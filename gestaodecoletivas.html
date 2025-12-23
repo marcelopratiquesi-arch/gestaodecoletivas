@@ -1,0 +1,1140 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pratique Coletivas - Gestão Happy Zone</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        pratique: {
+                            blue: '#0056b3',
+                            lightBlue: '#3b82f6',
+                            red: '#e63946',
+                            gray: '#f3f4f6',
+                            dark: '#1e293b',
+                            sidebar: '#0f172a'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #f1f5f9; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        .glass-panel {
+            background: white;
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            border-radius: 12px;
+        }
+
+        .sidebar-link { transition: all 0.2s; border-left: 3px solid transparent; }
+        .sidebar-link:hover { background-color: rgba(255,255,255,0.05); color: white; }
+        .sidebar-link.active { background-color: rgba(59, 130, 246, 0.1); color: #60a5fa; border-left-color: #60a5fa; }
+
+        .table-custom th {
+            background-color: #f8fafc; color: #475569; font-size: 0.75rem;
+            text-transform: uppercase; letter-spacing: 0.05em; padding: 12px 16px; font-weight: 600;
+            cursor: pointer; user-select: none; transition: background 0.2s;
+        }
+        .table-custom th:hover { background-color: #e2e8f0; color: #1e293b; }
+        .table-custom td { padding: 14px 16px; border-bottom: 1px solid #f1f5f9; color: #334155; vertical-align: middle; }
+        .table-custom tr:last-child td { border-bottom: none; }
+        .table-custom tr:hover { background-color: #f8fafc; }
+
+        .aula-card { transition: transform 0.2s, box-shadow 0.2s; position: relative; }
+        .aula-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 10; }
+        .aula-card .card-actions { display: none; }
+        .aula-card:hover .card-actions { display: flex; }
+        
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .group-btn {
+            @apply px-3 py-1.5 text-xs font-semibold border rounded transition shadow-sm;
+        }
+        .group-btn.active {
+            @apply bg-blue-600 text-white border-blue-600;
+        }
+        .group-btn.inactive {
+            @apply bg-white text-gray-600 border-gray-200 hover:bg-gray-50;
+        }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden text-sm">
+
+    <!-- SIDEBAR -->
+    <aside class="w-64 bg-pratique-sidebar text-gray-400 flex flex-col flex-shrink-0 transition-all duration-300">
+        <div class="p-6 border-b border-gray-800">
+            <h1 class="text-xl font-bold text-white tracking-tight">PRATIQUE <span class="text-blue-500">COLETIVAS</span></h1>
+            <p class="text-xs mt-1 opacity-60">Gestão Happy Zone</p>
+        </div>
+
+        <nav class="flex-1 overflow-y-auto py-4 space-y-1">
+            <button onclick="app.nav('relatorio')" id="nav-relatorio" class="sidebar-link active w-full text-left px-6 py-3 flex items-center gap-3">
+                <span class="text-lg">📊</span> Relatório Gerencial
+            </button>
+            <button onclick="app.nav('config')" id="nav-config" class="sidebar-link w-full text-left px-6 py-3 flex items-center gap-3">
+                <span class="text-lg">⚙️</span> Configurações
+            </button>
+            <button onclick="app.nav('cronograma')" id="nav-cronograma" class="sidebar-link w-full text-left px-6 py-3 flex items-center gap-3">
+                <span class="text-lg">📅</span> Cronograma Visual
+            </button>
+            <button onclick="app.nav('importacao')" id="nav-importacao" class="sidebar-link w-full text-left px-6 py-3 flex items-center gap-3">
+                <span class="text-lg">🛠️</span> Ferramentas Avançadas
+            </button>
+        </nav>
+
+        <div class="p-4 border-t border-gray-800 bg-gray-900/50">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-xs">A</div>
+                <div>
+                    <p class="text-white text-xs font-bold">Admin</p>
+                    <p class="text-xs">admin@pratique.com.br</p>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- CONTEÚDO PRINCIPAL -->
+    <main class="flex-1 flex flex-col bg-slate-50 overflow-hidden relative">
+        <header class="h-16 bg-white border-b border-gray-200 flex justify-between items-center px-8 flex-shrink-0">
+            <h2 id="page-title" class="text-lg font-bold text-gray-700">Visão Geral</h2>
+            <div class="flex items-center gap-4">
+                <span id="data-atual" class="text-xs font-mono text-gray-500 bg-gray-100 px-3 py-1 rounded-full"></span>
+                <button onclick="app.salvarBackup()" class="text-blue-600 hover:text-blue-800 text-xs font-bold flex items-center gap-1">
+                    💾 Backup Global
+                </button>
+            </div>
+        </header>
+
+        <div class="flex-1 overflow-y-auto p-8" id="main-content">
+            
+            <!-- ================= ABA RELATÓRIO ================= -->
+            <div id="view-relatorio" class="view-section fade-in">
+                <!-- Filtros Avançados -->
+                <div class="glass-panel p-6 mb-6">
+                    <h3 class="font-bold text-gray-700 mb-4 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path></svg>
+                        Filtros de Análise Happy Zone
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-7 gap-4 items-end">
+                        <div class="md:col-span-1">
+                            <label class="block text-xs font-bold text-gray-500 mb-1">Mês/Ano</label>
+                            <div class="flex gap-1">
+                                <select id="rel-mes" class="w-2/3 p-2 border rounded text-xs bg-white" onchange="app.gerarRelatorio()"></select>
+                                <input type="number" id="rel-ano" class="w-1/3 p-2 border rounded text-xs" value="2025" onchange="app.gerarRelatorio()">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 mb-1">País</label>
+                            <select id="rel-pais" class="w-full p-2 border rounded text-xs bg-white" onchange="app.gerarRelatorio()">
+                                <option value="">Todos</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 mb-1">Estado</label>
+                            <select id="rel-estado" class="w-full p-2 border rounded text-xs bg-white" onchange="app.gerarRelatorio()">
+                                <option value="">Todos</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 mb-1">Mentor</label>
+                            <select id="rel-mentor" class="w-full p-2 border rounded text-xs bg-white" onchange="app.atualizarComboUnidades('rel'); app.gerarRelatorio()">
+                                <option value="">Todos</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 mb-1">Unidade</label>
+                            <select id="rel-unidade" class="w-full p-2 border rounded text-xs bg-white" onchange="app.gerarRelatorio()">
+                                <option value="">Todas</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 mb-1">Modalidade</label>
+                            <select id="rel-modalidade" class="w-full p-2 border rounded text-xs bg-white" onchange="app.gerarRelatorio()">
+                                <option value="">Todas</option>
+                            </select>
+                        </div>
+                        <button onclick="app.gerarRelatorio()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded text-xs transition shadow-md h-[34px]">
+                            Filtrar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- KPIs -->
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+                    <div class="glass-panel p-4 border-l-4 border-blue-500">
+                        <p class="text-[10px] font-bold text-gray-400 uppercase">Receita Líquida</p>
+                        <p class="text-xl font-bold text-gray-800 mt-1" id="kpi-receita">R$ 0,00</p>
+                    </div>
+                    <div class="glass-panel p-4 border-l-4 border-green-500">
+                        <p class="text-[10px] font-bold text-gray-400 uppercase">Aulas Realizadas</p>
+                        <p class="text-xl font-bold text-gray-800 mt-1" id="kpi-aulas">0</p>
+                    </div>
+                    <div class="glass-panel p-4 border-l-4 border-orange-500">
+                        <p class="text-[10px] font-bold text-gray-400 uppercase">Média Alunos/Aula</p>
+                        <p class="text-xl font-bold text-gray-800 mt-1" id="kpi-media-alunos">0</p>
+                    </div>
+                     <div class="glass-panel p-4 border-l-4 border-purple-500">
+                        <p class="text-[10px] font-bold text-gray-400 uppercase">Aulas Canceladas</p>
+                        <p class="text-xl font-bold text-red-600 mt-1" id="kpi-canceladas">0</p>
+                    </div>
+                    <!-- KPI DE UNIDADES -->
+                    <div class="glass-panel p-4 border-l-4 border-pink-500">
+                        <p class="text-[10px] font-bold text-gray-400 uppercase">Unidades Ativas</p>
+                        <p class="text-xl font-bold text-pink-600 mt-1" id="kpi-unidades-count">0</p>
+                        <p class="text-[9px] text-gray-400">No filtro atual</p>
+                    </div>
+                </div>
+
+                <!-- Painel de Agrupamento e Detalhamento -->
+                <div class="glass-panel overflow-hidden mb-6">
+                    <div class="p-4 border-b border-gray-100 flex flex-col gap-4 bg-gray-50">
+                        <div class="flex justify-between items-center">
+                            <h3 class="font-bold text-gray-700 flex items-center gap-2">
+                                <span>📈</span> Performance & Classificação
+                            </h3>
+                            <button onclick="app.exportarCSV()" class="text-xs text-green-600 font-bold hover:underline flex items-center gap-1">
+                                📥 Exportar Excel
+                            </button>
+                        </div>
+                        
+                        <!-- Barra de Agrupamento -->
+                        <div class="flex flex-wrap gap-2 items-center">
+                            <span class="text-xs font-bold text-gray-500 uppercase mr-2">Agrupar por:</span>
+                            <button onclick="app.setAgrupamento('detalhado')" id="grp-detalhado" class="group-btn active">Detalhado (Padrão)</button>
+                            <button onclick="app.setAgrupamento('modalidade')" id="grp-modalidade" class="group-btn inactive">Modalidade</button>
+                            <button onclick="app.setAgrupamento('professor')" id="grp-professor" class="group-btn inactive">Professor</button>
+                            <button onclick="app.setAgrupamento('unidade')" id="grp-unidade" class="group-btn inactive">Unidade</button>
+                            <button onclick="app.setAgrupamento('dia')" id="grp-dia" class="group-btn inactive">Dia Semana</button>
+                            <button onclick="app.setAgrupamento('estado')" id="grp-estado" class="group-btn inactive">Estado</button>
+                            <button onclick="app.setAgrupamento('pais')" id="grp-pais" class="group-btn inactive">País</button>
+                        </div>
+                    </div>
+                    
+                    <div class="overflow-x-auto max-h-[500px]">
+                        <table class="w-full table-custom text-left" id="tabela-relatorio">
+                            <thead class="sticky top-0 shadow-sm bg-gray-50 z-10 text-gray-600" id="header-relatorio">
+                                <!-- Headers dinâmicos -->
+                            </thead>
+                            <tbody id="body-relatorio"></tbody>
+                        </table>
+                    </div>
+                    <div id="relatorio-empty" class="p-8 text-center text-gray-400 hidden">
+                        <p class="text-4xl mb-2">📊</p>
+                        <p>Nenhum dado encontrado para os filtros selecionados.</p>
+                    </div>
+                </div>
+
+                <!-- Seção de Feriados -->
+                <div id="section-feriados" class="hidden glass-panel border-l-4 border-red-400 bg-red-50/50 p-6">
+                    <h3 class="font-bold text-red-800 mb-2 flex items-center gap-2">
+                        <span>📅</span> Impacto de Feriados no Período
+                    </h3>
+                    <div class="text-sm text-red-700 mb-4" id="feriados-lista-nomes"></div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs text-left" id="tabela-canceladas">
+                            <thead class="text-red-900 border-b border-red-200">
+                                <tr>
+                                    <th class="py-2">Data</th>
+                                    <th class="py-2">Feriado</th>
+                                    <th class="py-2">Unidade</th>
+                                    <th class="py-2">Modalidade</th>
+                                    <th class="py-2 text-right">Impacto Financeiro</th>
+                                </tr>
+                            </thead>
+                            <tbody class="text-red-800"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= ABA CONFIGURAÇÃO ================= -->
+            <div id="view-config" class="view-section hidden fade-in">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <!-- Coluna 1 -->
+                    <div class="lg:col-span-1 space-y-6">
+                        <div class="glass-panel p-5">
+                            <h3 class="font-bold text-gray-800 mb-3 border-b pb-2 text-xs uppercase">1. Mentores</h3>
+                            <div class="flex gap-2 mb-3">
+                                <input type="text" id="cad-mentor-nome" placeholder="Nome" class="w-full p-2 border rounded text-xs">
+                                <button onclick="app.addMentor()" class="bg-gray-800 text-white px-3 rounded text-xs hover:bg-black">+</button>
+                            </div>
+                            <ul id="lista-mentores" class="space-y-1 max-h-32 overflow-y-auto text-xs text-gray-600"></ul>
+                        </div>
+                        <div class="glass-panel p-5 border-l-4 border-pink-500">
+                            <h3 class="font-bold text-gray-800 mb-3 border-b pb-2 text-xs uppercase">2. Modalidades & Cores</h3>
+                            <div class="flex gap-2 mb-3 items-center">
+                                <input type="text" id="cad-mod-nome" placeholder="Ex: Jump" class="flex-1 p-2 border rounded text-xs">
+                                <input type="color" id="cad-mod-cor" class="w-8 h-8 rounded cursor-pointer border p-0" value="#3b82f6">
+                                <button onclick="app.addModalidade()" class="bg-pink-600 text-white px-3 py-2 rounded text-xs hover:bg-pink-700">Add</button>
+                            </div>
+                            <ul id="lista-modalidades" class="space-y-1 max-h-40 overflow-y-auto text-xs"></ul>
+                        </div>
+                    </div>
+                    <!-- Coluna 2 -->
+                    <div class="lg:col-span-1">
+                        <div class="glass-panel p-5 h-full">
+                            <h3 class="font-bold text-gray-800 mb-3 border-b pb-2 text-xs uppercase">3. Unidades (Global)</h3>
+                            <div class="space-y-2 mb-3">
+                                <select id="cad-unidade-mentor" class="w-full p-2 border rounded text-xs bg-white">
+                                    <option value="">Selecione Mentor...</option>
+                                </select>
+                                <input type="text" id="cad-unidade-nome" placeholder="Nome da Unidade" class="w-full p-2 border rounded text-xs">
+                                <div class="grid grid-cols-2 gap-2">
+                                    <input type="text" id="cad-unidade-pais" placeholder="País (Ex: Brasil)" class="w-full p-2 border rounded text-xs" value="Brasil">
+                                    <input type="text" id="cad-unidade-estado" placeholder="Estado (Ex: MG)" class="w-full p-2 border rounded text-xs">
+                                </div>
+                                <button onclick="app.addUnidade()" class="w-full bg-blue-600 text-white py-2 rounded text-xs font-bold hover:bg-blue-700">Salvar Unidade</button>
+                            </div>
+                            <input type="text" placeholder="🔍 Buscar..." class="w-full p-2 border rounded text-xs mb-2 bg-slate-50" onkeyup="app.filtrarListaUnidades(this.value)">
+                            <ul id="lista-unidades" class="space-y-2 max-h-[300px] overflow-y-auto text-xs text-gray-600"></ul>
+                        </div>
+                    </div>
+                    <!-- Coluna 3 -->
+                    <div class="lg:col-span-1">
+                        <div class="glass-panel p-5 border-2 border-blue-100 h-full">
+                            <h3 class="font-bold text-blue-800 mb-4 flex items-center gap-2 text-xs uppercase">
+                                <span class="bg-blue-100 p-1 rounded">📅</span> 4. Grade Horária
+                            </h3>
+                            <div class="space-y-3">
+                                <div><label class="text-[10px] font-bold text-gray-400">ONDE?</label><select id="grade-unidade" class="w-full p-2 border rounded text-xs bg-white font-bold text-gray-700 mb-1"></select></div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div><label class="text-[10px] font-bold text-gray-400">MODALIDADE</label><select id="grade-modalidade" class="w-full p-2 border rounded text-xs bg-white"></select></div>
+                                    <div><label class="text-[10px] font-bold text-gray-400">PROFESSOR</label><input type="text" id="grade-prof" placeholder="Nome" class="w-full p-2 border rounded text-xs"></div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div><label class="text-[10px] font-bold text-gray-400">VALOR (R$)</label><input type="number" id="grade-valor" placeholder="0.00" class="w-full p-2 border rounded text-xs"></div>
+                                    <div><label class="text-[10px] font-bold text-orange-500">MÉDIA ALUNOS</label><input type="number" id="grade-alunos" placeholder="0" class="w-full p-2 border rounded text-xs border-orange-200"></div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div><label class="text-[10px] font-bold text-gray-400">HORA</label><input type="time" id="grade-hora" class="w-full p-2 border rounded text-xs"></div>
+                                    <div><label class="text-[10px] font-bold text-gray-400">DIAS</label><div class="flex gap-1 flex-wrap" id="check-dias"></div></div>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button onclick="app.addHorario()" id="btn-save-grade" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded shadow-md text-xs mt-2 transition">ADICIONAR AULA</button>
+                                    <button onclick="app.cancelarEdicao()" id="btn-cancel-grade" class="hidden bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-3 rounded shadow-md text-xs mt-2 transition">CANCELAR</button>
+                                </div>
+                            </div>
+                            <div class="mt-4 border-t pt-4">
+                                <h4 class="font-bold text-gray-400 text-[10px] uppercase mb-2">Últimas Cadastradas</h4>
+                                <div id="lista-grades-recentes" class="space-y-2"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= ABA CRONOGRAMA ================= -->
+            <div id="view-cronograma" class="view-section hidden fade-in">
+                <div class="glass-panel p-6 min-h-[500px]">
+                    <div class="flex justify-between items-center mb-6">
+                        <div>
+                            <h3 class="font-bold text-xl text-gray-800">Cronograma Visual</h3>
+                            <p class="text-sm text-gray-500">Passe o mouse sobre a aula para Editar ou Excluir.</p>
+                        </div>
+                        <div class="w-72">
+                            <label class="block text-xs font-bold text-gray-500 mb-1">Unidade Selecionada</label>
+                            <select id="cronograma-unidade-select" class="w-full p-2 border rounded shadow-sm bg-white" onchange="app.renderCronograma()">
+                                <option value="">Selecione...</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto rounded-lg border border-gray-100" id="cronograma-container">
+                        <div class="p-12 text-center text-gray-400">
+                            <p class="text-4xl mb-4">👆</p>
+                            Selecione uma unidade acima para ver a grade.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= ABA IMPORTAÇÃO ================= -->
+            <div id="view-importacao" class="view-section hidden fade-in">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-6xl mx-auto">
+                    <!-- Ferramentas mantidas intactas -->
+                    <div class="glass-panel p-6">
+                        <h2 class="text-lg font-bold text-gray-800 mb-2">🚀 Importação de Unidades</h2>
+                        <p class="text-xs text-gray-500 mb-4">Cole do Excel (Ctrl+V): <code>Unidade | Mentor | Estado | País</code></p>
+                        <textarea id="import-unidades-text" class="w-full h-24 p-3 border rounded bg-gray-50 font-mono text-xs mb-3" placeholder="Pratique Savassi&#9;Felipe Souza&#9;MG&#9;Brasil"></textarea>
+                        <button onclick="app.importarUnidades()" class="w-full bg-blue-600 text-white py-2 rounded text-sm font-bold hover:bg-blue-700">Processar Unidades</button>
+                    </div>
+
+                    <!-- REMOVIDO: Importação de Modalidades -->
+                    <div class="glass-panel p-6 border-l-4 border-green-500">
+                        <h2 class="text-lg font-bold text-gray-800 mb-2">📅 Importação de Grades</h2>
+                        <p class="text-xs text-gray-500 mb-4">Cole do Excel: <code>Unidade | Modalidade | Professor | Dias | Hora | Valor | Média Alunos</code></p>
+                        <textarea id="import-grades-text" class="w-full h-24 p-3 border rounded bg-gray-50 font-mono text-xs mb-3" placeholder="Pratique Savassi&#9;Jump&#9;João&#9;Segunda,Quarta&#9;18:00&#9;50.00&#9;30"></textarea>
+                        <div class="flex gap-4">
+                            <button onclick="app.importarGrades()" class="flex-1 bg-green-600 text-white py-3 rounded font-bold hover:bg-green-700">Processar Grade</button>
+                            <button onclick="app.exportarGrades()" class="flex-1 bg-gray-700 text-white py-3 rounded font-bold hover:bg-gray-800 border border-gray-600">📥 Exportar Grades Atuais (CSV)</button>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel p-6 md:col-span-2 border-t-4 border-gray-800">
+                        <h2 class="text-lg font-bold text-gray-800 mb-4">📤 Backup e Dados do Sistema</h2>
+                        <div class="flex gap-4">
+                            <button onclick="app.salvarBackup()" class="flex-1 bg-gray-800 text-white py-3 rounded font-bold hover:bg-black flex justify-center gap-2">
+                                <span>💾</span> Backup Completo (JSON)
+                            </button>
+                            <button onclick="app.exportarRelatorioGeral()" class="flex-1 bg-blue-800 text-white py-3 rounded font-bold hover:bg-blue-900 flex justify-center gap-2">
+                                <span>📋</span> Relatório Geral de Aulas (CSV)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- TOAST -->
+    <div id="toast" class="fixed top-5 right-5 bg-gray-800 text-white px-6 py-4 rounded shadow-xl transform translate-x-full transition-transform duration-300 z-50 flex items-center gap-4">
+        <div id="toast-icon" class="text-2xl">✅</div>
+        <div>
+            <h4 id="toast-title" class="font-bold text-sm">Sucesso</h4>
+            <p id="toast-msg" class="text-xs opacity-80">Operação realizada.</p>
+        </div>
+    </div>
+
+    <script>
+        class SistemaPratique {
+            constructor() {
+                this.db = {
+                    mentores: [], 
+                    unidades: [], 
+                    modalidades: [], 
+                    horarios: []  
+                };
+                this.editingId = null; 
+                this.dadosExibidos = []; // Dados atuais da tabela (detalhado ou agrupado)
+                this.modoAgrupamento = 'detalhado'; // detalhado, modalidade, professor, unidade, etc.
+                this.ordenacao = { campo: 'receita', direcao: 'desc' };
+                this.dadosBrutosFiltrados = []; // Cache dos dados brutos do filtro atual
+                
+                this.constantes = {
+                    dias: ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"],
+                    meses: ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"],
+                    feriadosFixos: [
+                        { d: 1, m: 0, nome: "Confraternização Universal" },
+                        { d: 21, m: 3, nome: "Tiradentes" },
+                        { d: 1, m: 4, nome: "Dia do Trabalho" },
+                        { d: 7, m: 8, nome: "Independência" },
+                        { d: 12, m: 9, nome: "N. Sra. Aparecida" },
+                        { d: 2, m: 10, nome: "Finados" },
+                        { d: 15, m: 10, nome: "Proclamação da República" },
+                        { d: 25, m: 11, nome: "Natal" }
+                    ]
+                };
+                this.init();
+            }
+
+            init() {
+                this.carregarDados();
+                this.setupUI();
+                this.nav('relatorio');
+            }
+
+            // --- CORE DADOS ---
+            carregarDados() {
+                const salvo = localStorage.getItem('pratique_global_db_v5');
+                if (salvo) {
+                    this.db = JSON.parse(salvo);
+                    if(!this.db.modalidades) this.db.modalidades = [];
+                } else {
+                    this.seedInicial();
+                }
+            }
+
+            salvarDados() {
+                localStorage.setItem('pratique_global_db_v5', JSON.stringify(this.db));
+            }
+
+            seedInicial() {
+                this.db.mentores = [{ id: 1, nome: "Felipe Souza" }];
+                this.db.modalidades = [{ id: 1, nome: "Energy Jump", cor: "#ff5722" }, { id: 2, nome: "Power Training", cor: "#2196f3" }];
+                this.db.unidades = [{ id: 101, nome: "Pratique Savassi", mentorId: 1, estado: "MG", pais: "Brasil" }];
+                this.salvarDados();
+            }
+
+            // --- UI & NAVEGAÇÃO ---
+            nav(viewId) {
+                document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
+                document.getElementById(`view-${viewId}`).classList.remove('hidden');
+                document.querySelectorAll('.sidebar-link').forEach(el => el.classList.remove('active'));
+                document.getElementById(`nav-${viewId}`).classList.add('active');
+                
+                const titulos = { 'relatorio': 'Visão Geral', 'config': 'Configurações', 'cronograma': 'Cronograma Visual', 'importacao': 'Ferramentas' };
+                document.getElementById('page-title').innerText = titulos[viewId];
+
+                if(viewId === 'relatorio') this.gerarRelatorio();
+                this.cancelarEdicao(); 
+            }
+
+            setupUI() {
+                document.getElementById('data-atual').innerText = new Date().toLocaleDateString('pt-BR');
+                
+                document.getElementById('check-dias').innerHTML = this.constantes.dias.map(d => `
+                    <label class="cursor-pointer select-none">
+                        <input type="checkbox" value="${d}" class="peer sr-only check-dia-input">
+                        <div class="px-2 py-1 text-[10px] uppercase border rounded bg-white text-gray-400 peer-checked:bg-blue-600 peer-checked:text-white peer-checked:border-blue-600 transition">${d.substring(0,3)}</div>
+                    </label>`).join('');
+
+                const selMes = document.getElementById('rel-mes');
+                const mesAtual = new Date().getMonth();
+                selMes.innerHTML = this.constantes.meses.map((m, i) => `<option value="${i}" ${i === mesAtual ? 'selected' : ''}>${m}</option>`).join('');
+
+                this.atualizarListas();
+            }
+
+            atualizarListas() {
+                // Populate Mentors
+                const htmlMentores = this.db.mentores.map(m => `<li class="flex justify-between bg-slate-50 p-1 px-2 rounded border"><span>${m.nome}</span> <button onclick="app.remove('mentores', ${m.id})" class="text-red-400 hover:text-red-600 font-bold">×</button></li>`).join('');
+                document.getElementById('lista-mentores').innerHTML = htmlMentores;
+                const opsMentores = `<option value="">Todos</option>` + this.db.mentores.map(m => `<option value="${m.id}">${m.nome}</option>`).join('');
+                ['cad-unidade-mentor', 'rel-mentor'].forEach(id => {
+                    const el = document.getElementById(id);
+                    const val = el.value;
+                    el.innerHTML = opsMentores;
+                    if(val && [...el.options].some(o => o.value == val)) el.value = val;
+                });
+
+                // Populate Modalidades
+                const htmlMods = this.db.modalidades.map(m => `
+                    <li class="flex justify-between items-center bg-slate-50 p-1 px-2 rounded border">
+                        <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full" style="background:${m.cor}"></div> ${m.nome}</div> 
+                        <button onclick="app.remove('modalidades', ${m.id})" class="text-red-400">×</button>
+                    </li>`).join('');
+                document.getElementById('lista-modalidades').innerHTML = htmlMods;
+                const opsMods = `<option value="">Selecione...</option>` + this.db.modalidades.map(m => `<option value="${m.id}">${m.nome}</option>`).join('');
+                document.getElementById('grade-modalidade').innerHTML = opsMods;
+                document.getElementById('rel-modalidade').innerHTML = `<option value="">Todas</option>` + this.db.modalidades.map(m => `<option value="${m.id}">${m.nome}</option>`).join('');
+
+                this.renderListaUnidades();
+                
+                // Populate Filters with existing data
+                const paises = [...new Set(this.db.unidades.map(u => u.pais).filter(Boolean))].sort();
+                const estados = [...new Set(this.db.unidades.map(u => u.estado).filter(Boolean))].sort();
+                
+                const selPais = document.getElementById('rel-pais');
+                const valPais = selPais.value;
+                selPais.innerHTML = '<option value="">Todos</option>' + paises.map(p => `<option value="${p}">${p}</option>`).join('');
+                if(valPais) selPais.value = valPais;
+
+                const selEstado = document.getElementById('rel-estado');
+                const valEstado = selEstado.value;
+                selEstado.innerHTML = '<option value="">Todos</option>' + estados.map(e => `<option value="${e}">${e}</option>`).join('');
+                if(valEstado) selEstado.value = valEstado;
+
+                const selUni = document.getElementById('rel-unidade');
+                const valUni = selUni.value;
+                selUni.innerHTML = '<option value="">Todas</option>' + this.db.unidades.sort((a,b) => a.nome.localeCompare(b.nome)).map(u => `<option value="${u.id}">${u.nome}</option>`).join('');
+                if(valUni) selUni.value = valUni;
+
+                const selCrono = document.getElementById('cronograma-unidade-select');
+                const valCrono = selCrono.value;
+                selCrono.innerHTML = '<option value="">Selecione...</option>' + this.db.unidades.sort((a,b) => a.nome.localeCompare(b.nome)).map(u => `<option value="${u.id}">${u.nome}</option>`).join('');
+                if(valCrono) selCrono.value = valCrono;
+
+                this.atualizarSeletorUnidadesGrade();
+                this.renderGradesRecentes();
+            }
+
+            renderListaUnidades() {
+                document.getElementById('lista-unidades').innerHTML = this.db.unidades.sort((a,b) => a.nome.localeCompare(b.nome)).map(u => {
+                    const m = this.db.mentores.find(x => x.id == u.mentorId)?.nome || '-';
+                    return `<li class="flex justify-between items-center bg-white p-2 rounded border shadow-sm">
+                        <div><div class="font-bold text-gray-700">${u.nome}</div><div class="text-[10px] text-gray-400">${m} • ${u.estado || '-'}, ${u.pais || '-'}</div></div>
+                        <button onclick="app.remove('unidades', ${u.id})" class="text-red-400 hover:text-red-600 font-bold">×</button>
+                    </li>`;
+                }).join('');
+            }
+
+            atualizarSeletorUnidadesGrade() {
+                const sel = document.getElementById('grade-unidade');
+                const val = sel.value;
+                sel.innerHTML = '<option value="">Selecione...</option>' + this.db.unidades.sort((a,b) => a.nome.localeCompare(b.nome)).map(u => `<option value="${u.id}">${u.nome}</option>`).join('');
+                if(val) sel.value = val;
+            }
+
+            atualizarComboUnidades(prefixo) {
+                // Filtros independentes
+            }
+
+            // --- CRUD ---
+            remove(tipo, id) {
+                if(!confirm('Tem certeza?')) return;
+                this.db[tipo] = this.db[tipo].filter(x => x.id !== id);
+                if(tipo === 'unidades') this.db.horarios = this.db.horarios.filter(h => h.unidadeId !== id);
+                this.salvarDados(); this.atualizarListas();
+            }
+
+            addMentor() {
+                const nome = document.getElementById('cad-mentor-nome').value.trim();
+                if(!nome) return;
+                this.db.mentores.push({ id: Date.now(), nome });
+                this.salvarDados(); this.atualizarListas();
+                document.getElementById('cad-mentor-nome').value = '';
+                this.notify('success', 'Mentor Salvo');
+            }
+
+            addModalidade() {
+                const nome = document.getElementById('cad-mod-nome').value.trim();
+                const cor = document.getElementById('cad-mod-cor').value;
+                if(!nome) return;
+                this.db.modalidades.push({ id: Date.now(), nome, cor });
+                this.salvarDados(); this.atualizarListas();
+                document.getElementById('cad-mod-nome').value = '';
+                this.notify('success', 'Modalidade Salva');
+            }
+
+            addUnidade() {
+                const nome = document.getElementById('cad-unidade-nome').value.trim();
+                const mentorId = document.getElementById('cad-unidade-mentor').value;
+                const estado = document.getElementById('cad-unidade-estado').value.trim().toUpperCase();
+                const pais = document.getElementById('cad-unidade-pais').value.trim();
+                
+                if(!nome || !mentorId) return this.notify('error', 'Nome e Mentor obrigatórios');
+                this.db.unidades.push({ id: Date.now(), nome, mentorId, estado, pais });
+                this.salvarDados(); this.atualizarListas();
+                document.getElementById('cad-unidade-nome').value = '';
+                this.notify('success', 'Unidade Salva');
+            }
+
+            // --- EDIÇÃO E ADIÇÃO DE HORÁRIOS ---
+            editarHorario(id) {
+                const h = this.db.horarios.find(item => item.id == id);
+                if(!h) return;
+
+                const configTab = document.getElementById('view-config');
+                if(configTab.classList.contains('hidden')) {
+                    this.nav('config');
+                }
+
+                document.getElementById('grade-unidade').value = h.unidadeId;
+                document.getElementById('grade-modalidade').value = h.modalidadeId;
+                document.getElementById('grade-prof').value = h.professor;
+                document.getElementById('grade-valor').value = h.valor;
+                document.getElementById('grade-alunos').value = h.mediaAlunos;
+                document.getElementById('grade-hora').value = h.hora;
+
+                document.querySelectorAll('.check-dia-input').forEach(cb => {
+                    cb.checked = h.dias.includes(cb.value);
+                });
+
+                this.editingId = id;
+                const btnSave = document.getElementById('btn-save-grade');
+                btnSave.innerText = 'SALVAR ALTERAÇÕES';
+                btnSave.classList.remove('bg-green-600', 'hover:bg-green-700');
+                btnSave.classList.add('bg-blue-600', 'hover:bg-blue-700');
+                
+                document.getElementById('btn-cancel-grade').classList.remove('hidden');
+                document.getElementById('grade-unidade').scrollIntoView({ behavior: 'smooth' });
+                this.notify('info', 'Editando aula. Faça alterações e salve.');
+            }
+
+            cancelarEdicao() {
+                this.editingId = null;
+                document.getElementById('grade-modalidade').value = '';
+                document.getElementById('grade-prof').value = '';
+                document.getElementById('grade-valor').value = '';
+                document.getElementById('grade-alunos').value = '';
+                document.getElementById('grade-hora').value = '';
+                document.querySelectorAll('.check-dia-input').forEach(cb => cb.checked = false);
+
+                const btnSave = document.getElementById('btn-save-grade');
+                btnSave.innerText = 'ADICIONAR AULA';
+                btnSave.classList.add('bg-green-600', 'hover:bg-green-700');
+                btnSave.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+                document.getElementById('btn-cancel-grade').classList.add('hidden');
+            }
+
+            addHorario() {
+                const uId = document.getElementById('grade-unidade').value;
+                const mId = document.getElementById('grade-modalidade').value;
+                const prof = document.getElementById('grade-prof').value.trim();
+                const dias = Array.from(document.querySelectorAll('.check-dia-input:checked')).map(c => c.value);
+                const hora = document.getElementById('grade-hora').value;
+                const valor = parseFloat(document.getElementById('grade-valor').value) || 0;
+                const media = parseInt(document.getElementById('grade-alunos').value) || 0;
+
+                if(!uId || !mId || !prof || !hora || dias.length === 0) return this.notify('error', 'Preencha tudo');
+
+                const novoHorario = { 
+                    id: this.editingId ? this.editingId : Date.now(), 
+                    unidadeId: uId, 
+                    modalidadeId: mId, 
+                    professor: prof, 
+                    valor, 
+                    mediaAlunos: media, 
+                    hora, 
+                    dias 
+                };
+
+                if (this.editingId) {
+                    const idx = this.db.horarios.findIndex(h => h.id == this.editingId);
+                    if(idx !== -1) this.db.horarios[idx] = novoHorario;
+                    this.notify('success', 'Aula atualizada com sucesso!');
+                    this.cancelarEdicao();
+                } else {
+                    this.db.horarios.push(novoHorario);
+                    this.notify('success', 'Aula adicionada!');
+                }
+
+                this.salvarDados(); 
+                this.renderGradesRecentes();
+                if(!this.editingId) {
+                    document.getElementById('grade-modalidade').value = '';
+                    document.getElementById('grade-alunos').value = '';
+                }
+            }
+
+            renderGradesRecentes() {
+                const div = document.getElementById('lista-grades-recentes');
+                div.innerHTML = this.db.horarios.slice(-5).reverse().map(h => {
+                    const u = this.db.unidades.find(x => x.id == h.unidadeId)?.nome;
+                    const m = this.db.modalidades.find(x => x.id == h.modalidadeId)?.nome;
+                    return `<div class="flex justify-between items-center bg-slate-50 p-2 rounded border border-l-2 border-l-blue-500 text-[10px]">
+                        <div>
+                            <b>${m}</b> em ${u}<br>
+                            <span class="text-gray-500">${h.dias.join(', ')} às ${h.hora}</span>
+                        </div>
+                        <div class="flex gap-1">
+                            <button onclick="app.editarHorario(${h.id})" class="text-blue-500 hover:text-blue-700 p-1" title="Editar">✏️</button>
+                            <button onclick="app.remove('horarios', ${h.id})" class="text-red-500 hover:text-red-700 p-1" title="Excluir">🗑️</button>
+                        </div>
+                    </div>`;
+                }).join('');
+            }
+
+            // --- IMPORTAÇÃO E EXPORTAÇÃO (Excel Friendly) ---
+            downloadCSV(csvContent, fileName) {
+                const blob = new Blob(["\uFEFF"+csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement("a");
+                const url = URL.createObjectURL(blob);
+                link.setAttribute("href", url);
+                link.setAttribute("download", fileName);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+
+            // FUNÇÃO AUXILIAR PARA PARSEAR TAB OU PONTO E VÍRGULA
+            parseImportLines(text) {
+                if(!text.trim()) return [];
+                return text.split('\n').map(l => {
+                    // Tenta Tab (Excel padrão) ou ; (CSV)
+                    if(l.includes('\t')) return l.split('\t').map(s => s.trim());
+                    return l.split(';').map(s => s.trim());
+                }).filter(cols => cols.length > 1 && cols[0]); // Filtra linhas vazias
+            }
+
+            importarGrades() {
+                const txt = document.getElementById('import-grades-text').value;
+                const linhas = this.parseImportLines(txt);
+                let count = 0;
+                
+                linhas.forEach(parts => {
+                    if(parts.length >= 5) {
+                        const [uNome, mNome, prof, diasRaw, hora, valor, media] = parts;
+                        const unidade = this.db.unidades.find(x => x.nome.toLowerCase() === uNome.toLowerCase());
+                        const modalidade = this.db.modalidades.find(x => x.nome.toLowerCase() === mNome.toLowerCase());
+                        
+                        if(unidade && modalidade) {
+                            const dias = diasRaw.split(',').map(d => d.trim());
+                            this.db.horarios.push({
+                                id: Date.now() + Math.random(),
+                                unidadeId: unidade.id,
+                                modalidadeId: modalidade.id,
+                                professor: prof,
+                                dias: dias,
+                                hora: hora,
+                                valor: parseFloat(valor) || 0,
+                                mediaAlunos: parseInt(media) || 0
+                            });
+                            count++;
+                        }
+                    }
+                });
+                this.salvarDados();
+                this.renderGradesRecentes();
+                this.notify('success', `${count} Aulas importadas`);
+            }
+
+            exportarGrades() {
+                let csv = "Unidade;Modalidade;Professor;Dias;Hora;Valor;MediaAlunos\n";
+                this.db.horarios.forEach(h => {
+                    const u = this.db.unidades.find(x => x.id == h.unidadeId)?.nome || "?";
+                    const m = this.db.modalidades.find(x => x.id == h.modalidadeId)?.nome || "?";
+                    csv += `${u};${m};${h.professor};"${h.dias.join(',')}";${h.hora};${h.valor};${h.mediaAlunos}\n`;
+                });
+                this.downloadCSV(csv, "Grades_Pratique.csv");
+            }
+
+            importarUnidades() {
+                const txt = document.getElementById('import-unidades-text').value;
+                const linhas = this.parseImportLines(txt);
+                let count = 0;
+                
+                linhas.forEach(cols => {
+                    const [uNome, mNome, est, pais] = cols;
+                    if(uNome && mNome) {
+                        let mentor = this.db.mentores.find(x => x.nome.toLowerCase() === mNome.toLowerCase());
+                        if(!mentor) { mentor = { id: Date.now() + Math.random(), nome: mNome }; this.db.mentores.push(mentor); }
+                        
+                        if(!this.db.unidades.find(x => x.nome.toLowerCase() === uNome.toLowerCase())) {
+                            this.db.unidades.push({ id: Date.now() + Math.random(), nome: uNome, mentorId: mentor.id, estado: est || 'MG', pais: pais || 'Brasil' });
+                            count++;
+                        }
+                    }
+                });
+                this.salvarDados(); this.atualizarListas();
+                this.notify('success', `${count} Unidades importadas`);
+            }
+
+            // --- CÁLCULOS E RELATÓRIOS ---
+            calcularPascoa(ano) {
+                const C = Math.floor(ano/100);
+                const N = ano - 19*Math.floor(ano/19);
+                const K = Math.floor((C - 17)/25);
+                let I = C - Math.floor(C/4) - Math.floor((C - K)/3) + 19*N + 15;
+                I = I - 30*Math.floor((I/30));
+                I = I - Math.floor(I/28)*(1 - Math.floor(I/28)*Math.floor(29/(I + 1))*Math.floor((21 - N)/11));
+                let J = ano + Math.floor(ano/4) + I + 2 - C + Math.floor(C/4);
+                J = J - 7*Math.floor(J/7);
+                const L = I - J;
+                const mes = 3 + Math.floor((L + 40)/44);
+                const dia = L + 28 - 31*Math.floor(mes/4);
+                return { m: mes-1, d: dia };
+            }
+
+            getFeriadosMoveis(ano) {
+                const p = this.calcularPascoa(ano);
+                const pascoa = new Date(ano, p.m, p.d);
+                const carnaval = new Date(pascoa); carnaval.setDate(pascoa.getDate() - 47);
+                const sextaSanta = new Date(pascoa); sextaSanta.setDate(pascoa.getDate() - 2);
+                const corpus = new Date(pascoa); corpus.setDate(pascoa.getDate() + 60);
+                return [
+                    { d: carnaval.getDate(), m: carnaval.getMonth(), nome: "Carnaval" },
+                    { d: sextaSanta.getDate(), m: sextaSanta.getMonth(), nome: "Sexta-feira Santa" },
+                    { d: corpus.getDate(), m: corpus.getMonth(), nome: "Corpus Christi" }
+                ];
+            }
+
+            gerarRelatorio() {
+                const mes = parseInt(document.getElementById('rel-mes').value);
+                const ano = parseInt(document.getElementById('rel-ano').value);
+                
+                const fPais = document.getElementById('rel-pais').value;
+                const fEst = document.getElementById('rel-estado').value;
+                const fMent = document.getElementById('rel-mentor').value;
+                const fUni = document.getElementById('rel-unidade').value;
+                const fMod = document.getElementById('rel-modalidade').value;
+
+                const feriadosFixos = this.constantes.feriadosFixos.filter(f => f.m === mes);
+                const feriadosMoveis = this.getFeriadosMoveis(ano).filter(f => f.m === mes);
+                const todosFeriados = [...feriadosFixos, ...feriadosMoveis];
+                
+                const divFeriados = document.getElementById('section-feriados');
+                const listaFeriadosNomes = document.getElementById('feriados-lista-nomes');
+                if(todosFeriados.length > 0) {
+                    divFeriados.classList.remove('hidden');
+                    listaFeriadosNomes.innerText = "Feriados identificados: " + todosFeriados.map(f => `${f.d}/${f.m+1} (${f.nome})`).join(', ');
+                } else {
+                    divFeriados.classList.add('hidden');
+                }
+
+                // Filtrar Horários
+                let horariosFiltrados = this.db.horarios.filter(h => {
+                    const u = this.db.unidades.find(x => x.id == h.unidadeId);
+                    if(!u) return false;
+                    
+                    if(fPais && u.pais !== fPais) return false;
+                    if(fEst && u.estado !== fEst) return false;
+                    if(fMent && u.mentorId != fMent) return false;
+                    if(fUni && u.id != fUni) return false;
+                    if(fMod && h.modalidadeId != fMod) return false;
+                    
+                    return true;
+                });
+
+                // Calcular
+                const diasNoMes = new Date(ano, mes + 1, 0).getDate();
+                let totalReceita = 0, totalAulas = 0, somaAlunos = 0, aulasCanceladas = 0;
+                let detalheCanceladas = [];
+                let linhasBrutas = []; // Para agrupamento
+                let unidadesUnicas = new Set(); // Para o novo KPI
+
+                horariosFiltrados.forEach(h => {
+                    unidadesUnicas.add(h.unidadeId);
+                    let aulasCount = 0;
+                    
+                    for(let d=1; d<=diasNoMes; d++) {
+                        const data = new Date(ano, mes, d);
+                        const diaSemana = this.constantes.dias[data.getDay() === 0 ? 6 : data.getDay() - 1];
+                        if(h.dias.includes(diaSemana)) {
+                            const ehFeriado = todosFeriados.find(f => f.d === d);
+                            if(ehFeriado) {
+                                aulasCanceladas++;
+                                const u = this.db.unidades.find(x => x.id == h.unidadeId);
+                                const m = this.db.modalidades.find(x => x.id == h.modalidadeId);
+                                detalheCanceladas.push({ data: `${d}/${mes+1}`, feriado: ehFeriado.nome, unidade: u?.nome, mod: m?.nome, valor: h.valor });
+                            } else {
+                                aulasCount++;
+                            }
+                        }
+                    }
+
+                    const receita = aulasCount * h.valor;
+                    totalReceita += receita;
+                    totalAulas += aulasCount;
+                    somaAlunos += (h.mediaAlunos * aulasCount);
+
+                    const u = this.db.unidades.find(x => x.id == h.unidadeId);
+                    const m = this.db.modalidades.find(x => x.id == h.modalidadeId);
+                    
+                    linhasBrutas.push({
+                        unidade: u?.nome || 'N/A',
+                        pais: u?.pais || '-',
+                        estado: u?.estado || '-',
+                        modalidade: m?.nome || 'N/A',
+                        professor: h.professor,
+                        dias: h.dias, // Array original
+                        diasStr: h.dias.map(d => d.substring(0,3)).join(', '),
+                        valorHora: h.valor,
+                        aulas: aulasCount,
+                        mediaAlunos: h.mediaAlunos,
+                        receita: receita
+                    });
+                });
+
+                document.getElementById('kpi-receita').innerText = `R$ ${totalReceita.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+                document.getElementById('kpi-aulas').innerText = totalAulas;
+                document.getElementById('kpi-media-alunos').innerText = totalAulas > 0 ? Math.round(somaAlunos/totalAulas) : 0;
+                document.getElementById('kpi-canceladas').innerText = aulasCanceladas;
+                document.getElementById('kpi-unidades-count').innerText = unidadesUnicas.size; // NOVO KPI
+
+                this.dadosBrutosFiltrados = linhasBrutas; // Guardar para agrupar
+                this.processarExibicaoTabela(); // Renderizar com agrupamento atual
+
+                document.querySelector('#tabela-canceladas tbody').innerHTML = detalheCanceladas.map(c => `<tr><td>${c.data}</td><td>${c.feriado}</td><td>${c.unidade}</td><td>${c.mod}</td><td class="text-right text-red-600 font-bold">- R$ ${c.valor.toFixed(2)}</td></tr>`).join('');
+                
+                if (horariosFiltrados.length === 0) document.getElementById('relatorio-empty').classList.remove('hidden');
+                else document.getElementById('relatorio-empty').classList.add('hidden');
+            }
+
+            setAgrupamento(modo) {
+                this.modoAgrupamento = modo;
+                document.querySelectorAll('.group-btn').forEach(btn => {
+                    btn.classList.remove('active', 'inactive');
+                    btn.classList.add(btn.id === `grp-${modo}` ? 'active' : 'inactive');
+                });
+                this.processarExibicaoTabela();
+            }
+
+            processarExibicaoTabela() {
+                let dados = [];
+                const modo = this.modoAgrupamento;
+
+                if (modo === 'detalhado') {
+                    dados = this.dadosBrutosFiltrados.map(i => ({...i})); 
+                } else {
+                    let agrupado = {};
+                    
+                    this.dadosBrutosFiltrados.forEach(item => {
+                        let chaves = [];
+                        if (modo === 'dia') {
+                            chaves = item.dias;
+                        } else {
+                            let k = '';
+                            if(modo === 'modalidade') k = item.modalidade;
+                            if(modo === 'professor') k = item.professor;
+                            if(modo === 'unidade') k = item.unidade;
+                            if(modo === 'estado') k = item.estado;
+                            if(modo === 'pais') k = item.pais;
+                            chaves = [k];
+                        }
+
+                        chaves.forEach(chave => {
+                            if (!agrupado[chave]) {
+                                agrupado[chave] = { chave: chave, aulas: 0, receita: 0, somaAlunos: 0 };
+                            }
+                            agrupado[chave].aulas += item.aulas;
+                            agrupado[chave].receita += item.receita;
+                            agrupado[chave].somaAlunos += (item.mediaAlunos * item.aulas);
+                        });
+                    });
+
+                    dados = Object.values(agrupado).map(g => ({
+                        grupo: g.chave,
+                        aulas: g.aulas,
+                        receita: g.receita,
+                        mediaAlunos: g.aulas > 0 ? Math.round(g.somaAlunos / g.aulas) : 0
+                    }));
+                }
+
+                this.dadosExibidos = dados;
+                this.ordenarRelatorio(this.ordenacao.campo, true); // Re-ordenar e renderizar
+            }
+
+            ordenarRelatorio(campo, forceRender = false) {
+                if (!forceRender && this.ordenacao.campo === campo) {
+                    this.ordenacao.direcao = this.ordenacao.direcao === 'asc' ? 'desc' : 'asc';
+                } else {
+                    this.ordenacao.campo = campo;
+                }
+                
+                this.dadosExibidos.sort((a, b) => {
+                    let valA = a[campo];
+                    let valB = b[campo];
+                    if (valA === undefined) valA = a.grupo || 0;
+                    if (valB === undefined) valB = b.grupo || 0;
+                    if (typeof valA === 'string') { valA = valA.toLowerCase(); valB = valB.toLowerCase(); }
+                    
+                    if (valA < valB) return this.ordenacao.direcao === 'asc' ? -1 : 1;
+                    if (valA > valB) return this.ordenacao.direcao === 'asc' ? 1 : -1;
+                    return 0;
+                });
+
+                this.renderizarTabela();
+            }
+
+            renderizarTabela() {
+                const thead = document.getElementById('header-relatorio');
+                const tbody = document.getElementById('body-relatorio');
+                const modo = this.modoAgrupamento;
+                
+                const getArrow = (col) => this.ordenacao.campo === col ? (this.ordenacao.direcao === 'asc' ? '⬆️' : '⬇️') : '';
+                
+                if (modo === 'detalhado') {
+                    thead.innerHTML = `
+                        <th onclick="app.ordenarRelatorio('unidade')">Unidade ${getArrow('unidade')}</th>
+                        <th onclick="app.ordenarRelatorio('modalidade')">Modalidade ${getArrow('modalidade')}</th>
+                        <th onclick="app.ordenarRelatorio('professor')">Professor ${getArrow('professor')}</th>
+                        <th onclick="app.ordenarRelatorio('diasStr')">Dias ${getArrow('diasStr')}</th>
+                        <th onclick="app.ordenarRelatorio('valorHora')" class="text-center">Valor Aula ${getArrow('valorHora')}</th>
+                        <th onclick="app.ordenarRelatorio('aulas')" class="text-center">Qtd Aulas ${getArrow('aulas')}</th>
+                        <th onclick="app.ordenarRelatorio('mediaAlunos')" class="text-center">Média Alunos ${getArrow('mediaAlunos')}</th>
+                        <th onclick="app.ordenarRelatorio('receita')" class="text-right">Receita ${getArrow('receita')}</th>
+                    `;
+                    tbody.innerHTML = this.dadosExibidos.map(row => `
+                        <tr>
+                            <td class="font-bold text-gray-700 text-xs">${row.unidade}<br><span class="text-[9px] text-gray-400 font-normal">${row.pais}, ${row.estado}</span></td>
+                            <td class="text-xs text-blue-600 font-bold">${row.modalidade}</td>
+                            <td class="text-xs">${row.professor}</td>
+                            <td class="text-xs text-gray-500">${row.diasStr}</td>
+                            <td class="text-center font-mono text-xs">R$ ${row.valorHora.toFixed(2)}</td>
+                            <td class="text-center font-mono bg-gray-50 text-xs">${row.aulas}</td>
+                            <td class="text-center font-bold text-xs">${row.mediaAlunos}</td>
+                            <td class="text-right font-bold text-green-600 text-xs">R$ ${row.receita.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                        </tr>
+                    `).join('');
+                } else {
+                    const tituloGrupo = modo.charAt(0).toUpperCase() + modo.slice(1);
+                    thead.innerHTML = `
+                        <th onclick="app.ordenarRelatorio('grupo')">${tituloGrupo} ${getArrow('grupo')}</th>
+                        <th onclick="app.ordenarRelatorio('aulas')" class="text-center">Total Aulas ${getArrow('aulas')}</th>
+                        <th onclick="app.ordenarRelatorio('mediaAlunos')" class="text-center">Média Alunos (Pond.) ${getArrow('mediaAlunos')}</th>
+                        <th onclick="app.ordenarRelatorio('receita')" class="text-right">Receita Total ${getArrow('receita')}</th>
+                    `;
+                    tbody.innerHTML = this.dadosExibidos.map(row => `
+                        <tr>
+                            <td class="font-bold text-gray-800 text-sm">${row.grupo}</td>
+                            <td class="text-center font-mono bg-gray-50 text-sm">${row.aulas}</td>
+                            <td class="text-center font-bold text-sm">${row.mediaAlunos}</td>
+                            <td class="text-right font-bold text-green-600 text-sm">R$ ${row.receita.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                        </tr>
+                    `).join('');
+                }
+            }
+
+            renderCronograma() {
+                const uId = document.getElementById('cronograma-unidade-select').value;
+                const container = document.getElementById('cronograma-container');
+                if(!uId) return container.innerHTML = '<div class="p-12 text-center text-gray-400">Selecione uma unidade.</div>';
+
+                const grades = this.db.horarios.filter(h => h.unidadeId == uId);
+                const times = [...new Set(grades.map(h => h.hora))].sort();
+
+                let html = `<table class="w-full border-collapse min-w-[800px]"><thead><tr><th class="p-2 bg-gray-50 border text-xs">HORA</th>` + 
+                    this.constantes.dias.map(d => `<th class="p-2 bg-gray-50 border text-xs uppercase">${d}</th>`).join('') + `</tr></thead><tbody>`;
+
+                if(times.length === 0) html += `<tr><td colspan="8" class="p-8 text-center text-gray-400">Sem aulas.</td></tr>`;
+
+                times.forEach(hora => {
+                    html += `<tr><td class="p-2 border font-bold text-center bg-gray-50 text-xs">${hora}</td>`;
+                    this.constantes.dias.forEach(dia => {
+                        const aula = grades.find(h => h.hora === hora && h.dias.includes(dia));
+                        if(aula) {
+                            const mod = this.db.modalidades.find(m => m.id == aula.modalidadeId);
+                            html += `<td class="p-1 border h-16 align-top">
+                                <div class="aula-card rounded p-1 text-[10px] text-white shadow-sm h-full group" style="background:${mod?.cor || '#ccc'}">
+                                    <div class="font-bold uppercase leading-tight">${mod?.nome}</div>
+                                    <div class="opacity-90 truncate">${aula.professor}</div>
+                                    <div class="mt-1 pt-1 border-t border-white/20">👥 ${aula.mediaAlunos}</div>
+                                    
+                                    <div class="card-actions absolute inset-0 bg-black/60 rounded flex items-center justify-center gap-2 backdrop-blur-sm transition-opacity">
+                                        <button onclick="app.editarHorario(${aula.id})" class="bg-blue-500 hover:bg-blue-600 text-white p-1 rounded" title="Editar">✏️</button>
+                                        <button onclick="app.remove('horarios', ${aula.id}); app.renderCronograma()" class="bg-red-500 hover:bg-red-600 text-white p-1 rounded" title="Excluir">🗑️</button>
+                                    </div>
+                                </div>
+                            </td>`;
+                        } else {
+                            html += `<td class="border bg-slate-50/30"></td>`;
+                        }
+                    });
+                    html += `</tr>`;
+                });
+                container.innerHTML = html + `</tbody></table>`;
+            }
+
+            salvarBackup() {
+                const blob = new Blob([JSON.stringify(this.db, null, 2)], { type: 'application/json' });
+                const link = document.createElement("a");
+                link.href = URL.createObjectURL(blob);
+                link.download = `Backup_Pratique_${new Date().toISOString().split('T')[0]}.json`;
+                link.click();
+            }
+
+            exportarRelatorioGeral() {
+                this.exportarCSV(); 
+            }
+
+            exportarCSV() {
+                const linhas = document.querySelectorAll('#tabela-relatorio tr');
+                let csv = "";
+                linhas.forEach(row => {
+                    const cols = row.querySelectorAll('td, th');
+                    const dados = Array.from(cols).map(c => c.innerText.replace(/\n/g, ' ').trim());
+                    csv += dados.join(';') + "\n";
+                });
+                this.downloadCSV(csv, `Relatorio_Geral_Pratique.csv`);
+            }
+
+            notify(type, msg) {
+                const toast = document.getElementById('toast');
+                document.getElementById('toast-msg').innerText = msg;
+                toast.classList.remove('translate-x-full');
+                setTimeout(() => toast.classList.add('translate-x-full'), 3000);
+            }
+        }
+
+        const app = new SistemaPratique();
+    </script>
+</body>
+</html>
