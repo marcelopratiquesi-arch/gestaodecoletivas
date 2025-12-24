@@ -44,12 +44,13 @@
         .sidebar-link:hover { background-color: rgba(255,255,255,0.05); color: white; }
         .sidebar-link.active { background-color: rgba(59, 130, 246, 0.1); color: #60a5fa; border-left-color: #60a5fa; }
 
+        /* Tabela interativa com cursor pointer nos headers */
         .table-custom th {
             background-color: #f8fafc; color: #475569; font-size: 0.75rem;
-            text-transform: uppercase; letter-spacing: 0.05em; padding: 12px 16px; font-weight: 600;
-            cursor: pointer; user-select: none; transition: background 0.2s; white-space: nowrap;
+            text-transform: uppercase; letter-spacing: 0.05em; padding: 12px 16px; font-weight: 700;
+            cursor: pointer; user-select: none; transition: background 0.2s, color 0.2s; white-space: nowrap;
         }
-        .table-custom th:hover { background-color: #e2e8f0; color: #1e293b; }
+        .table-custom th:hover { background-color: #e2e8f0; color: #0056b3; }
         .table-custom td { padding: 10px 16px; border-bottom: 1px solid #f1f5f9; color: #334155; vertical-align: middle; }
         .table-custom tr:last-child td { border-bottom: none; }
         .table-custom tr:hover { background-color: #f8fafc; }
@@ -120,7 +121,7 @@
                 <div class="w-10 h-10 md:w-8 md:h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-sm md:text-xs">A</div>
                 <div>
                     <p class="text-white text-sm md:text-xs font-bold">Admin</p>
-                    <p class="text-xs flex items-center gap-1"><span id="status-dot" class="status-dot status-offline"></span> <span id="status-text">Offline</span></p>
+                    <p class="text-xs flex items-center gap-1"><span class="status-dot status-offline"></span> Offline</p>
                 </div>
             </div>
         </div>
@@ -182,7 +183,7 @@
                     </div>
                 </div>
 
-                <!-- KPIs -->
+                <!-- KPIs (ATUALIZADO COM 6 COLUNAS) -->
                 <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4 mb-6">
                     <div class="glass-panel p-3 md:p-4 border-l-4 border-blue-500 col-span-2 md:col-span-1">
                         <p class="text-[10px] font-bold text-gray-400 uppercase">Investimento Total</p>
@@ -310,18 +311,6 @@
 
             <!-- ================= ABA CONFIGURAÇÃO ================= -->
             <div id="view-config" class="view-section hidden fade-in pb-20">
-                <div class="glass-panel p-4 md:p-6 border-2 border-green-100 mb-6 relative overflow-hidden">
-                    <div class="absolute top-0 right-0 p-4 opacity-10">
-                        <i data-lucide="sheet" class="w-24 h-24 text-green-600"></i>
-                    </div>
-                    <h3 class="font-bold text-green-800 mb-2 flex items-center gap-2 text-sm uppercase">
-                        <span class="bg-green-100 p-1 rounded"><i data-lucide="cloud" class="w-4 h-4 text-green-600"></i></span> Integração Google Planilhas
-                    </h3>
-                    <div class="flex flex-col md:flex-row gap-3 items-end">
-                        <div class="w-full md:flex-1"><label class="block text-xs font-bold text-gray-500 mb-1">URL do Web App</label><input type="text" id="config-api-url" class="w-full p-2 border rounded text-xs h-10 font-mono text-gray-600 bg-slate-50" placeholder="https://script.google.com/..."></div>
-                        <button onclick="app.salvarUrlApi()" class="w-full md:w-auto bg-green-600 text-white px-4 rounded text-xs font-bold hover:bg-green-700 h-10 flex items-center justify-center gap-2"><i data-lucide="check" class="w-4 h-4"></i> Conectar</button>
-                    </div>
-                </div>
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
                     <!-- Coluna 1 -->
                     <div class="lg:col-span-1 space-y-6">
