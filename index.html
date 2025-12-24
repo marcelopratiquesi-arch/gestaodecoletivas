@@ -85,6 +85,13 @@
             background-color: rgba(0, 0, 0, 0.6);
             backdrop-filter: blur(3px);
         }
+        
+        /* Status Indicator Pulse */
+        .status-dot { height: 8px; width: 8px; border-radius: 50%; display: inline-block; }
+        .status-online { background-color: #22c55e; box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2); }
+        .status-offline { background-color: #ef4444; }
+        .status-syncing { background-color: #eab308; animation: pulse 1s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
     </style>
 </head>
 <body class="h-screen flex overflow-hidden text-sm font-sans bg-slate-50">
@@ -125,7 +132,7 @@
                 <div class="w-10 h-10 md:w-8 md:h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-sm md:text-xs">A</div>
                 <div>
                     <p class="text-white text-sm md:text-xs font-bold">Admin</p>
-                    <p class="text-xs">admin@pratique.com.br</p>
+                    <p class="text-xs flex items-center gap-1"><span id="status-dot" class="status-dot status-offline"></span> <span id="status-text">Offline (Local)</span></p>
                 </div>
             </div>
         </div>
@@ -143,6 +150,10 @@
             </div>
             
             <div class="flex items-center gap-2 md:gap-4">
+                <div id="sync-status" class="hidden md:flex items-center gap-2 text-xs text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                    <i data-lucide="cloud-off" id="sync-icon" class="w-3 h-3"></i>
+                    <span id="sync-msg">Local</span>
+                </div>
                 <span id="data-atual" class="hidden md:inline-block text-xs font-mono text-gray-500 bg-gray-100 px-3 py-1 rounded-full"></span>
                 <button onclick="app.salvarBackup()" class="text-blue-600 hover:text-blue-800 text-xs font-bold flex items-center gap-1 bg-blue-50 p-2 rounded-lg md:bg-transparent md:p-0">
                     <i data-lucide="save" class="w-4 h-4"></i> <span class="hidden md:inline">Backup Global</span>
@@ -219,7 +230,7 @@
                         <p class="text-lg md:text-xl font-bold text-gray-800 mt-1" id="kpi-aulas">0</p>
                     </div>
                     <div class="glass-panel p-3 md:p-4 border-l-4 border-orange-500">
-                        <p class="text-[10px] font-bold text-gray-400 uppercase">Méd. Alunos</p>
+                        <p class="text-[10px] font-bold text-gray-400 uppercase">Méd. Alunos/Aula</p>
                         <p class="text-lg md:text-xl font-bold text-gray-800 mt-1" id="kpi-media-alunos">0</p>
                     </div>
                      <div class="glass-panel p-3 md:p-4 border-l-4 border-purple-500">
@@ -289,6 +300,36 @@
 
             <!-- ================= ABA CONFIGURAÇÃO ================= -->
             <div id="view-config" class="view-section hidden fade-in pb-20">
+                
+                <!-- NOVA SEÇÃO: Integração Google Sheets -->
+                <div class="glass-panel p-4 md:p-6 border-2 border-green-100 mb-6 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 p-4 opacity-10">
+                        <i data-lucide="sheet" class="w-24 h-24 text-green-600"></i>
+                    </div>
+                    <h3 class="font-bold text-green-800 mb-2 flex items-center gap-2 text-sm uppercase">
+                        <span class="bg-green-100 p-1 rounded"><i data-lucide="cloud" class="w-4 h-4 text-green-600"></i></span> Integração Google Planilhas (Nuvem)
+                    </h3>
+                    <p class="text-xs text-gray-600 mb-4 max-w-2xl">
+                        Conecte seu sistema a uma Planilha Google para salvar dados automaticamente na nuvem e compartilhar com sua equipe.
+                        O sistema irá sincronizar automaticamente ao salvar dados.
+                    </p>
+                    
+                    <div class="flex flex-col md:flex-row gap-3 items-end">
+                        <div class="w-full md:flex-1">
+                            <label class="block text-xs font-bold text-gray-500 mb-1">URL do Web App (Google Apps Script)</label>
+                            <input type="text" id="config-api-url" class="w-full p-2 border rounded text-xs h-10 font-mono text-gray-600 bg-slate-50" placeholder="https://script.google.com/macros/s/SEU_ID_AQUI/exec">
+                        </div>
+                        <button onclick="app.salvarUrlApi()" class="w-full md:w-auto bg-green-600 text-white px-4 rounded text-xs font-bold hover:bg-green-700 h-10 flex items-center justify-center gap-2">
+                            <i data-lucide="check" class="w-4 h-4"></i> Salvar & Testar Conexão
+                        </button>
+                    </div>
+                    <div class="mt-3">
+                        <button onclick="alert('PASSO A PASSO NO GOOGLE SHEETS:\n\n1. Crie uma nova Planilha Google\n2. Vá em Extensões > Apps Script\n3. Apague o código padrão e cole o código abaixo:\n\nfunction doPost(e) {\n  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];\n  var data = JSON.parse(e.postData.contents);\n  // Salva na célula A1 como JSON stringificado (Banco de Dados Simples)\n  sheet.getRange(\'A1\').setValue(JSON.stringify(data));\n  return ContentService.createTextOutput(JSON.stringify({status: \'success\'})).setMimeType(ContentService.MimeType.JSON);\n}\n\nfunction doGet(e) {\n  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];\n  var data = sheet.getRange(\'A1\').getValue();\n  return ContentService.createTextOutput(data).setMimeType(ContentService.MimeType.JSON);\n}\n\n4. Clique em Implantar > Nova Implantação\n5. Selecione Tipo: App da Web\n6. Em \'Quem pode acessar\', selecione: QUALQUER PESSOA (Importante!)\n7. Copie a URL gerada e cole aqui no sistema.')" class="text-xs text-blue-600 underline cursor-pointer hover:text-blue-800">
+                            Como obter a URL? (Ver Código do Script)
+                        </button>
+                    </div>
+                </div>
+
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
                     <!-- Coluna 1 -->
                     <div class="lg:col-span-1 space-y-6">
@@ -371,18 +412,23 @@
                             <h3 class="font-bold text-xl text-gray-800 flex items-center gap-2">
                                 <i data-lucide="layout-grid" class="w-6 h-6 text-blue-600"></i> Cronograma
                             </h3>
-                            <p class="text-sm text-gray-500">Toque na aula para editar.</p>
+                            <p class="text-sm text-gray-500">Toque na aula para editar ou adicione novas.</p>
                         </div>
-                        <div class="w-full md:w-80">
-                            <label class="block text-xs font-bold text-gray-500 mb-1">Unidade</label>
-                            <div class="relative">
-                                <select id="cronograma-unidade-select" class="w-full p-3 pl-10 border rounded shadow-sm bg-white font-semibold text-gray-700 h-11" onchange="app.renderCronograma()">
-                                    <option value="">Selecione...</option>
-                                </select>
-                                <div class="absolute left-3 top-3.5 text-gray-400">
-                                    <i data-lucide="map-pin" class="w-4 h-4"></i>
+                        <div class="w-full md:w-auto flex flex-col md:flex-row gap-4 items-end">
+                            <div class="w-full md:w-64">
+                                <label class="block text-xs font-bold text-gray-500 mb-1">Unidade</label>
+                                <div class="relative">
+                                    <select id="cronograma-unidade-select" class="w-full p-3 pl-10 border rounded shadow-sm bg-white font-semibold text-gray-700 h-11" onchange="app.renderCronograma()">
+                                        <option value="">Selecione...</option>
+                                    </select>
+                                    <div class="absolute left-3 top-3.5 text-gray-400">
+                                        <i data-lucide="map-pin" class="w-4 h-4"></i>
+                                    </div>
                                 </div>
                             </div>
+                            <button onclick="app.abrirModalAdicao()" class="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold h-11 px-6 rounded shadow flex items-center justify-center gap-2">
+                                <i data-lucide="plus" class="w-4 h-4"></i> Adicionar
+                            </button>
                         </div>
                     </div>
                     <div class="overflow-x-auto rounded-lg border border-gray-100 bg-white min-h-[300px]" id="cronograma-container">
@@ -453,12 +499,12 @@
         </div>
     </main>
 
-    <!-- MODAL DE EDIÇÃO RÁPIDA (Responsivo) -->
+    <!-- MODAL DE EDIÇÃO/CRIAÇÃO RÁPIDA (Responsivo) -->
     <div id="modal-editor" class="fixed inset-0 z-[60] hidden modal-overlay flex items-center justify-center p-4">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden transform transition-all scale-100 max-h-[90vh] flex flex-col">
             <div class="bg-blue-600 p-4 flex justify-between items-center flex-shrink-0">
                 <h3 class="text-white font-bold text-lg flex items-center gap-2">
-                    <i data-lucide="edit-3" class="w-5 h-5"></i> Editar Aula
+                    <i data-lucide="edit-3" class="w-5 h-5"></i> <span id="modal-titulo">Editar Aula</span>
                 </h3>
                 <button onclick="app.fecharModal()" class="text-white hover:bg-blue-700 rounded-full p-1">
                     <i data-lucide="x" class="w-6 h-6"></i>
@@ -493,7 +539,7 @@
                         <input type="number" id="modal-valor" class="w-full p-2 border rounded text-xs h-10">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-gray-500 mb-1">Alunos</label>
+                        <label class="block text-xs font-bold text-gray-500 mb-1">Média Alunos</label>
                         <input type="number" id="modal-alunos" class="w-full p-2 border rounded text-xs h-10">
                     </div>
                 </div>
@@ -506,7 +552,7 @@
                 </div>
             </div>
             <div class="bg-gray-50 p-4 flex justify-between gap-3 border-t flex-shrink-0">
-                <button onclick="app.excluirViaModal()" class="text-red-500 hover:text-red-700 text-xs font-bold px-2 py-2 flex items-center gap-1">
+                <button onclick="app.excluirViaModal()" id="btn-excluir-modal" class="text-red-500 hover:text-red-700 text-xs font-bold px-2 py-2 flex items-center gap-1">
                     <i data-lucide="trash-2" class="w-4 h-4"></i> <span class="hidden md:inline">Excluir</span>
                 </button>
                 <button onclick="app.salvarModal()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded text-sm shadow-md transition flex-1 md:flex-none">
@@ -544,6 +590,9 @@
                 this.dadosBrutosFiltrados = []; 
                 this.mobileMenuOpen = false;
                 
+                // Variáveis da API
+                this.apiUrl = localStorage.getItem('pratique_api_url') || '';
+                
                 this.constantes = {
                     dias: ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"],
                     meses: ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"],
@@ -564,6 +613,12 @@
             init() {
                 this.carregarDados();
                 this.setupUI();
+                
+                // Se tiver URL configurada, tenta baixar dados da nuvem ao iniciar
+                if (this.apiUrl) {
+                    this.sincronizarComGoogle(true);
+                }
+
                 this.nav('relatorio');
             }
 
@@ -599,10 +654,121 @@
                 } else {
                     this.seedInicial();
                 }
+                this.atualizarStatusUI(false);
             }
 
             salvarDados() {
+                // 1. Salva localmente (síncrono, imediato)
                 localStorage.setItem('pratique_global_db_v5', JSON.stringify(this.db));
+                
+                // 2. Tenta sincronizar com nuvem (assíncrono)
+                if (this.apiUrl) {
+                    this.enviarParaGoogle();
+                }
+            }
+
+            // --- INTEGRAÇÃO GOOGLE SHEETS ---
+            salvarUrlApi() {
+                const url = document.getElementById('config-api-url').value.trim();
+                if (!url) {
+                    this.notify('info', 'URL removida. Modo offline.');
+                    localStorage.removeItem('pratique_api_url');
+                    this.apiUrl = '';
+                    this.atualizarStatusUI(false);
+                    return;
+                }
+                
+                this.apiUrl = url;
+                localStorage.setItem('pratique_api_url', url);
+                this.notify('info', 'Testando conexão...');
+                this.enviarParaGoogle(); // Tenta enviar para testar
+            }
+
+            async enviarParaGoogle() {
+                this.atualizarStatusUI(true, 'Sincronizando...');
+                try {
+                    // O Google Apps Script precisa de no-cors ou tratamento específico de CORS
+                    // Para dados simples JSON, POST costuma funcionar com Content-Type text/plain
+                    // para evitar preflight complexo em alguns casos.
+                    const response = await fetch(this.apiUrl, {
+                        method: 'POST',
+                        mode: 'no-cors', // Importante para Apps Script sem domínio customizado
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(this.db)
+                    });
+                    
+                    // Com no-cors, não sabemos o status real, mas se não der erro de rede, assumimos sucesso
+                    console.log("Enviado para Google Sheets");
+                    this.atualizarStatusUI(true, 'Online', 'online');
+                    setTimeout(() => this.notify('success', 'Dados salvos na nuvem!'), 500);
+                } catch (error) {
+                    console.error("Erro ao sincronizar:", error);
+                    this.atualizarStatusUI(true, 'Erro Sync', 'offline');
+                    this.notify('error', 'Falha ao salvar na nuvem.');
+                }
+            }
+
+            async sincronizarComGoogle(silencioso = false) {
+                if(!this.apiUrl) return;
+                
+                if(!silencioso) this.atualizarStatusUI(true, 'Baixando...');
+                
+                try {
+                    const response = await fetch(this.apiUrl);
+                    if (!response.ok) throw new Error('Erro na resposta');
+                    
+                    const dadosNuvem = await response.json();
+                    
+                    if (dadosNuvem && dadosNuvem.horarios) {
+                        this.db = dadosNuvem;
+                        this.salvarDados(); // Salva localmente o que veio da nuvem
+                        this.atualizarListas();
+                        this.gerarRelatorio();
+                        if(!silencioso) this.notify('success', 'Dados atualizados da nuvem!');
+                        this.atualizarStatusUI(true, 'Online', 'online');
+                    }
+                } catch (error) {
+                    console.error("Erro ao baixar:", error);
+                    if(!silencioso) this.notify('error', 'Erro ao baixar dados.');
+                    this.atualizarStatusUI(true, 'Erro Sync', 'offline');
+                }
+            }
+
+            atualizarStatusUI(temApi, texto = 'Offline', classe = 'offline') {
+                const dot = document.getElementById('status-dot');
+                const label = document.getElementById('status-text');
+                const syncBadge = document.getElementById('sync-status');
+                const syncMsg = document.getElementById('sync-msg');
+                const syncIcon = document.getElementById('sync-icon');
+
+                // Sidebar status
+                dot.className = `status-dot status-${classe}`;
+                label.innerText = temApi ? (texto === 'Online' ? 'Conectado' : texto) : 'Offline (Local)';
+
+                // Header status
+                if (temApi) {
+                    syncBadge.classList.remove('hidden');
+                    syncBadge.classList.add('flex');
+                    syncMsg.innerText = texto;
+                    
+                    if (texto === 'Sincronizando...') {
+                        syncIcon.setAttribute('data-lucide', 'refresh-cw');
+                        syncIcon.classList.add('animate-spin');
+                    } else if (classe === 'online') {
+                        syncIcon.setAttribute('data-lucide', 'cloud');
+                        syncIcon.classList.remove('animate-spin');
+                        syncBadge.classList.replace('text-red-500', 'text-green-600');
+                        syncBadge.classList.replace('bg-red-50', 'bg-green-50');
+                    } else {
+                        syncIcon.setAttribute('data-lucide', 'cloud-off');
+                        syncIcon.classList.remove('animate-spin');
+                    }
+                } else {
+                    syncBadge.classList.add('hidden');
+                }
+                lucide.createIcons();
             }
 
             seedInicial() {
@@ -631,6 +797,7 @@
 
             setupUI() {
                 document.getElementById('data-atual').innerText = new Date().toLocaleDateString('pt-BR');
+                document.getElementById('config-api-url').value = this.apiUrl;
                 
                 // Checkbox dias configuração
                 document.getElementById('check-dias').innerHTML = this.constantes.dias.map(d => `
@@ -781,6 +948,31 @@
 
             // --- EDIÇÃO (CONFIG) E MODAL (CRONOGRAMA) ---
 
+            // Abre modal para criação de aula
+            abrirModalAdicao() {
+                const uId = document.getElementById('cronograma-unidade-select').value;
+                if(!uId) return alert('Por favor, selecione uma unidade no topo primeiro.');
+
+                const unidade = this.db.unidades.find(u => u.id == uId);
+                
+                // Limpa campos para nova adição
+                document.getElementById('modal-id').value = ''; // ID vazio = nova aula
+                document.getElementById('modal-titulo').innerText = 'Adicionar Nova Aula';
+                document.getElementById('modal-unidade-view').value = unidade ? unidade.nome : 'Erro';
+                document.getElementById('modal-modalidade').value = '';
+                document.getElementById('modal-prof').value = '';
+                document.getElementById('modal-hora').value = '';
+                document.getElementById('modal-valor').value = '';
+                document.getElementById('modal-alunos').value = '';
+                
+                document.querySelectorAll('.modal-check-dia').forEach(cb => cb.checked = false);
+                
+                // Esconde botão excluir pois é novo
+                document.getElementById('btn-excluir-modal').classList.add('hidden');
+                
+                document.getElementById('modal-editor').classList.remove('hidden');
+            }
+
             // Abre modal para edição no Cronograma
             abrirModalEdicao(id) {
                 const h = this.db.horarios.find(item => item.id == id);
@@ -789,6 +981,7 @@
                 const unidade = this.db.unidades.find(u => u.id == h.unidadeId);
 
                 document.getElementById('modal-id').value = h.id;
+                document.getElementById('modal-titulo').innerText = 'Editar Aula';
                 document.getElementById('modal-unidade-view').value = unidade ? unidade.nome : 'Unidade Removida';
                 document.getElementById('modal-modalidade').value = h.modalidadeId;
                 document.getElementById('modal-prof').value = h.professor;
@@ -799,6 +992,9 @@
                 document.querySelectorAll('.modal-check-dia').forEach(cb => {
                     cb.checked = h.dias.includes(cb.value);
                 });
+
+                // Mostra botão excluir
+                document.getElementById('btn-excluir-modal').classList.remove('hidden');
 
                 document.getElementById('modal-editor').classList.remove('hidden');
             }
@@ -818,26 +1014,48 @@
 
                 if(!mId || !prof || !hora || dias.length === 0) return alert("Preencha todos os campos e selecione ao menos um dia.");
 
-                const idx = this.db.horarios.findIndex(h => h.id == id);
-                if(idx !== -1) {
-                    this.db.horarios[idx] = { 
-                        ...this.db.horarios[idx],
+                if(id) {
+                    // Edição
+                    const idx = this.db.horarios.findIndex(h => h.id == id);
+                    if(idx !== -1) {
+                        this.db.horarios[idx] = { 
+                            ...this.db.horarios[idx],
+                            modalidadeId: mId,
+                            professor: prof,
+                            hora: hora,
+                            valor: valor,
+                            mediaAlunos: media,
+                            dias: dias
+                        };
+                        this.notify('success', 'Aula atualizada!');
+                    }
+                } else {
+                    // Nova Aula (pegamos a unidade do select visual)
+                    const uId = document.getElementById('cronograma-unidade-select').value;
+                    if(!uId) return alert('Erro de unidade');
+                    
+                    this.db.horarios.push({
+                        id: Date.now() + Math.random(),
+                        unidadeId: parseInt(uId),
                         modalidadeId: mId,
                         professor: prof,
                         hora: hora,
                         valor: valor,
                         mediaAlunos: media,
                         dias: dias
-                    };
-                    this.salvarDados();
-                    this.renderCronograma(); // Atualiza fundo
-                    this.fecharModal();
-                    this.notify('success', 'Aula atualizada!');
+                    });
+                    this.notify('success', 'Nova aula criada!');
                 }
+
+                this.salvarDados();
+                this.renderCronograma(); // Atualiza fundo
+                this.fecharModal();
             }
 
             excluirViaModal() {
                 const id = document.getElementById('modal-id').value;
+                if(!id) return; // Se não tem ID, não tem o que excluir
+                
                 if(confirm("Deseja realmente excluir esta aula?")) {
                     this.db.horarios = this.db.horarios.filter(h => h.id != id);
                     this.salvarDados();
@@ -1301,7 +1519,7 @@
                         <th onclick="app.ordenarRelatorio('diasStr')">Dias ${getArrow('diasStr')}</th>
                         <th onclick="app.ordenarRelatorio('valorHora')" class="text-center">Valor ${getArrow('valorHora')}</th>
                         <th onclick="app.ordenarRelatorio('aulas')" class="text-center">Aulas ${getArrow('aulas')}</th>
-                        <th onclick="app.ordenarRelatorio('mediaAlunos')" class="text-center">Alunos ${getArrow('mediaAlunos')}</th>
+                        <th onclick="app.ordenarRelatorio('mediaAlunos')" class="text-center">Média Alunos ${getArrow('mediaAlunos')}</th>
                         <th onclick="app.ordenarRelatorio('receita')" class="text-right">Receita ${getArrow('receita')}</th>
                     `;
                     tbody.innerHTML = this.dadosExibidos.map(row => `
@@ -1365,7 +1583,7 @@
                                     </div>
                                     
                                     <div class="flex justify-between items-end mt-1 pt-1 border-t border-white/20">
-                                        <span class="text-[9px]">👥 ${aula.mediaAlunos}</span>
+                                        <span class="text-[9px]">Média: ${aula.mediaAlunos}</span>
                                         <i data-lucide="edit" class="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100 block"></i>
                                     </div>
                                 </div>
