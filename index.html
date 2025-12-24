@@ -2,11 +2,13 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Pratique Coletivas - Gestão Happy Zone</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Ícones Lucide para visual moderno -->
+    <script src="https://unpkg.com/lucide@latest"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -28,6 +30,7 @@
     </script>
     <style>
         body { background-color: #f1f5f9; }
+        /* Scrollbar suave */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
@@ -47,7 +50,7 @@
         .table-custom th {
             background-color: #f8fafc; color: #475569; font-size: 0.75rem;
             text-transform: uppercase; letter-spacing: 0.05em; padding: 12px 16px; font-weight: 600;
-            cursor: pointer; user-select: none; transition: background 0.2s;
+            cursor: pointer; user-select: none; transition: background 0.2s; white-space: nowrap;
         }
         .table-custom th:hover { background-color: #e2e8f0; color: #1e293b; }
         .table-custom td { padding: 14px 16px; border-bottom: 1px solid #f1f5f9; color: #334155; vertical-align: middle; }
@@ -59,11 +62,16 @@
         .aula-card .card-actions { display: none; }
         .aula-card:hover .card-actions { display: flex; }
         
+        /* Mobile Specific fixes */
+        @media (max-width: 768px) {
+            .aula-card .card-actions { display: flex; opacity: 1; background: rgba(0,0,0,0.3); } /* Sempre mostrar ações no mobile se necessário */
+        }
+
         .fade-in { animation: fadeIn 0.3s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
         
         .group-btn {
-            @apply px-3 py-1.5 text-xs font-semibold border rounded transition shadow-sm;
+            @apply px-3 py-2 text-xs font-semibold border rounded transition shadow-sm flex-1 whitespace-nowrap justify-center flex items-center;
         }
         .group-btn.active {
             @apply bg-blue-600 text-white border-blue-600;
@@ -71,37 +79,52 @@
         .group-btn.inactive {
             @apply bg-white text-gray-600 border-gray-200 hover:bg-gray-50;
         }
+
+        /* Modal Overlay */
+        .modal-overlay {
+            background-color: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(3px);
+        }
     </style>
 </head>
-<body class="h-screen flex overflow-hidden text-sm">
+<body class="h-screen flex overflow-hidden text-sm font-sans bg-slate-50">
 
-    <!-- SIDEBAR -->
-    <aside class="w-64 bg-pratique-sidebar text-gray-400 flex flex-col flex-shrink-0 transition-all duration-300">
-        <div class="p-6 border-b border-gray-800">
-            <h1 class="text-xl font-bold text-white tracking-tight">PRATIQUE <span class="text-blue-500">COLETIVAS</span></h1>
-            <p class="text-xs mt-1 opacity-60">Gestão Happy Zone</p>
+    <!-- OVERLAY MOBILE -->
+    <div id="mobile-menu-overlay" onclick="app.toggleMenu()" class="fixed inset-0 bg-black/50 z-40 hidden md:hidden backdrop-blur-sm transition-opacity"></div>
+
+    <!-- SIDEBAR (Adaptada para Mobile) -->
+    <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-pratique-sidebar text-gray-400 flex flex-col flex-shrink-0 transition-transform duration-300 transform -translate-x-full md:relative md:translate-x-0 shadow-2xl md:shadow-none">
+        <div class="p-6 border-b border-gray-800 flex justify-between items-center">
+            <div>
+                <h1 class="text-xl font-bold text-white tracking-tight">PRATIQUE <span class="text-blue-500">COLETIVAS</span></h1>
+                <p class="text-xs mt-1 opacity-60">Gestão Happy Zone</p>
+            </div>
+            <!-- Botão fechar apenas mobile -->
+            <button onclick="app.toggleMenu()" class="md:hidden text-gray-400 hover:text-white">
+                <i data-lucide="x" class="w-6 h-6"></i>
+            </button>
         </div>
 
         <nav class="flex-1 overflow-y-auto py-4 space-y-1">
-            <button onclick="app.nav('relatorio')" id="nav-relatorio" class="sidebar-link active w-full text-left px-6 py-3 flex items-center gap-3">
-                <span class="text-lg">📊</span> Relatório Gerencial
+            <button onclick="app.nav('relatorio')" id="nav-relatorio" class="sidebar-link active w-full text-left px-6 py-4 md:py-3 flex items-center gap-3">
+                <i data-lucide="bar-chart-2" class="w-5 h-5"></i> <span class="font-medium">Relatório Gerencial</span>
             </button>
-            <button onclick="app.nav('config')" id="nav-config" class="sidebar-link w-full text-left px-6 py-3 flex items-center gap-3">
-                <span class="text-lg">⚙️</span> Configurações
+            <button onclick="app.nav('config')" id="nav-config" class="sidebar-link w-full text-left px-6 py-4 md:py-3 flex items-center gap-3">
+                <i data-lucide="settings" class="w-5 h-5"></i> <span class="font-medium">Configurações</span>
             </button>
-            <button onclick="app.nav('cronograma')" id="nav-cronograma" class="sidebar-link w-full text-left px-6 py-3 flex items-center gap-3">
-                <span class="text-lg">📅</span> Cronograma Visual
+            <button onclick="app.nav('cronograma')" id="nav-cronograma" class="sidebar-link w-full text-left px-6 py-4 md:py-3 flex items-center gap-3">
+                <i data-lucide="calendar" class="w-5 h-5"></i> <span class="font-medium">Cronograma Visual</span>
             </button>
-            <button onclick="app.nav('importacao')" id="nav-importacao" class="sidebar-link w-full text-left px-6 py-3 flex items-center gap-3">
-                <span class="text-lg">🛠️</span> Ferramentas Avançadas
+            <button onclick="app.nav('importacao')" id="nav-importacao" class="sidebar-link w-full text-left px-6 py-4 md:py-3 flex items-center gap-3">
+                <i data-lucide="database" class="w-5 h-5"></i> <span class="font-medium">Ferramentas Avançadas</span>
             </button>
         </nav>
 
         <div class="p-4 border-t border-gray-800 bg-gray-900/50">
             <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-xs">A</div>
+                <div class="w-10 h-10 md:w-8 md:h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-sm md:text-xs">A</div>
                 <div>
-                    <p class="text-white text-xs font-bold">Admin</p>
+                    <p class="text-white text-sm md:text-xs font-bold">Admin</p>
                     <p class="text-xs">admin@pratique.com.br</p>
                 </div>
             </div>
@@ -109,125 +132,126 @@
     </aside>
 
     <!-- CONTEÚDO PRINCIPAL -->
-    <main class="flex-1 flex flex-col bg-slate-50 overflow-hidden relative">
-        <header class="h-16 bg-white border-b border-gray-200 flex justify-between items-center px-8 flex-shrink-0">
-            <h2 id="page-title" class="text-lg font-bold text-gray-700">Visão Geral</h2>
-            <div class="flex items-center gap-4">
-                <span id="data-atual" class="text-xs font-mono text-gray-500 bg-gray-100 px-3 py-1 rounded-full"></span>
-                <button onclick="app.salvarBackup()" class="text-blue-600 hover:text-blue-800 text-xs font-bold flex items-center gap-1">
-                    💾 Backup Global
+    <main class="flex-1 flex flex-col bg-slate-50 overflow-hidden relative w-full">
+        <!-- HEADER -->
+        <header class="h-16 bg-white border-b border-gray-200 flex justify-between items-center px-4 md:px-8 flex-shrink-0 z-10 sticky top-0">
+            <div class="flex items-center gap-3">
+                <button onclick="app.toggleMenu()" class="md:hidden p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-lg">
+                    <i data-lucide="menu" class="w-6 h-6"></i>
+                </button>
+                <h2 id="page-title" class="text-lg font-bold text-gray-700 truncate">Visão Geral</h2>
+            </div>
+            
+            <div class="flex items-center gap-2 md:gap-4">
+                <span id="data-atual" class="hidden md:inline-block text-xs font-mono text-gray-500 bg-gray-100 px-3 py-1 rounded-full"></span>
+                <button onclick="app.salvarBackup()" class="text-blue-600 hover:text-blue-800 text-xs font-bold flex items-center gap-1 bg-blue-50 p-2 rounded-lg md:bg-transparent md:p-0">
+                    <i data-lucide="save" class="w-4 h-4"></i> <span class="hidden md:inline">Backup Global</span>
                 </button>
             </div>
         </header>
 
-        <div class="flex-1 overflow-y-auto p-8" id="main-content">
+        <div class="flex-1 overflow-y-auto p-4 md:p-8 scroll-smooth" id="main-content">
             
             <!-- ================= ABA RELATÓRIO ================= -->
-            <div id="view-relatorio" class="view-section fade-in">
+            <div id="view-relatorio" class="view-section fade-in pb-20">
                 <!-- Filtros Avançados -->
-                <div class="glass-panel p-6 mb-6">
-                    <h3 class="font-bold text-gray-700 mb-4 flex items-center gap-2">
-                        <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path></svg>
-                        Filtros de Análise Happy Zone
+                <div class="glass-panel p-4 md:p-6 mb-6">
+                    <h3 class="font-bold text-gray-700 mb-4 flex items-center gap-2 text-sm md:text-base">
+                        <i data-lucide="filter" class="w-4 h-4 text-blue-500"></i>
+                        Filtros de Análise
                     </h3>
-                    <div class="grid grid-cols-1 md:grid-cols-7 gap-4 items-end">
-                        <div class="md:col-span-1">
+                    <!-- Grid responsivo para filtros -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 items-end">
+                        <div class="col-span-2 md:col-span-1">
                             <label class="block text-xs font-bold text-gray-500 mb-1">Mês/Ano</label>
                             <div class="flex gap-1">
-                                <select id="rel-mes" class="w-2/3 p-2 border rounded text-xs bg-white" onchange="app.gerarRelatorio()"></select>
-                                <input type="number" id="rel-ano" class="w-1/3 p-2 border rounded text-xs" value="2025" onchange="app.gerarRelatorio()">
+                                <select id="rel-mes" class="w-2/3 p-2 border rounded text-xs bg-white h-9" onchange="app.gerarRelatorio()"></select>
+                                <input type="number" id="rel-ano" class="w-1/3 p-2 border rounded text-xs h-9" value="2025" onchange="app.gerarRelatorio()">
                             </div>
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-gray-500 mb-1">País</label>
-                            <select id="rel-pais" class="w-full p-2 border rounded text-xs bg-white" onchange="app.gerarRelatorio()">
+                            <select id="rel-pais" class="w-full p-2 border rounded text-xs bg-white h-9" onchange="app.gerarRelatorio()">
                                 <option value="">Todos</option>
                             </select>
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-gray-500 mb-1">Estado</label>
-                            <select id="rel-estado" class="w-full p-2 border rounded text-xs bg-white" onchange="app.gerarRelatorio()">
+                            <select id="rel-estado" class="w-full p-2 border rounded text-xs bg-white h-9" onchange="app.gerarRelatorio()">
                                 <option value="">Todos</option>
                             </select>
                         </div>
                         
-                        <div>
+                        <div class="col-span-2 md:col-span-1">
                             <label class="block text-xs font-bold text-gray-500 mb-1">Mentor</label>
-                            <select id="rel-mentor" class="w-full p-2 border rounded text-xs bg-white" onchange="app.atualizarComboUnidades('rel'); app.gerarRelatorio()">
+                            <select id="rel-mentor" class="w-full p-2 border rounded text-xs bg-white h-9" onchange="app.atualizarComboUnidades('rel'); app.gerarRelatorio()">
                                 <option value="">Todos</option>
                             </select>
                         </div>
-                        <div>
+                        <div class="col-span-2 md:col-span-1">
                             <label class="block text-xs font-bold text-gray-500 mb-1">Unidade</label>
-                            <select id="rel-unidade" class="w-full p-2 border rounded text-xs bg-white" onchange="app.gerarRelatorio()">
+                            <select id="rel-unidade" class="w-full p-2 border rounded text-xs bg-white h-9" onchange="app.gerarRelatorio()">
                                 <option value="">Todas</option>
                             </select>
                         </div>
-                        <div>
+                        <div class="col-span-2 md:col-span-1">
                             <label class="block text-xs font-bold text-gray-500 mb-1">Modalidade</label>
-                            <select id="rel-modalidade" class="w-full p-2 border rounded text-xs bg-white" onchange="app.gerarRelatorio()">
+                            <select id="rel-modalidade" class="w-full p-2 border rounded text-xs bg-white h-9" onchange="app.gerarRelatorio()">
                                 <option value="">Todas</option>
                             </select>
                         </div>
-                        <button onclick="app.gerarRelatorio()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded text-xs transition shadow-md h-[34px]">
-                            Filtrar
-                        </button>
-                    </div>
-                </div>
-
-                <!-- KPIs -->
-                <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-                    <div class="glass-panel p-4 border-l-4 border-blue-500">
-                        <p class="text-[10px] font-bold text-gray-400 uppercase">Receita Líquida</p>
-                        <p class="text-xl font-bold text-gray-800 mt-1" id="kpi-receita">R$ 0,00</p>
-                    </div>
-                    <div class="glass-panel p-4 border-l-4 border-green-500">
-                        <p class="text-[10px] font-bold text-gray-400 uppercase">Aulas Realizadas</p>
-                        <p class="text-xl font-bold text-gray-800 mt-1" id="kpi-aulas">0</p>
-                    </div>
-                    <div class="glass-panel p-4 border-l-4 border-orange-500">
-                        <p class="text-[10px] font-bold text-gray-400 uppercase">Média Alunos/Aula</p>
-                        <p class="text-xl font-bold text-gray-800 mt-1" id="kpi-media-alunos">0</p>
-                    </div>
-                     <div class="glass-panel p-4 border-l-4 border-purple-500">
-                        <p class="text-[10px] font-bold text-gray-400 uppercase">Aulas Canceladas</p>
-                        <p class="text-xl font-bold text-red-600 mt-1" id="kpi-canceladas">0</p>
-                    </div>
-                    <!-- KPI DE UNIDADES -->
-                    <div class="glass-panel p-4 border-l-4 border-pink-500">
-                        <p class="text-[10px] font-bold text-gray-400 uppercase">Unidades Ativas</p>
-                        <p class="text-xl font-bold text-pink-600 mt-1" id="kpi-unidades-count">0</p>
-                        <p class="text-[9px] text-gray-400">No filtro atual</p>
-                    </div>
-                </div>
-
-                <!-- Painel de Agrupamento e Detalhamento -->
-                <div class="glass-panel overflow-hidden mb-6">
-                    <div class="p-4 border-b border-gray-100 flex flex-col gap-4 bg-gray-50">
-                        <div class="flex justify-between items-center">
-                            <h3 class="font-bold text-gray-700 flex items-center gap-2">
-                                <span>📈</span> Performance & Classificação
-                            </h3>
-                            <button onclick="app.exportarCSV()" class="text-xs text-green-600 font-bold hover:underline flex items-center gap-1">
-                                📥 Exportar Excel
+                        <div class="col-span-2 md:col-span-1">
+                            <button onclick="app.gerarRelatorio()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded text-xs transition shadow-md h-9 flex items-center justify-center gap-2">
+                                <i data-lucide="search" class="w-3 h-3"></i> Filtrar
                             </button>
                         </div>
+                    </div>
+                </div>
+
+                <!-- KPIs Responsivos -->
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4 mb-6">
+                    <div class="glass-panel p-3 md:p-4 border-l-4 border-blue-500 col-span-2 md:col-span-1">
+                        <p class="text-[10px] font-bold text-gray-400 uppercase">Receita Líquida</p>
+                        <p class="text-lg md:text-xl font-bold text-gray-800 mt-1 truncate" id="kpi-receita">R$ 0,00</p>
+                    </div>
+                    <div class="glass-panel p-3 md:p-4 border-l-4 border-green-500">
+                        <p class="text-[10px] font-bold text-gray-400 uppercase">Aulas Feitas</p>
+                        <p class="text-lg md:text-xl font-bold text-gray-800 mt-1" id="kpi-aulas">0</p>
+                    </div>
+                    <div class="glass-panel p-3 md:p-4 border-l-4 border-orange-500">
+                        <p class="text-[10px] font-bold text-gray-400 uppercase">Méd. Alunos</p>
+                        <p class="text-lg md:text-xl font-bold text-gray-800 mt-1" id="kpi-media-alunos">0</p>
+                    </div>
+                     <div class="glass-panel p-3 md:p-4 border-l-4 border-purple-500">
+                        <p class="text-[10px] font-bold text-gray-400 uppercase">Canceladas</p>
+                        <p class="text-lg md:text-xl font-bold text-red-600 mt-1" id="kpi-canceladas">0</p>
+                    </div>
+                    <div class="glass-panel p-3 md:p-4 border-l-4 border-pink-500">
+                        <p class="text-[10px] font-bold text-gray-400 uppercase">Unidades</p>
+                        <p class="text-lg md:text-xl font-bold text-pink-600 mt-1" id="kpi-unidades-count">0</p>
+                    </div>
+                </div>
+
+                <!-- Painel de Tabela Responsivo -->
+                <div class="glass-panel overflow-hidden mb-6">
+                    <div class="p-4 border-b border-gray-100 flex flex-col md:flex-row md:justify-between md:items-center gap-4 bg-gray-50">
+                        <h3 class="font-bold text-gray-700 flex items-center gap-2 text-sm md:text-base">
+                            <i data-lucide="trending-up" class="w-4 h-4"></i> Performance
+                        </h3>
                         
-                        <!-- Barra de Agrupamento -->
-                        <div class="flex flex-wrap gap-2 items-center">
-                            <span class="text-xs font-bold text-gray-500 uppercase mr-2">Agrupar por:</span>
-                            <button onclick="app.setAgrupamento('detalhado')" id="grp-detalhado" class="group-btn active">Detalhado (Padrão)</button>
+                        <!-- Barra de Agrupamento - Scroll horizontal no mobile -->
+                        <div class="flex overflow-x-auto pb-2 md:pb-0 gap-2 items-center no-scrollbar w-full md:w-auto">
+                            <span class="text-xs font-bold text-gray-500 uppercase mr-2 whitespace-nowrap">Agrupar:</span>
+                            <button onclick="app.setAgrupamento('detalhado')" id="grp-detalhado" class="group-btn active">Detalhado</button>
                             <button onclick="app.setAgrupamento('modalidade')" id="grp-modalidade" class="group-btn inactive">Modalidade</button>
-                            <button onclick="app.setAgrupamento('professor')" id="grp-professor" class="group-btn inactive">Professor</button>
+                            <button onclick="app.setAgrupamento('professor')" id="grp-professor" class="group-btn inactive">Prof.</button>
                             <button onclick="app.setAgrupamento('unidade')" id="grp-unidade" class="group-btn inactive">Unidade</button>
-                            <button onclick="app.setAgrupamento('dia')" id="grp-dia" class="group-btn inactive">Dia Semana</button>
-                            <button onclick="app.setAgrupamento('estado')" id="grp-estado" class="group-btn inactive">Estado</button>
-                            <button onclick="app.setAgrupamento('pais')" id="grp-pais" class="group-btn inactive">País</button>
+                            <button onclick="app.setAgrupamento('dia')" id="grp-dia" class="group-btn inactive">Dia</button>
                         </div>
                     </div>
                     
                     <div class="overflow-x-auto max-h-[500px]">
-                        <table class="w-full table-custom text-left" id="tabela-relatorio">
+                        <table class="w-full table-custom text-left min-w-[800px] md:min-w-full" id="tabela-relatorio">
                             <thead class="sticky top-0 shadow-sm bg-gray-50 z-10 text-gray-600" id="header-relatorio">
                                 <!-- Headers dinâmicos -->
                             </thead>
@@ -235,26 +259,26 @@
                         </table>
                     </div>
                     <div id="relatorio-empty" class="p-8 text-center text-gray-400 hidden">
-                        <p class="text-4xl mb-2">📊</p>
-                        <p>Nenhum dado encontrado para os filtros selecionados.</p>
+                        <i data-lucide="inbox" class="w-12 h-12 mx-auto mb-2 opacity-50"></i>
+                        <p>Nenhum dado encontrado.</p>
                     </div>
                 </div>
 
                 <!-- Seção de Feriados -->
-                <div id="section-feriados" class="hidden glass-panel border-l-4 border-red-400 bg-red-50/50 p-6">
+                <div id="section-feriados" class="hidden glass-panel border-l-4 border-red-400 bg-red-50/50 p-4 md:p-6">
                     <h3 class="font-bold text-red-800 mb-2 flex items-center gap-2">
-                        <span>📅</span> Impacto de Feriados no Período
+                        <i data-lucide="calendar-off" class="w-4 h-4"></i> Impacto de Feriados
                     </h3>
                     <div class="text-sm text-red-700 mb-4" id="feriados-lista-nomes"></div>
                     <div class="overflow-x-auto">
-                        <table class="w-full text-xs text-left" id="tabela-canceladas">
+                        <table class="w-full text-xs text-left min-w-[600px]" id="tabela-canceladas">
                             <thead class="text-red-900 border-b border-red-200">
                                 <tr>
                                     <th class="py-2">Data</th>
                                     <th class="py-2">Feriado</th>
                                     <th class="py-2">Unidade</th>
                                     <th class="py-2">Modalidade</th>
-                                    <th class="py-2 text-right">Impacto Financeiro</th>
+                                    <th class="py-2 text-right">Impacto</th>
                                 </tr>
                             </thead>
                             <tbody class="text-red-800"></tbody>
@@ -264,70 +288,70 @@
             </div>
 
             <!-- ================= ABA CONFIGURAÇÃO ================= -->
-            <div id="view-config" class="view-section hidden fade-in">
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div id="view-config" class="view-section hidden fade-in pb-20">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
                     <!-- Coluna 1 -->
                     <div class="lg:col-span-1 space-y-6">
-                        <div class="glass-panel p-5">
+                        <div class="glass-panel p-4 md:p-5">
                             <h3 class="font-bold text-gray-800 mb-3 border-b pb-2 text-xs uppercase">1. Mentores</h3>
                             <div class="flex gap-2 mb-3">
-                                <input type="text" id="cad-mentor-nome" placeholder="Nome" class="w-full p-2 border rounded text-xs">
-                                <button onclick="app.addMentor()" class="bg-gray-800 text-white px-3 rounded text-xs hover:bg-black">+</button>
+                                <input type="text" id="cad-mentor-nome" placeholder="Nome" class="w-full p-2 border rounded text-xs h-9">
+                                <button onclick="app.addMentor()" class="bg-gray-800 text-white px-3 rounded text-xs hover:bg-black h-9">+</button>
                             </div>
                             <ul id="lista-mentores" class="space-y-1 max-h-32 overflow-y-auto text-xs text-gray-600"></ul>
                         </div>
-                        <div class="glass-panel p-5 border-l-4 border-pink-500">
+                        <div class="glass-panel p-4 md:p-5 border-l-4 border-pink-500">
                             <h3 class="font-bold text-gray-800 mb-3 border-b pb-2 text-xs uppercase">2. Modalidades & Cores</h3>
                             <div class="flex gap-2 mb-3 items-center">
-                                <input type="text" id="cad-mod-nome" placeholder="Ex: Jump" class="flex-1 p-2 border rounded text-xs">
-                                <input type="color" id="cad-mod-cor" class="w-8 h-8 rounded cursor-pointer border p-0" value="#3b82f6">
-                                <button onclick="app.addModalidade()" class="bg-pink-600 text-white px-3 py-2 rounded text-xs hover:bg-pink-700">Add</button>
+                                <input type="text" id="cad-mod-nome" placeholder="Ex: Jump" class="flex-1 p-2 border rounded text-xs h-9">
+                                <input type="color" id="cad-mod-cor" class="w-9 h-9 rounded cursor-pointer border p-0" value="#3b82f6">
+                                <button onclick="app.addModalidade()" class="bg-pink-600 text-white px-3 py-2 rounded text-xs hover:bg-pink-700 h-9">Add</button>
                             </div>
                             <ul id="lista-modalidades" class="space-y-1 max-h-40 overflow-y-auto text-xs"></ul>
                         </div>
                     </div>
                     <!-- Coluna 2 -->
                     <div class="lg:col-span-1">
-                        <div class="glass-panel p-5 h-full">
+                        <div class="glass-panel p-4 md:p-5 h-full">
                             <h3 class="font-bold text-gray-800 mb-3 border-b pb-2 text-xs uppercase">3. Unidades (Global)</h3>
                             <div class="space-y-2 mb-3">
-                                <select id="cad-unidade-mentor" class="w-full p-2 border rounded text-xs bg-white">
+                                <select id="cad-unidade-mentor" class="w-full p-2 border rounded text-xs bg-white h-9">
                                     <option value="">Selecione Mentor...</option>
                                 </select>
-                                <input type="text" id="cad-unidade-nome" placeholder="Nome da Unidade" class="w-full p-2 border rounded text-xs">
+                                <input type="text" id="cad-unidade-nome" placeholder="Nome da Unidade" class="w-full p-2 border rounded text-xs h-9">
                                 <div class="grid grid-cols-2 gap-2">
-                                    <input type="text" id="cad-unidade-pais" placeholder="País (Ex: Brasil)" class="w-full p-2 border rounded text-xs" value="Brasil">
-                                    <input type="text" id="cad-unidade-estado" placeholder="Estado (Ex: MG)" class="w-full p-2 border rounded text-xs">
+                                    <input type="text" id="cad-unidade-pais" placeholder="País" class="w-full p-2 border rounded text-xs h-9" value="Brasil">
+                                    <input type="text" id="cad-unidade-estado" placeholder="Estado (UF)" class="w-full p-2 border rounded text-xs h-9">
                                 </div>
-                                <button onclick="app.addUnidade()" class="w-full bg-blue-600 text-white py-2 rounded text-xs font-bold hover:bg-blue-700">Salvar Unidade</button>
+                                <button onclick="app.addUnidade()" class="w-full bg-blue-600 text-white py-2 rounded text-xs font-bold hover:bg-blue-700 h-9">Salvar Unidade</button>
                             </div>
-                            <input type="text" placeholder="🔍 Buscar..." class="w-full p-2 border rounded text-xs mb-2 bg-slate-50" onkeyup="app.filtrarListaUnidades(this.value)">
+                            <input type="text" placeholder="🔍 Buscar..." class="w-full p-2 border rounded text-xs mb-2 bg-slate-50 h-9" onkeyup="app.filtrarListaUnidades(this.value)">
                             <ul id="lista-unidades" class="space-y-2 max-h-[300px] overflow-y-auto text-xs text-gray-600"></ul>
                         </div>
                     </div>
                     <!-- Coluna 3 -->
                     <div class="lg:col-span-1">
-                        <div class="glass-panel p-5 border-2 border-blue-100 h-full">
+                        <div class="glass-panel p-4 md:p-5 border-2 border-blue-100 h-full">
                             <h3 class="font-bold text-blue-800 mb-4 flex items-center gap-2 text-xs uppercase">
-                                <span class="bg-blue-100 p-1 rounded">📅</span> 4. Grade Horária
+                                <span class="bg-blue-100 p-1 rounded"><i data-lucide="calendar-plus" class="w-4 h-4"></i></span> 4. Grade Horária
                             </h3>
                             <div class="space-y-3">
-                                <div><label class="text-[10px] font-bold text-gray-400">ONDE?</label><select id="grade-unidade" class="w-full p-2 border rounded text-xs bg-white font-bold text-gray-700 mb-1"></select></div>
+                                <div><label class="text-[10px] font-bold text-gray-400">ONDE?</label><select id="grade-unidade" class="w-full p-2 border rounded text-xs bg-white font-bold text-gray-700 mb-1 h-9"></select></div>
                                 <div class="grid grid-cols-2 gap-2">
-                                    <div><label class="text-[10px] font-bold text-gray-400">MODALIDADE</label><select id="grade-modalidade" class="w-full p-2 border rounded text-xs bg-white"></select></div>
-                                    <div><label class="text-[10px] font-bold text-gray-400">PROFESSOR</label><input type="text" id="grade-prof" placeholder="Nome" class="w-full p-2 border rounded text-xs"></div>
+                                    <div><label class="text-[10px] font-bold text-gray-400">MODALIDADE</label><select id="grade-modalidade" class="w-full p-2 border rounded text-xs bg-white h-9"></select></div>
+                                    <div><label class="text-[10px] font-bold text-gray-400">PROFESSOR</label><input type="text" id="grade-prof" placeholder="Nome" class="w-full p-2 border rounded text-xs h-9"></div>
                                 </div>
                                 <div class="grid grid-cols-2 gap-2">
-                                    <div><label class="text-[10px] font-bold text-gray-400">VALOR (R$)</label><input type="number" id="grade-valor" placeholder="0.00" class="w-full p-2 border rounded text-xs"></div>
-                                    <div><label class="text-[10px] font-bold text-orange-500">MÉDIA ALUNOS</label><input type="number" id="grade-alunos" placeholder="0" class="w-full p-2 border rounded text-xs border-orange-200"></div>
+                                    <div><label class="text-[10px] font-bold text-gray-400">VALOR (R$)</label><input type="number" id="grade-valor" placeholder="0.00" class="w-full p-2 border rounded text-xs h-9"></div>
+                                    <div><label class="text-[10px] font-bold text-orange-500">MÉDIA ALUNOS</label><input type="number" id="grade-alunos" placeholder="0" class="w-full p-2 border rounded text-xs border-orange-200 h-9"></div>
                                 </div>
                                 <div class="grid grid-cols-2 gap-2">
-                                    <div><label class="text-[10px] font-bold text-gray-400">HORA</label><input type="time" id="grade-hora" class="w-full p-2 border rounded text-xs"></div>
+                                    <div><label class="text-[10px] font-bold text-gray-400">HORA</label><input type="time" id="grade-hora" class="w-full p-2 border rounded text-xs h-9"></div>
                                     <div><label class="text-[10px] font-bold text-gray-400">DIAS</label><div class="flex gap-1 flex-wrap" id="check-dias"></div></div>
                                 </div>
                                 <div class="flex gap-2">
-                                    <button onclick="app.addHorario()" id="btn-save-grade" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded shadow-md text-xs mt-2 transition">ADICIONAR AULA</button>
-                                    <button onclick="app.cancelarEdicao()" id="btn-cancel-grade" class="hidden bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-3 rounded shadow-md text-xs mt-2 transition">CANCELAR</button>
+                                    <button onclick="app.addHorario()" id="btn-save-grade" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded shadow-md text-xs mt-2 transition h-10">ADICIONAR AULA</button>
+                                    <button onclick="app.cancelarEdicao()" id="btn-cancel-grade" class="hidden bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-3 rounded shadow-md text-xs mt-2 transition h-10">CANCELAR</button>
                                 </div>
                             </div>
                             <div class="mt-4 border-t pt-4">
@@ -340,59 +364,86 @@
             </div>
 
             <!-- ================= ABA CRONOGRAMA ================= -->
-            <div id="view-cronograma" class="view-section hidden fade-in">
-                <div class="glass-panel p-6 min-h-[500px]">
-                    <div class="flex justify-between items-center mb-6">
+            <div id="view-cronograma" class="view-section hidden fade-in pb-20">
+                <div class="glass-panel p-4 md:p-6 min-h-[500px]">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                         <div>
-                            <h3 class="font-bold text-xl text-gray-800">Cronograma Visual</h3>
-                            <p class="text-sm text-gray-500">Passe o mouse sobre a aula para Editar ou Excluir.</p>
+                            <h3 class="font-bold text-xl text-gray-800 flex items-center gap-2">
+                                <i data-lucide="layout-grid" class="w-6 h-6 text-blue-600"></i> Cronograma
+                            </h3>
+                            <p class="text-sm text-gray-500">Toque na aula para editar.</p>
                         </div>
-                        <div class="w-72">
-                            <label class="block text-xs font-bold text-gray-500 mb-1">Unidade Selecionada</label>
-                            <select id="cronograma-unidade-select" class="w-full p-2 border rounded shadow-sm bg-white" onchange="app.renderCronograma()">
-                                <option value="">Selecione...</option>
-                            </select>
+                        <div class="w-full md:w-80">
+                            <label class="block text-xs font-bold text-gray-500 mb-1">Unidade</label>
+                            <div class="relative">
+                                <select id="cronograma-unidade-select" class="w-full p-3 pl-10 border rounded shadow-sm bg-white font-semibold text-gray-700 h-11" onchange="app.renderCronograma()">
+                                    <option value="">Selecione...</option>
+                                </select>
+                                <div class="absolute left-3 top-3.5 text-gray-400">
+                                    <i data-lucide="map-pin" class="w-4 h-4"></i>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div class="overflow-x-auto rounded-lg border border-gray-100" id="cronograma-container">
-                        <div class="p-12 text-center text-gray-400">
-                            <p class="text-4xl mb-4">👆</p>
-                            Selecione uma unidade acima para ver a grade.
+                    <div class="overflow-x-auto rounded-lg border border-gray-100 bg-white min-h-[300px]" id="cronograma-container">
+                        <div class="h-full flex flex-col items-center justify-center text-gray-300 py-20">
+                            <i data-lucide="mouse-pointer-click" class="w-16 h-16 mb-4 opacity-50"></i>
+                            <p class="text-lg text-center px-4">Selecione uma unidade para ver a grade.</p>
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- ================= ABA IMPORTAÇÃO ================= -->
-            <div id="view-importacao" class="view-section hidden fade-in">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-6xl mx-auto">
+            <div id="view-importacao" class="view-section hidden fade-in pb-20">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 max-w-6xl mx-auto">
                     <!-- Ferramentas mantidas intactas -->
-                    <div class="glass-panel p-6">
-                        <h2 class="text-lg font-bold text-gray-800 mb-2">🚀 Importação de Unidades</h2>
+                    <div class="glass-panel p-4 md:p-6">
+                        <h2 class="text-lg font-bold text-gray-800 mb-2 flex items-center gap-2">
+                            <i data-lucide="upload-cloud" class="w-5 h-5 text-blue-600"></i> Importar Unidades
+                        </h2>
                         <p class="text-xs text-gray-500 mb-4">Cole do Excel (Ctrl+V): <code>Unidade | Mentor | Estado | País</code></p>
                         <textarea id="import-unidades-text" class="w-full h-24 p-3 border rounded bg-gray-50 font-mono text-xs mb-3" placeholder="Pratique Savassi&#9;Felipe Souza&#9;MG&#9;Brasil"></textarea>
-                        <button onclick="app.importarUnidades()" class="w-full bg-blue-600 text-white py-2 rounded text-sm font-bold hover:bg-blue-700">Processar Unidades</button>
+                        <button onclick="app.importarUnidades()" class="w-full bg-blue-600 text-white py-2 rounded text-sm font-bold hover:bg-blue-700 h-10">Processar Unidades</button>
                     </div>
 
-                    <!-- REMOVIDO: Importação de Modalidades -->
-                    <div class="glass-panel p-6 border-l-4 border-green-500">
-                        <h2 class="text-lg font-bold text-gray-800 mb-2">📅 Importação de Grades</h2>
-                        <p class="text-xs text-gray-500 mb-4">Cole do Excel: <code>Unidade | Modalidade | Professor | Dias | Hora | Valor | Média Alunos</code></p>
-                        <textarea id="import-grades-text" class="w-full h-24 p-3 border rounded bg-gray-50 font-mono text-xs mb-3" placeholder="Pratique Savassi&#9;Jump&#9;João&#9;Segunda,Quarta&#9;18:00&#9;50.00&#9;30"></textarea>
-                        <div class="flex gap-4">
-                            <button onclick="app.importarGrades()" class="flex-1 bg-green-600 text-white py-3 rounded font-bold hover:bg-green-700">Processar Grade</button>
-                            <button onclick="app.exportarGrades()" class="flex-1 bg-gray-700 text-white py-3 rounded font-bold hover:bg-gray-800 border border-gray-600">📥 Exportar Grades Atuais (CSV)</button>
+                    <div class="glass-panel p-4 md:p-6 border-l-4 border-green-500">
+                        <h2 class="text-lg font-bold text-gray-800 mb-2 flex items-center gap-2">
+                            <i data-lucide="table" class="w-5 h-5 text-green-600"></i> Importar Grades
+                        </h2>
+                        <p class="text-xs text-gray-500 mb-4">Cole do Excel: <code>Unidade | Mod. | Prof. | Dias | Hora | Valor | Alunos</code></p>
+                        <textarea id="import-grades-text" class="w-full h-24 p-3 border rounded bg-gray-50 font-mono text-xs mb-3" placeholder="Pratique Savassi&#9;Jump&#9;João&#9;Segunda&#9;18:00&#9;50.00&#9;30"></textarea>
+                        <div class="flex flex-col md:flex-row gap-4">
+                            <button onclick="app.importarGrades()" class="flex-1 bg-green-600 text-white py-3 rounded font-bold hover:bg-green-700 text-sm h-10 flex items-center justify-center">Processar</button>
+                            <button onclick="app.exportarGrades()" class="flex-1 bg-gray-700 text-white py-3 rounded font-bold hover:bg-gray-800 border border-gray-600 text-sm h-10">Exportar CSV</button>
                         </div>
                     </div>
 
-                    <div class="glass-panel p-6 md:col-span-2 border-t-4 border-gray-800">
-                        <h2 class="text-lg font-bold text-gray-800 mb-4">📤 Backup e Dados do Sistema</h2>
-                        <div class="flex gap-4">
-                            <button onclick="app.salvarBackup()" class="flex-1 bg-gray-800 text-white py-3 rounded font-bold hover:bg-black flex justify-center gap-2">
-                                <span>💾</span> Backup Completo (JSON)
+                    <!-- Restauração de Backup -->
+                    <div class="glass-panel p-4 md:p-6 border-l-4 border-purple-500 md:col-span-2">
+                        <h2 class="text-lg font-bold text-gray-800 mb-2 flex items-center gap-2">
+                            <i data-lucide="refresh-cw" class="w-5 h-5 text-purple-600"></i> Restauração de Sistema
+                        </h2>
+                        <p class="text-sm text-gray-600 mb-4">
+                            Selecione o arquivo <code>.json</code> para restaurar todos os dados.
+                            <br><span class="text-red-500 font-bold text-xs">⚠️ Atenção: Isso substituirá todos os dados atuais!</span>
+                        </p>
+                        <div class="flex flex-col md:flex-row items-center gap-4 bg-gray-50 p-4 rounded border border-dashed border-gray-300">
+                            <input type="file" id="input-backup-file" accept=".json" class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100">
+                            <button onclick="app.restaurarBackup()" class="w-full md:w-auto bg-purple-600 text-white py-2 px-6 rounded font-bold hover:bg-purple-700 text-sm whitespace-nowrap h-10">
+                                Restaurar Backup
                             </button>
-                            <button onclick="app.exportarRelatorioGeral()" class="flex-1 bg-blue-800 text-white py-3 rounded font-bold hover:bg-blue-900 flex justify-center gap-2">
-                                <span>📋</span> Relatório Geral de Aulas (CSV)
+                        </div>
+                    </div>
+
+                    <div class="glass-panel p-4 md:p-6 md:col-span-2 border-t-4 border-gray-800">
+                        <h2 class="text-lg font-bold text-gray-800 mb-4">📤 Dados do Sistema</h2>
+                        <div class="flex flex-col md:flex-row gap-4">
+                            <button onclick="app.salvarBackup()" class="flex-1 bg-gray-800 text-white py-3 rounded font-bold hover:bg-black flex justify-center items-center gap-2 h-12">
+                                <i data-lucide="save" class="w-4 h-4"></i> Backup Completo (JSON)
+                            </button>
+                            <button onclick="app.exportarRelatorioGeral()" class="flex-1 bg-blue-800 text-white py-3 rounded font-bold hover:bg-blue-900 flex justify-center items-center gap-2 h-12">
+                                <i data-lucide="file-text" class="w-4 h-4"></i> Relatório Geral (CSV)
                             </button>
                         </div>
                     </div>
@@ -402,8 +453,71 @@
         </div>
     </main>
 
+    <!-- MODAL DE EDIÇÃO RÁPIDA (Responsivo) -->
+    <div id="modal-editor" class="fixed inset-0 z-[60] hidden modal-overlay flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden transform transition-all scale-100 max-h-[90vh] flex flex-col">
+            <div class="bg-blue-600 p-4 flex justify-between items-center flex-shrink-0">
+                <h3 class="text-white font-bold text-lg flex items-center gap-2">
+                    <i data-lucide="edit-3" class="w-5 h-5"></i> Editar Aula
+                </h3>
+                <button onclick="app.fecharModal()" class="text-white hover:bg-blue-700 rounded-full p-1">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+            <div class="p-4 md:p-6 space-y-4 overflow-y-auto">
+                <input type="hidden" id="modal-id">
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 mb-1">Unidade</label>
+                        <input type="text" id="modal-unidade-view" class="w-full p-2 border rounded bg-gray-100 text-xs font-bold text-gray-600 h-10" disabled>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 mb-1">Modalidade</label>
+                        <select id="modal-modalidade" class="w-full p-2 border rounded text-xs bg-white h-10"></select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 mb-1">Professor</label>
+                    <input type="text" id="modal-prof" class="w-full p-2 border rounded text-xs h-10">
+                </div>
+
+                <div class="grid grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 mb-1">Hora</label>
+                        <input type="time" id="modal-hora" class="w-full p-2 border rounded text-xs h-10">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 mb-1">Valor</label>
+                        <input type="number" id="modal-valor" class="w-full p-2 border rounded text-xs h-10">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 mb-1">Alunos</label>
+                        <input type="number" id="modal-alunos" class="w-full p-2 border rounded text-xs h-10">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 mb-1">Dias da Semana</label>
+                    <div class="flex flex-wrap gap-2" id="modal-dias-container">
+                        <!-- Checkboxes gerados via JS -->
+                    </div>
+                </div>
+            </div>
+            <div class="bg-gray-50 p-4 flex justify-between gap-3 border-t flex-shrink-0">
+                <button onclick="app.excluirViaModal()" class="text-red-500 hover:text-red-700 text-xs font-bold px-2 py-2 flex items-center gap-1">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i> <span class="hidden md:inline">Excluir</span>
+                </button>
+                <button onclick="app.salvarModal()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded text-sm shadow-md transition flex-1 md:flex-none">
+                    Salvar
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- TOAST -->
-    <div id="toast" class="fixed top-5 right-5 bg-gray-800 text-white px-6 py-4 rounded shadow-xl transform translate-x-full transition-transform duration-300 z-50 flex items-center gap-4">
+    <div id="toast" class="fixed top-5 right-5 bg-gray-800 text-white px-6 py-4 rounded shadow-xl transform translate-x-full transition-transform duration-300 z-[70] flex items-center gap-4 border-l-4 border-green-500 max-w-[90%]">
         <div id="toast-icon" class="text-2xl">✅</div>
         <div>
             <h4 id="toast-title" class="font-bold text-sm">Sucesso</h4>
@@ -412,6 +526,9 @@
     </div>
 
     <script>
+        // Inicializa ícones
+        lucide.createIcons();
+
         class SistemaPratique {
             constructor() {
                 this.db = {
@@ -421,10 +538,11 @@
                     horarios: []  
                 };
                 this.editingId = null; 
-                this.dadosExibidos = []; // Dados atuais da tabela (detalhado ou agrupado)
-                this.modoAgrupamento = 'detalhado'; // detalhado, modalidade, professor, unidade, etc.
+                this.dadosExibidos = []; 
+                this.modoAgrupamento = 'detalhado';
                 this.ordenacao = { campo: 'receita', direcao: 'desc' };
-                this.dadosBrutosFiltrados = []; // Cache dos dados brutos do filtro atual
+                this.dadosBrutosFiltrados = []; 
+                this.mobileMenuOpen = false;
                 
                 this.constantes = {
                     dias: ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"],
@@ -449,12 +567,35 @@
                 this.nav('relatorio');
             }
 
+            // --- MENU MOBILE ---
+            toggleMenu() {
+                this.mobileMenuOpen = !this.mobileMenuOpen;
+                const sidebar = document.getElementById('sidebar');
+                const overlay = document.getElementById('mobile-menu-overlay');
+                
+                if (this.mobileMenuOpen) {
+                    sidebar.classList.remove('-translate-x-full');
+                    overlay.classList.remove('hidden');
+                } else {
+                    sidebar.classList.add('-translate-x-full');
+                    overlay.classList.add('hidden');
+                }
+            }
+
             // --- CORE DADOS ---
             carregarDados() {
                 const salvo = localStorage.getItem('pratique_global_db_v5');
                 if (salvo) {
-                    this.db = JSON.parse(salvo);
-                    if(!this.db.modalidades) this.db.modalidades = [];
+                    try {
+                        this.db = JSON.parse(salvo);
+                        if(!this.db.modalidades) this.db.modalidades = [];
+                        if(!this.db.unidades) this.db.unidades = [];
+                        if(!this.db.mentores) this.db.mentores = [];
+                        if(!this.db.horarios) this.db.horarios = [];
+                    } catch(e) {
+                        console.error("Erro ao carregar dados", e);
+                        this.seedInicial();
+                    }
                 } else {
                     this.seedInicial();
                 }
@@ -481,6 +622,9 @@
                 const titulos = { 'relatorio': 'Visão Geral', 'config': 'Configurações', 'cronograma': 'Cronograma Visual', 'importacao': 'Ferramentas' };
                 document.getElementById('page-title').innerText = titulos[viewId];
 
+                // Fechar menu mobile se estiver aberto
+                if(this.mobileMenuOpen) this.toggleMenu();
+
                 if(viewId === 'relatorio') this.gerarRelatorio();
                 this.cancelarEdicao(); 
             }
@@ -488,10 +632,18 @@
             setupUI() {
                 document.getElementById('data-atual').innerText = new Date().toLocaleDateString('pt-BR');
                 
+                // Checkbox dias configuração
                 document.getElementById('check-dias').innerHTML = this.constantes.dias.map(d => `
                     <label class="cursor-pointer select-none">
                         <input type="checkbox" value="${d}" class="peer sr-only check-dia-input">
                         <div class="px-2 py-1 text-[10px] uppercase border rounded bg-white text-gray-400 peer-checked:bg-blue-600 peer-checked:text-white peer-checked:border-blue-600 transition">${d.substring(0,3)}</div>
+                    </label>`).join('');
+
+                // Checkbox dias modal visual
+                document.getElementById('modal-dias-container').innerHTML = this.constantes.dias.map(d => `
+                    <label class="cursor-pointer select-none">
+                        <input type="checkbox" value="${d}" class="peer sr-only modal-check-dia">
+                        <div class="px-3 py-2 text-xs uppercase border rounded bg-white text-gray-500 peer-checked:bg-blue-600 peer-checked:text-white peer-checked:border-blue-600 transition font-medium min-w-[3rem] text-center">${d.substring(0,3)}</div>
                     </label>`).join('');
 
                 const selMes = document.getElementById('rel-mes');
@@ -503,25 +655,33 @@
 
             atualizarListas() {
                 // Populate Mentors
-                const htmlMentores = this.db.mentores.map(m => `<li class="flex justify-between bg-slate-50 p-1 px-2 rounded border"><span>${m.nome}</span> <button onclick="app.remove('mentores', ${m.id})" class="text-red-400 hover:text-red-600 font-bold">×</button></li>`).join('');
+                const htmlMentores = this.db.mentores.map(m => `<li class="flex justify-between bg-slate-50 p-2 rounded border items-center"><span>${m.nome}</span> <button onclick="app.remove('mentores', ${m.id})" class="text-red-400 hover:text-red-600 font-bold p-1">×</button></li>`).join('');
                 document.getElementById('lista-mentores').innerHTML = htmlMentores;
                 const opsMentores = `<option value="">Todos</option>` + this.db.mentores.map(m => `<option value="${m.id}">${m.nome}</option>`).join('');
                 ['cad-unidade-mentor', 'rel-mentor'].forEach(id => {
                     const el = document.getElementById(id);
-                    const val = el.value;
-                    el.innerHTML = opsMentores;
-                    if(val && [...el.options].some(o => o.value == val)) el.value = val;
+                    if(el) {
+                        const val = el.value;
+                        el.innerHTML = opsMentores;
+                        if(val && [...el.options].some(o => o.value == val)) el.value = val;
+                    }
                 });
 
                 // Populate Modalidades
                 const htmlMods = this.db.modalidades.map(m => `
-                    <li class="flex justify-between items-center bg-slate-50 p-1 px-2 rounded border">
-                        <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full" style="background:${m.cor}"></div> ${m.nome}</div> 
-                        <button onclick="app.remove('modalidades', ${m.id})" class="text-red-400">×</button>
+                    <li class="flex justify-between items-center bg-slate-50 p-2 rounded border">
+                        <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full flex-shrink-0" style="background:${m.cor}"></div> ${m.nome}</div> 
+                        <button onclick="app.remove('modalidades', ${m.id})" class="text-red-400 p-1">×</button>
                     </li>`).join('');
                 document.getElementById('lista-modalidades').innerHTML = htmlMods;
+                
                 const opsMods = `<option value="">Selecione...</option>` + this.db.modalidades.map(m => `<option value="${m.id}">${m.nome}</option>`).join('');
-                document.getElementById('grade-modalidade').innerHTML = opsMods;
+                
+                ['grade-modalidade', 'modal-modalidade'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if(el) el.innerHTML = opsMods;
+                });
+
                 document.getElementById('rel-modalidade').innerHTML = `<option value="">Todas</option>` + this.db.modalidades.map(m => `<option value="${m.id}">${m.nome}</option>`).join('');
 
                 this.renderListaUnidades();
@@ -557,9 +717,12 @@
             renderListaUnidades() {
                 document.getElementById('lista-unidades').innerHTML = this.db.unidades.sort((a,b) => a.nome.localeCompare(b.nome)).map(u => {
                     const m = this.db.mentores.find(x => x.id == u.mentorId)?.nome || '-';
-                    return `<li class="flex justify-between items-center bg-white p-2 rounded border shadow-sm">
-                        <div><div class="font-bold text-gray-700">${u.nome}</div><div class="text-[10px] text-gray-400">${m} • ${u.estado || '-'}, ${u.pais || '-'}</div></div>
-                        <button onclick="app.remove('unidades', ${u.id})" class="text-red-400 hover:text-red-600 font-bold">×</button>
+                    return `<li class="flex justify-between items-center bg-white p-3 rounded border shadow-sm">
+                        <div class="overflow-hidden pr-2">
+                            <div class="font-bold text-gray-700 truncate">${u.nome}</div>
+                            <div class="text-[10px] text-gray-400 truncate">${m} • ${u.estado || '-'}, ${u.pais || '-'}</div>
+                        </div>
+                        <button onclick="app.remove('unidades', ${u.id})" class="text-red-400 hover:text-red-600 font-bold p-2">×</button>
                     </li>`;
                 }).join('');
             }
@@ -572,7 +735,7 @@
             }
 
             atualizarComboUnidades(prefixo) {
-                // Filtros independentes
+                // Futuro: Filtrar unidades por mentor selecionado
             }
 
             // --- CRUD ---
@@ -581,6 +744,7 @@
                 this.db[tipo] = this.db[tipo].filter(x => x.id !== id);
                 if(tipo === 'unidades') this.db.horarios = this.db.horarios.filter(h => h.unidadeId !== id);
                 this.salvarDados(); this.atualizarListas();
+                this.renderCronograma();
             }
 
             addMentor() {
@@ -615,8 +779,83 @@
                 this.notify('success', 'Unidade Salva');
             }
 
-            // --- EDIÇÃO E ADIÇÃO DE HORÁRIOS ---
+            // --- EDIÇÃO (CONFIG) E MODAL (CRONOGRAMA) ---
+
+            // Abre modal para edição no Cronograma
+            abrirModalEdicao(id) {
+                const h = this.db.horarios.find(item => item.id == id);
+                if(!h) return;
+
+                const unidade = this.db.unidades.find(u => u.id == h.unidadeId);
+
+                document.getElementById('modal-id').value = h.id;
+                document.getElementById('modal-unidade-view').value = unidade ? unidade.nome : 'Unidade Removida';
+                document.getElementById('modal-modalidade').value = h.modalidadeId;
+                document.getElementById('modal-prof').value = h.professor;
+                document.getElementById('modal-hora').value = h.hora;
+                document.getElementById('modal-valor').value = h.valor;
+                document.getElementById('modal-alunos').value = h.mediaAlunos;
+
+                document.querySelectorAll('.modal-check-dia').forEach(cb => {
+                    cb.checked = h.dias.includes(cb.value);
+                });
+
+                document.getElementById('modal-editor').classList.remove('hidden');
+            }
+
+            fecharModal() {
+                document.getElementById('modal-editor').classList.add('hidden');
+            }
+
+            salvarModal() {
+                const id = document.getElementById('modal-id').value;
+                const mId = document.getElementById('modal-modalidade').value;
+                const prof = document.getElementById('modal-prof').value.trim();
+                const hora = document.getElementById('modal-hora').value;
+                const valor = parseFloat(document.getElementById('modal-valor').value) || 0;
+                const media = parseInt(document.getElementById('modal-alunos').value) || 0;
+                const dias = Array.from(document.querySelectorAll('.modal-check-dia:checked')).map(c => c.value);
+
+                if(!mId || !prof || !hora || dias.length === 0) return alert("Preencha todos os campos e selecione ao menos um dia.");
+
+                const idx = this.db.horarios.findIndex(h => h.id == id);
+                if(idx !== -1) {
+                    this.db.horarios[idx] = { 
+                        ...this.db.horarios[idx],
+                        modalidadeId: mId,
+                        professor: prof,
+                        hora: hora,
+                        valor: valor,
+                        mediaAlunos: media,
+                        dias: dias
+                    };
+                    this.salvarDados();
+                    this.renderCronograma(); // Atualiza fundo
+                    this.fecharModal();
+                    this.notify('success', 'Aula atualizada!');
+                }
+            }
+
+            excluirViaModal() {
+                const id = document.getElementById('modal-id').value;
+                if(confirm("Deseja realmente excluir esta aula?")) {
+                    this.db.horarios = this.db.horarios.filter(h => h.id != id);
+                    this.salvarDados();
+                    this.renderCronograma();
+                    this.fecharModal();
+                    this.notify('success', 'Aula excluída.');
+                }
+            }
+
+            // Edição na aba Config (Antigo método mantido para compatibilidade)
             editarHorario(id) {
+                // Se estiver na aba cronograma, abre o modal
+                if(!document.getElementById('view-cronograma').classList.contains('hidden')) {
+                    this.abrirModalEdicao(id);
+                    return;
+                }
+
+                // Se não, usa o formulário da aba config
                 const h = this.db.horarios.find(item => item.id == id);
                 if(!h) return;
 
@@ -657,10 +896,13 @@
                 document.querySelectorAll('.check-dia-input').forEach(cb => cb.checked = false);
 
                 const btnSave = document.getElementById('btn-save-grade');
-                btnSave.innerText = 'ADICIONAR AULA';
-                btnSave.classList.add('bg-green-600', 'hover:bg-green-700');
-                btnSave.classList.remove('bg-blue-600', 'hover:bg-blue-700');
-                document.getElementById('btn-cancel-grade').classList.add('hidden');
+                if(btnSave) {
+                    btnSave.innerText = 'ADICIONAR AULA';
+                    btnSave.classList.add('bg-green-600', 'hover:bg-green-700');
+                    btnSave.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+                }
+                const btnCancel = document.getElementById('btn-cancel-grade');
+                if(btnCancel) btnCancel.classList.add('hidden');
             }
 
             addHorario() {
@@ -688,7 +930,7 @@
                 if (this.editingId) {
                     const idx = this.db.horarios.findIndex(h => h.id == this.editingId);
                     if(idx !== -1) this.db.horarios[idx] = novoHorario;
-                    this.notify('success', 'Aula atualizada com sucesso!');
+                    this.notify('success', 'Aula atualizada!');
                     this.cancelarEdicao();
                 } else {
                     this.db.horarios.push(novoHorario);
@@ -734,14 +976,12 @@
                 document.body.removeChild(link);
             }
 
-            // FUNÇÃO AUXILIAR PARA PARSEAR TAB OU PONTO E VÍRGULA
             parseImportLines(text) {
                 if(!text.trim()) return [];
                 return text.split('\n').map(l => {
-                    // Tenta Tab (Excel padrão) ou ; (CSV)
                     if(l.includes('\t')) return l.split('\t').map(s => s.trim());
                     return l.split(';').map(s => s.trim());
-                }).filter(cols => cols.length > 1 && cols[0]); // Filtra linhas vazias
+                }).filter(cols => cols.length > 1 && cols[0]); 
             }
 
             importarGrades() {
@@ -805,6 +1045,38 @@
                 });
                 this.salvarDados(); this.atualizarListas();
                 this.notify('success', `${count} Unidades importadas`);
+            }
+
+            // --- NOVA FUNÇÃO: RESTAURAR BACKUP ---
+            restaurarBackup() {
+                const fileInput = document.getElementById('input-backup-file');
+                const file = fileInput.files[0];
+                
+                if (!file) {
+                    return this.notify('error', 'Selecione um arquivo .json primeiro');
+                }
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const json = JSON.parse(e.target.result);
+                        
+                        // Validação básica da estrutura
+                        if(Array.isArray(json.unidades) && Array.isArray(json.horarios)) {
+                            if(confirm(`Tem certeza? Isso substituirá todos os dados atuais por ${json.horarios.length} aulas do backup.`)) {
+                                this.db = json;
+                                this.salvarDados();
+                                alert("Backup restaurado com sucesso! A página será recarregada.");
+                                location.reload();
+                            }
+                        } else {
+                            alert("O arquivo não parece ser um backup válido do Sistema Pratique.");
+                        }
+                    } catch (error) {
+                        alert("Erro ao ler arquivo JSON: " + error.message);
+                    }
+                };
+                reader.readAsText(file);
             }
 
             // --- CÁLCULOS E RELATÓRIOS ---
@@ -877,8 +1149,8 @@
                 const diasNoMes = new Date(ano, mes + 1, 0).getDate();
                 let totalReceita = 0, totalAulas = 0, somaAlunos = 0, aulasCanceladas = 0;
                 let detalheCanceladas = [];
-                let linhasBrutas = []; // Para agrupamento
-                let unidadesUnicas = new Set(); // Para o novo KPI
+                let linhasBrutas = []; 
+                let unidadesUnicas = new Set(); 
 
                 horariosFiltrados.forEach(h => {
                     unidadesUnicas.add(h.unidadeId);
@@ -914,7 +1186,7 @@
                         estado: u?.estado || '-',
                         modalidade: m?.nome || 'N/A',
                         professor: h.professor,
-                        dias: h.dias, // Array original
+                        dias: h.dias, 
                         diasStr: h.dias.map(d => d.substring(0,3)).join(', '),
                         valorHora: h.valor,
                         aulas: aulasCount,
@@ -927,10 +1199,10 @@
                 document.getElementById('kpi-aulas').innerText = totalAulas;
                 document.getElementById('kpi-media-alunos').innerText = totalAulas > 0 ? Math.round(somaAlunos/totalAulas) : 0;
                 document.getElementById('kpi-canceladas').innerText = aulasCanceladas;
-                document.getElementById('kpi-unidades-count').innerText = unidadesUnicas.size; // NOVO KPI
+                document.getElementById('kpi-unidades-count').innerText = unidadesUnicas.size; 
 
-                this.dadosBrutosFiltrados = linhasBrutas; // Guardar para agrupar
-                this.processarExibicaoTabela(); // Renderizar com agrupamento atual
+                this.dadosBrutosFiltrados = linhasBrutas; 
+                this.processarExibicaoTabela(); 
 
                 document.querySelector('#tabela-canceladas tbody').innerHTML = detalheCanceladas.map(c => `<tr><td>${c.data}</td><td>${c.feriado}</td><td>${c.unidade}</td><td>${c.mod}</td><td class="text-right text-red-600 font-bold">- R$ ${c.valor.toFixed(2)}</td></tr>`).join('');
                 
@@ -989,7 +1261,7 @@
                 }
 
                 this.dadosExibidos = dados;
-                this.ordenarRelatorio(this.ordenacao.campo, true); // Re-ordenar e renderizar
+                this.ordenarRelatorio(this.ordenacao.campo, true); 
             }
 
             ordenarRelatorio(campo, forceRender = false) {
@@ -1027,9 +1299,9 @@
                         <th onclick="app.ordenarRelatorio('modalidade')">Modalidade ${getArrow('modalidade')}</th>
                         <th onclick="app.ordenarRelatorio('professor')">Professor ${getArrow('professor')}</th>
                         <th onclick="app.ordenarRelatorio('diasStr')">Dias ${getArrow('diasStr')}</th>
-                        <th onclick="app.ordenarRelatorio('valorHora')" class="text-center">Valor Aula ${getArrow('valorHora')}</th>
-                        <th onclick="app.ordenarRelatorio('aulas')" class="text-center">Qtd Aulas ${getArrow('aulas')}</th>
-                        <th onclick="app.ordenarRelatorio('mediaAlunos')" class="text-center">Média Alunos ${getArrow('mediaAlunos')}</th>
+                        <th onclick="app.ordenarRelatorio('valorHora')" class="text-center">Valor ${getArrow('valorHora')}</th>
+                        <th onclick="app.ordenarRelatorio('aulas')" class="text-center">Aulas ${getArrow('aulas')}</th>
+                        <th onclick="app.ordenarRelatorio('mediaAlunos')" class="text-center">Alunos ${getArrow('mediaAlunos')}</th>
                         <th onclick="app.ordenarRelatorio('receita')" class="text-right">Receita ${getArrow('receita')}</th>
                     `;
                     tbody.innerHTML = this.dadosExibidos.map(row => `
@@ -1049,7 +1321,7 @@
                     thead.innerHTML = `
                         <th onclick="app.ordenarRelatorio('grupo')">${tituloGrupo} ${getArrow('grupo')}</th>
                         <th onclick="app.ordenarRelatorio('aulas')" class="text-center">Total Aulas ${getArrow('aulas')}</th>
-                        <th onclick="app.ordenarRelatorio('mediaAlunos')" class="text-center">Média Alunos (Pond.) ${getArrow('mediaAlunos')}</th>
+                        <th onclick="app.ordenarRelatorio('mediaAlunos')" class="text-center">Média Alunos ${getArrow('mediaAlunos')}</th>
                         <th onclick="app.ordenarRelatorio('receita')" class="text-right">Receita Total ${getArrow('receita')}</th>
                     `;
                     tbody.innerHTML = this.dadosExibidos.map(row => `
@@ -1066,31 +1338,35 @@
             renderCronograma() {
                 const uId = document.getElementById('cronograma-unidade-select').value;
                 const container = document.getElementById('cronograma-container');
-                if(!uId) return container.innerHTML = '<div class="p-12 text-center text-gray-400">Selecione uma unidade.</div>';
+                if(!uId) return container.innerHTML = '<div class="h-full flex flex-col items-center justify-center text-gray-300 py-20"><i data-lucide="mouse-pointer-click" class="w-16 h-16 mb-4 opacity-50"></i><p class="text-lg text-center px-4">Selecione uma unidade para ver a grade.</p></div>';
 
                 const grades = this.db.horarios.filter(h => h.unidadeId == uId);
                 const times = [...new Set(grades.map(h => h.hora))].sort();
 
-                let html = `<table class="w-full border-collapse min-w-[800px]"><thead><tr><th class="p-2 bg-gray-50 border text-xs">HORA</th>` + 
-                    this.constantes.dias.map(d => `<th class="p-2 bg-gray-50 border text-xs uppercase">${d}</th>`).join('') + `</tr></thead><tbody>`;
+                let html = `<table class="w-full border-collapse min-w-[800px]"><thead><tr><th class="p-2 bg-gray-50 border text-xs w-20 text-gray-500">HORA</th>` + 
+                    this.constantes.dias.map(d => `<th class="p-2 bg-gray-50 border text-xs uppercase text-gray-500">${d}</th>`).join('') + `</tr></thead><tbody>`;
 
-                if(times.length === 0) html += `<tr><td colspan="8" class="p-8 text-center text-gray-400">Sem aulas.</td></tr>`;
+                if(times.length === 0) html += `<tr><td colspan="8" class="p-8 text-center text-gray-400">Nenhuma aula cadastrada nesta unidade.</td></tr>`;
 
                 times.forEach(hora => {
-                    html += `<tr><td class="p-2 border font-bold text-center bg-gray-50 text-xs">${hora}</td>`;
+                    html += `<tr><td class="p-2 border font-bold text-center bg-gray-50 text-xs text-gray-600 sticky left-0 z-10 bg-slate-100">${hora}</td>`;
                     this.constantes.dias.forEach(dia => {
                         const aula = grades.find(h => h.hora === hora && h.dias.includes(dia));
                         if(aula) {
                             const mod = this.db.modalidades.find(m => m.id == aula.modalidadeId);
-                            html += `<td class="p-1 border h-16 align-top">
-                                <div class="aula-card rounded p-1 text-[10px] text-white shadow-sm h-full group" style="background:${mod?.cor || '#ccc'}">
-                                    <div class="font-bold uppercase leading-tight">${mod?.nome}</div>
-                                    <div class="opacity-90 truncate">${aula.professor}</div>
-                                    <div class="mt-1 pt-1 border-t border-white/20">👥 ${aula.mediaAlunos}</div>
+                            html += `<td class="p-1 border h-20 align-top w-[13%]">
+                                <div onclick="app.abrirModalEdicao(${aula.id})" 
+                                     class="aula-card rounded p-2 text-xs text-white shadow-sm h-full cursor-pointer relative group flex flex-col justify-between" 
+                                     style="background:${mod?.cor || '#ccc'}">
                                     
-                                    <div class="card-actions absolute inset-0 bg-black/60 rounded flex items-center justify-center gap-2 backdrop-blur-sm transition-opacity">
-                                        <button onclick="app.editarHorario(${aula.id})" class="bg-blue-500 hover:bg-blue-600 text-white p-1 rounded" title="Editar">✏️</button>
-                                        <button onclick="app.remove('horarios', ${aula.id}); app.renderCronograma()" class="bg-red-500 hover:bg-red-600 text-white p-1 rounded" title="Excluir">🗑️</button>
+                                    <div>
+                                        <div class="font-bold uppercase leading-tight text-[11px] mb-1">${mod?.nome}</div>
+                                        <div class="opacity-90 text-[10px] truncate">${aula.professor}</div>
+                                    </div>
+                                    
+                                    <div class="flex justify-between items-end mt-1 pt-1 border-t border-white/20">
+                                        <span class="text-[9px]">👥 ${aula.mediaAlunos}</span>
+                                        <i data-lucide="edit" class="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100 block"></i>
                                     </div>
                                 </div>
                             </td>`;
@@ -1101,6 +1377,7 @@
                     html += `</tr>`;
                 });
                 container.innerHTML = html + `</tbody></table>`;
+                lucide.createIcons(); // Recriar ícones após renderizar HTML
             }
 
             salvarBackup() {
@@ -1129,6 +1406,9 @@
             notify(type, msg) {
                 const toast = document.getElementById('toast');
                 document.getElementById('toast-msg').innerText = msg;
+                const icon = type === 'success' ? '✅' : (type === 'error' ? '❌' : 'ℹ️');
+                document.getElementById('toast-icon').innerText = icon;
+                
                 toast.classList.remove('translate-x-full');
                 setTimeout(() => toast.classList.add('translate-x-full'), 3000);
             }
