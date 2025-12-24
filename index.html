@@ -69,6 +69,8 @@
         .status-dot { height: 8px; width: 8px; border-radius: 50%; display: inline-block; }
         .status-online { background-color: #22c55e; box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2); }
         .status-offline { background-color: #ef4444; }
+        .status-sync { background-color: #f59e0b; animation: pulse 1s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
         
         @media print {
             @page { margin: 0.5cm; size: landscape; }
@@ -121,7 +123,10 @@
                 <div class="w-10 h-10 md:w-8 md:h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-sm md:text-xs">A</div>
                 <div>
                     <p class="text-white text-sm md:text-xs font-bold">Admin</p>
-                    <p class="text-xs flex items-center gap-1"><span class="status-dot status-offline"></span> Offline</p>
+                    <p class="text-xs flex items-center gap-1" id="connection-status">
+                        <span class="status-dot status-offline" id="status-dot"></span> 
+                        <span id="status-text">Offline</span>
+                    </p>
                 </div>
             </div>
         </div>
@@ -139,6 +144,9 @@
             </div>
             
             <div class="flex items-center gap-2 md:gap-4">
+                <button onclick="app.forcarSincronizacao()" class="text-xs font-bold text-gray-500 hover:text-blue-600 flex items-center gap-1 mr-2" title="Forçar Sincronização">
+                    <i data-lucide="refresh-cw" class="w-3 h-3"></i> Sync
+                </button>
                 <span id="data-atual" class="hidden md:inline-block text-xs font-mono text-gray-500 bg-gray-100 px-3 py-1 rounded-full"></span>
                 <button onclick="app.salvarBackup()" class="text-blue-600 hover:text-blue-800 text-xs font-bold flex items-center gap-1 bg-blue-50 p-2 rounded-lg md:bg-transparent md:p-0">
                     <i data-lucide="save" class="w-4 h-4"></i> <span class="hidden md:inline">Backup Global</span>
@@ -465,12 +473,14 @@
         class SistemaPratique {
             constructor() {
                 this.db = { mentores: [], unidades: [], modalidades: [], horarios: [] };
+                // URL FORNECIDA PELO USUÁRIO PARA INTEGRAÇÃO COM GOOGLE SHEETS
+                this.apiUrl = 'https://script.google.com/macros/s/AKfycbz8LU_ekbnZ7tAwrvxyaASzql0Cvqe-HAVGhWpO-TkOWot3AcWjpAALTB3u2bOGx8hbfA/exec';
+                
                 this.editingId = null;
                 this.dadosExibidos = [];
                 this.modoAgrupamento = 'detalhado';
                 this.ordenacao = { campo: 'receita', direcao: 'desc' };
                 this.mobileMenuOpen = false;
-                this.apiUrl = ''; 
                 
                 this.constantes = {
                     dias: ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"],
@@ -488,11 +498,107 @@
             }
 
             init() {
-                this.carregarDados();
+                // Tenta carregar localmente primeiro para velocidade
+                this.carregarDadosLocais();
                 this.setupUI();
                 this.nav('relatorio');
-                setTimeout(() => lucide.createIcons(), 500); 
+                setTimeout(() => lucide.createIcons(), 500);
+                
+                // Tenta sincronizar com a nuvem (Download)
+                this.sincronizarNuvem('download');
             }
+
+            // --- Lógica de Banco de Dados e Sincronização ---
+
+            carregarDadosLocais() {
+                const salvo = localStorage.getItem('pratique_global_db_v5');
+                if (salvo) { 
+                    try { 
+                        const parsed = JSON.parse(salvo); 
+                        // Mescla garantindo que a estrutura exista
+                        this.db = { 
+                            mentores: parsed.mentores || [], 
+                            unidades: parsed.unidades || [], 
+                            modalidades: parsed.modalidades || [], 
+                            horarios: parsed.horarios || [] 
+                        }; 
+                    } catch(e) { 
+                        this.seedInicial(); 
+                    } 
+                } else { 
+                    this.seedInicial(); 
+                }
+            }
+
+            salvarDados() { 
+                // 1. Salva Local
+                localStorage.setItem('pratique_global_db_v5', JSON.stringify(this.db));
+                // 2. Tenta Salvar na Nuvem (Upload)
+                this.sincronizarNuvem('upload');
+            }
+
+            async sincronizarNuvem(acao) {
+                const dot = document.getElementById('status-dot');
+                const txt = document.getElementById('status-text');
+                
+                // Muda status para "Sincronizando..."
+                if(dot) { dot.className = 'status-dot status-sync'; }
+                if(txt) { txt.innerText = 'Sync...'; txt.className = 'text-xs text-orange-500 font-bold'; }
+
+                try {
+                    if (acao === 'download') {
+                        // Tenta baixar dados do Google Script
+                        const response = await fetch(this.apiUrl);
+                        const cloudData = await response.json();
+                        
+                        // Se vierem dados válidos, atualiza o DB local
+                        if (cloudData && (cloudData.mentores || cloudData.unidades || cloudData.horarios)) {
+                            this.db = cloudData;
+                            // Salva no local storage para persistir
+                            localStorage.setItem('pratique_global_db_v5', JSON.stringify(this.db));
+                            // Atualiza a tela
+                            this.atualizarListas();
+                            this.renderCronograma();
+                            if(!document.getElementById('view-relatorio').classList.contains('hidden')) this.gerarRelatorio();
+                            this.notify('success', 'DADOS ATUALIZADOS DA NUVEM!');
+                        }
+                    } else if (acao === 'upload') {
+                        // Envia dados para o Google Script
+                        // Usamos 'no-cors' ou text/plain para evitar bloqueio do Google
+                        await fetch(this.apiUrl, {
+                            method: 'POST',
+                            body: JSON.stringify(this.db),
+                            headers: { "Content-Type": "text/plain;charset=utf-8" }
+                        });
+                    }
+
+                    // Sucesso
+                    if(dot) { dot.className = 'status-dot status-online'; }
+                    if(txt) { txt.innerText = 'Online'; txt.className = 'text-xs text-green-600 font-bold'; }
+
+                } catch (error) {
+                    console.error("Erro na nuvem:", error);
+                    // Erro / Offline
+                    if(dot) { dot.className = 'status-dot status-offline'; }
+                    if(txt) { txt.innerText = 'Offline (Salvo Local)'; txt.className = 'text-xs text-gray-400 font-bold'; }
+                    
+                    if (acao === 'download') {
+                        this.notify('error', 'SEM CONEXÃO. USANDO DADOS LOCAIS.');
+                    }
+                }
+            }
+
+            forcarSincronizacao() {
+                this.sincronizarNuvem('download');
+            }
+
+            seedInicial() { 
+                this.db = { mentores: [{id:1,nome:"FELIPE SOUZA"}], modalidades: [{id:1,nome:"JUMP",cor:"#ff5722"}], unidades: [{id:101,nome:"PRATIQUE SAVASSI",mentorId:1,estado:"MG",pais:"Brasil"}], horarios: [] }; 
+                // Não chama salvarDados aqui para evitar loop de upload vazio
+                localStorage.setItem('pratique_global_db_v5', JSON.stringify(this.db));
+            }
+            
+            // --- Fim Lógica Banco de Dados ---
 
             atualizarEstadosRelatorio() {
                 const paisSelecionado = document.getElementById('rel-pais').value;
@@ -542,14 +648,6 @@
                     if(isDragging) { isDragging = false; modal.style.cursor = 'default'; }
                 });
             }
-
-            carregarDados() {
-                const salvo = localStorage.getItem('pratique_global_db_v5');
-                if (salvo) { try { const parsed = JSON.parse(salvo); this.db = { mentores: parsed.mentores || [], unidades: parsed.unidades || [], modalidades: parsed.modalidades || [], horarios: parsed.horarios || [] }; } catch(e) { this.seedInicial(); } } else { this.seedInicial(); }
-            }
-
-            salvarDados() { localStorage.setItem('pratique_global_db_v5', JSON.stringify(this.db)); }
-            seedInicial() { this.db = { mentores: [{id:1,nome:"FELIPE SOUZA"}], modalidades: [{id:1,nome:"JUMP",cor:"#ff5722"}], unidades: [{id:101,nome:"PRATIQUE SAVASSI",mentorId:1,estado:"MG",pais:"Brasil"}], horarios: [] }; this.salvarDados(); }
             
             nav(viewId) {
                 document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
