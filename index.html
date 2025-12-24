@@ -547,8 +547,11 @@
 
                 try {
                     if (acao === 'download') {
-                        // Tenta baixar dados do Google Script
-                        const response = await fetch(this.apiUrl);
+                        // Tenta baixar dados do Google Script - IMPORTANTE: referrerPolicy: 'no-referrer' ajuda no Vercel
+                        const response = await fetch(this.apiUrl, { referrerPolicy: "no-referrer", redirect: "follow" });
+                        
+                        if (!response.ok) throw new Error('Erro na resposta da rede');
+                        
                         const cloudData = await response.json();
                         
                         // Se vierem dados válidos, atualiza o DB local
@@ -565,9 +568,11 @@
                     } else if (acao === 'upload') {
                         // Envia dados para o Google Script
                         // Usamos 'no-cors' ou text/plain para evitar bloqueio do Google
+                        // IMPORTANTE: referrerPolicy: 'no-referrer' ajuda no Vercel
                         await fetch(this.apiUrl, {
                             method: 'POST',
                             body: JSON.stringify(this.db),
+                            referrerPolicy: "no-referrer",
                             headers: { "Content-Type": "text/plain;charset=utf-8" }
                         });
                     }
@@ -583,7 +588,7 @@
                     if(txt) { txt.innerText = 'Offline (Salvo Local)'; txt.className = 'text-xs text-gray-400 font-bold'; }
                     
                     if (acao === 'download') {
-                        this.notify('error', 'SEM CONEXÃO. USANDO DADOS LOCAIS.');
+                        this.notify('error', 'USANDO DADOS LOCAIS (MODO OFFLINE)');
                     }
                 }
             }
