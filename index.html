@@ -69,7 +69,6 @@
         .status-online { background-color: #22c55e; box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2); }
         .status-offline { background-color: #ef4444; }
         
-        /* ESTILOS DE IMPRESSÃO (PDF) */
         @media print {
             @page { margin: 0.5cm; size: landscape; }
             aside, header, .no-print, .sidebar-link, #mobile-menu-overlay { display: none !important; }
@@ -77,7 +76,6 @@
             .view-section { display: none !important; }
             #view-relatorio { display: block !important; padding: 0 !important; }
             .glass-panel { box-shadow: none !important; border: 1px solid #ddd !important; break-inside: avoid; margin-bottom: 20px; page-break-inside: avoid; }
-            /* Esconde botão de filtros na impressão */
             .glass-panel button { display: none !important; }
             th { background-color: #eee !important; color: black !important; font-weight: bold !important; }
             td { border-bottom: 1px solid #ccc !important; }
@@ -122,7 +120,7 @@
                 <div class="w-10 h-10 md:w-8 md:h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-sm md:text-xs">A</div>
                 <div>
                     <p class="text-white text-sm md:text-xs font-bold">Admin</p>
-                    <p class="text-xs flex items-center gap-1"><span class="status-dot status-offline"></span> Offline</p>
+                    <p class="text-xs flex items-center gap-1"><span id="status-dot" class="status-dot status-offline"></span> <span id="status-text">Offline</span></p>
                 </div>
             </div>
         </div>
@@ -151,7 +149,7 @@
             
             <!-- ================= ABA RELATÓRIO ================= -->
             <div id="view-relatorio" class="view-section pb-20">
-                <!-- Filtros Avançados -->
+                <!-- Filtros -->
                 <div class="glass-panel p-4 md:p-6 mb-6 no-print">
                     <h3 class="font-bold text-gray-700 mb-4 flex items-center gap-2 text-sm md:text-base uppercase">
                         <i data-lucide="filter" class="w-4 h-4 text-blue-500"></i>
@@ -162,11 +160,21 @@
                             <label class="block text-xs font-bold text-gray-500 mb-1">Mês/Ano</label>
                             <div class="flex gap-1">
                                 <select id="rel-mes" class="w-2/3 p-2 border rounded text-xs bg-white h-9 uppercase" onchange="app.gerarRelatorio()"></select>
-                                <input type="number" id="rel-ano" class="w-1/3 p-2 border rounded text-xs h-9 uppercase" value="2025" onchange="app.gerarRelatorio()">
+                                <input type="number" id="rel-ano" class="w-1/3 p-2 border rounded text-xs h-9 uppercase min-w-[70px]" value="2025" onchange="app.gerarRelatorio()">
                             </div>
                         </div>
-                        <div><label class="block text-xs font-bold text-gray-500 mb-1">País</label><select id="rel-pais" class="w-full p-2 border rounded text-xs bg-white h-9 uppercase" onchange="app.gerarRelatorio()"><option value="">TODOS</option></select></div>
-                        <div><label class="block text-xs font-bold text-gray-500 mb-1">Estado</label><select id="rel-estado" class="w-full p-2 border rounded text-xs bg-white h-9 uppercase" onchange="app.gerarRelatorio()"><option value="">TODOS</option></select></div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 mb-1">País</label>
+                            <select id="rel-pais" class="w-full p-2 border rounded text-xs bg-white h-9 uppercase" onchange="app.atualizarEstadosRelatorio(); app.gerarRelatorio()">
+                                <option value="">TODOS</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 mb-1">Estado</label>
+                            <select id="rel-estado" class="w-full p-2 border rounded text-xs bg-white h-9 uppercase" onchange="app.gerarRelatorio()">
+                                <option value="">TODOS</option>
+                            </select>
+                        </div>
                         <div class="col-span-2 md:col-span-1"><label class="block text-xs font-bold text-gray-500 mb-1">Mentor</label><select id="rel-mentor" class="w-full p-2 border rounded text-xs bg-white h-9 uppercase" onchange="app.gerarRelatorio()"><option value="">TODOS</option></select></div>
                         <div class="col-span-2 md:col-span-1"><label class="block text-xs font-bold text-gray-500 mb-1">Unidade</label><select id="rel-unidade" class="w-full p-2 border rounded text-xs bg-white h-9 uppercase" onchange="app.gerarRelatorio()"><option value="">TODAS</option></select></div>
                         <div class="col-span-2 md:col-span-1"><label class="block text-xs font-bold text-gray-500 mb-1">Modalidade</label><select id="rel-modalidade" class="w-full p-2 border rounded text-xs bg-white h-9 uppercase" onchange="app.gerarRelatorio()"><option value="">TODAS</option></select></div>
@@ -175,12 +183,32 @@
                 </div>
 
                 <!-- KPIs -->
-                <div class="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4 mb-6">
-                    <div class="glass-panel p-3 md:p-4 border-l-4 border-blue-500 col-span-2 md:col-span-1"><p class="text-[10px] font-bold text-gray-400 uppercase">Investimento Total</p><p class="text-lg md:text-xl font-bold text-gray-800 mt-1 truncate" id="kpi-receita">R$ 0,00</p></div>
-                    <div class="glass-panel p-3 md:p-4 border-l-4 border-green-500"><p class="text-[10px] font-bold text-gray-400 uppercase">Aulas Realizadas</p><p class="text-lg md:text-xl font-bold text-gray-800 mt-1" id="kpi-aulas">0</p></div>
-                    <div class="glass-panel p-3 md:p-4 border-l-4 border-orange-500"><p class="text-[10px] font-bold text-gray-400 uppercase">Média Geral Alunos</p><p class="text-lg md:text-xl font-bold text-gray-800 mt-1" id="kpi-media-alunos">0</p></div>
-                    <div class="glass-panel p-3 md:p-4 border-l-4 border-purple-500"><p class="text-[10px] font-bold text-gray-400 uppercase">Canceladas</p><p class="text-lg md:text-xl font-bold text-red-600 mt-1" id="kpi-canceladas">0</p></div>
-                    <div class="glass-panel p-3 md:p-4 border-l-4 border-pink-500"><p class="text-[10px] font-bold text-gray-400 uppercase">Unidades Ativas</p><p class="text-lg md:text-xl font-bold text-pink-600 mt-1" id="kpi-unidades-count">0</p></div>
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4 mb-6">
+                    <div class="glass-panel p-3 md:p-4 border-l-4 border-blue-500 col-span-2 md:col-span-1">
+                        <p class="text-[10px] font-bold text-gray-400 uppercase">Investimento Total</p>
+                        <p class="text-lg md:text-xl font-bold text-gray-800 mt-1 truncate" id="kpi-receita">R$ 0,00</p>
+                    </div>
+                    <div class="glass-panel p-3 md:p-4 border-l-4 border-green-500">
+                        <p class="text-[10px] font-bold text-gray-400 uppercase">Aulas Realizadas</p>
+                        <p class="text-lg md:text-xl font-bold text-gray-800 mt-1" id="kpi-aulas">0</p>
+                    </div>
+                    <div class="glass-panel p-3 md:p-4 border-l-4 border-orange-500">
+                        <p class="text-[10px] font-bold text-gray-400 uppercase">Média Geral Alunos</p>
+                        <p class="text-lg md:text-xl font-bold text-gray-800 mt-1" id="kpi-media-alunos">0</p>
+                    </div>
+                    <!-- NOVO CARD: MÉDIA VALOR AULA -->
+                    <div class="glass-panel p-3 md:p-4 border-l-4 border-cyan-500">
+                        <p class="text-[10px] font-bold text-gray-400 uppercase">Valor Médio Aula</p>
+                        <p class="text-lg md:text-xl font-bold text-gray-800 mt-1" id="kpi-media-valor">R$ 0,00</p>
+                    </div>
+                     <div class="glass-panel p-3 md:p-4 border-l-4 border-purple-500">
+                        <p class="text-[10px] font-bold text-gray-400 uppercase">Canceladas</p>
+                        <p class="text-lg md:text-xl font-bold text-red-600 mt-1" id="kpi-canceladas">0</p>
+                    </div>
+                    <div class="glass-panel p-3 md:p-4 border-l-4 border-pink-500">
+                        <p class="text-[10px] font-bold text-gray-400 uppercase">Unidades Ativas</p>
+                        <p class="text-lg md:text-xl font-bold text-pink-600 mt-1" id="kpi-unidades-count">0</p>
+                    </div>
                 </div>
 
                 <!-- Análise Geral -->
@@ -212,7 +240,9 @@
                     </div>
                     <div class="overflow-x-auto max-h-[500px]">
                         <table class="w-full table-custom text-left min-w-[800px] md:min-w-full uppercase" id="tabela-relatorio">
-                            <thead class="sticky top-0 shadow-sm bg-gray-50 z-10 text-gray-600" id="header-relatorio"></thead>
+                            <thead class="sticky top-0 shadow-sm bg-gray-50 z-10 text-gray-600" id="header-relatorio">
+                                <!-- Headers gerados via JS com ordenação -->
+                            </thead>
                             <tbody id="body-relatorio"></tbody>
                         </table>
                     </div>
@@ -234,21 +264,20 @@
                     
                     <!-- RANKING DETALHADO -->
                     <div class="glass-panel p-4 md:p-6 border-t-4 border-gray-800">
-                        <h3 class="font-bold text-gray-800 mb-6 flex items-center gap-2 text-lg uppercase"><i data-lucide="award" class="w-5 h-5"></i> Rankings Detalhados</h3>
+                        <h3 class="font-bold text-gray-800 mb-6 flex items-center gap-2 text-lg uppercase"><i data-lucide="award" class="w-5 h-5"></i> Rankings Detalhados (Baseado na Média Cadastrada)</h3>
                         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                            <!-- Ranking Média Alunos -->
+                            <!-- Ranking 1: Melhores Médias -->
                             <div>
-                                <h4 class="text-sm font-bold text-orange-600 uppercase mb-3 border-b-2 border-orange-100 pb-2">
-                                    <i data-lucide="users" class="w-4 h-4 inline mr-1"></i> Top Performance (Média Alunos)
+                                <h4 class="text-sm font-bold text-blue-700 uppercase mb-3 border-b-2 border-blue-100 pb-2">
+                                    <i data-lucide="trending-up" class="w-4 h-4 inline mr-1"></i> Top Performance (Melhores)
                                 </h4>
                                 <div class="overflow-x-auto">
                                     <table class="w-full text-xs text-left uppercase" id="tabela-ranking-alunos">
                                         <thead class="text-gray-500 border-b">
                                             <tr>
-                                                <th class="py-2">Pos.</th>
+                                                <th class="py-2 w-10">Pos.</th>
                                                 <th class="py-2">Unidade</th>
-                                                <th class="py-2 text-center">Aulas</th>
-                                                <th class="py-2 text-right">Média</th>
+                                                <th class="py-2 text-right w-24">Média</th>
                                             </tr>
                                         </thead>
                                         <tbody class="text-gray-700"></tbody>
@@ -256,19 +285,18 @@
                                 </div>
                             </div>
 
-                            <!-- Ranking Gastos -->
+                            <!-- Ranking 2: Piores Médias -->
                             <div>
-                                <h4 class="text-sm font-bold text-blue-700 uppercase mb-3 border-b-2 border-blue-100 pb-2">
-                                    <i data-lucide="dollar-sign" class="w-4 h-4 inline mr-1"></i> Top Investimento (Financeiro)
+                                <h4 class="text-sm font-bold text-red-600 uppercase mb-3 border-b-2 border-red-100 pb-2">
+                                    <i data-lucide="alert-triangle" class="w-4 h-4 inline mr-1"></i> Atenção: Baixa Performance (Piores)
                                 </h4>
                                 <div class="overflow-x-auto">
                                     <table class="w-full text-xs text-left uppercase" id="tabela-ranking-gastos">
                                         <thead class="text-gray-500 border-b">
                                             <tr>
-                                                <th class="py-2">Pos.</th>
+                                                <th class="py-2 w-10">Pos.</th>
                                                 <th class="py-2">Unidade</th>
-                                                <th class="py-2 text-center">Total Alunos</th>
-                                                <th class="py-2 text-right">Investimento</th>
+                                                <th class="py-2 text-right w-24">Média</th>
                                             </tr>
                                         </thead>
                                         <tbody class="text-gray-700"></tbody>
@@ -282,6 +310,18 @@
 
             <!-- ================= ABA CONFIGURAÇÃO ================= -->
             <div id="view-config" class="view-section hidden fade-in pb-20">
+                <div class="glass-panel p-4 md:p-6 border-2 border-green-100 mb-6 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 p-4 opacity-10">
+                        <i data-lucide="sheet" class="w-24 h-24 text-green-600"></i>
+                    </div>
+                    <h3 class="font-bold text-green-800 mb-2 flex items-center gap-2 text-sm uppercase">
+                        <span class="bg-green-100 p-1 rounded"><i data-lucide="cloud" class="w-4 h-4 text-green-600"></i></span> Integração Google Planilhas
+                    </h3>
+                    <div class="flex flex-col md:flex-row gap-3 items-end">
+                        <div class="w-full md:flex-1"><label class="block text-xs font-bold text-gray-500 mb-1">URL do Web App</label><input type="text" id="config-api-url" class="w-full p-2 border rounded text-xs h-10 font-mono text-gray-600 bg-slate-50" placeholder="https://script.google.com/..."></div>
+                        <button onclick="app.salvarUrlApi()" class="w-full md:w-auto bg-green-600 text-white px-4 rounded text-xs font-bold hover:bg-green-700 h-10 flex items-center justify-center gap-2"><i data-lucide="check" class="w-4 h-4"></i> Conectar</button>
+                    </div>
+                </div>
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
                     <!-- Coluna 1 -->
                     <div class="lg:col-span-1 space-y-6">
@@ -304,7 +344,6 @@
                                 <select id="cad-unidade-mentor" class="w-full p-2 border rounded text-xs bg-white h-9 uppercase"><option value="">SELECIONE MENTOR...</option></select>
                                 <input type="text" id="cad-unidade-nome" placeholder="NOME DA UNIDADE" class="w-full p-2 border rounded text-xs h-9 uppercase">
                                 
-                                <!-- ALTERAÇÃO PRINCIPAL: PAÍS E ESTADO DINÂMICOS -->
                                 <div class="grid grid-cols-2 gap-2">
                                     <select id="cad-unidade-pais" class="w-full p-2 border rounded text-xs bg-white h-9 uppercase" onchange="app.atualizarEstados()">
                                         <option value="Brasil">BRASIL</option>
@@ -315,7 +354,6 @@
                                         <!-- Preenchido via JS -->
                                     </select>
                                 </div>
-                                <!-- FIM DA ALTERAÇÃO -->
 
                                 <button onclick="app.addUnidade()" class="w-full bg-blue-600 text-white py-2 rounded text-xs font-bold hover:bg-blue-700 h-9 uppercase">SALVAR UNIDADE</button>
                             </div>
@@ -359,14 +397,14 @@
                 </div>
             </div>
 
-            <!-- ================= ABA IMPORTAÇÃO (FERRAMENTAS AVANÇADAS) ================= -->
+            <!-- ================= ABA IMPORTAÇÃO ================= -->
             <div id="view-importacao" class="view-section hidden fade-in pb-20">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-6xl mx-auto">
                     <!-- Importação -->
                     <div class="glass-panel p-6"><h2 class="font-bold text-gray-800 mb-2 uppercase">Importar Unidades</h2><textarea id="import-unidades-text" class="w-full h-24 p-3 border rounded text-xs mb-2"></textarea><button onclick="app.importarUnidades()" class="bg-blue-600 text-white px-4 py-2 rounded text-xs w-full font-bold uppercase">Processar Importação</button></div>
                     <div class="glass-panel p-6"><h2 class="font-bold text-gray-800 mb-2 uppercase">Importar Grades</h2><textarea id="import-grades-text" class="w-full h-24 p-3 border rounded text-xs mb-2"></textarea><button onclick="app.importarGrades()" class="bg-green-600 text-white px-4 py-2 rounded text-xs w-full font-bold uppercase">Processar Importação</button></div>
                     
-                    <!-- NOVA SEÇÃO: EXPORTAÇÃO DE DADOS ESPECÍFICOS -->
+                    <!-- EXPORTAÇÃO -->
                     <div class="glass-panel p-6 md:col-span-2 border-l-4 border-orange-500">
                         <h2 class="font-bold text-gray-800 mb-2 flex items-center gap-2 uppercase"><i data-lucide="download" class="w-4 h-4"></i> Exportação de Dados Cadastrais</h2>
                         <p class="text-xs text-gray-500 mb-4 uppercase">Baixe listas completas para conferência ou migração.</p>
@@ -432,7 +470,6 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // Garantir que a variável global app seja definida após o carregamento
             window.app = new SistemaPratique();
         });
 
@@ -444,14 +481,12 @@
                 this.modoAgrupamento = 'detalhado';
                 this.ordenacao = { campo: 'receita', direcao: 'desc' };
                 this.mobileMenuOpen = false;
-                // Removida API URL pois não será mais usada
                 this.apiUrl = ''; 
                 
                 this.constantes = {
                     dias: ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"],
                     meses: ["JANEIRO", "FEVEREIRO", "MARÇO", "ABRIL", "MAIO", "JUNHO", "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO"],
-                    feriadosFixos: [{d:1,m:0,nome:"CONF. UNIVERSAL"}, {d:21,m:3,nome:"TIRADENTES"}, {d:1,m:4,nome:"DIA DO TRABALHO"}, {d:7,m:8,nome:"INDEPENDÊNCIA"}, {d:12,m:9,nome:"N. SRA. APARECIDA"}, {d:2,m:10,nome:"FINADOS"}, {d:15,m:10,nome:"PROCLAMAÇÃO"}, {d:25,m:11,nome:"NATAL"}],
-                    // NOVA ESTRUTURA PARA PAÍSES E ESTADOS
+                    feriadosFixos: [{d:1,m:0,nome:"CONF. UNIVERSAL"}, {d:21,m:3,nome:"TIRADENTES"}, {d:1,m:4,nome:"DIA DO TRABALHO"}, {d:7,m:8,nome:"INDEPENDÊNCIA"}, {d:12,m:9,nome:"N. SRA. APARECIDA"}, {d:2,m:10,nome:"FINADOS"}, {d:15,m:10,nome:"PROCLAMAÇÃO"}, {d:25,m:11,nome:"Natal"}],
                     paisesEstados: {
                         'Brasil': ["AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"],
                         'Estados Unidos': ["AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA", "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD", "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ", "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY"],
@@ -467,19 +502,27 @@
                 this.carregarDados();
                 this.setupUI();
                 this.nav('relatorio');
-                // Força ícones
                 setTimeout(() => lucide.createIcons(), 500); 
             }
 
-            // --- Lógica de Estados Dinâmicos ---
+            atualizarEstadosRelatorio() {
+                const paisSelecionado = document.getElementById('rel-pais').value;
+                const selectEstado = document.getElementById('rel-estado');
+                if (paisSelecionado && this.constantes.paisesEstados[paisSelecionado]) {
+                    const estados = this.constantes.paisesEstados[paisSelecionado];
+                    selectEstado.innerHTML = `<option value="">TODOS</option>` + estados.map(e => `<option value="${e}">${e}</option>`).join('');
+                } else {
+                    const estadosDb = [...new Set(this.db.unidades.map(u => u.estado).filter(Boolean))].sort();
+                    selectEstado.innerHTML = `<option value="">TODOS</option>` + estadosDb.map(e => `<option value="${e}">${e}</option>`).join('');
+                }
+            }
+
             atualizarEstados() {
                 const paisSelecionado = document.getElementById('cad-unidade-pais').value;
                 const selectEstado = document.getElementById('cad-unidade-estado');
                 const estados = this.constantes.paisesEstados[paisSelecionado] || [];
-                
                 selectEstado.innerHTML = estados.map(e => `<option value="${e}">${e}</option>`).join('');
             }
-            // -----------------------------------
 
             setupDraggableModal() {
                 const modal = document.getElementById('modal-card');
@@ -513,44 +556,19 @@
 
             carregarDados() {
                 const salvo = localStorage.getItem('pratique_global_db_v5');
-                if (salvo) { 
-                    try { 
-                        const parsed = JSON.parse(salvo);
-                        this.db = {
-                            mentores: parsed.mentores || [],
-                            unidades: parsed.unidades || [],
-                            modalidades: parsed.modalidades || [],
-                            horarios: parsed.horarios || []
-                        };
-                    } catch(e) { this.seedInicial(); } 
-                } else { 
-                    this.seedInicial(); 
-                }
+                if (salvo) { try { const parsed = JSON.parse(salvo); this.db = { mentores: parsed.mentores || [], unidades: parsed.unidades || [], modalidades: parsed.modalidades || [], horarios: parsed.horarios || [] }; } catch(e) { this.seedInicial(); } } else { this.seedInicial(); }
             }
 
-            salvarDados() { 
-                localStorage.setItem('pratique_global_db_v5', JSON.stringify(this.db)); 
-            }
-
-            seedInicial() { 
-                this.db = {
-                    mentores: [{id:1,nome:"FELIPE SOUZA"}],
-                    modalidades: [{id:1,nome:"JUMP",cor:"#ff5722"}],
-                    unidades: [{id:101,nome:"PRATIQUE SAVASSI",mentorId:1,estado:"MG",pais:"Brasil"}],
-                    horarios: []
-                };
-                this.salvarDados(); 
-            }
+            salvarDados() { localStorage.setItem('pratique_global_db_v5', JSON.stringify(this.db)); }
+            seedInicial() { this.db = { mentores: [{id:1,nome:"FELIPE SOUZA"}], modalidades: [{id:1,nome:"JUMP",cor:"#ff5722"}], unidades: [{id:101,nome:"PRATIQUE SAVASSI",mentorId:1,estado:"MG",pais:"Brasil"}], horarios: [] }; this.salvarDados(); }
             
             nav(viewId) {
                 document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
                 const target = document.getElementById(`view-${viewId}`);
                 if (target) target.classList.remove('hidden');
-                
                 document.querySelectorAll('.sidebar-link').forEach(el => el.classList.remove('active'));
                 const link = document.getElementById(`nav-${viewId}`);
                 if (link) link.classList.add('active');
-
                 if(this.mobileMenuOpen) this.toggleMenu();
                 if(viewId === 'relatorio') setTimeout(() => this.gerarRelatorio(), 100);
                 this.cancelarEdicao();
@@ -561,121 +579,75 @@
                 this.mobileMenuOpen = !this.mobileMenuOpen;
                 const sb = document.getElementById('sidebar');
                 const ov = document.getElementById('mobile-menu-overlay');
-                if(this.mobileMenuOpen) { sb.classList.remove('-translate-x-full'); ov.classList.remove('hidden'); }
-                else { sb.classList.add('-translate-x-full'); ov.classList.add('hidden'); }
+                if(this.mobileMenuOpen) { sb.classList.remove('-translate-x-full'); ov.classList.remove('hidden'); } else { sb.classList.add('-translate-x-full'); ov.classList.add('hidden'); }
             }
 
             setupUI() {
-                const dataEl = document.getElementById('data-atual');
-                if(dataEl) dataEl.innerText = new Date().toLocaleDateString('pt-BR');
-                
-                const checkDias = (id, cls) => {
-                    const el = document.getElementById(id);
-                    if(el) {
-                        el.innerHTML = this.constantes.dias.map(d => `
-                            <label class="cursor-pointer select-none"><input type="checkbox" value="${d}" class="peer sr-only ${cls}">
-                            <div class="px-2 py-1 text-[10px] uppercase border rounded bg-white text-gray-400 peer-checked:bg-blue-600 peer-checked:text-white transition">${d.substring(0,3)}</div></label>`).join('');
-                    }
-                }
+                document.getElementById('data-atual').innerText = new Date().toLocaleDateString('pt-BR');
+                const checkDias = (id, cls) => { const el = document.getElementById(id); if(el) el.innerHTML = this.constantes.dias.map(d => `<label class="cursor-pointer select-none"><input type="checkbox" value="${d}" class="peer sr-only ${cls}"><div class="px-2 py-1 text-[10px] uppercase border rounded bg-white text-gray-400 peer-checked:bg-blue-600 peer-checked:text-white transition">${d.substring(0,3)}</div></label>`).join(''); }
                 checkDias('check-dias', 'check-dia-input');
                 checkDias('modal-dias-container', 'modal-check-dia');
-                
                 const selMes = document.getElementById('rel-mes');
                 if(selMes) selMes.innerHTML = this.constantes.meses.map((m, i) => `<option value="${i}" ${i === new Date().getMonth() ? 'selected' : ''}>${m}</option>`).join('');
-                
                 this.atualizarListas();
-                this.atualizarEstados(); // Inicializa estados
+                this.atualizarEstados(); 
+                this.atualizarEstadosRelatorio();
             }
 
             atualizarListas() {
                 const renderList = (id, list, renderFn) => { const el = document.getElementById(id); if(el) el.innerHTML = list.map(renderFn).join(''); };
-                
                 renderList('lista-mentores', this.db.mentores, m => `<li class="flex justify-between bg-slate-50 p-1 px-2 rounded border"><span>${m.nome}</span> <button onclick="app.remove('mentores', ${m.id})" class="text-red-400">×</button></li>`);
                 renderList('lista-modalidades', this.db.modalidades, m => `<li class="flex justify-between bg-slate-50 p-1 rounded border"><div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full" style="background:${m.cor}"></div>${m.nome}</div><button onclick="app.remove('modalidades', ${m.id})" class="text-red-400">×</button></li>`);
-                
                 const ops = (list) => `<option value="">SELECIONE...</option>` + list.map(i => `<option value="${i.id}">${i.nome}</option>`).join('');
-                
                 ['cad-unidade-mentor', 'rel-mentor'].forEach(id => { const el = document.getElementById(id); if(el) el.innerHTML = `<option value="">TODOS</option>` + this.db.mentores.map(m => `<option value="${m.id}">${m.nome}</option>`).join(''); });
                 ['grade-modalidade', 'modal-modalidade'].forEach(id => { const el = document.getElementById(id); if(el) el.innerHTML = ops(this.db.modalidades); });
-                const relMod = document.getElementById('rel-modalidade');
-                if(relMod) relMod.innerHTML = `<option value="">TODAS</option>` + this.db.modalidades.map(m => `<option value="${m.id}">${m.nome}</option>`).join('');
-                
+                const relMod = document.getElementById('rel-modalidade'); if(relMod) relMod.innerHTML = `<option value="">TODAS</option>` + this.db.modalidades.map(m => `<option value="${m.id}">${m.nome}</option>`).join('');
                 const renderUni = u => `<li class="flex justify-between items-center bg-white p-2 rounded border shadow-sm"><div><div class="font-bold text-gray-700">${u.nome}</div><div class="text-[10px] text-gray-400">${u.estado}, ${u.pais}</div></div><button onclick="app.remove('unidades', ${u.id})" class="text-red-400">×</button></li>`;
                 renderList('lista-unidades', this.db.unidades.sort((a,b)=>a.nome.localeCompare(b.nome)), renderUni);
-                
                 const opsUni = `<option value="">TODAS/SELECIONE</option>` + this.db.unidades.sort((a,b)=>a.nome.localeCompare(b.nome)).map(u => `<option value="${u.id}">${u.nome}</option>`).join('');
                 ['rel-unidade', 'grade-unidade', 'cronograma-unidade-select'].forEach(id => { const el = document.getElementById(id); if(el) { const v = el.value; el.innerHTML = opsUni; if(v) el.value = v; } });
-
-                const paises = [...new Set(this.db.unidades.map(u => u.pais).filter(Boolean))].sort();
-                const estados = [...new Set(this.db.unidades.map(u => u.estado).filter(Boolean))].sort();
-                
-                const relPais = document.getElementById('rel-pais');
-                if(relPais) relPais.innerHTML = '<option value="">TODOS</option>' + paises.map(p => `<option value="${p}">${p}</option>`).join('');
-                
-                const relEstado = document.getElementById('rel-estado');
-                if(relEstado) relEstado.innerHTML = '<option value="">TODOS</option>' + estados.map(e => `<option value="${e}">${e}</option>`).join('');
-                
+                const paises = Object.keys(this.constantes.paisesEstados);
+                const relPais = document.getElementById('rel-pais'); if(relPais) relPais.innerHTML = '<option value="">TODOS</option>' + paises.map(p => `<option value="${p}">${p}</option>`).join('');
                 this.renderGradesRecentes();
                 lucide.createIcons();
             }
             
             filtrarListaUnidades(termo) {
-                const lista = document.getElementById('lista-unidades');
-                if(!lista) return;
-                const items = lista.getElementsByTagName('li');
-                termo = termo.toLowerCase();
-                for (let i = 0; i < items.length; i++) {
-                    const text = items[i].textContent || items[i].innerText;
-                    items[i].style.display = text.toLowerCase().indexOf(termo) > -1 ? "" : "none";
-                }
+                const lista = document.getElementById('lista-unidades'); if(!lista) return;
+                const items = lista.getElementsByTagName('li'); termo = termo.toLowerCase();
+                for (let i = 0; i < items.length; i++) { const text = items[i].textContent || items[i].innerText; items[i].style.display = text.toLowerCase().indexOf(termo) > -1 ? "" : "none"; }
             }
 
             calcularPascoa(ano) {
                 const C = Math.floor(ano/100), N = ano - 19*Math.floor(ano/19), K = Math.floor((C - 17)/25);
-                let I = C - Math.floor(C/4) - Math.floor((C - K)/3) + 19*N + 15;
-                I = I - 30*Math.floor((I/30)); I = I - Math.floor(I/28)*(1 - Math.floor(I/28)*Math.floor(29/(I + 1))*Math.floor((21 - N)/11));
+                let I = C - Math.floor(C/4) - Math.floor((C - K)/3) + 19*N + 15; I = I - 30*Math.floor((I/30)); I = I - Math.floor(I/28)*(1 - Math.floor(I/28)*Math.floor(29/(I + 1))*Math.floor((21 - N)/11));
                 let J = ano + Math.floor(ano/4) + I + 2 - C + Math.floor(C/4); J = J - 7*Math.floor(J/7); const L = I - J;
-                const mes = 3 + Math.floor((L + 40)/44), dia = L + 28 - 31*Math.floor(mes/4);
-                return { m: mes-1, d: dia };
+                const mes = 3 + Math.floor((L + 40)/44), dia = L + 28 - 31*Math.floor(mes/4); return { m: mes-1, d: dia };
             }
 
             getFeriadosMoveis(ano) {
                 const p = this.calcularPascoa(ano); const pascoa = new Date(ano, p.m, p.d);
-                const carnaval = new Date(pascoa); carnaval.setDate(pascoa.getDate() - 47);
-                const sextaSanta = new Date(pascoa); sextaSanta.setDate(pascoa.getDate() - 2);
-                const corpus = new Date(pascoa); corpus.setDate(pascoa.getDate() + 60);
+                const carnaval = new Date(pascoa); carnaval.setDate(pascoa.getDate() - 47); const sextaSanta = new Date(pascoa); sextaSanta.setDate(pascoa.getDate() - 2); const corpus = new Date(pascoa); corpus.setDate(pascoa.getDate() + 60);
                 return [{ d: carnaval.getDate(), m: carnaval.getMonth(), nome: "CARNAVAL" }, { d: sextaSanta.getDate(), m: sextaSanta.getMonth(), nome: "SEXTA-FEIRA SANTA" }, { d: corpus.getDate(), m: corpus.getMonth(), nome: "CORPUS CHRISTI" }];
             }
 
             gerarRelatorio() {
-                const elMes = document.getElementById('rel-mes');
-                if(!elMes) return;
-                
+                const elMes = document.getElementById('rel-mes'); if(!elMes) return;
                 const mes = parseInt(elMes.value), ano = parseInt(document.getElementById('rel-ano').value);
-                const fPais = document.getElementById('rel-pais').value, fEst = document.getElementById('rel-estado').value;
-                const fMent = document.getElementById('rel-mentor').value, fUni = document.getElementById('rel-unidade').value, fMod = document.getElementById('rel-modalidade').value;
+                const fPais = document.getElementById('rel-pais').value, fEst = document.getElementById('rel-estado').value, fMent = document.getElementById('rel-mentor').value, fUni = document.getElementById('rel-unidade').value, fMod = document.getElementById('rel-modalidade').value;
                 const feriados = [...this.constantes.feriadosFixos.filter(f => f.m === mes), ...this.getFeriadosMoveis(ano).filter(f => f.m === mes)];
-                
                 const divFeriados = document.getElementById('section-feriados');
-                if(feriados.length > 0) { 
-                    divFeriados.classList.remove('hidden'); 
-                    document.getElementById('feriados-lista-nomes').innerText = "FERIADOS: " + feriados.map(f => `${f.d}/${f.m+1} (${f.nome})`).join(', '); 
-                } else { 
-                    divFeriados.classList.add('hidden'); 
-                }
+                if(feriados.length > 0) { divFeriados.classList.remove('hidden'); document.getElementById('feriados-lista-nomes').innerText = "FERIADOS: " + feriados.map(f => `${f.d}/${f.m+1} (${f.nome})`).join(', '); } else { divFeriados.classList.add('hidden'); }
                 
                 let filtered = this.db.horarios.filter(h => {
-                    const u = this.db.unidades.find(x => x.id == h.unidadeId);
-                    if(!u) return false;
-                    if(fPais && u.pais !== fPais) return false; if(fEst && u.estado !== fEst) return false;
-                    if(fMent && u.mentorId != fMent) return false; if(fUni && u.id != fUni) return false;
-                    if(fMod && h.modalidadeId != fMod) return false;
+                    const u = this.db.unidades.find(x => x.id == h.unidadeId); if(!u) return false;
+                    if(fPais && u.pais !== fPais) return false; if(fEst && u.estado !== fEst) return false; if(fMent && u.mentorId != fMent) return false; if(fUni && u.id != fUni) return false; if(fMod && h.modalidadeId != fMod) return false;
                     return true;
                 });
                 
                 const daysInMonth = new Date(ano, mes + 1, 0).getDate();
                 let stats = { rec:0, aul:0, alu:0, canc:0, uni:new Set() };
-                let rankingData = {}, canceladas = [], rows = [];
+                let canceladas = [], rows = [];
 
                 filtered.forEach(h => {
                     const u = this.db.unidades.find(x => x.id == h.unidadeId), m = this.db.modalidades.find(x => x.id == h.modalidadeId);
@@ -685,65 +657,58 @@
                         const dia = this.constantes.dias[new Date(ano, mes, d).getDay() === 0 ? 6 : new Date(ano, mes, d).getDay() - 1];
                         if(h.dias.includes(dia)) {
                             const isFer = feriados.find(f => f.d === d);
-                            if(isFer) { stats.canc++; canceladas.push({ data: `${d}/${mes+1}`, feriado: isFer.nome, unidade: u?.nome, impacto: h.valor }); } 
-                            else ac++;
+                            if(isFer) { stats.canc++; canceladas.push({ data: `${d}/${mes+1}`, feriado: isFer.nome, unidade: u?.nome, impacto: h.valor }); } else ac++;
                         }
                     }
                     const rec = ac * h.valor; stats.rec += rec; stats.aul += ac; stats.alu += (h.mediaAlunos * ac);
                     
-                    if(u) {
-                        if(!rankingData[u.nome]) rankingData[u.nome] = { nome: u.nome, gasto: 0, somaMediaAlunos: 0, countHorarios: 0, totalAulas: 0, totalAlunos: 0 };
-                        rankingData[u.nome].gasto += rec;
-                        rankingData[u.nome].somaMediaAlunos += h.mediaAlunos;
-                        rankingData[u.nome].countHorarios++;
-                        rankingData[u.nome].totalAulas += ac;
-                        rankingData[u.nome].totalAlunos += (h.mediaAlunos * ac);
-                    }
-
                     rows.push({ unidade: u?.nome||'?', modalidade: m?.nome||'?', professor: h.professor, diasStr: h.dias.map(d=>d.substring(0,3)).join(','), valorHora: h.valor, aulas: ac, mediaAlunos: h.mediaAlunos, receita: rec, dias: h.dias });
                 });
 
                 document.getElementById('kpi-receita').innerText = `R$ ${stats.rec.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
                 document.getElementById('kpi-aulas').innerText = stats.aul;
                 document.getElementById('kpi-media-alunos').innerText = stats.aul ? Math.round(stats.alu/stats.aul) : 0;
+                // Cálculo Valor Médio Aula
+                const mediaValor = stats.aul > 0 ? stats.rec / stats.aul : 0;
+                document.getElementById('kpi-media-valor').innerText = `R$ ${mediaValor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+
                 document.getElementById('kpi-canceladas').innerText = stats.canc;
                 document.getElementById('kpi-unidades-count').innerText = stats.uni.size;
                 document.querySelector('#tabela-canceladas tbody').innerHTML = canceladas.map(c => `<tr><td>${c.data}</td><td>${c.feriado}</td><td>${c.unidade}</td><td class="text-right text-red-600">- R$ ${c.impacto.toFixed(2)}</td></tr>`).join('');
                 
                 this.dadosBrutosFiltrados = rows;
                 this.processarExibicaoTabela();
-                this.gerarRankings(rankingData);
+                
+                // GERA O RANKING DIRETO (SEM CÁLCULO)
+                this.gerarRankings(rows);
+                
                 document.getElementById('relatorio-empty').classList.toggle('hidden', rows.length > 0);
             }
 
-            gerarRankings(dataObj) {
-                const lista = Object.values(dataObj).map(item => ({
-                    nome: item.nome,
-                    gasto: item.gasto,
-                    mediaGeral: item.countHorarios > 0 ? Math.round(item.somaMediaAlunos / item.countHorarios) : 0,
-                    totalAulas: item.totalAulas,
-                    totalAlunos: Math.round(item.totalAlunos)
-                }));
+            // GERA RANKING DIRETO DAS AULAS (ZERO CÁLCULO)
+            gerarRankings(rows) {
+                // Ordenação pura pelo valor de média cadastrada
+                const byBest = [...rows].sort((a,b) => b.mediaAlunos - a.mediaAlunos).slice(0, 10);
+                const byWorst = [...rows].sort((a,b) => a.mediaAlunos - b.mediaAlunos).slice(0, 10);
 
-                const byAlu = [...lista].sort((a,b) => b.mediaGeral - a.mediaGeral).slice(0, 10); 
-                const byGas = [...lista].sort((a,b) => b.gasto - a.gasto).slice(0, 10); 
-
-                const renderTable = (arr, isGas) => {
-                    if(!arr.length) return '<tr><td colspan="4" class="text-center py-4 text-gray-400">SEM DADOS</td></tr>';
+                const renderTable = (arr, isWorst) => {
+                    if(!arr.length) return '<tr><td colspan="3" class="text-center py-4 text-gray-400">SEM DADOS</td></tr>';
                     return arr.map((i, idx) => `
                         <tr class="border-b border-gray-100 hover:bg-gray-50">
-                            <td class="py-2 font-bold ${idx < 3 ? 'text-blue-600' : 'text-gray-500'}">${idx + 1}º</td>
-                            <td class="py-2 truncate max-w-[150px] font-medium text-gray-700">${i.nome}</td>
-                            <td class="py-2 text-center text-gray-500">${isGas ? i.totalAlunos : i.totalAulas}</td>
-                            <td class="py-2 text-right font-bold ${isGas ? 'text-green-600' : 'text-orange-500'}">
-                                ${isGas ? 'R$ ' + i.gasto.toLocaleString('pt-BR') : i.mediaGeral}
+                            <td class="py-2 font-bold ${idx < 3 ? (isWorst ? 'text-red-600' : 'text-blue-600') : 'text-gray-500'}">${idx + 1}º</td>
+                            <td class="py-2 truncate max-w-[200px] font-medium text-gray-700">
+                                ${i.unidade}<br>
+                                <span class="text-[9px] text-gray-400 uppercase">${i.modalidade} | ${i.professor}</span>
+                            </td>
+                            <td class="py-2 text-right font-bold ${isWorst ? 'text-red-500' : 'text-green-600'}">
+                                ${i.mediaAlunos}
                             </td>
                         </tr>
                     `).join('');
                 };
 
-                document.querySelector('#tabela-ranking-alunos tbody').innerHTML = renderTable(byAlu, false);
-                document.querySelector('#tabela-ranking-gastos tbody').innerHTML = renderTable(byGas, true);
+                document.querySelector('#tabela-ranking-alunos tbody').innerHTML = renderTable(byBest, false);
+                document.querySelector('#tabela-ranking-gastos tbody').innerHTML = renderTable(byWorst, true);
             }
 
             setAgrupamento(modo) {
@@ -799,12 +764,21 @@
                 
                 if (modo === 'detalhado') {
                     thead.innerHTML = `
-                        <th onclick="app.ordenarRelatorio('unidade')">UNIDADE</th><th onclick="app.ordenarRelatorio('modalidade')">MODALIDADE</th>
-                        <th>PROF.</th><th class="text-center">VALOR</th><th class="text-center">AULAS</th><th class="text-center">MÉDIA</th><th class="text-right">INVESTIMENTO ${this.ordenacao.campo === 'receita' ? arr : ''}</th>`;
+                        <th onclick="app.ordenarRelatorio('unidade')">UNIDADE ${this.ordenacao.campo === 'unidade' ? arr : ''}</th>
+                        <th onclick="app.ordenarRelatorio('modalidade')">MODALIDADE ${this.ordenacao.campo === 'modalidade' ? arr : ''}</th>
+                        <th onclick="app.ordenarRelatorio('professor')">PROF. ${this.ordenacao.campo === 'professor' ? arr : ''}</th>
+                        <th onclick="app.ordenarRelatorio('valorHora')" class="text-center">VALOR ${this.ordenacao.campo === 'valorHora' ? arr : ''}</th>
+                        <th onclick="app.ordenarRelatorio('aulas')" class="text-center">AULAS ${this.ordenacao.campo === 'aulas' ? arr : ''}</th>
+                        <th onclick="app.ordenarRelatorio('mediaAlunos')" class="text-center">MÉDIA ${this.ordenacao.campo === 'mediaAlunos' ? arr : ''}</th>
+                        <th onclick="app.ordenarRelatorio('receita')" class="text-right">INVESTIMENTO ${this.ordenacao.campo === 'receita' ? arr : ''}</th>`;
                     tbody.innerHTML = this.dadosExibidos.map(r => `
                         <tr><td class="font-bold text-gray-700 text-xs">${r.unidade}</td><td class="text-blue-600 font-bold text-xs">${r.modalidade}</td><td class="text-xs">${r.professor}</td><td class="text-center font-mono text-xs">R$ ${r.valorHora.toFixed(2)}</td><td class="text-center font-bold text-xs">${r.aulas}</td><td class="text-center text-xs">${r.mediaAlunos}</td><td class="text-right font-bold text-green-600 text-xs">R$ ${r.receita.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td></tr>`).join('');
                 } else {
-                    thead.innerHTML = `<th onclick="app.ordenarRelatorio('grupo')">GRUPO</th><th class="text-center">AULAS</th><th class="text-center">MÉDIA</th><th class="text-right">INVESTIMENTO ${this.ordenacao.campo === 'receita' ? arr : ''}</th>`;
+                    thead.innerHTML = `
+                        <th onclick="app.ordenarRelatorio('grupo')">GRUPO ${this.ordenacao.campo === 'grupo' ? arr : ''}</th>
+                        <th class="text-center" onclick="app.ordenarRelatorio('aulas')" class="text-center">AULAS ${this.ordenacao.campo === 'aulas' ? arr : ''}</th>
+                        <th class="text-center" onclick="app.ordenarRelatorio('mediaAlunos')" class="text-center">MÉDIA ${this.ordenacao.campo === 'mediaAlunos' ? arr : ''}</th>
+                        <th class="text-right" onclick="app.ordenarRelatorio('receita')" class="text-right">INVESTIMENTO ${this.ordenacao.campo === 'receita' ? arr : ''}</th>`;
                     tbody.innerHTML = this.dadosExibidos.map(r => `
                         <tr><td class="font-bold text-gray-800 text-sm">${r.grupo}</td><td class="text-center text-sm">${r.aulas}</td><td class="text-center text-sm">${r.mediaAlunos}</td><td class="text-right font-bold text-green-600 text-sm">R$ ${r.receita.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td></tr>`).join('');
                 }
@@ -949,26 +923,8 @@
                 c.innerHTML = ht + `</tbody></table>`; lucide.createIcons();
             }
             notify(t,m) { const x=document.getElementById('toast'); document.getElementById('toast-msg').innerText=m; x.classList.remove('translate-x-full'); setTimeout(()=>x.classList.add('translate-x-full'),3000); }
-            importarUnidades() { 
-                try {
-                    const txt = document.getElementById('import-unidades-text').value;
-                    if(!txt) return alert("Cole os dados primeiro.");
-                    const l=this.parseImportLines(txt); 
-                    l.forEach(c=>{ if(c[0]){ this.db.unidades.push({id:Date.now()+Math.random(), nome:c[0].toUpperCase(), mentorId:1, estado:c[2]?.toUpperCase()||'MG', pais:c[3]||'Brasil'}); } }); 
-                    this.salvarDados(); this.atualizarListas(); 
-                    this.notify('success', 'Importação Concluída');
-                } catch(e) { alert("Erro na importação: "+e); }
-            }
-            importarGrades() { 
-                try {
-                    const txt = document.getElementById('import-grades-text').value;
-                    if(!txt) return alert("Cole os dados primeiro.");
-                    const l=this.parseImportLines(txt); 
-                    l.forEach(c=>{ if(c.length>=5){ const u=this.db.unidades.find(x=>x.nome.toUpperCase()==c[0].toUpperCase()); const m=this.db.modalidades.find(x=>x.nome.toUpperCase()==c[1].toUpperCase()); if(u&&m) this.db.horarios.push({id:Date.now()+Math.random(), unidadeId:u.id, modalidadeId:m.id, professor:c[2].toUpperCase(), dias:c[3].split(','), hora:c[4], valor:parseFloat(c[5])||0, mediaAlunos:parseInt(c[6])||0}); } }); 
-                    this.salvarDados(); this.renderGradesRecentes();
-                    this.notify('success', 'Importação Concluída');
-                } catch(e) { alert("Erro na importação: "+e); }
-            }
+            importarUnidades() { const l=this.parseImportLines(document.getElementById('import-unidades-text').value); l.forEach(c=>{ if(c[0]){ this.db.unidades.push({id:Date.now()+Math.random(), nome:c[0].toUpperCase(), mentorId:1, estado:c[2]||'MG', pais:c[3]||'BR'}); } }); this.salvarDados(); this.atualizarListas(); }
+            importarGrades() { const l=this.parseImportLines(document.getElementById('import-grades-text').value); l.forEach(c=>{ if(c.length>=5){ const u=this.db.unidades.find(x=>x.nome==c[0]); const m=this.db.modalidades.find(x=>x.nome==c[1]); if(u&&m) this.db.horarios.push({id:Date.now()+Math.random(), unidadeId:u.id, modalidadeId:m.id, professor:c[2], dias:c[3].split(','), hora:c[4], valor:parseFloat(c[5])||0, mediaAlunos:parseInt(c[6])||0}); } }); this.salvarDados(); this.renderGradesRecentes(); }
             
             // Backup legado
             exportarRelatorioGeral() { this.exportarExcel(); }
@@ -981,39 +937,9 @@
                 });
                 this.downloadCSV(csv, "Grades_Pratique.csv");
             }
-            
-            salvarBackup() {
-                const blob = new Blob([JSON.stringify(this.db, null, 2)], { type: 'application/json' });
-                const link = document.createElement("a");
-                link.href = URL.createObjectURL(blob);
-                link.download = `Backup_Pratique_${new Date().toISOString().split('T')[0]}.json`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            }
-
-            restaurarBackup() {
-                const fileInput = document.getElementById('input-backup-file');
-                const file = fileInput.files[0];
-                if (!file) return alert('Selecione um arquivo .json primeiro');
-                
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    try {
-                        const json = JSON.parse(e.target.result);
-                        if(Array.isArray(json.unidades) && Array.isArray(json.horarios)) {
-                            if(confirm(`Confirmar restauração?`)) {
-                                this.db = json;
-                                this.salvarDados();
-                                alert("Sucesso! Recarregando...");
-                                location.reload();
-                            }
-                        } else { alert("Arquivo inválido."); }
-                    } catch (error) { alert("Erro ao ler arquivo: " + error.message); }
-                };
-                reader.readAsText(file);
-            }
         }
+
+        const app = new SistemaPratique();
     </script>
 </body>
 </html>
