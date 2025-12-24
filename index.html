@@ -575,6 +575,13 @@
         // Inicializa ícones
         lucide.createIcons();
 
+        // 1. GARANTE CARREGAMENTO SEGURO
+        document.addEventListener('DOMContentLoaded', () => {
+            const app = new SistemaPratique();
+            // 3. EXPOR PARA BOTÕES HTML
+            window.app = app;
+        });
+
         class SistemaPratique {
             constructor() {
                 this.db = {
@@ -620,6 +627,9 @@
                 }
 
                 this.nav('relatorio');
+                
+                // Força ícones aparecerem
+                setTimeout(() => lucide.createIcons(), 500);
             }
 
             // --- MENU MOBILE ---
@@ -793,6 +803,9 @@
 
                 if(viewId === 'relatorio') this.gerarRelatorio();
                 this.cancelarEdicao(); 
+                
+                // Recarrega ícones ao navegar
+                lucide.createIcons();
             }
 
             setupUI() {
@@ -882,7 +895,11 @@
             }
 
             renderListaUnidades() {
-                document.getElementById('lista-unidades').innerHTML = this.db.unidades.sort((a,b) => a.nome.localeCompare(b.nome)).map(u => {
+                // 2. PROTEÇÃO NULL CHECK
+                const container = document.getElementById('lista-unidades');
+                if (!container) return;
+
+                container.innerHTML = this.db.unidades.sort((a,b) => a.nome.localeCompare(b.nome)).map(u => {
                     const m = this.db.mentores.find(x => x.id == u.mentorId)?.nome || '-';
                     return `<li class="flex justify-between items-center bg-white p-3 rounded border shadow-sm">
                         <div class="overflow-hidden pr-2">
@@ -1164,7 +1181,10 @@
             }
 
             renderGradesRecentes() {
+                // 2. PROTEÇÃO NULL CHECK
                 const div = document.getElementById('lista-grades-recentes');
+                if (!div) return;
+
                 div.innerHTML = this.db.horarios.slice(-5).reverse().map(h => {
                     const u = this.db.unidades.find(x => x.id == h.unidadeId)?.nome;
                     const m = this.db.modalidades.find(x => x.id == h.modalidadeId)?.nome;
@@ -1631,8 +1651,6 @@
                 setTimeout(() => toast.classList.add('translate-x-full'), 3000);
             }
         }
-
-        const app = new SistemaPratique();
     </script>
 </body>
 </html>
