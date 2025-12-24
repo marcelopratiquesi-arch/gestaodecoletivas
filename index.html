@@ -915,7 +915,45 @@
             importarUnidades() { const l=this.parseImportLines(document.getElementById('import-unidades-text').value); l.forEach(c=>{ if(c[0]){ this.db.unidades.push({id:Date.now()+Math.random(), nome:c[0].toUpperCase(), mentorId:1, estado:c[2]||'MG', pais:c[3]||'BR'}); } }); this.salvarDados(); this.atualizarListas(); }
             importarGrades() { const l=this.parseImportLines(document.getElementById('import-grades-text').value); l.forEach(c=>{ if(c.length>=5){ const u=this.db.unidades.find(x=>x.nome==c[0]); const m=this.db.modalidades.find(x=>x.nome==c[1]); if(u&&m) this.db.horarios.push({id:Date.now()+Math.random(), unidadeId:u.id, modalidadeId:m.id, professor:c[2], dias:c[3].split(','), hora:c[4], valor:parseFloat(c[5])||0, mediaAlunos:parseInt(c[6])||0}); } }); this.salvarDados(); this.renderGradesRecentes(); }
             
-            // Backup legado
+            // Backup e Restauração
+            salvarBackup() {
+                const data = JSON.stringify(this.db, null, 2);
+                const blob = new Blob([data], {type: 'application/json'});
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `backup_gestao_pratique_${new Date().toISOString().slice(0,10)}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                this.notify('success', 'BACKUP GERADO!');
+            }
+
+            restaurarBackup() {
+                const input = document.getElementById('input-backup-file');
+                if (!input.files.length) return alert('SELECIONE O ARQUIVO .JSON');
+                const file = input.files[0];
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const json = JSON.parse(e.target.result);
+                        if(json.mentores && json.unidades && json.horarios) {
+                            this.db = json;
+                            this.salvarDados();
+                            this.init();
+                            this.notify('success', 'SISTEMA RESTAURADO!');
+                        } else {
+                            alert('ARQUIVO INVÁLIDO OU ANTIGO');
+                        }
+                    } catch (err) {
+                        alert('ERRO AO LER ARQUIVO');
+                    }
+                };
+                reader.readAsText(file);
+            }
+
+            // Exportações
             exportarRelatorioGeral() { this.exportarExcel(); }
             exportarGrades() {
                 let csv = "Unidade;Modalidade;Professor;Dias;Hora;Valor;MediaAlunos\n";
