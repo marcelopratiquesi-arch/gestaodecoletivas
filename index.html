@@ -43,6 +43,7 @@
         .sidebar-link { transition: all 0.2s; border-left: 3px solid transparent; cursor: pointer; }
         .sidebar-link:hover { background-color: rgba(255,255,255,0.05); color: white; }
         .sidebar-link.active { background-color: rgba(59, 130, 246, 0.1); color: #60a5fa; border-left-color: #60a5fa; }
+        .sidebar-link.disabled { opacity: 0.3; pointer-events: none; display: none; }
 
         /* Tabela interativa com cursor pointer nos headers */
         .table-custom th {
@@ -71,6 +72,12 @@
         .status-offline { background-color: #ef4444; }
         .status-sync { background-color: #f59e0b; animation: pulse 1s infinite; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
+        /* Login Screen Styles */
+        .login-bg {
+            background-color: #0f172a;
+            background-image: radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%), radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%);
+        }
         
         @media print {
             @page { margin: 0.5cm; size: landscape; }
@@ -88,348 +95,432 @@
 </head>
 <body class="h-screen flex overflow-hidden text-sm font-sans bg-slate-50">
 
-    <!-- OVERLAY MOBILE -->
-    <div id="mobile-menu-overlay" onclick="app.toggleMenu()" class="fixed inset-0 bg-black/50 z-40 hidden md:hidden backdrop-blur-sm transition-opacity"></div>
-
-    <!-- SIDEBAR -->
-    <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-pratique-sidebar text-gray-400 flex flex-col flex-shrink-0 transition-transform duration-300 transform -translate-x-full md:relative md:translate-x-0 shadow-2xl md:shadow-none no-print">
-        <div class="p-6 border-b border-gray-800 flex justify-between items-center">
-            <div>
-                <h1 class="text-xl font-bold text-white tracking-tight">PRATIQUE <span class="text-blue-500">COLETIVAS</span></h1>
-                <p class="text-xs mt-1 opacity-60">Gestão Happy Zone</p>
+    <!-- TELA DE LOGIN -->
+    <div id="login-screen" class="fixed inset-0 z-[100] flex items-center justify-center login-bg p-4">
+        <div class="bg-white/10 backdrop-blur-lg border border-white/20 p-8 rounded-2xl shadow-2xl w-full max-w-md">
+            <div class="text-center mb-8">
+                <h1 class="text-3xl font-bold text-white tracking-tight mb-2">PRATIQUE <span class="text-blue-400">COLETIVAS</span></h1>
+                <p class="text-blue-200 text-xs uppercase tracking-widest">Gestão & Performance</p>
             </div>
-            <button onclick="app.toggleMenu()" class="md:hidden text-gray-400 hover:text-white">
-                <i data-lucide="x" class="w-6 h-6"></i>
-            </button>
-        </div>
-
-        <nav class="flex-1 overflow-y-auto py-4 space-y-1">
-            <button onclick="app.nav('relatorio')" id="nav-relatorio" class="sidebar-link active w-full text-left px-6 py-4 md:py-3 flex items-center gap-3">
-                <i data-lucide="bar-chart-2" class="w-5 h-5"></i> <span class="font-medium">Relatório Gerencial</span>
-            </button>
-            <button onclick="app.nav('config')" id="nav-config" class="sidebar-link w-full text-left px-6 py-4 md:py-3 flex items-center gap-3">
-                <i data-lucide="settings" class="w-5 h-5"></i> <span class="font-medium">Configurações</span>
-            </button>
-            <button onclick="app.nav('cronograma')" id="nav-cronograma" class="sidebar-link w-full text-left px-6 py-4 md:py-3 flex items-center gap-3">
-                <i data-lucide="calendar" class="w-5 h-5"></i> <span class="font-medium">Cronograma Visual</span>
-            </button>
-            <button onclick="app.nav('importacao')" id="nav-importacao" class="sidebar-link w-full text-left px-6 py-4 md:py-3 flex items-center gap-3">
-                <i data-lucide="database" class="w-5 h-5"></i> <span class="font-medium">Ferramentas Avançadas</span>
-            </button>
-        </nav>
-
-        <div class="p-4 border-t border-gray-800 bg-gray-900/50">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 md:w-8 md:h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-sm md:text-xs">A</div>
+            
+            <form onsubmit="event.preventDefault(); app.login();" class="space-y-4">
                 <div>
-                    <p class="text-white text-sm md:text-xs font-bold">Admin</p>
-                    <p class="text-xs flex items-center gap-1" id="connection-status">
-                        <span class="status-dot status-offline" id="status-dot"></span> 
-                        <span id="status-text">Offline</span>
-                    </p>
+                    <label class="block text-xs font-bold text-blue-200 uppercase mb-1">Usuário / Mentor / Unidade</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i data-lucide="user" class="h-5 w-5 text-blue-300"></i>
+                        </div>
+                        <input type="text" id="login-user" class="pl-10 w-full p-3 bg-slate-900/50 border border-slate-700 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 transition uppercase" placeholder="Nome de Acesso" required>
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-xs font-bold text-blue-200 uppercase mb-1">Senha</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i data-lucide="lock" class="h-5 w-5 text-blue-300"></i>
+                        </div>
+                        <input type="password" id="login-pass" class="pl-10 w-full p-3 bg-slate-900/50 border border-slate-700 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 transition" placeholder="••••••••" required>
+                    </div>
+                </div>
+
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-lg shadow-blue-600/30 transition transform hover:-translate-y-1 uppercase text-xs tracking-wider flex items-center justify-center gap-2">
+                    <i data-lucide="log-in" class="w-4 h-4"></i> Acessar Sistema
+                </button>
+            </form>
+            
+            <div class="mt-6 text-center">
+                <p class="text-[10px] text-slate-400">
+                    <span class="font-bold text-blue-400">Admin:</span> admin / admin123 <br>
+                    <span class="font-bold text-blue-400">Padrão:</span> Nome / 1234
+                </p>
+            </div>
+            <div id="login-error" class="hidden mt-4 p-3 bg-red-500/20 border border-red-500/50 rounded text-red-200 text-xs text-center font-bold uppercase">
+                Credenciais Inválidas
+            </div>
+        </div>
+    </div>
+
+    <!-- APP CONTAINER (Inicialmente oculto) -->
+    <div id="app-container" class="flex-1 flex overflow-hidden hidden">
+        
+        <!-- OVERLAY MOBILE -->
+        <div id="mobile-menu-overlay" onclick="app.toggleMenu()" class="fixed inset-0 bg-black/50 z-40 hidden md:hidden backdrop-blur-sm transition-opacity"></div>
+
+        <!-- SIDEBAR -->
+        <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-pratique-sidebar text-gray-400 flex flex-col flex-shrink-0 transition-transform duration-300 transform -translate-x-full md:relative md:translate-x-0 shadow-2xl md:shadow-none no-print">
+            <div class="p-6 border-b border-gray-800 flex justify-between items-center">
+                <div>
+                    <h1 class="text-xl font-bold text-white tracking-tight">PRATIQUE <span class="text-blue-500">COLETIVAS</span></h1>
+                    <p class="text-xs mt-1 opacity-60">Gestão Happy Zone</p>
+                </div>
+                <button onclick="app.toggleMenu()" class="md:hidden text-gray-400 hover:text-white">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+
+            <nav class="flex-1 overflow-y-auto py-4 space-y-1">
+                <button onclick="app.nav('relatorio')" id="nav-relatorio" class="sidebar-link active w-full text-left px-6 py-4 md:py-3 flex items-center gap-3">
+                    <i data-lucide="bar-chart-2" class="w-5 h-5"></i> <span class="font-medium">Relatório Gerencial</span>
+                </button>
+                <button onclick="app.nav('config')" id="nav-config" class="sidebar-link w-full text-left px-6 py-4 md:py-3 flex items-center gap-3">
+                    <i data-lucide="settings" class="w-5 h-5"></i> <span class="font-medium">Configurações</span>
+                </button>
+                <button onclick="app.nav('cronograma')" id="nav-cronograma" class="sidebar-link w-full text-left px-6 py-4 md:py-3 flex items-center gap-3">
+                    <i data-lucide="calendar" class="w-5 h-5"></i> <span class="font-medium">Cronograma Visual</span>
+                </button>
+                <button onclick="app.nav('importacao')" id="nav-importacao" class="sidebar-link w-full text-left px-6 py-4 md:py-3 flex items-center gap-3">
+                    <i data-lucide="database" class="w-5 h-5"></i> <span class="font-medium">Ferramentas Avançadas</span>
+                </button>
+            </nav>
+
+            <div class="p-4 border-t border-gray-800 bg-gray-900/50">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 md:w-8 md:h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-sm md:text-xs" id="user-avatar">A</div>
+                    <div class="overflow-hidden">
+                        <p class="text-white text-sm md:text-xs font-bold truncate" id="user-name">Carregando...</p>
+                        <p class="text-xs text-gray-500" id="user-role">...</p>
+                    </div>
+                    <button onclick="app.logout()" class="ml-auto text-red-400 hover:text-red-300" title="Sair">
+                        <i data-lucide="log-out" class="w-4 h-4"></i>
+                    </button>
+                </div>
+                <div class="mt-2 text-[10px] flex items-center gap-1 opacity-50">
+                    <span class="status-dot status-offline" id="status-dot"></span> 
+                    <span id="status-text">Offline</span>
                 </div>
             </div>
-        </div>
-    </aside>
+        </aside>
 
-    <!-- CONTEÚDO PRINCIPAL -->
-    <main class="flex-1 flex flex-col bg-slate-50 overflow-hidden relative w-full">
-        <!-- HEADER -->
-        <header class="h-16 bg-white border-b border-gray-200 flex justify-between items-center px-4 md:px-8 flex-shrink-0 z-10 sticky top-0 no-print">
-            <div class="flex items-center gap-3">
-                <button onclick="app.toggleMenu()" class="md:hidden p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-lg">
-                    <i data-lucide="menu" class="w-6 h-6"></i>
-                </button>
-                <h2 id="page-title" class="text-lg font-bold text-gray-700 truncate">Visão Geral</h2>
-            </div>
-            
-            <div class="flex items-center gap-2 md:gap-4">
-                <button onclick="app.forcarSincronizacao()" class="text-xs font-bold text-gray-500 hover:text-blue-600 flex items-center gap-1 mr-2" title="Forçar Sincronização">
-                    <i data-lucide="refresh-cw" class="w-3 h-3"></i> Sync
-                </button>
-                <span id="data-atual" class="hidden md:inline-block text-xs font-mono text-gray-500 bg-gray-100 px-3 py-1 rounded-full"></span>
-                <button onclick="app.salvarBackup()" class="text-blue-600 hover:text-blue-800 text-xs font-bold flex items-center gap-1 bg-blue-50 p-2 rounded-lg md:bg-transparent md:p-0">
-                    <i data-lucide="save" class="w-4 h-4"></i> <span class="hidden md:inline">Backup Global</span>
-                </button>
-            </div>
-        </header>
+        <!-- CONTEÚDO PRINCIPAL -->
+        <main class="flex-1 flex flex-col bg-slate-50 overflow-hidden relative w-full">
+            <!-- HEADER -->
+            <header class="h-16 bg-white border-b border-gray-200 flex justify-between items-center px-4 md:px-8 flex-shrink-0 z-10 sticky top-0 no-print">
+                <div class="flex items-center gap-3">
+                    <button onclick="app.toggleMenu()" class="md:hidden p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-lg">
+                        <i data-lucide="menu" class="w-6 h-6"></i>
+                    </button>
+                    <h2 id="page-title" class="text-lg font-bold text-gray-700 truncate">Visão Geral</h2>
+                </div>
+                
+                <div class="flex items-center gap-2 md:gap-4">
+                    <button onclick="app.forcarSincronizacao()" class="text-xs font-bold text-gray-500 hover:text-blue-600 flex items-center gap-1 mr-2" title="Forçar Sincronização">
+                        <i data-lucide="refresh-cw" class="w-3 h-3"></i> Sync
+                    </button>
+                    <span id="data-atual" class="hidden md:inline-block text-xs font-mono text-gray-500 bg-gray-100 px-3 py-1 rounded-full"></span>
+                    <button onclick="app.salvarBackup()" class="text-blue-600 hover:text-blue-800 text-xs font-bold flex items-center gap-1 bg-blue-50 p-2 rounded-lg md:bg-transparent md:p-0">
+                        <i data-lucide="save" class="w-4 h-4"></i> <span class="hidden md:inline">Backup Global</span>
+                    </button>
+                </div>
+            </header>
 
-        <div class="flex-1 overflow-y-auto p-4 md:p-8 scroll-smooth" id="main-content">
-            
-            <!-- ================= ABA RELATÓRIO ================= -->
-            <div id="view-relatorio" class="view-section pb-20">
-                <!-- Filtros -->
-                <div class="glass-panel p-4 md:p-6 mb-6 no-print">
-                    <h3 class="font-bold text-gray-700 mb-4 flex items-center gap-2 text-sm md:text-base uppercase">
-                        <i data-lucide="filter" class="w-4 h-4 text-blue-500"></i>
-                        FILTROS
-                    </h3>
-                    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 items-end">
-                        <div class="col-span-2 md:col-span-1">
-                            <label class="block text-xs font-bold text-gray-500 mb-1">Mês/Ano</label>
-                            <div class="flex gap-1">
-                                <select id="rel-mes" class="w-2/3 p-2 border rounded text-xs bg-white h-9 uppercase" onchange="app.gerarRelatorio()"></select>
-                                <input type="number" id="rel-ano" class="w-1/3 p-2 border rounded text-xs h-9 uppercase min-w-[70px]" value="2025" onchange="app.gerarRelatorio()">
+            <div class="flex-1 overflow-y-auto p-4 md:p-8 scroll-smooth" id="main-content">
+                
+                <!-- ================= ABA RELATÓRIO ================= -->
+                <div id="view-relatorio" class="view-section pb-20">
+                    <!-- Filtros -->
+                    <div class="glass-panel p-4 md:p-6 mb-6 no-print">
+                        <h3 class="font-bold text-gray-700 mb-4 flex items-center gap-2 text-sm md:text-base uppercase">
+                            <i data-lucide="filter" class="w-4 h-4 text-blue-500"></i>
+                            FILTROS
+                        </h3>
+                        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 items-end">
+                            <div class="col-span-2 md:col-span-1">
+                                <label class="block text-xs font-bold text-gray-500 mb-1">Mês/Ano</label>
+                                <div class="flex gap-1">
+                                    <select id="rel-mes" class="w-2/3 p-2 border rounded text-xs bg-white h-9 uppercase" onchange="app.gerarRelatorio()"></select>
+                                    <input type="number" id="rel-ano" class="w-1/3 p-2 border rounded text-xs h-9 uppercase min-w-[70px]" value="2025" onchange="app.gerarRelatorio()">
+                                </div>
+                            </div>
+                            <!-- GRUPO DE FILTROS ADMIN/MENTOR -->
+                            <div class="filter-group-admin w-full">
+                                <label class="block text-xs font-bold text-gray-500 mb-1">País</label>
+                                <select id="rel-pais" class="w-full p-2 border rounded text-xs bg-white h-9 uppercase" onchange="app.atualizarFiltrosRelatorio('pais'); app.gerarRelatorio()">
+                                    <option value="">TODOS</option>
+                                </select>
+                            </div>
+                            <div class="filter-group-admin w-full">
+                                <label class="block text-xs font-bold text-gray-500 mb-1">Estado</label>
+                                <select id="rel-estado" class="w-full p-2 border rounded text-xs bg-white h-9 uppercase" onchange="app.atualizarFiltrosRelatorio('estado'); app.gerarRelatorio()">
+                                    <option value="">TODOS</option>
+                                </select>
+                            </div>
+                            <div class="col-span-2 md:col-span-1 filter-group-admin"><label class="block text-xs font-bold text-gray-500 mb-1">Mentor</label><select id="rel-mentor" class="w-full p-2 border rounded text-xs bg-white h-9 uppercase" onchange="app.atualizarFiltrosRelatorio('mentor'); app.gerarRelatorio()"><option value="">TODOS</option></select></div>
+                            <div class="col-span-2 md:col-span-1 filter-group-admin"><label class="block text-xs font-bold text-gray-500 mb-1">Unidade</label><select id="rel-unidade" class="w-full p-2 border rounded text-xs bg-white h-9 uppercase" onchange="app.atualizarFiltrosRelatorio('unidade'); app.gerarRelatorio()"><option value="">TODAS</option></select></div>
+                            
+                            <!-- Modalidade sempre visível -->
+                            <div class="col-span-2 md:col-span-1"><label class="block text-xs font-bold text-gray-500 mb-1">Modalidade</label><select id="rel-modalidade" class="w-full p-2 border rounded text-xs bg-white h-9 uppercase" onchange="app.gerarRelatorio()"><option value="">TODAS</option></select></div>
+                            <div class="col-span-2 md:col-span-1"><button onclick="app.gerarRelatorio()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded text-xs transition shadow-md h-9 flex items-center justify-center gap-2 uppercase"><i data-lucide="search" class="w-3 h-3"></i> Filtrar</button></div>
+                        </div>
+                    </div>
+
+                    <!-- KPIs -->
+                    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4 mb-6">
+                        <div class="glass-panel p-3 md:p-4 border-l-4 border-blue-500 col-span-2 md:col-span-1">
+                            <p class="text-[10px] font-bold text-gray-400 uppercase">Valor Mensal Total</p>
+                            <p class="text-lg md:text-xl font-bold text-gray-800 mt-1 truncate" id="kpi-receita">R$ 0,00</p>
+                        </div>
+                        <div class="glass-panel p-3 md:p-4 border-l-4 border-green-500">
+                            <p class="text-[10px] font-bold text-gray-400 uppercase">Aulas Realizadas</p>
+                            <p class="text-lg md:text-xl font-bold text-gray-800 mt-1" id="kpi-aulas">0</p>
+                        </div>
+                        <div class="glass-panel p-3 md:p-4 border-l-4 border-orange-500">
+                            <p class="text-[10px] font-bold text-gray-400 uppercase">Média Geral Alunos</p>
+                            <p class="text-lg md:text-xl font-bold text-gray-800 mt-1" id="kpi-media-alunos">0</p>
+                        </div>
+                        <div class="glass-panel p-3 md:p-4 border-l-4 border-cyan-500">
+                            <p class="text-[10px] font-bold text-gray-400 uppercase">Valor Médio Aula</p>
+                            <p class="text-lg md:text-xl font-bold text-gray-800 mt-1" id="kpi-media-valor">R$ 0,00</p>
+                        </div>
+                        <div class="glass-panel p-3 md:p-4 border-l-4 border-purple-500">
+                            <p class="text-[10px] font-bold text-gray-400 uppercase">Aulas Canceladas</p>
+                            <p class="text-lg md:text-xl font-bold text-red-600 mt-1" id="kpi-canceladas">0</p>
+                        </div>
+                        <div class="glass-panel p-3 md:p-4 border-l-4 border-pink-500">
+                            <p class="text-[10px] font-bold text-gray-400 uppercase">Unidades</p>
+                            <p class="text-lg md:text-xl font-bold text-pink-600 mt-1" id="kpi-unidades-count">0</p>
+                        </div>
+                    </div>
+
+                    <!-- Análise Geral -->
+                    <div class="glass-panel overflow-hidden mb-6">
+                        <div class="p-4 border-b border-gray-100 flex flex-col md:flex-row md:justify-between md:items-center gap-4 bg-gray-50">
+                            <h3 class="font-bold text-gray-700 flex items-center gap-2 text-sm md:text-base uppercase">
+                                <i data-lucide="trending-up" class="w-4 h-4"></i> Análise Geral
+                            </h3>
+                            
+                            <div class="flex gap-2 no-print">
+                                <button onclick="app.exportarExcel()" class="text-green-700 bg-green-50 hover:bg-green-100 px-3 py-1.5 rounded text-xs font-bold border border-green-200 flex items-center gap-2 transition uppercase">
+                                    <i data-lucide="sheet" class="w-4 h-4"></i> Excel
+                                </button>
+                                <button onclick="window.print()" class="text-gray-700 bg-gray-50 hover:bg-gray-100 px-3 py-1.5 rounded text-xs font-bold border border-gray-200 flex items-center gap-2 transition uppercase">
+                                    <i data-lucide="printer" class="w-4 h-4"></i> PDF
+                                </button>
                             </div>
                         </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 mb-1">País</label>
-                            <select id="rel-pais" class="w-full p-2 border rounded text-xs bg-white h-9 uppercase" onchange="app.atualizarEstadosRelatorio(); app.gerarRelatorio()">
-                                <option value="">TODOS</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 mb-1">Estado</label>
-                            <select id="rel-estado" class="w-full p-2 border rounded text-xs bg-white h-9 uppercase" onchange="app.gerarRelatorio()">
-                                <option value="">TODOS</option>
-                            </select>
-                        </div>
-                        <div class="col-span-2 md:col-span-1"><label class="block text-xs font-bold text-gray-500 mb-1">Mentor</label><select id="rel-mentor" class="w-full p-2 border rounded text-xs bg-white h-9 uppercase" onchange="app.gerarRelatorio()"><option value="">TODOS</option></select></div>
-                        <div class="col-span-2 md:col-span-1"><label class="block text-xs font-bold text-gray-500 mb-1">Unidade</label><select id="rel-unidade" class="w-full p-2 border rounded text-xs bg-white h-9 uppercase" onchange="app.gerarRelatorio()"><option value="">TODAS</option></select></div>
-                        <div class="col-span-2 md:col-span-1"><label class="block text-xs font-bold text-gray-500 mb-1">Modalidade</label><select id="rel-modalidade" class="w-full p-2 border rounded text-xs bg-white h-9 uppercase" onchange="app.gerarRelatorio()"><option value="">TODAS</option></select></div>
-                        <div class="col-span-2 md:col-span-1"><button onclick="app.gerarRelatorio()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded text-xs transition shadow-md h-9 flex items-center justify-center gap-2 uppercase"><i data-lucide="search" class="w-3 h-3"></i> Filtrar</button></div>
-                    </div>
-                </div>
-
-                <!-- KPIs (ATUALIZADO COM 6 COLUNAS) -->
-                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4 mb-6">
-                    <div class="glass-panel p-3 md:p-4 border-l-4 border-blue-500 col-span-2 md:col-span-1">
-                        <p class="text-[10px] font-bold text-gray-400 uppercase">Valor Mensal Total</p>
-                        <p class="text-lg md:text-xl font-bold text-gray-800 mt-1 truncate" id="kpi-receita">R$ 0,00</p>
-                    </div>
-                    <div class="glass-panel p-3 md:p-4 border-l-4 border-green-500">
-                        <p class="text-[10px] font-bold text-gray-400 uppercase">Aulas Realizadas</p>
-                        <p class="text-lg md:text-xl font-bold text-gray-800 mt-1" id="kpi-aulas">0</p>
-                    </div>
-                    <div class="glass-panel p-3 md:p-4 border-l-4 border-orange-500">
-                        <p class="text-[10px] font-bold text-gray-400 uppercase">Média Geral Alunos</p>
-                        <p class="text-lg md:text-xl font-bold text-gray-800 mt-1" id="kpi-media-alunos">0</p>
-                    </div>
-                    <!-- NOVO CARD: MÉDIA VALOR AULA -->
-                    <div class="glass-panel p-3 md:p-4 border-l-4 border-cyan-500">
-                        <p class="text-[10px] font-bold text-gray-400 uppercase">Valor Médio Aula</p>
-                        <p class="text-lg md:text-xl font-bold text-gray-800 mt-1" id="kpi-media-valor">R$ 0,00</p>
-                    </div>
-                     <div class="glass-panel p-3 md:p-4 border-l-4 border-purple-500">
-                        <p class="text-[10px] font-bold text-gray-400 uppercase">Aulas Canceladas</p>
-                        <p class="text-lg md:text-xl font-bold text-red-600 mt-1" id="kpi-canceladas">0</p>
-                    </div>
-                    <div class="glass-panel p-3 md:p-4 border-l-4 border-pink-500">
-                        <p class="text-[10px] font-bold text-gray-400 uppercase">Unidades Mentoradas</p>
-                        <p class="text-lg md:text-xl font-bold text-pink-600 mt-1" id="kpi-unidades-count">0</p>
-                    </div>
-                </div>
-
-                <!-- Análise Geral -->
-                <div class="glass-panel overflow-hidden mb-6">
-                    <div class="p-4 border-b border-gray-100 flex flex-col md:flex-row md:justify-between md:items-center gap-4 bg-gray-50">
-                        <h3 class="font-bold text-gray-700 flex items-center gap-2 text-sm md:text-base uppercase">
-                            <i data-lucide="trending-up" class="w-4 h-4"></i> Análise Geral
-                        </h3>
                         
-                        <div class="flex gap-2 no-print">
-                            <button onclick="app.exportarExcel()" class="text-green-700 bg-green-50 hover:bg-green-100 px-3 py-1.5 rounded text-xs font-bold border border-green-200 flex items-center gap-2 transition uppercase">
-                                <i data-lucide="sheet" class="w-4 h-4"></i> Excel
-                            </button>
-                            <button onclick="window.print()" class="text-gray-700 bg-gray-50 hover:bg-gray-100 px-3 py-1.5 rounded text-xs font-bold border border-gray-200 flex items-center gap-2 transition uppercase">
-                                <i data-lucide="printer" class="w-4 h-4"></i> PDF
-                            </button>
+                        <div class="px-4 py-3 bg-white border-b border-gray-100 overflow-x-auto no-print">
+                            <div class="flex gap-2 items-center min-w-max">
+                                <span class="text-xs font-bold text-gray-400 uppercase mr-1">AGRUPAR VISÃO POR:</span>
+                                <button onclick="app.setAgrupamento('detalhado')" id="grp-detalhado" class="group-btn active uppercase"><i data-lucide="list" class="w-3 h-3 mr-1"></i> Detalhado</button>
+                                <button onclick="app.setAgrupamento('modalidade')" id="grp-modalidade" class="group-btn inactive uppercase"><i data-lucide="activity" class="w-3 h-3 mr-1"></i> Modalidade</button>
+                                <button onclick="app.setAgrupamento('professor')" id="grp-professor" class="group-btn inactive uppercase"><i data-lucide="user" class="w-3 h-3 mr-1"></i> Professor</button>
+                                <button onclick="app.setAgrupamento('unidade')" id="grp-unidade" class="group-btn inactive uppercase"><i data-lucide="map-pin" class="w-3 h-3 mr-1"></i> Unidade</button>
+                                <button onclick="app.setAgrupamento('dia')" id="grp-dia" class="group-btn inactive uppercase"><i data-lucide="calendar" class="w-3 h-3 mr-1"></i> Dia</button>
+                            </div>
                         </div>
-                    </div>
-                    
-                    <div class="px-4 py-3 bg-white border-b border-gray-100 overflow-x-auto no-print">
-                        <div class="flex gap-2 items-center min-w-max">
-                            <span class="text-xs font-bold text-gray-400 uppercase mr-1">AGRUPAR VISÃO POR:</span>
-                            <button onclick="app.setAgrupamento('detalhado')" id="grp-detalhado" class="group-btn active uppercase"><i data-lucide="list" class="w-3 h-3 mr-1"></i> Detalhado</button>
-                            <button onclick="app.setAgrupamento('modalidade')" id="grp-modalidade" class="group-btn inactive uppercase"><i data-lucide="activity" class="w-3 h-3 mr-1"></i> Modalidade</button>
-                            <button onclick="app.setAgrupamento('professor')" id="grp-professor" class="group-btn inactive uppercase"><i data-lucide="user" class="w-3 h-3 mr-1"></i> Professor</button>
-                            <button onclick="app.setAgrupamento('unidade')" id="grp-unidade" class="group-btn inactive uppercase"><i data-lucide="map-pin" class="w-3 h-3 mr-1"></i> Unidade</button>
-                            <button onclick="app.setAgrupamento('dia')" id="grp-dia" class="group-btn inactive uppercase"><i data-lucide="calendar" class="w-3 h-3 mr-1"></i> Dia</button>
-                        </div>
-                    </div>
-                    <div class="overflow-x-auto max-h-[500px]">
-                        <table class="w-full table-custom text-left min-w-[800px] md:min-w-full uppercase" id="tabela-relatorio">
-                            <thead class="sticky top-0 shadow-sm bg-gray-50 z-10 text-gray-600" id="header-relatorio">
-                                <!-- Headers gerados via JS com ordenação -->
-                            </thead>
-                            <tbody id="body-relatorio"></tbody>
-                        </table>
-                    </div>
-                    <div id="relatorio-empty" class="p-8 text-center text-gray-400 hidden"><i data-lucide="inbox" class="w-12 h-12 mx-auto mb-2 opacity-50"></i><p>Nenhum dado encontrado.</p></div>
-                </div>
-
-                <!-- Rankings e Feriados -->
-                <div class="grid grid-cols-1 gap-6">
-                    <div id="section-feriados" class="glass-panel border-l-4 border-red-400 bg-red-50/50 p-4 md:p-6 hidden">
-                        <h3 class="font-bold text-red-800 mb-2 flex items-center gap-2 uppercase"><i data-lucide="calendar-off" class="w-4 h-4"></i> Impacto de Feriados</h3>
-                        <div class="text-sm text-red-700 mb-4 uppercase" id="feriados-lista-nomes"></div>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-xs text-left uppercase" id="tabela-canceladas">
-                                <thead class="text-red-900 border-b border-red-200"><tr><th class="py-2">Data</th><th class="py-2">Feriado</th><th class="py-2">Unidade</th><th class="py-2 text-right">Impacto</th></tr></thead>
-                                <tbody class="text-red-800"></tbody>
+                        <div class="overflow-x-auto max-h-[500px]">
+                            <table class="w-full table-custom text-left min-w-[800px] md:min-w-full uppercase" id="tabela-relatorio">
+                                <thead class="sticky top-0 shadow-sm bg-gray-50 z-10 text-gray-600" id="header-relatorio"></thead>
+                                <tbody id="body-relatorio"></tbody>
                             </table>
                         </div>
+                        <div id="relatorio-empty" class="p-8 text-center text-gray-400 hidden"><i data-lucide="inbox" class="w-12 h-12 mx-auto mb-2 opacity-50"></i><p>Nenhum dado encontrado.</p></div>
                     </div>
-                    
-                    <!-- RANKING DETALHADO -->
-                    <div class="glass-panel p-4 md:p-6 border-t-4 border-gray-800">
-                        <h3 class="font-bold text-gray-800 mb-6 flex items-center gap-2 text-lg uppercase"><i data-lucide="award" class="w-5 h-5"></i> Fluxo Geral Coletivas</h3>
-                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                            <!-- Ranking 1: Melhores Médias -->
-                            <div>
-                                <h4 class="text-sm font-bold text-blue-700 uppercase mb-3 border-b-2 border-blue-100 pb-2">
-                                    <i data-lucide="trending-up" class="w-4 h-4 inline mr-1"></i> Top Fluxo 
-                                </h4>
-                                <div class="overflow-x-auto">
-                                    <table class="w-full text-xs text-left uppercase" id="tabela-ranking-alunos">
-                                        <thead class="text-gray-500 border-b">
-                                            <tr>
-                                                <th class="py-2 w-10">Pos.</th>
-                                                <th class="py-2">Unidade</th>
-                                                <th class="py-2 text-right w-24">Média</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody class="text-gray-700"></tbody>
-                                    </table>
-                                </div>
-                            </div>
 
-                            <!-- Ranking 2: Piores Médias -->
-                            <div>
-                                <h4 class="text-sm font-bold text-red-600 uppercase mb-3 border-b-2 border-red-100 pb-2">
-                                    <i data-lucide="alert-triangle" class="w-4 h-4 inline mr-1"></i> Atenção: Baixo Fluxo
-                                </h4>
-                                <div class="overflow-x-auto">
-                                    <table class="w-full text-xs text-left uppercase" id="tabela-ranking-gastos">
-                                        <thead class="text-gray-500 border-b">
-                                            <tr>
-                                                <th class="py-2 w-10">Pos.</th>
-                                                <th class="py-2">Unidade</th>
-                                                <th class="py-2 text-right w-24">Média</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody class="text-gray-700"></tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ================= ABA CONFIGURAÇÃO ================= -->
-            <div id="view-config" class="view-section hidden fade-in pb-20">
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
-                    <!-- Coluna 1 -->
-                    <div class="lg:col-span-1 space-y-6">
-                        <div class="glass-panel p-4 md:p-5">
-                            <h3 class="font-bold text-gray-800 mb-3 border-b pb-2 text-xs uppercase">1. Mentores</h3>
-                            <div class="flex gap-2 mb-3"><input type="text" id="cad-mentor-nome" placeholder="NOME" class="w-full p-2 border rounded text-xs h-9 uppercase"><button onclick="app.addMentor()" class="bg-gray-800 text-white px-3 rounded text-xs hover:bg-black h-9">+</button></div>
-                            <ul id="lista-mentores" class="space-y-1 max-h-32 overflow-y-auto text-xs text-gray-600 uppercase"></ul>
-                        </div>
-                        <div class="glass-panel p-4 md:p-5 border-l-4 border-pink-500">
-                            <h3 class="font-bold text-gray-800 mb-3 border-b pb-2 text-xs uppercase">2. Modalidades</h3>
-                            <div class="flex gap-2 mb-3 items-center"><input type="text" id="cad-mod-nome" placeholder="NOME" class="flex-1 p-2 border rounded text-xs h-9 uppercase"><input type="color" id="cad-mod-cor" class="w-9 h-9 rounded cursor-pointer border p-0" value="#3b82f6"><button onclick="app.addModalidade()" class="bg-pink-600 text-white px-3 py-2 rounded text-xs hover:bg-pink-700 h-9 uppercase">Add</button></div>
-                            <ul id="lista-modalidades" class="space-y-1 max-h-40 overflow-y-auto text-xs uppercase"></ul>
-                        </div>
-                    </div>
-                    <!-- Coluna 2 -->
-                    <div class="lg:col-span-1">
-                        <div class="glass-panel p-4 md:p-5 h-full">
-                            <h3 class="font-bold text-gray-800 mb-3 border-b pb-2 text-xs uppercase">3. Unidades</h3>
-                            <div class="space-y-2 mb-3">
-                                <select id="cad-unidade-mentor" class="w-full p-2 border rounded text-xs bg-white h-9 uppercase"><option value="">SELECIONE MENTOR...</option></select>
-                                <input type="text" id="cad-unidade-nome" placeholder="NOME DA UNIDADE" class="w-full p-2 border rounded text-xs h-9 uppercase">
-                                
-                                <div class="grid grid-cols-2 gap-2">
-                                    <select id="cad-unidade-pais" class="w-full p-2 border rounded text-xs bg-white h-9 uppercase" onchange="app.atualizarEstados()">
-                                        <option value="Brasil">BRASIL</option>
-                                        <option value="Estados Unidos">ESTADOS UNIDOS</option>
-                                        <option value="Argentina">ARGENTINA</option>
-                                    </select>
-                                    <select id="cad-unidade-estado" class="w-full p-2 border rounded text-xs bg-white h-9 uppercase">
-                                        <!-- Preenchido via JS -->
-                                    </select>
+                    <!-- Rankings e Feriados -->
+                    <div class="grid grid-cols-1 gap-6">
+                        <!-- RANKING DETALHADO -->
+                        <div class="glass-panel p-4 md:p-6 border-t-4 border-gray-800">
+                            <h3 class="font-bold text-gray-800 mb-6 flex items-center gap-2 text-lg uppercase"><i data-lucide="award" class="w-5 h-5"></i> Fluxo Geral Coletivas</h3>
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                <!-- Ranking 1: Melhores Médias -->
+                                <div>
+                                    <h4 class="text-sm font-bold text-blue-700 uppercase mb-3 border-b-2 border-blue-100 pb-2">
+                                        <i data-lucide="trending-up" class="w-4 h-4 inline mr-1"></i> Top Fluxo 
+                                    </h4>
+                                    <div class="overflow-x-auto">
+                                        <table class="w-full text-xs text-left uppercase" id="tabela-ranking-alunos">
+                                            <thead class="text-gray-500 border-b">
+                                                <tr>
+                                                    <th class="py-2 w-10">Pos.</th>
+                                                    <th class="py-2">Unidade</th>
+                                                    <th class="py-2 text-right w-24">Média</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="text-gray-700"></tbody>
+                                        </table>
+                                    </div>
                                 </div>
 
-                                <button onclick="app.addUnidade()" class="w-full bg-blue-600 text-white py-2 rounded text-xs font-bold hover:bg-blue-700 h-9 uppercase">SALVAR UNIDADE</button>
+                                <!-- Ranking 2: Piores Médias -->
+                                <div>
+                                    <h4 class="text-sm font-bold text-red-600 uppercase mb-3 border-b-2 border-red-100 pb-2">
+                                        <i data-lucide="alert-triangle" class="w-4 h-4 inline mr-1"></i> Atenção: Baixo Fluxo
+                                    </h4>
+                                    <div class="overflow-x-auto">
+                                        <table class="w-full text-xs text-left uppercase" id="tabela-ranking-gastos">
+                                            <thead class="text-gray-500 border-b">
+                                                <tr>
+                                                    <th class="py-2 w-10">Pos.</th>
+                                                    <th class="py-2">Unidade</th>
+                                                    <th class="py-2 text-right w-24">Média</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="text-gray-700"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
                             </div>
-                            <input type="text" placeholder="BUSCAR..." class="w-full p-2 border rounded text-xs mb-2 bg-slate-50 h-9 uppercase" onkeyup="app.filtrarListaUnidades(this.value)">
-                            <ul id="lista-unidades" class="space-y-2 max-h-[300px] overflow-y-auto text-xs text-gray-600 uppercase"></ul>
                         </div>
-                    </div>
-                    <!-- Coluna 3 -->
-                    <div class="lg:col-span-1">
-                        <div class="glass-panel p-4 md:p-5 border-2 border-blue-100 h-full">
-                            <h3 class="font-bold text-blue-800 mb-4 flex items-center gap-2 text-xs uppercase"><span class="bg-blue-100 p-1 rounded"><i data-lucide="calendar-plus" class="w-4 h-4"></i></span> 4. Grade Horária</h3>
-                            <div class="space-y-3">
-                                <div><label class="text-[10px] font-bold text-gray-400">ONDE?</label><select id="grade-unidade" class="w-full p-2 border rounded text-xs bg-white font-bold text-gray-700 mb-1 h-9 uppercase"></select></div>
-                                <div class="grid grid-cols-2 gap-2"><div><label class="text-[10px] font-bold text-gray-400">MODALIDADE</label><select id="grade-modalidade" class="w-full p-2 border rounded text-xs bg-white h-9 uppercase"></select></div><div><label class="text-[10px] font-bold text-gray-400">PROFESSOR</label><input type="text" id="grade-prof" placeholder="NOME" class="w-full p-2 border rounded text-xs h-9 uppercase"></div></div>
-                                <div class="grid grid-cols-2 gap-2"><div><label class="text-[10px] font-bold text-gray-400">VALOR (R$)</label><input type="number" id="grade-valor" placeholder="0.00" class="w-full p-2 border rounded text-xs h-9"></div><div><label class="text-[10px] font-bold text-orange-500">MÉDIA ALUNOS</label><input type="number" id="grade-alunos" placeholder="0" class="w-full p-2 border rounded text-xs border-orange-200 h-9"></div></div>
-                                <div class="grid grid-cols-2 gap-2"><div><label class="text-[10px] font-bold text-gray-400">HORA</label><input type="time" id="grade-hora" class="w-full p-2 border rounded text-xs h-9"></div><div><label class="text-[10px] font-bold text-gray-400">DIAS</label><div class="flex gap-1 flex-wrap" id="check-dias"></div></div></div>
-                                <div class="flex gap-2"><button onclick="app.addHorario()" id="btn-save-grade" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded shadow-md text-xs mt-2 transition h-10 uppercase">ADICIONAR</button><button onclick="app.cancelarEdicao()" id="btn-cancel-grade" class="hidden bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-3 rounded shadow-md text-xs mt-2 transition h-10 uppercase">CANCELAR</button></div>
+                        
+                        <!-- FERIADOS MOVED TO BOTTOM -->
+                        <div id="section-feriados" class="glass-panel border-l-4 border-red-400 bg-red-50/50 p-4 md:p-6 hidden">
+                            <div class="flex justify-between items-start mb-4">
+                                <div>
+                                    <h3 class="font-bold text-red-800 mb-2 flex items-center gap-2 uppercase"><i data-lucide="calendar-off" class="w-4 h-4"></i> Impacto de Feriados</h3>
+                                    <div class="text-sm text-red-700 uppercase" id="feriados-lista-nomes"></div>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-[10px] font-bold text-red-600 uppercase">Total Economizado</p>
+                                    <p class="text-xl font-bold text-red-800" id="total-economizado">R$ 0,00</p>
+                                </div>
                             </div>
-                            <div class="mt-4 border-t pt-4">
-                                <h4 class="font-bold text-gray-400 text-[10px] uppercase mb-2">Últimas Cadastradas</h4>
-                                <div id="lista-grades-recentes" class="space-y-2 uppercase"></div>
+                            
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-xs text-left uppercase" id="tabela-canceladas">
+                                    <thead class="text-red-900 border-b border-red-200"><tr><th class="py-2">Data</th><th class="py-2">Feriado</th><th class="py-2">Unidade</th><th class="py-2 text-right">Impacto</th></tr></thead>
+                                    <tbody class="text-red-800"></tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- ================= ABA CRONOGRAMA ================= -->
-            <div id="view-cronograma" class="view-section hidden fade-in pb-20">
-                <div class="glass-panel p-4 md:p-6 min-h-[500px]">
-                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-                        <div><h3 class="font-bold text-xl text-gray-800 flex items-center gap-2 uppercase"><i data-lucide="layout-grid" class="w-6 h-6 text-blue-600"></i> Cronograma</h3><p class="text-sm text-gray-500 uppercase">Selecione uma unidade para gerenciar a grade.</p></div>
-                        <div class="w-full md:w-auto flex flex-col md:flex-row gap-4 items-end">
-                            <div class="w-full md:w-64"><label class="block text-xs font-bold text-gray-500 mb-1">Unidade</label><div class="relative"><select id="cronograma-unidade-select" class="w-full p-3 pl-10 border rounded shadow-sm bg-white font-semibold text-gray-700 h-11 uppercase" onchange="app.renderCronograma()"><option value="">SELECIONE...</option></select><div class="absolute left-3 top-3.5 text-gray-400"><i data-lucide="map-pin" class="w-4 h-4"></i></div></div></div>
-                            <button onclick="app.abrirModalAdicao()" class="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold h-11 px-6 rounded shadow flex items-center justify-center gap-2 uppercase"><i data-lucide="plus" class="w-4 h-4"></i> Adicionar Aula</button>
+                <!-- ================= ABA CONFIGURAÇÃO ================= -->
+                <div id="view-config" class="view-section hidden fade-in pb-20">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+                        <!-- Coluna 1 -->
+                        <div class="lg:col-span-1 space-y-6">
+                            <!-- BLOQUEIO ADMIN: Mentores -->
+                            <div class="glass-panel p-4 md:p-5 admin-only-block relative">
+                                <h3 class="font-bold text-gray-800 mb-3 border-b pb-2 text-xs uppercase">1. Mentores (Admin)</h3>
+                                <div class="flex gap-2 mb-3"><input type="text" id="cad-mentor-nome" placeholder="NOME" class="w-full p-2 border rounded text-xs h-9 uppercase"><button onclick="app.addMentor()" class="bg-gray-800 text-white px-3 rounded text-xs hover:bg-black h-9">+</button></div>
+                                <ul id="lista-mentores" class="space-y-1 max-h-32 overflow-y-auto text-xs text-gray-600 uppercase"></ul>
+                            </div>
+                            <!-- BLOQUEIO ADMIN: Modalidades -->
+                            <div class="glass-panel p-4 md:p-5 border-l-4 border-pink-500 admin-only-block">
+                                <h3 class="font-bold text-gray-800 mb-3 border-b pb-2 text-xs uppercase">2. Modalidades (Admin)</h3>
+                                <div class="flex gap-2 mb-3 items-center"><input type="text" id="cad-mod-nome" placeholder="NOME" class="flex-1 p-2 border rounded text-xs h-9 uppercase"><input type="color" id="cad-mod-cor" class="w-9 h-9 rounded cursor-pointer border p-0" value="#3b82f6"><button onclick="app.addModalidade()" class="bg-pink-600 text-white px-3 py-2 rounded text-xs hover:bg-pink-700 h-9 uppercase">Add</button></div>
+                                <ul id="lista-modalidades" class="space-y-1 max-h-40 overflow-y-auto text-xs uppercase"></ul>
+                            </div>
                         </div>
-                    </div>
-                    <div class="overflow-x-auto rounded-lg border border-gray-100 bg-white min-h-[300px]" id="cronograma-container">
-                        <div class="h-full flex flex-col items-center justify-center text-gray-300 py-20"><i data-lucide="mouse-pointer-click" class="w-16 h-16 mb-4 opacity-50"></i><p class="text-lg text-center px-4 uppercase">Selecione uma unidade para ver a grade.</p></div>
+                        <!-- Coluna 2 -->
+                        <div class="lg:col-span-1">
+                            <div class="glass-panel p-4 md:p-5 h-full">
+                                <h3 class="font-bold text-gray-800 mb-3 border-b pb-2 text-xs uppercase">3. Unidades</h3>
+                                <div class="space-y-2 mb-3">
+                                    <select id="cad-unidade-mentor" class="w-full p-2 border rounded text-xs bg-white h-9 uppercase"><option value="">SELECIONE MENTOR...</option></select>
+                                    <input type="text" id="cad-unidade-nome" placeholder="NOME DA UNIDADE" class="w-full p-2 border rounded text-xs h-9 uppercase">
+                                    
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <select id="cad-unidade-pais" class="w-full p-2 border rounded text-xs bg-white h-9 uppercase" onchange="app.atualizarEstados()">
+                                            <option value="Brasil">BRASIL</option>
+                                            <option value="Estados Unidos">ESTADOS UNIDOS</option>
+                                            <option value="Argentina">ARGENTINA</option>
+                                        </select>
+                                        <select id="cad-unidade-estado" class="w-full p-2 border rounded text-xs bg-white h-9 uppercase">
+                                            <!-- Preenchido via JS -->
+                                        </select>
+                                    </div>
+
+                                    <button onclick="app.addUnidade()" class="w-full bg-blue-600 text-white py-2 rounded text-xs font-bold hover:bg-blue-700 h-9 uppercase">SALVAR UNIDADE</button>
+                                </div>
+                                <input type="text" placeholder="BUSCAR..." class="w-full p-2 border rounded text-xs mb-2 bg-slate-50 h-9 uppercase" onkeyup="app.filtrarListaUnidades(this.value)">
+                                <ul id="lista-unidades" class="space-y-2 max-h-[300px] overflow-y-auto text-xs text-gray-600 uppercase"></ul>
+                            </div>
+                        </div>
+                        <!-- Coluna 3 -->
+                        <div class="lg:col-span-1">
+                            <div class="glass-panel p-4 md:p-5 border-2 border-blue-100 h-full">
+                                <h3 class="font-bold text-blue-800 mb-4 flex items-center gap-2 text-xs uppercase"><span class="bg-blue-100 p-1 rounded"><i data-lucide="calendar-plus" class="w-4 h-4"></i></span> 4. Grade Horária</h3>
+                                <div class="space-y-3">
+                                    <div><label class="text-[10px] font-bold text-gray-400">ONDE?</label><select id="grade-unidade" class="w-full p-2 border rounded text-xs bg-white font-bold text-gray-700 mb-1 h-9 uppercase"></select></div>
+                                    <div class="grid grid-cols-2 gap-2"><div><label class="text-[10px] font-bold text-gray-400">MODALIDADE</label><select id="grade-modalidade" class="w-full p-2 border rounded text-xs bg-white h-9 uppercase"></select></div><div><label class="text-[10px] font-bold text-gray-400">PROFESSOR</label><input type="text" id="grade-prof" placeholder="NOME" class="w-full p-2 border rounded text-xs h-9 uppercase"></div></div>
+                                    <div class="grid grid-cols-2 gap-2"><div><label class="text-[10px] font-bold text-gray-400">VALOR (R$)</label><input type="number" id="grade-valor" placeholder="0.00" class="w-full p-2 border rounded text-xs h-9"></div><div><label class="text-[10px] font-bold text-orange-500">MÉDIA ALUNOS</label><input type="number" id="grade-alunos" placeholder="0" class="w-full p-2 border rounded text-xs border-orange-200 h-9"></div></div>
+                                    <div class="grid grid-cols-2 gap-2"><div><label class="text-[10px] font-bold text-gray-400">HORA</label><input type="time" id="grade-hora" class="w-full p-2 border rounded text-xs h-9"></div><div><label class="text-[10px] font-bold text-gray-400">DIAS</label><div class="flex gap-1 flex-wrap" id="check-dias"></div></div></div>
+                                    <div class="flex gap-2"><button onclick="app.addHorario()" id="btn-save-grade" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded shadow-md text-xs mt-2 transition h-10 uppercase">ADICIONAR</button><button onclick="app.cancelarEdicao()" id="btn-cancel-grade" class="hidden bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-3 rounded shadow-md text-xs mt-2 transition h-10 uppercase">CANCELAR</button></div>
+                                </div>
+                                <div class="mt-4 border-t pt-4">
+                                    <h4 class="font-bold text-gray-400 text-[10px] uppercase mb-2">Últimas Cadastradas</h4>
+                                    <div id="lista-grades-recentes" class="space-y-2 uppercase"></div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- ================= ABA IMPORTAÇÃO ================= -->
-            <div id="view-importacao" class="view-section hidden fade-in pb-20">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-6xl mx-auto">
-                    <!-- Importação -->
-                    <div class="glass-panel p-6"><h2 class="font-bold text-gray-800 mb-2 uppercase">Importar Unidades</h2><textarea id="import-unidades-text" class="w-full h-24 p-3 border rounded text-xs mb-2"></textarea><button onclick="app.importarUnidades()" class="bg-blue-600 text-white px-4 py-2 rounded text-xs w-full font-bold uppercase">Processar Importação</button></div>
-                    <div class="glass-panel p-6"><h2 class="font-bold text-gray-800 mb-2 uppercase">Importar Grades</h2><textarea id="import-grades-text" class="w-full h-24 p-3 border rounded text-xs mb-2"></textarea><button onclick="app.importarGrades()" class="bg-green-600 text-white px-4 py-2 rounded text-xs w-full font-bold uppercase">Processar Importação</button></div>
-                    
-                    <!-- EXPORTAÇÃO -->
-                    <div class="glass-panel p-6 md:col-span-2 border-l-4 border-orange-500">
-                        <h2 class="font-bold text-gray-800 mb-2 flex items-center gap-2 uppercase"><i data-lucide="download" class="w-4 h-4"></i> Exportação de Dados Cadastrais</h2>
-                        <p class="text-xs text-gray-500 mb-4 uppercase">Baixe listas completas para conferência ou migração.</p>
-                        <div class="flex gap-4">
-                            <button onclick="app.exportarUnidadesCSV()" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-3 rounded text-xs font-bold flex-1 flex items-center justify-center gap-2 uppercase">
-                                <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Exportar Lista de Unidades
-                            </button>
-                            <button onclick="app.exportarGrades()" class="bg-green-700 hover:bg-green-800 text-white px-4 py-3 rounded text-xs font-bold flex-1 flex items-center justify-center gap-2 uppercase">
-                                <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Exportar Grade Completa
-                            </button>
+                <!-- ================= ABA CRONOGRAMA ================= -->
+                <div id="view-cronograma" class="view-section hidden fade-in pb-20">
+                    <div class="glass-panel p-4 md:p-6 min-h-[500px]">
+                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                            <div><h3 class="font-bold text-xl text-gray-800 flex items-center gap-2 uppercase"><i data-lucide="layout-grid" class="w-6 h-6 text-blue-600"></i> Cronograma</h3><p class="text-sm text-gray-500 uppercase">Selecione uma unidade para gerenciar a grade.</p></div>
+                            <div class="w-full md:w-auto flex flex-col md:flex-row gap-4 items-end">
+                                <div class="w-full md:w-64"><label class="block text-xs font-bold text-gray-500 mb-1">Unidade</label><div class="relative"><select id="cronograma-unidade-select" class="w-full p-3 pl-10 border rounded shadow-sm bg-white font-semibold text-gray-700 h-11 uppercase" onchange="app.renderCronograma()"><option value="">SELECIONE...</option></select><div class="absolute left-3 top-3.5 text-gray-400"><i data-lucide="map-pin" class="w-4 h-4"></i></div></div></div>
+                                <button onclick="app.abrirModalAdicao()" class="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold h-11 px-6 rounded shadow flex items-center justify-center gap-2 uppercase"><i data-lucide="plus" class="w-4 h-4"></i> Adicionar Aula</button>
+                            </div>
                         </div>
-                    </div>
-
-                    <!-- Sistema -->
-                    <div class="glass-panel p-6 md:col-span-2 border-t-4 border-gray-800 flex flex-col md:flex-row gap-6 justify-between items-center">
-                        <div class="w-full">
-                            <h2 class="font-bold text-gray-800 mb-2 uppercase">Backup & Restauração</h2>
-                            <div class="flex gap-2 items-center"><input type="file" id="input-backup-file" accept=".json" class="text-xs w-full"><button onclick="app.restaurarBackup()" class="bg-purple-600 text-white px-4 py-2 rounded text-xs font-bold uppercase">Restaurar</button></div>
-                        </div>
-                        <div class="w-full md:w-auto">
-                            <button onclick="app.salvarBackup()" class="bg-gray-800 text-white px-6 py-3 rounded font-bold w-full md:w-auto flex items-center justify-center gap-2 uppercase"><i data-lucide="save" class="w-4 h-4"></i> Baixar Backup Completo (JSON)</button>
+                        <div class="overflow-x-auto rounded-lg border border-gray-100 bg-white min-h-[300px]" id="cronograma-container">
+                            <div class="h-full flex flex-col items-center justify-center text-gray-300 py-20"><i data-lucide="mouse-pointer-click" class="w-16 h-16 mb-4 opacity-50"></i><p class="text-lg text-center px-4 uppercase">Selecione uma unidade para ver a grade.</p></div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-        </div>
-    </main>
+                <!-- ================= ABA IMPORTAÇÃO E FERRAMENTAS AVANÇADAS ================= -->
+                <div id="view-importacao" class="view-section hidden fade-in pb-20">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-6xl mx-auto">
+                        
+                        <!-- CARD GESTÃO DE ACESSOS (NOVO) -->
+                        <div class="glass-panel p-6 md:col-span-2 border-l-4 border-blue-600">
+                            <h2 class="font-bold text-gray-800 mb-4 flex items-center gap-2 uppercase"><i data-lucide="key" class="w-5 h-5 text-blue-600"></i> Gestão de Acessos & Senhas</h2>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <!-- Mentores -->
+                                <div>
+                                    <h4 class="font-bold text-xs text-gray-500 uppercase mb-2 border-b pb-1">Acesso Mentores</h4>
+                                    <div class="max-h-60 overflow-y-auto pr-2 space-y-2" id="lista-senhas-mentores"></div>
+                                </div>
+                                <!-- Unidades -->
+                                <div>
+                                    <h4 class="font-bold text-xs text-gray-500 uppercase mb-2 border-b pb-1">Acesso Unidades</h4>
+                                    <div class="max-h-60 overflow-y-auto pr-2 space-y-2" id="lista-senhas-unidades"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Importação -->
+                        <div class="glass-panel p-6"><h2 class="font-bold text-gray-800 mb-2 uppercase">Importar Unidades</h2><textarea id="import-unidades-text" class="w-full h-24 p-3 border rounded text-xs mb-2"></textarea><button onclick="app.importarUnidades()" class="bg-blue-600 text-white px-4 py-2 rounded text-xs w-full font-bold uppercase">Processar Importação</button></div>
+                        <div class="glass-panel p-6"><h2 class="font-bold text-gray-800 mb-2 uppercase">Importar Grades</h2><textarea id="import-grades-text" class="w-full h-24 p-3 border rounded text-xs mb-2"></textarea><button onclick="app.importarGrades()" class="bg-green-600 text-white px-4 py-2 rounded text-xs w-full font-bold uppercase">Processar Importação</button></div>
+                        
+                        <!-- EXPORTAÇÃO -->
+                        <div class="glass-panel p-6 md:col-span-2 border-l-4 border-orange-500">
+                            <h2 class="font-bold text-gray-800 mb-2 flex items-center gap-2 uppercase"><i data-lucide="download" class="w-4 h-4"></i> Exportação de Dados Cadastrais</h2>
+                            <p class="text-xs text-gray-500 mb-4 uppercase">Baixe listas completas para conferência ou migração.</p>
+                            <div class="flex gap-4">
+                                <button onclick="app.exportarUnidadesCSV()" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-3 rounded text-xs font-bold flex-1 flex items-center justify-center gap-2 uppercase">
+                                    <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Exportar Lista de Unidades
+                                </button>
+                                <button onclick="app.exportarGrades()" class="bg-green-700 hover:bg-green-800 text-white px-4 py-3 rounded text-xs font-bold flex-1 flex items-center justify-center gap-2 uppercase">
+                                    <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Exportar Grade Completa
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Sistema -->
+                        <div class="glass-panel p-6 md:col-span-2 border-t-4 border-gray-800 flex flex-col md:flex-row gap-6 justify-between items-center">
+                            <div class="w-full">
+                                <h2 class="font-bold text-gray-800 mb-2 uppercase">Backup & Restauração</h2>
+                                <div class="flex gap-2 items-center"><input type="file" id="input-backup-file" accept=".json" class="text-xs w-full"><button onclick="app.restaurarBackup()" class="bg-purple-600 text-white px-4 py-2 rounded text-xs font-bold uppercase">Restaurar</button></div>
+                            </div>
+                            <div class="w-full md:w-auto">
+                                <button onclick="app.salvarBackup()" class="bg-gray-800 text-white px-6 py-3 rounded font-bold w-full md:w-auto flex items-center justify-center gap-2 uppercase"><i data-lucide="save" class="w-4 h-4"></i> Baixar Backup Completo (JSON)</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
 
     <!-- MODAL DE EDIÇÃO/CRIAÇÃO ARRASTÁVEL -->
     <div id="modal-editor" class="fixed inset-0 z-[60] hidden flex items-center justify-center modal-overlay">
@@ -473,7 +564,6 @@
         class SistemaPratique {
             constructor() {
                 this.db = { mentores: [], unidades: [], modalidades: [], horarios: [] };
-                // URL FORNECIDA PELO USUÁRIO PARA INTEGRAÇÃO COM GOOGLE SHEETS
                 this.apiUrl = 'https://script.google.com/macros/s/AKfycbz8LU_ekbnZ7tAwrvxyaASzql0Cvqe-HAVGhWpO-TkOWot3AcWjpAALTB3u2bOGx8hbfA/exec';
                 
                 this.editingId = null;
@@ -482,6 +572,9 @@
                 this.ordenacao = { campo: 'receita', direcao: 'desc' };
                 this.mobileMenuOpen = false;
                 
+                // AUTH
+                this.currentUser = null; 
+
                 this.constantes = {
                     dias: ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"],
                     meses: ["JANEIRO", "FEVEREIRO", "MARÇO", "ABRIL", "MAIO", "JUNHO", "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO"],
@@ -498,30 +591,130 @@
             }
 
             init() {
-                // Tenta carregar localmente primeiro para velocidade
                 this.carregarDadosLocais();
                 this.setupUI();
-                this.nav('relatorio');
-                setTimeout(() => lucide.createIcons(), 500);
                 
-                // Tenta sincronizar com a nuvem (Download)
+                // Verifica sessão salva
+                const sessionUser = sessionStorage.getItem('pratique_user');
+                if(sessionUser) {
+                    this.currentUser = JSON.parse(sessionUser);
+                    this.postLoginSetup();
+                } else {
+                    // Mantém na tela de login
+                }
+                
+                setTimeout(() => lucide.createIcons(), 500);
+            }
+
+            // ================== AUTH SYSTEM ==================
+            login() {
+                const user = document.getElementById('login-user').value.trim().toUpperCase();
+                const pass = document.getElementById('login-pass').value.trim();
+                const errorDiv = document.getElementById('login-error');
+                
+                // 1. ADMIN CHECK
+                if (user === 'ADMIN' && pass === 'admin123') {
+                    this.completeLogin({ id: 'admin', name: 'ADMINISTRADOR', role: 'admin' });
+                    return;
+                }
+
+                // 2. MENTOR CHECK
+                const mentorFound = this.db.mentores.find(m => m.nome.toUpperCase() === user);
+                // Senha padrão 1234 ou a salva
+                const mentorPass = mentorFound?.senha || '1234';
+                if (mentorFound && pass === mentorPass) {
+                    this.completeLogin({ id: mentorFound.id, name: mentorFound.nome, role: 'mentor' });
+                    return;
+                }
+
+                // 3. UNIDADE CHECK (NOVO)
+                const unitFound = this.db.unidades.find(u => u.nome.toUpperCase() === user);
+                const unitPass = unitFound?.senha || '1234';
+                if (unitFound && pass === unitPass) {
+                    this.completeLogin({ id: unitFound.id, name: unitFound.nome, role: 'unidade' });
+                    return;
+                }
+
+                errorDiv.classList.remove('hidden');
+                errorDiv.innerText = "USUÁRIO OU SENHA INVÁLIDOS";
+                const box = document.querySelector('.bg-white\\/10');
+                box.classList.add('animate-pulse');
+                setTimeout(()=>box.classList.remove('animate-pulse'), 500);
+            }
+
+            completeLogin(userData) {
+                this.currentUser = userData;
+                sessionStorage.setItem('pratique_user', JSON.stringify(userData));
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('app-container').classList.remove('hidden');
+                this.postLoginSetup();
+                this.notify('success', `BEM-VINDO, ${userData.name.split(' ')[0]}`);
                 this.sincronizarNuvem('download');
             }
 
-            // --- Lógica de Banco de Dados e Sincronização ---
+            logout() {
+                sessionStorage.removeItem('pratique_user');
+                window.location.reload();
+            }
+
+            postLoginSetup() {
+                document.getElementById('user-name').innerText = this.currentUser.name;
+                
+                let roleLabel = 'Acesso Total';
+                if(this.currentUser.role === 'mentor') roleLabel = 'Mentor';
+                if(this.currentUser.role === 'unidade') roleLabel = 'Unidade';
+                document.getElementById('user-role').innerText = roleLabel;
+                
+                document.getElementById('user-avatar').innerText = this.currentUser.name.charAt(0);
+
+                // RESET UI
+                document.getElementById('nav-importacao').classList.remove('disabled');
+                document.getElementById('nav-config').classList.remove('disabled');
+                document.querySelectorAll('.filter-group-admin').forEach(el => el.classList.remove('hidden'));
+                document.querySelectorAll('.admin-only-block').forEach(el => el.classList.remove('hidden'));
+
+                // RESTRIÇÕES DE PERFIL
+                if(this.currentUser.role === 'mentor') {
+                    document.getElementById('nav-importacao').classList.add('disabled');
+                    document.querySelectorAll('.admin-only-block').forEach(el => el.classList.add('hidden'));
+                }
+
+                if(this.currentUser.role === 'unidade') {
+                    // Hide sidebar items
+                    document.getElementById('nav-config').classList.add('disabled');
+                    document.getElementById('nav-importacao').classList.add('disabled');
+                    // Hide Report Filters (Pais, Estado, Mentor, Unidade)
+                    document.querySelectorAll('.filter-group-admin').forEach(el => el.classList.add('hidden'));
+                }
+
+                // Inicializa os filtros do relatório com todos os dados antes de gerar
+                this.atualizarFiltrosRelatorio('init');
+                
+                if(this.currentUser.role === 'admin') {
+                    this.renderAcessos();
+                }
+
+                this.nav('relatorio');
+                this.atualizarListas();
+            }
+
+            // =================================================
 
             carregarDadosLocais() {
                 const salvo = localStorage.getItem('pratique_global_db_v5');
                 if (salvo) { 
                     try { 
                         const parsed = JSON.parse(salvo); 
-                        // Mescla garantindo que a estrutura exista
                         this.db = { 
                             mentores: parsed.mentores || [], 
                             unidades: parsed.unidades || [], 
                             modalidades: parsed.modalidades || [], 
                             horarios: parsed.horarios || [] 
                         }; 
+                        // Migration de senhas (garantir que existem)
+                        this.db.mentores.forEach(m => { if(!m.senha) m.senha = '1234'; });
+                        this.db.unidades.forEach(u => { if(!u.senha) u.senha = '1234'; });
+
                     } catch(e) { 
                         this.seedInicial(); 
                     } 
@@ -531,91 +724,61 @@
             }
 
             salvarDados() { 
-                // 1. Salva Local
                 localStorage.setItem('pratique_global_db_v5', JSON.stringify(this.db));
-                // 2. Tenta Salvar na Nuvem (Upload)
                 this.sincronizarNuvem('upload');
             }
 
             async sincronizarNuvem(acao) {
                 const dot = document.getElementById('status-dot');
                 const txt = document.getElementById('status-text');
-                
-                // Muda status para "Sincronizando..."
                 if(dot) { dot.className = 'status-dot status-sync'; }
                 if(txt) { txt.innerText = 'Sync...'; txt.className = 'text-xs text-orange-500 font-bold'; }
 
                 try {
                     if (acao === 'download') {
-                        // Tenta baixar dados do Google Script - IMPORTANTE: referrerPolicy: 'no-referrer' ajuda no Vercel
                         const response = await fetch(this.apiUrl, { referrerPolicy: "no-referrer", redirect: "follow" });
-                        
                         if (!response.ok) throw new Error('Erro na resposta da rede');
-                        
                         const cloudData = await response.json();
                         
-                        // Se vierem dados válidos, atualiza o DB local
                         if (cloudData && (cloudData.mentores || cloudData.unidades || cloudData.horarios)) {
                             this.db = cloudData;
-                            // Salva no local storage para persistir
+                            // Ensure passwords exist on download too
+                            this.db.mentores.forEach(m => { if(!m.senha) m.senha = '1234'; });
+                            this.db.unidades.forEach(u => { if(!u.senha) u.senha = '1234'; });
+
                             localStorage.setItem('pratique_global_db_v5', JSON.stringify(this.db));
-                            // Atualiza a tela
                             this.atualizarListas();
                             this.renderCronograma();
-                            if(!document.getElementById('view-relatorio').classList.contains('hidden')) this.gerarRelatorio();
+                            if(this.currentUser?.role === 'admin') this.renderAcessos();
+                            
+                            if(!document.getElementById('view-relatorio').classList.contains('hidden')) {
+                                this.atualizarFiltrosRelatorio('init');
+                                this.gerarRelatorio();
+                            }
                             this.notify('success', 'DADOS ATUALIZADOS DA NUVEM!');
                         }
                     } else if (acao === 'upload') {
-                        // Envia dados para o Google Script
-                        // Usamos 'no-cors' ou text/plain para evitar bloqueio do Google
-                        // IMPORTANTE: referrerPolicy: 'no-referrer' ajuda no Vercel
                         await fetch(this.apiUrl, {
-                            method: 'POST',
-                            body: JSON.stringify(this.db),
-                            referrerPolicy: "no-referrer",
-                            headers: { "Content-Type": "text/plain;charset=utf-8" }
+                            method: 'POST', body: JSON.stringify(this.db), referrerPolicy: "no-referrer", headers: { "Content-Type": "text/plain;charset=utf-8" }
                         });
                     }
-
-                    // Sucesso
                     if(dot) { dot.className = 'status-dot status-online'; }
                     if(txt) { txt.innerText = 'Online'; txt.className = 'text-xs text-green-600 font-bold'; }
-
                 } catch (error) {
                     console.error("Erro na nuvem:", error);
-                    // Erro / Offline
                     if(dot) { dot.className = 'status-dot status-offline'; }
                     if(txt) { txt.innerText = 'Offline (Salvo Local)'; txt.className = 'text-xs text-gray-400 font-bold'; }
-                    
-                    if (acao === 'download') {
-                        this.notify('error', 'USANDO DADOS LOCAIS (MODO OFFLINE)');
-                    }
                 }
             }
 
-            forcarSincronizacao() {
-                this.sincronizarNuvem('download');
-            }
+            forcarSincronizacao() { this.sincronizarNuvem('download'); }
 
             seedInicial() { 
-                this.db = { mentores: [{id:1,nome:"FELIPE SOUZA"}], modalidades: [{id:1,nome:"JUMP",cor:"#ff5722"}], unidades: [{id:101,nome:"PRATIQUE SAVASSI",mentorId:1,estado:"MG",pais:"Brasil"}], horarios: [] }; 
-                // Não chama salvarDados aqui para evitar loop de upload vazio
+                this.db = { mentores: [{id:1,nome:"FELIPE SOUZA", senha:"1234"}], modalidades: [{id:1,nome:"JUMP",cor:"#ff5722"}], unidades: [{id:101,nome:"PRATIQUE SAVASSI",mentorId:1,estado:"MG",pais:"Brasil", senha:"1234"}], horarios: [] }; 
                 localStorage.setItem('pratique_global_db_v5', JSON.stringify(this.db));
             }
             
-            // --- Fim Lógica Banco de Dados ---
-
-            atualizarEstadosRelatorio() {
-                const paisSelecionado = document.getElementById('rel-pais').value;
-                const selectEstado = document.getElementById('rel-estado');
-                if (paisSelecionado && this.constantes.paisesEstados[paisSelecionado]) {
-                    const estados = this.constantes.paisesEstados[paisSelecionado];
-                    selectEstado.innerHTML = `<option value="">TODOS</option>` + estados.map(e => `<option value="${e}">${e}</option>`).join('');
-                } else {
-                    const estadosDb = [...new Set(this.db.unidades.map(u => u.estado).filter(Boolean))].sort();
-                    selectEstado.innerHTML = `<option value="">TODOS</option>` + estadosDb.map(e => `<option value="${e}">${e}</option>`).join('');
-                }
-            }
+            atualizarEstadosRelatorio() { } // Deprecated by cascade logic
 
             atualizarEstados() {
                 const paisSelecionado = document.getElementById('cad-unidade-pais').value;
@@ -627,34 +790,21 @@
             setupDraggableModal() {
                 const modal = document.getElementById('modal-card');
                 const header = document.getElementById('modal-header');
-                let isDragging = false;
-                let startX, startY, initialLeft, initialTop;
-
-                header.addEventListener('mousedown', (e) => {
-                    isDragging = true;
-                    startX = e.clientX;
-                    startY = e.clientY;
-                    const style = window.getComputedStyle(modal);
-                    const matrix = new DOMMatrixReadOnly(style.transform);
-                    initialLeft = matrix.m41;
-                    initialTop = matrix.m42;
-                    modal.style.cursor = 'grabbing';
-                });
-
-                window.addEventListener('mousemove', (e) => {
-                    if (!isDragging) return;
-                    e.preventDefault();
-                    const dx = e.clientX - startX;
-                    const dy = e.clientY - startY;
-                    modal.style.transform = `translate(${initialLeft + dx}px, ${initialTop + dy}px)`;
-                });
-
-                window.addEventListener('mouseup', () => {
-                    if(isDragging) { isDragging = false; modal.style.cursor = 'default'; }
-                });
+                let isDragging = false, startX, startY, initialLeft, initialTop;
+                header.addEventListener('mousedown', (e) => { isDragging = true; startX = e.clientX; startY = e.clientY; const style = window.getComputedStyle(modal); const matrix = new DOMMatrixReadOnly(style.transform); initialLeft = matrix.m41; initialTop = matrix.m42; modal.style.cursor = 'grabbing'; });
+                window.addEventListener('mousemove', (e) => { if (!isDragging) return; e.preventDefault(); const dx = e.clientX - startX; const dy = e.clientY - startY; modal.style.transform = `translate(${initialLeft + dx}px, ${initialTop + dy}px)`; });
+                window.addEventListener('mouseup', () => { if(isDragging) { isDragging = false; modal.style.cursor = 'default'; } });
             }
             
             nav(viewId) {
+                if (this.currentUser && (this.currentUser.role === 'mentor' || this.currentUser.role === 'unidade') && viewId === 'importacao') {
+                    return this.notify('error', 'ACESSO NEGADO');
+                }
+                
+                if (this.currentUser && this.currentUser.role === 'unidade' && viewId === 'config') {
+                    return this.notify('error', 'ACESSO NEGADO');
+                }
+
                 document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
                 const target = document.getElementById(`view-${viewId}`);
                 if (target) target.classList.remove('hidden');
@@ -662,7 +812,13 @@
                 const link = document.getElementById(`nav-${viewId}`);
                 if (link) link.classList.add('active');
                 if(this.mobileMenuOpen) this.toggleMenu();
-                if(viewId === 'relatorio') setTimeout(() => this.gerarRelatorio(), 100);
+                
+                // Atualiza filtros apenas na entrada se necessário
+                if(viewId === 'relatorio') setTimeout(() => {
+                    this.atualizarFiltrosRelatorio('init');
+                    this.gerarRelatorio();
+                }, 100);
+                
                 this.cancelarEdicao();
                 lucide.createIcons();
             }
@@ -681,25 +837,183 @@
                 checkDias('modal-dias-container', 'modal-check-dia');
                 const selMes = document.getElementById('rel-mes');
                 if(selMes) selMes.innerHTML = this.constantes.meses.map((m, i) => `<option value="${i}" ${i === new Date().getMonth() ? 'selected' : ''}>${m}</option>`).join('');
-                this.atualizarListas();
-                this.atualizarEstados(); 
-                this.atualizarEstadosRelatorio();
+                this.atualizarEstados();
+            }
+
+            // === GESTÃO DE ACESSOS (NOVO) ===
+            renderAcessos() {
+                const renderItem = (item, type) => `
+                    <div class="flex items-center gap-2 bg-slate-50 p-2 rounded border border-gray-200">
+                        <div class="flex-1 min-w-0">
+                            <p class="text-xs font-bold text-gray-700 truncate">${item.nome}</p>
+                        </div>
+                        <input type="text" value="${item.senha || '1234'}" id="pass-${type}-${item.id}" class="w-20 p-1 text-xs border rounded text-center bg-white" placeholder="Senha">
+                        <button onclick="app.savePassword('${type}', ${item.id})" class="text-green-600 hover:text-green-800 p-1" title="Salvar"><i data-lucide="save" class="w-3 h-3"></i></button>
+                        <button onclick="app.resetPassword('${type}', ${item.id})" class="text-gray-400 hover:text-red-500 p-1" title="Resetar 1234"><i data-lucide="rotate-ccw" class="w-3 h-3"></i></button>
+                    </div>`;
+
+                document.getElementById('lista-senhas-mentores').innerHTML = this.db.mentores.map(m => renderItem(m, 'mentores')).join('');
+                document.getElementById('lista-senhas-unidades').innerHTML = this.db.unidades.sort((a,b)=>a.nome.localeCompare(b.nome)).map(u => renderItem(u, 'unidades')).join('');
+                lucide.createIcons();
+            }
+
+            savePassword(type, id) {
+                const newVal = document.getElementById(`pass-${type}-${id}`).value;
+                if(!newVal) return alert('Senha vazia!');
+                const item = this.db[type].find(x => x.id === id);
+                if(item) {
+                    item.senha = newVal;
+                    this.salvarDados();
+                    this.notify('success', 'SENHA ATUALIZADA!');
+                }
+            }
+
+            resetPassword(type, id) {
+                if(confirm('Resetar senha para 1234?')) {
+                    const item = this.db[type].find(x => x.id === id);
+                    if(item) {
+                        item.senha = '1234';
+                        document.getElementById(`pass-${type}-${id}`).value = '1234';
+                        this.salvarDados();
+                        this.notify('success', 'SENHA RESETADA!');
+                    }
+                }
+            }
+
+            // === LÓGICA DE FILTROS EM CASCATA ===
+            atualizarFiltrosRelatorio(origem) {
+                const elPais = document.getElementById('rel-pais');
+                const elEstado = document.getElementById('rel-estado');
+                const elMentor = document.getElementById('rel-mentor');
+                const elUnidade = document.getElementById('rel-unidade');
+                const elModalidade = document.getElementById('rel-modalidade');
+
+                const valPais = elPais.value;
+                const valEstado = elEstado.value;
+                const valMentor = elMentor.value;
+                const valUnidade = elUnidade.value;
+                const valModalidade = elModalidade.value;
+
+                const popular = (el, lista, valorAtual, defaultText = "TODOS") => {
+                    el.innerHTML = `<option value="">${defaultText}</option>` + lista.map(i => `<option value="${i.id || i}">${i.nome || i}</option>`).join('');
+                    const existe = lista.some(i => (i.id || i) == valorAtual);
+                    if (valorAtual && existe) el.value = valorAtual;
+                    else el.value = "";
+                };
+
+                // 1. POPULAR ESTADOS
+                if (origem === 'init' || origem === 'pais') {
+                    let estadosFiltrados = [];
+                    const estadosEmUso = [...new Set(this.db.unidades.filter(u => !valPais || u.pais === valPais).map(u => u.estado))].sort();
+                    popular(elEstado, estadosEmUso, valEstado);
+                }
+
+                // 2. POPULAR MENTORES
+                if (origem === 'init' || origem === 'pais' || origem === 'estado') {
+                    const unidadesContexto = this.db.unidades.filter(u => {
+                        if (elPais.value && u.pais !== elPais.value) return false;
+                        if (elEstado.value && u.estado !== elEstado.value) return false;
+                        return true;
+                    });
+                    
+                    const mentoresIds = [...new Set(unidadesContexto.map(u => u.mentorId))];
+                    const mentoresFiltrados = this.db.mentores.filter(m => mentoresIds.includes(m.id));
+                    
+                    popular(elMentor, mentoresFiltrados, valMentor);
+                    
+                    if (this.currentUser && this.currentUser.role === 'mentor') {
+                        elMentor.value = this.currentUser.id;
+                        elMentor.disabled = true;
+                    }
+                }
+
+                // 3. POPULAR UNIDADES
+                if (origem === 'init' || origem === 'pais' || origem === 'estado' || origem === 'mentor') {
+                    const mentorAtual = elMentor.value;
+                    const unidadesFiltradas = this.db.unidades.filter(u => {
+                        if (elPais.value && u.pais !== elPais.value) return false;
+                        if (elEstado.value && u.estado !== elEstado.value) return false;
+                        if (mentorAtual && u.mentorId != mentorAtual) return false;
+                        return true;
+                    }).sort((a,b)=>a.nome.localeCompare(b.nome));
+
+                    popular(elUnidade, unidadesFiltradas, valUnidade, "TODAS");
+                    
+                    // Trava Unidade se logado como unidade
+                    if (this.currentUser && this.currentUser.role === 'unidade') {
+                        elUnidade.value = this.currentUser.id;
+                        elUnidade.disabled = true;
+                    }
+                }
+
+                // 4. POPULAR MODALIDADES
+                if (origem === 'init' || origem === 'pais' || origem === 'estado' || origem === 'mentor' || origem === 'unidade') {
+                    let unidadeAtual = elUnidade.value;
+                    // Se for perfil unidade, força o ID
+                    if (this.currentUser && this.currentUser.role === 'unidade') {
+                        unidadeAtual = this.currentUser.id;
+                    }
+
+                    const horariosContexto = this.db.horarios.filter(h => {
+                        const u = this.db.unidades.find(x => x.id == h.unidadeId);
+                        if (!u) return false;
+                        if (elPais.value && u.pais !== elPais.value) return false;
+                        if (elEstado.value && u.estado !== elEstado.value) return false;
+                        if (elMentor.value && u.mentorId != elMentor.value) return false;
+                        if (unidadeAtual && u.id != unidadeAtual) return false;
+                        return true;
+                    });
+
+                    const modsIds = [...new Set(horariosContexto.map(h => h.modalidadeId))];
+                    const modsFiltradas = this.db.modalidades.filter(m => modsIds.includes(m.id));
+
+                    popular(elModalidade, modsFiltradas, valModalidade, "TODAS");
+                }
             }
 
             atualizarListas() {
                 const renderList = (id, list, renderFn) => { const el = document.getElementById(id); if(el) el.innerHTML = list.map(renderFn).join(''); };
+                
                 renderList('lista-mentores', this.db.mentores, m => `<li class="flex justify-between bg-slate-50 p-1 px-2 rounded border"><span>${m.nome}</span> <button onclick="app.remove('mentores', ${m.id})" class="text-red-400">×</button></li>`);
                 renderList('lista-modalidades', this.db.modalidades, m => `<li class="flex justify-between bg-slate-50 p-1 rounded border"><div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full" style="background:${m.cor}"></div>${m.nome}</div><button onclick="app.remove('modalidades', ${m.id})" class="text-red-400">×</button></li>`);
+                
                 const ops = (list) => `<option value="">SELECIONE...</option>` + list.map(i => `<option value="${i.id}">${i.nome}</option>`).join('');
-                ['cad-unidade-mentor', 'rel-mentor'].forEach(id => { const el = document.getElementById(id); if(el) el.innerHTML = `<option value="">TODOS</option>` + this.db.mentores.map(m => `<option value="${m.id}">${m.nome}</option>`).join(''); });
+                const selMentorCad = document.getElementById('cad-unidade-mentor');
+                if(selMentorCad) selMentorCad.innerHTML = `<option value="">TODOS</option>` + this.db.mentores.map(m => `<option value="${m.id}">${m.nome}</option>`).join('');
+                
                 ['grade-modalidade', 'modal-modalidade'].forEach(id => { const el = document.getElementById(id); if(el) el.innerHTML = ops(this.db.modalidades); });
-                const relMod = document.getElementById('rel-modalidade'); if(relMod) relMod.innerHTML = `<option value="">TODAS</option>` + this.db.modalidades.map(m => `<option value="${m.id}">${m.nome}</option>`).join('');
+                
+                let unidadesVisiveis = this.db.unidades;
+                if (this.currentUser && this.currentUser.role === 'mentor') {
+                    unidadesVisiveis = this.db.unidades.filter(u => u.mentorId == this.currentUser.id);
+                    if(selMentorCad) { selMentorCad.value = this.currentUser.id; selMentorCad.disabled = true; }
+                } else if(this.currentUser && this.currentUser.role === 'unidade') {
+                    unidadesVisiveis = this.db.unidades.filter(u => u.id == this.currentUser.id);
+                } else {
+                    if(selMentorCad) selMentorCad.disabled = false;
+                }
+
                 const renderUni = u => `<li class="flex justify-between items-center bg-white p-2 rounded border shadow-sm"><div><div class="font-bold text-gray-700">${u.nome}</div><div class="text-[10px] text-gray-400">${u.estado}, ${u.pais}</div></div><button onclick="app.remove('unidades', ${u.id})" class="text-red-400">×</button></li>`;
-                renderList('lista-unidades', this.db.unidades.sort((a,b)=>a.nome.localeCompare(b.nome)), renderUni);
-                const opsUni = `<option value="">TODAS/SELECIONE</option>` + this.db.unidades.sort((a,b)=>a.nome.localeCompare(b.nome)).map(u => `<option value="${u.id}">${u.nome}</option>`).join('');
-                ['rel-unidade', 'grade-unidade', 'cronograma-unidade-select'].forEach(id => { const el = document.getElementById(id); if(el) { const v = el.value; el.innerHTML = opsUni; if(v) el.value = v; } });
+                renderList('lista-unidades', unidadesVisiveis.sort((a,b)=>a.nome.localeCompare(b.nome)), renderUni);
+                
+                const opsUni = `<option value="">${(this.currentUser?.role === 'mentor' || this.currentUser?.role === 'unidade') ? 'SELECIONE' : 'TODAS/SELECIONE'}</option>` + unidadesVisiveis.sort((a,b)=>a.nome.localeCompare(b.nome)).map(u => `<option value="${u.id}">${u.nome}</option>`).join('');
+                ['grade-unidade', 'cronograma-unidade-select'].forEach(id => { 
+                    const el = document.getElementById(id); 
+                    if(el) { 
+                        const v = el.value; 
+                        el.innerHTML = opsUni; 
+                        if(this.currentUser?.role === 'unidade') {
+                            el.value = this.currentUser.id;
+                            el.disabled = true;
+                        } else if(v) {
+                            el.value = v; 
+                        }
+                    } 
+                });
+
                 const paises = Object.keys(this.constantes.paisesEstados);
                 const relPais = document.getElementById('rel-pais'); if(relPais) relPais.innerHTML = '<option value="">TODOS</option>' + paises.map(p => `<option value="${p}">${p}</option>`).join('');
+                
                 this.renderGradesRecentes();
                 lucide.createIcons();
             }
@@ -728,12 +1042,42 @@
                 const mes = parseInt(elMes.value), ano = parseInt(document.getElementById('rel-ano').value);
                 const fPais = document.getElementById('rel-pais').value, fEst = document.getElementById('rel-estado').value, fMent = document.getElementById('rel-mentor').value, fUni = document.getElementById('rel-unidade').value, fMod = document.getElementById('rel-modalidade').value;
                 const feriados = [...this.constantes.feriadosFixos.filter(f => f.m === mes), ...this.getFeriadosMoveis(ano).filter(f => f.m === mes)];
+                
+                if (this.currentUser && this.currentUser.role === 'mentor') {
+                    const selMentor = document.getElementById('rel-mentor');
+                    selMentor.value = this.currentUser.id;
+                    selMentor.disabled = true;
+                }
+
+                // UNIDADE LOCK
+                if (this.currentUser && this.currentUser.role === 'unidade') {
+                    // Ignora filtros visuais e usa ID direto
+                }
+
                 const divFeriados = document.getElementById('section-feriados');
-                if(feriados.length > 0) { divFeriados.classList.remove('hidden'); document.getElementById('feriados-lista-nomes').innerText = "FERIADOS: " + feriados.map(f => `${f.d}/${f.m+1} (${f.nome})`).join(', '); } else { divFeriados.classList.add('hidden'); }
+                let totalEconomizado = 0;
+
+                if(feriados.length > 0) { 
+                    divFeriados.classList.remove('hidden'); 
+                    document.getElementById('feriados-lista-nomes').innerText = "FERIADOS DO MÊS: " + feriados.map(f => `${f.d}/${f.m+1} (${f.nome})`).join(', '); 
+                } else { 
+                    divFeriados.classList.add('hidden'); 
+                }
                 
                 let filtered = this.db.horarios.filter(h => {
                     const u = this.db.unidades.find(x => x.id == h.unidadeId); if(!u) return false;
-                    if(fPais && u.pais !== fPais) return false; if(fEst && u.estado !== fEst) return false; if(fMent && u.mentorId != fMent) return false; if(fUni && u.id != fUni) return false; if(fMod && h.modalidadeId != fMod) return false;
+                    
+                    if (this.currentUser && this.currentUser.role === 'mentor' && u.mentorId != this.currentUser.id) return false;
+                    if (this.currentUser && this.currentUser.role === 'unidade' && u.id != this.currentUser.id) return false;
+
+                    if (this.currentUser?.role !== 'unidade') {
+                        if(fPais && u.pais !== fPais) return false; 
+                        if(fEst && u.estado !== fEst) return false; 
+                        if(fMent && u.mentorId != fMent) return false; 
+                        if(fUni && u.id != fUni) return false; 
+                    }
+                    
+                    if(fMod && h.modalidadeId != fMod) return false;
                     return true;
                 });
                 
@@ -749,37 +1093,36 @@
                         const dia = this.constantes.dias[new Date(ano, mes, d).getDay() === 0 ? 6 : new Date(ano, mes, d).getDay() - 1];
                         if(h.dias.includes(dia)) {
                             const isFer = feriados.find(f => f.d === d);
-                            if(isFer) { stats.canc++; canceladas.push({ data: `${d}/${mes+1}`, feriado: isFer.nome, unidade: u?.nome, impacto: h.valor }); } else ac++;
+                            if(isFer) { 
+                                stats.canc++; 
+                                totalEconomizado += h.valor;
+                                canceladas.push({ data: `${d}/${mes+1}`, feriado: isFer.nome, unidade: u?.nome, impacto: h.valor }); 
+                            } else ac++;
                         }
                     }
                     const rec = ac * h.valor; stats.rec += rec; stats.aul += ac; stats.alu += (h.mediaAlunos * ac);
-                    
                     rows.push({ unidade: u?.nome||'?', modalidade: m?.nome||'?', professor: h.professor, diasStr: h.dias.map(d=>d.substring(0,3)).join(','), valorHora: h.valor, aulas: ac, mediaAlunos: h.mediaAlunos, receita: rec, dias: h.dias });
                 });
 
                 document.getElementById('kpi-receita').innerText = `R$ ${stats.rec.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
                 document.getElementById('kpi-aulas').innerText = stats.aul;
                 document.getElementById('kpi-media-alunos').innerText = stats.aul ? Math.round(stats.alu/stats.aul) : 0;
-                // Cálculo Valor Médio Aula
                 const mediaValor = stats.aul > 0 ? stats.rec / stats.aul : 0;
                 document.getElementById('kpi-media-valor').innerText = `R$ ${mediaValor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
 
                 document.getElementById('kpi-canceladas').innerText = stats.canc;
                 document.getElementById('kpi-unidades-count').innerText = stats.uni.size;
+                
+                document.getElementById('total-economizado').innerText = `R$ ${totalEconomizado.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
                 document.querySelector('#tabela-canceladas tbody').innerHTML = canceladas.map(c => `<tr><td>${c.data}</td><td>${c.feriado}</td><td>${c.unidade}</td><td class="text-right text-red-600">- R$ ${c.impacto.toFixed(2)}</td></tr>`).join('');
                 
                 this.dadosBrutosFiltrados = rows;
                 this.processarExibicaoTabela();
-                
-                // GERA O RANKING DIRETO (SEM CÁLCULO)
                 this.gerarRankings(rows);
-                
                 document.getElementById('relatorio-empty').classList.toggle('hidden', rows.length > 0);
             }
 
-            // GERA RANKING DIRETO DAS AULAS (ZERO CÁLCULO)
             gerarRankings(rows) {
-                // Ordenação pura pelo valor de média cadastrada
                 const byBest = [...rows].sort((a,b) => b.mediaAlunos - a.mediaAlunos).slice(0, 10);
                 const byWorst = [...rows].sort((a,b) => a.mediaAlunos - b.mediaAlunos).slice(0, 10);
 
@@ -914,7 +1257,12 @@
                 this.salvarDados(); this.notify('success', 'SALVO!'); this.renderGradesRecentes();
             }
             
-            remove(t,id) { if(confirm('EXCLUIR?')) { this.db[t]=this.db[t].filter(x=>x.id!=id); if(t=='unidades') this.db.horarios=this.db.horarios.filter(x=>x.unidadeId!=id); this.salvarDados(); this.atualizarListas(); this.renderCronograma(); } }
+            remove(t,id) { 
+                if(this.currentUser && (this.currentUser.role === 'mentor' || this.currentUser.role === 'unidade') && t !== 'unidades') return alert('ACESSO NEGADO');
+                if(this.currentUser && this.currentUser.role === 'unidade') return alert('ACESSO NEGADO');
+
+                if(confirm('EXCLUIR?')) { this.db[t]=this.db[t].filter(x=>x.id!=id); if(t=='unidades') this.db.horarios=this.db.horarios.filter(x=>x.unidadeId!=id); this.salvarDados(); this.atualizarListas(); this.renderCronograma(); } 
+            }
             
             cancelarEdicao() { this.editingId=null; document.getElementById('grade-prof').value=''; document.querySelectorAll('.check-dia-input').forEach(c=>c.checked=false); document.getElementById('btn-save-grade').innerText='ADICIONAR'; document.getElementById('btn-cancel-grade').classList.add('hidden'); }
             
@@ -930,7 +1278,17 @@
             renderGradesRecentes() { 
                 const lista = document.getElementById('lista-grades-recentes');
                 if (!lista) return;
-                lista.innerHTML = this.db.horarios.slice(-5).reverse().map(h => {
+                let grades = this.db.horarios;
+                if(this.currentUser && this.currentUser.role === 'mentor') {
+                    grades = grades.filter(g => {
+                        const u = this.db.unidades.find(un => un.id == g.unidadeId);
+                        return u && u.mentorId == this.currentUser.id;
+                    });
+                } else if(this.currentUser && this.currentUser.role === 'unidade') {
+                    grades = grades.filter(g => g.unidadeId == this.currentUser.id);
+                }
+                
+                lista.innerHTML = grades.slice(-5).reverse().map(h => {
                     const u = this.db.unidades.find(x=>x.id==h.unidadeId)?.nome || '?';
                     return `<div class="flex justify-between items-center border-b p-1 text-xs mb-1 bg-white uppercase">
                         <span><b>${u}</b><br>${h.professor} - ${h.hora}</span> 
@@ -944,12 +1302,12 @@
             
             addUnidade() { 
                 const n=document.getElementById('cad-unidade-nome').value.toUpperCase(); 
-                const mId=parseInt(document.getElementById('cad-unidade-mentor').value);
+                let mId = this.currentUser && this.currentUser.role === 'mentor' ? this.currentUser.id : parseInt(document.getElementById('cad-unidade-mentor').value);
                 const p=document.getElementById('cad-unidade-pais').value;
                 const e=document.getElementById('cad-unidade-estado').value;
                 
                 if(n && mId && p && e) { 
-                    this.db.unidades.push({id:Date.now(), nome:n, mentorId:mId, estado:e, pais:p}); 
+                    this.db.unidades.push({id:Date.now(), nome:n, mentorId:mId, estado:e, pais:p, senha:'1234'}); 
                     this.salvarDados(); 
                     this.atualizarListas(); 
                     document.getElementById('cad-unidade-nome').value=''; 
@@ -958,7 +1316,7 @@
                 }
             }
             addModalidade() { const n=document.getElementById('cad-mod-nome').value.toUpperCase(); if(n) { this.db.modalidades.push({id:Date.now(), nome:n, cor:document.getElementById('cad-mod-cor').value}); this.salvarDados(); this.atualizarListas(); document.getElementById('cad-mod-nome').value=''; } }
-            addMentor() { const n=document.getElementById('cad-mentor-nome').value.toUpperCase(); if(n) { this.db.mentores.push({id:Date.now(), nome:n}); this.salvarDados(); this.atualizarListas(); document.getElementById('cad-mentor-nome').value=''; } }
+            addMentor() { const n=document.getElementById('cad-mentor-nome').value.toUpperCase(); if(n) { this.db.mentores.push({id:Date.now(), nome:n, senha:'1234'}); this.salvarDados(); this.atualizarListas(); document.getElementById('cad-mentor-nome').value=''; } }
             
             abrirModalAdicao() { 
                 const uId = document.getElementById('cronograma-unidade-select').value; if(!uId) return alert('SELECIONE UNIDADE'); 
@@ -1015,7 +1373,7 @@
                 c.innerHTML = ht + `</tbody></table>`; lucide.createIcons();
             }
             notify(t,m) { const x=document.getElementById('toast'); document.getElementById('toast-msg').innerText=m; x.classList.remove('translate-x-full'); setTimeout(()=>x.classList.add('translate-x-full'),3000); }
-            importarUnidades() { const l=this.parseImportLines(document.getElementById('import-unidades-text').value); l.forEach(c=>{ if(c[0]){ this.db.unidades.push({id:Date.now()+Math.random(), nome:c[0].toUpperCase(), mentorId:1, estado:c[2]||'MG', pais:c[3]||'BR'}); } }); this.salvarDados(); this.atualizarListas(); }
+            importarUnidades() { const l=this.parseImportLines(document.getElementById('import-unidades-text').value); l.forEach(c=>{ if(c[0]){ this.db.unidades.push({id:Date.now()+Math.random(), nome:c[0].toUpperCase(), mentorId:1, estado:c[2]||'MG', pais:c[3]||'BR', senha:'1234'}); } }); this.salvarDados(); this.atualizarListas(); }
             importarGrades() { const l=this.parseImportLines(document.getElementById('import-grades-text').value); l.forEach(c=>{ if(c.length>=5){ const u=this.db.unidades.find(x=>x.nome==c[0]); const m=this.db.modalidades.find(x=>x.nome==c[1]); if(u&&m) this.db.horarios.push({id:Date.now()+Math.random(), unidadeId:u.id, modalidadeId:m.id, professor:c[2], dias:c[3].split(','), hora:c[4], valor:parseFloat(c[5])||0, mediaAlunos:parseInt(c[6])||0}); } }); this.salvarDados(); this.renderGradesRecentes(); }
             
             // Backup e Restauração
