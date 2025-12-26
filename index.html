@@ -232,21 +232,32 @@
                                     <input type="number" id="rel-ano" class="w-1/3 p-2 border rounded text-xs h-9 uppercase min-w-[70px]" value="2025" onchange="app.gerarRelatorio()">
                                 </div>
                             </div>
-                            <!-- GRUPO DE FILTROS ADMIN/MENTOR -->
-                            <div class="filter-group-admin w-full">
-                                <label class="block text-xs font-bold text-gray-500 mb-1">País</label>
-                                <select id="rel-pais" class="w-full p-2 border rounded text-xs bg-white h-9 uppercase" onchange="app.atualizarFiltrosRelatorio('pais'); app.gerarRelatorio()">
-                                    <option value="">TODOS</option>
-                                </select>
+                            
+                            <!-- GRUPO DE FILTROS ADMIN (País/Estado) -->
+                            <div class="col-span-2 contents" id="admin-filters-container">
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-500 mb-1">País</label>
+                                    <select id="rel-pais" class="w-full p-2 border rounded text-xs bg-white h-9 uppercase" onchange="app.atualizarFiltrosRelatorio('pais'); app.gerarRelatorio()">
+                                        <option value="">TODOS</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-500 mb-1">Estado</label>
+                                    <select id="rel-estado" class="w-full p-2 border rounded text-xs bg-white h-9 uppercase" onchange="app.atualizarFiltrosRelatorio('estado'); app.gerarRelatorio()">
+                                        <option value="">TODOS</option>
+                                    </select>
+                                </div>
                             </div>
-                            <div class="filter-group-admin w-full">
-                                <label class="block text-xs font-bold text-gray-500 mb-1">Estado</label>
-                                <select id="rel-estado" class="w-full p-2 border rounded text-xs bg-white h-9 uppercase" onchange="app.atualizarFiltrosRelatorio('estado'); app.gerarRelatorio()">
-                                    <option value="">TODOS</option>
-                                </select>
+
+                            <!-- GRUPO MENTOR/UNIDADE (Visível a todos, mas travado conforme perfil) -->
+                            <div class="col-span-2 md:col-span-1" id="filter-mentor-wrapper">
+                                <label class="block text-xs font-bold text-gray-500 mb-1">Mentor</label>
+                                <select id="rel-mentor" class="w-full p-2 border rounded text-xs bg-white h-9 uppercase" onchange="app.atualizarFiltrosRelatorio('mentor'); app.gerarRelatorio()"><option value="">TODOS</option></select>
                             </div>
-                            <div class="col-span-2 md:col-span-1 filter-group-admin"><label class="block text-xs font-bold text-gray-500 mb-1">Mentor</label><select id="rel-mentor" class="w-full p-2 border rounded text-xs bg-white h-9 uppercase" onchange="app.atualizarFiltrosRelatorio('mentor'); app.gerarRelatorio()"><option value="">TODOS</option></select></div>
-                            <div class="col-span-2 md:col-span-1 filter-group-admin"><label class="block text-xs font-bold text-gray-500 mb-1">Unidade</label><select id="rel-unidade" class="w-full p-2 border rounded text-xs bg-white h-9 uppercase" onchange="app.atualizarFiltrosRelatorio('unidade'); app.gerarRelatorio()"><option value="">TODAS</option></select></div>
+                            <div class="col-span-2 md:col-span-1" id="filter-unidade-wrapper">
+                                <label class="block text-xs font-bold text-gray-500 mb-1">Unidade</label>
+                                <select id="rel-unidade" class="w-full p-2 border rounded text-xs bg-white h-9 uppercase" onchange="app.atualizarFiltrosRelatorio('unidade'); app.gerarRelatorio()"><option value="">TODAS</option></select>
+                            </div>
                             
                             <!-- Modalidade sempre visível -->
                             <div class="col-span-2 md:col-span-1"><label class="block text-xs font-bold text-gray-500 mb-1">Modalidade</label><select id="rel-modalidade" class="w-full p-2 border rounded text-xs bg-white h-9 uppercase" onchange="app.gerarRelatorio()"><option value="">TODAS</option></select></div>
@@ -330,12 +341,12 @@
                                         <i data-lucide="trending-up" class="w-4 h-4 inline mr-1"></i> Top Fluxo 
                                     </h4>
                                     <div class="overflow-x-auto">
-                                        <table class="w-full text-xs text-left uppercase" id="tabela-ranking-alunos">
+                                        <table class="w-full text-xs text-left uppercase table-custom" id="tabela-ranking-alunos">
                                             <thead class="text-gray-500 border-b">
                                                 <tr>
-                                                    <th class="py-2 w-10">Pos.</th>
-                                                    <th class="py-2">Unidade</th>
-                                                    <th class="py-2 text-right w-24">Média</th>
+                                                    <th onclick="app.ordenarRanking('pos')" class="py-2 w-10 cursor-pointer hover:text-blue-600">Pos. ↕</th>
+                                                    <th onclick="app.ordenarRanking('unidade')" class="py-2 cursor-pointer hover:text-blue-600">Unidade ↕</th>
+                                                    <th onclick="app.ordenarRanking('media')" class="py-2 text-right w-24 cursor-pointer hover:text-blue-600">Média ↕</th>
                                                 </tr>
                                             </thead>
                                             <tbody class="text-gray-700"></tbody>
@@ -349,12 +360,12 @@
                                         <i data-lucide="alert-triangle" class="w-4 h-4 inline mr-1"></i> Atenção: Baixo Fluxo
                                     </h4>
                                     <div class="overflow-x-auto">
-                                        <table class="w-full text-xs text-left uppercase" id="tabela-ranking-gastos">
+                                        <table class="w-full text-xs text-left uppercase table-custom" id="tabela-ranking-gastos">
                                             <thead class="text-gray-500 border-b">
                                                 <tr>
-                                                    <th class="py-2 w-10">Pos.</th>
-                                                    <th class="py-2">Unidade</th>
-                                                    <th class="py-2 text-right w-24">Média</th>
+                                                    <th onclick="app.ordenarRanking('pos')" class="py-2 w-10 cursor-pointer hover:text-red-600">Pos. ↕</th>
+                                                    <th onclick="app.ordenarRanking('unidade')" class="py-2 cursor-pointer hover:text-red-600">Unidade ↕</th>
+                                                    <th onclick="app.ordenarRanking('media')" class="py-2 text-right w-24 cursor-pointer hover:text-red-600">Média ↕</th>
                                                 </tr>
                                             </thead>
                                             <tbody class="text-gray-700"></tbody>
@@ -477,11 +488,19 @@
                                 <!-- Mentores -->
                                 <div>
                                     <h4 class="font-bold text-xs text-gray-500 uppercase mb-2 border-b pb-1">Acesso Mentores</h4>
+                                    <div class="relative mb-2">
+                                        <input type="text" placeholder="BUSCAR MENTOR..." class="w-full p-2 pl-8 border rounded text-xs bg-slate-50 uppercase focus:border-blue-500 transition" onkeyup="app.renderAcessos('mentores', this.value)">
+                                        <i data-lucide="search" class="absolute left-2.5 top-2.5 w-3 h-3 text-gray-400"></i>
+                                    </div>
                                     <div class="max-h-60 overflow-y-auto pr-2 space-y-2" id="lista-senhas-mentores"></div>
                                 </div>
                                 <!-- Unidades -->
                                 <div>
                                     <h4 class="font-bold text-xs text-gray-500 uppercase mb-2 border-b pb-1">Acesso Unidades</h4>
+                                    <div class="relative mb-2">
+                                        <input type="text" placeholder="BUSCAR UNIDADE..." class="w-full p-2 pl-8 border rounded text-xs bg-slate-50 uppercase focus:border-blue-500 transition" onkeyup="app.renderAcessos('unidades', this.value)">
+                                        <i data-lucide="search" class="absolute left-2.5 top-2.5 w-3 h-3 text-gray-400"></i>
+                                    </div>
                                     <div class="max-h-60 overflow-y-auto pr-2 space-y-2" id="lista-senhas-unidades"></div>
                                 </div>
                             </div>
@@ -570,9 +589,9 @@
                 this.dadosExibidos = [];
                 this.modoAgrupamento = 'detalhado';
                 this.ordenacao = { campo: 'receita', direcao: 'desc' };
+                this.rankingData = [];
+                this.ordenacaoRanking = { campo: 'media', direcao: 'desc' };
                 this.mobileMenuOpen = false;
-                
-                // AUTH
                 this.currentUser = null; 
 
                 this.constantes = {
@@ -593,16 +612,11 @@
             init() {
                 this.carregarDadosLocais();
                 this.setupUI();
-                
-                // Verifica sessão salva
                 const sessionUser = sessionStorage.getItem('pratique_user');
                 if(sessionUser) {
                     this.currentUser = JSON.parse(sessionUser);
                     this.postLoginSetup();
-                } else {
-                    // Mantém na tela de login
                 }
-                
                 setTimeout(() => lucide.createIcons(), 500);
             }
 
@@ -612,22 +626,18 @@
                 const pass = document.getElementById('login-pass').value.trim();
                 const errorDiv = document.getElementById('login-error');
                 
-                // 1. ADMIN CHECK
                 if (user === 'ADMIN' && pass === 'admin123') {
                     this.completeLogin({ id: 'admin', name: 'ADMINISTRADOR', role: 'admin' });
                     return;
                 }
 
-                // 2. MENTOR CHECK
                 const mentorFound = this.db.mentores.find(m => m.nome.toUpperCase() === user);
-                // Senha padrão 1234 ou a salva
                 const mentorPass = mentorFound?.senha || '1234';
                 if (mentorFound && pass === mentorPass) {
                     this.completeLogin({ id: mentorFound.id, name: mentorFound.nome, role: 'mentor' });
                     return;
                 }
 
-                // 3. UNIDADE CHECK (NOVO)
                 const unitFound = this.db.unidades.find(u => u.nome.toUpperCase() === user);
                 const unitPass = unitFound?.senha || '1234';
                 if (unitFound && pass === unitPass) {
@@ -659,46 +669,38 @@
 
             postLoginSetup() {
                 document.getElementById('user-name').innerText = this.currentUser.name;
-                
                 let roleLabel = 'Acesso Total';
                 if(this.currentUser.role === 'mentor') roleLabel = 'Mentor';
                 if(this.currentUser.role === 'unidade') roleLabel = 'Unidade';
                 document.getElementById('user-role').innerText = roleLabel;
-                
                 document.getElementById('user-avatar').innerText = this.currentUser.name.charAt(0);
 
-                // RESET UI
                 document.getElementById('nav-importacao').classList.remove('disabled');
                 document.getElementById('nav-config').classList.remove('disabled');
-                document.querySelectorAll('.filter-group-admin').forEach(el => el.classList.remove('hidden'));
+                document.getElementById('admin-filters-container').classList.remove('hidden');
                 document.querySelectorAll('.admin-only-block').forEach(el => el.classList.remove('hidden'));
 
-                // RESTRIÇÕES DE PERFIL
                 if(this.currentUser.role === 'mentor') {
                     document.getElementById('nav-importacao').classList.add('disabled');
                     document.querySelectorAll('.admin-only-block').forEach(el => el.classList.add('hidden'));
+                    document.getElementById('admin-filters-container').classList.add('hidden');
                 }
 
                 if(this.currentUser.role === 'unidade') {
-                    // Hide sidebar items
                     document.getElementById('nav-config').classList.add('disabled');
                     document.getElementById('nav-importacao').classList.add('disabled');
-                    // Hide Report Filters (Pais, Estado, Mentor, Unidade)
-                    document.querySelectorAll('.filter-group-admin').forEach(el => el.classList.add('hidden'));
+                    document.getElementById('admin-filters-container').classList.add('hidden');
+                    document.getElementById('filter-mentor-wrapper').classList.add('hidden');
+                    document.getElementById('filter-unidade-wrapper').classList.add('hidden');
                 }
 
-                // Inicializa os filtros do relatório com todos os dados antes de gerar
                 this.atualizarFiltrosRelatorio('init');
-                
                 if(this.currentUser.role === 'admin') {
                     this.renderAcessos();
                 }
-
                 this.nav('relatorio');
                 this.atualizarListas();
             }
-
-            // =================================================
 
             carregarDadosLocais() {
                 const salvo = localStorage.getItem('pratique_global_db_v5');
@@ -711,16 +713,10 @@
                             modalidades: parsed.modalidades || [], 
                             horarios: parsed.horarios || [] 
                         }; 
-                        // Migration de senhas (garantir que existem)
                         this.db.mentores.forEach(m => { if(!m.senha) m.senha = '1234'; });
                         this.db.unidades.forEach(u => { if(!u.senha) u.senha = '1234'; });
-
-                    } catch(e) { 
-                        this.seedInicial(); 
-                    } 
-                } else { 
-                    this.seedInicial(); 
-                }
+                    } catch(e) { this.seedInicial(); } 
+                } else { this.seedInicial(); }
             }
 
             salvarDados() { 
@@ -731,26 +727,22 @@
             async sincronizarNuvem(acao) {
                 const dot = document.getElementById('status-dot');
                 const txt = document.getElementById('status-text');
-                if(dot) { dot.className = 'status-dot status-sync'; }
-                if(txt) { txt.innerText = 'Sync...'; txt.className = 'text-xs text-orange-500 font-bold'; }
+                if(dot) dot.className = 'status-dot status-sync';
+                if(txt) txt.innerText = 'Sync...'; 
 
                 try {
                     if (acao === 'download') {
                         const response = await fetch(this.apiUrl, { referrerPolicy: "no-referrer", redirect: "follow" });
                         if (!response.ok) throw new Error('Erro na resposta da rede');
                         const cloudData = await response.json();
-                        
                         if (cloudData && (cloudData.mentores || cloudData.unidades || cloudData.horarios)) {
                             this.db = cloudData;
-                            // Ensure passwords exist on download too
                             this.db.mentores.forEach(m => { if(!m.senha) m.senha = '1234'; });
                             this.db.unidades.forEach(u => { if(!u.senha) u.senha = '1234'; });
-
                             localStorage.setItem('pratique_global_db_v5', JSON.stringify(this.db));
                             this.atualizarListas();
                             this.renderCronograma();
                             if(this.currentUser?.role === 'admin') this.renderAcessos();
-                            
                             if(!document.getElementById('view-relatorio').classList.contains('hidden')) {
                                 this.atualizarFiltrosRelatorio('init');
                                 this.gerarRelatorio();
@@ -762,12 +754,11 @@
                             method: 'POST', body: JSON.stringify(this.db), referrerPolicy: "no-referrer", headers: { "Content-Type": "text/plain;charset=utf-8" }
                         });
                     }
-                    if(dot) { dot.className = 'status-dot status-online'; }
-                    if(txt) { txt.innerText = 'Online'; txt.className = 'text-xs text-green-600 font-bold'; }
+                    if(dot) dot.className = 'status-dot status-online';
+                    if(txt) txt.innerText = 'Online';
                 } catch (error) {
-                    console.error("Erro na nuvem:", error);
-                    if(dot) { dot.className = 'status-dot status-offline'; }
-                    if(txt) { txt.innerText = 'Offline (Salvo Local)'; txt.className = 'text-xs text-gray-400 font-bold'; }
+                    if(dot) dot.className = 'status-dot status-offline';
+                    if(txt) txt.innerText = 'Offline (Salvo Local)';
                 }
             }
 
@@ -778,7 +769,7 @@
                 localStorage.setItem('pratique_global_db_v5', JSON.stringify(this.db));
             }
             
-            atualizarEstadosRelatorio() { } // Deprecated by cascade logic
+            atualizarEstadosRelatorio() { }
 
             atualizarEstados() {
                 const paisSelecionado = document.getElementById('cad-unidade-pais').value;
@@ -797,13 +788,8 @@
             }
             
             nav(viewId) {
-                if (this.currentUser && (this.currentUser.role === 'mentor' || this.currentUser.role === 'unidade') && viewId === 'importacao') {
-                    return this.notify('error', 'ACESSO NEGADO');
-                }
-                
-                if (this.currentUser && this.currentUser.role === 'unidade' && viewId === 'config') {
-                    return this.notify('error', 'ACESSO NEGADO');
-                }
+                if (this.currentUser && (this.currentUser.role === 'mentor' || this.currentUser.role === 'unidade') && viewId === 'importacao') return this.notify('error', 'ACESSO NEGADO');
+                if (this.currentUser && this.currentUser.role === 'unidade' && viewId === 'config') return this.notify('error', 'ACESSO NEGADO');
 
                 document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
                 const target = document.getElementById(`view-${viewId}`);
@@ -813,7 +799,6 @@
                 if (link) link.classList.add('active');
                 if(this.mobileMenuOpen) this.toggleMenu();
                 
-                // Atualiza filtros apenas na entrada se necessário
                 if(viewId === 'relatorio') setTimeout(() => {
                     this.atualizarFiltrosRelatorio('init');
                     this.gerarRelatorio();
@@ -840,20 +825,26 @@
                 this.atualizarEstados();
             }
 
-            // === GESTÃO DE ACESSOS (NOVO) ===
-            renderAcessos() {
+            renderAcessos(tipoFiltragem, termo) {
                 const renderItem = (item, type) => `
                     <div class="flex items-center gap-2 bg-slate-50 p-2 rounded border border-gray-200">
-                        <div class="flex-1 min-w-0">
-                            <p class="text-xs font-bold text-gray-700 truncate">${item.nome}</p>
-                        </div>
+                        <div class="flex-1 min-w-0"><p class="text-xs font-bold text-gray-700 truncate">${item.nome}</p></div>
                         <input type="text" value="${item.senha || '1234'}" id="pass-${type}-${item.id}" class="w-20 p-1 text-xs border rounded text-center bg-white" placeholder="Senha">
-                        <button onclick="app.savePassword('${type}', ${item.id})" class="text-green-600 hover:text-green-800 p-1" title="Salvar"><i data-lucide="save" class="w-3 h-3"></i></button>
-                        <button onclick="app.resetPassword('${type}', ${item.id})" class="text-gray-400 hover:text-red-500 p-1" title="Resetar 1234"><i data-lucide="rotate-ccw" class="w-3 h-3"></i></button>
+                        <button onclick="app.savePassword('${type}', ${item.id})" class="text-green-600 hover:text-green-800 p-1"><i data-lucide="save" class="w-3 h-3"></i></button>
+                        <button onclick="app.resetPassword('${type}', ${item.id})" class="text-gray-400 hover:text-red-500 p-1"><i data-lucide="rotate-ccw" class="w-3 h-3"></i></button>
                     </div>`;
 
-                document.getElementById('lista-senhas-mentores').innerHTML = this.db.mentores.map(m => renderItem(m, 'mentores')).join('');
-                document.getElementById('lista-senhas-unidades').innerHTML = this.db.unidades.sort((a,b)=>a.nome.localeCompare(b.nome)).map(u => renderItem(u, 'unidades')).join('');
+                let listaMentores = this.db.mentores;
+                let listaUnidades = this.db.unidades;
+
+                if (termo) {
+                    termo = termo.toUpperCase();
+                    if (tipoFiltragem === 'mentores') listaMentores = listaMentores.filter(m => m.nome.includes(termo));
+                    if (tipoFiltragem === 'unidades') listaUnidades = listaUnidades.filter(u => u.nome.includes(termo));
+                }
+
+                if (!tipoFiltragem || tipoFiltragem === 'mentores') document.getElementById('lista-senhas-mentores').innerHTML = listaMentores.map(m => renderItem(m, 'mentores')).join('');
+                if (!tipoFiltragem || tipoFiltragem === 'unidades') document.getElementById('lista-senhas-unidades').innerHTML = listaUnidades.sort((a,b)=>a.nome.localeCompare(b.nome)).map(u => renderItem(u, 'unidades')).join('');
                 lucide.createIcons();
             }
 
@@ -880,7 +871,6 @@
                 }
             }
 
-            // === LÓGICA DE FILTROS EM CASCATA ===
             atualizarFiltrosRelatorio(origem) {
                 const elPais = document.getElementById('rel-pais');
                 const elEstado = document.getElementById('rel-estado');
@@ -897,90 +887,81 @@
                 const popular = (el, lista, valorAtual, defaultText = "TODOS") => {
                     el.innerHTML = `<option value="">${defaultText}</option>` + lista.map(i => `<option value="${i.id || i}">${i.nome || i}</option>`).join('');
                     const existe = lista.some(i => (i.id || i) == valorAtual);
-                    if (valorAtual && existe) el.value = valorAtual;
-                    else el.value = "";
+                    if (valorAtual && existe) el.value = valorAtual; else el.value = "";
                 };
 
-                // 1. POPULAR ESTADOS
                 if (origem === 'init' || origem === 'pais') {
-                    let estadosFiltrados = [];
                     const estadosEmUso = [...new Set(this.db.unidades.filter(u => !valPais || u.pais === valPais).map(u => u.estado))].sort();
                     popular(elEstado, estadosEmUso, valEstado);
                 }
 
-                // 2. POPULAR MENTORES
                 if (origem === 'init' || origem === 'pais' || origem === 'estado') {
                     const unidadesContexto = this.db.unidades.filter(u => {
+                        if (this.currentUser && this.currentUser.role === 'mentor') return true; 
                         if (elPais.value && u.pais !== elPais.value) return false;
                         if (elEstado.value && u.estado !== elEstado.value) return false;
                         return true;
                     });
-                    
                     const mentoresIds = [...new Set(unidadesContexto.map(u => u.mentorId))];
                     const mentoresFiltrados = this.db.mentores.filter(m => mentoresIds.includes(m.id));
-                    
                     popular(elMentor, mentoresFiltrados, valMentor);
-                    
                     if (this.currentUser && this.currentUser.role === 'mentor') {
-                        elMentor.value = this.currentUser.id;
-                        elMentor.disabled = true;
+                        elMentor.value = this.currentUser.id; elMentor.disabled = true;
                     }
                 }
 
-                // 3. POPULAR UNIDADES
                 if (origem === 'init' || origem === 'pais' || origem === 'estado' || origem === 'mentor') {
                     const mentorAtual = elMentor.value;
                     const unidadesFiltradas = this.db.unidades.filter(u => {
+                        if (this.currentUser && this.currentUser.role === 'mentor') {
+                            if (u.mentorId != this.currentUser.id) return false;
+                            return true;
+                        }
                         if (elPais.value && u.pais !== elPais.value) return false;
                         if (elEstado.value && u.estado !== elEstado.value) return false;
                         if (mentorAtual && u.mentorId != mentorAtual) return false;
                         return true;
                     }).sort((a,b)=>a.nome.localeCompare(b.nome));
-
                     popular(elUnidade, unidadesFiltradas, valUnidade, "TODAS");
-                    
-                    // Trava Unidade se logado como unidade
                     if (this.currentUser && this.currentUser.role === 'unidade') {
-                        elUnidade.value = this.currentUser.id;
-                        elUnidade.disabled = true;
+                        elUnidade.value = this.currentUser.id; elUnidade.disabled = true;
                     }
                 }
 
-                // 4. POPULAR MODALIDADES
                 if (origem === 'init' || origem === 'pais' || origem === 'estado' || origem === 'mentor' || origem === 'unidade') {
                     let unidadeAtual = elUnidade.value;
-                    // Se for perfil unidade, força o ID
-                    if (this.currentUser && this.currentUser.role === 'unidade') {
-                        unidadeAtual = this.currentUser.id;
+                    let modsFiltradas = [];
+                    const isUnidadeRestrita = (this.currentUser && this.currentUser.role === 'unidade');
+                    
+                    if (!unidadeAtual && !isUnidadeRestrita) {
+                        modsFiltradas = this.db.modalidades;
+                    } else {
+                        let unidadesAlvo = [];
+                        if (isUnidadeRestrita) {
+                            unidadesAlvo = [this.db.unidades.find(u => u.id == this.currentUser.id)];
+                        } else if (unidadeAtual) {
+                            unidadesAlvo = [this.db.unidades.find(u => u.id == unidadeAtual)];
+                        } 
+                        const validUnitIds = unidadesAlvo.filter(u => u).map(u => u.id);
+                        const horariosContexto = this.db.horarios.filter(h => {
+                            return validUnitIds.some(uid => uid == h.unidadeId || parseInt(uid) === parseInt(h.unidadeId));
+                        });
+                        const modsIds = [...new Set(horariosContexto.map(h => h.modalidadeId))];
+                        modsFiltradas = this.db.modalidades.filter(m => {
+                            return modsIds.some(mid => mid == m.id || parseInt(mid) === parseInt(m.id));
+                        });
                     }
-
-                    const horariosContexto = this.db.horarios.filter(h => {
-                        const u = this.db.unidades.find(x => x.id == h.unidadeId);
-                        if (!u) return false;
-                        if (elPais.value && u.pais !== elPais.value) return false;
-                        if (elEstado.value && u.estado !== elEstado.value) return false;
-                        if (elMentor.value && u.mentorId != elMentor.value) return false;
-                        if (unidadeAtual && u.id != unidadeAtual) return false;
-                        return true;
-                    });
-
-                    const modsIds = [...new Set(horariosContexto.map(h => h.modalidadeId))];
-                    const modsFiltradas = this.db.modalidades.filter(m => modsIds.includes(m.id));
-
                     popular(elModalidade, modsFiltradas, valModalidade, "TODAS");
                 }
             }
 
             atualizarListas() {
                 const renderList = (id, list, renderFn) => { const el = document.getElementById(id); if(el) el.innerHTML = list.map(renderFn).join(''); };
-                
                 renderList('lista-mentores', this.db.mentores, m => `<li class="flex justify-between bg-slate-50 p-1 px-2 rounded border"><span>${m.nome}</span> <button onclick="app.remove('mentores', ${m.id})" class="text-red-400">×</button></li>`);
                 renderList('lista-modalidades', this.db.modalidades, m => `<li class="flex justify-between bg-slate-50 p-1 rounded border"><div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full" style="background:${m.cor}"></div>${m.nome}</div><button onclick="app.remove('modalidades', ${m.id})" class="text-red-400">×</button></li>`);
-                
                 const ops = (list) => `<option value="">SELECIONE...</option>` + list.map(i => `<option value="${i.id}">${i.nome}</option>`).join('');
                 const selMentorCad = document.getElementById('cad-unidade-mentor');
                 if(selMentorCad) selMentorCad.innerHTML = `<option value="">TODOS</option>` + this.db.mentores.map(m => `<option value="${m.id}">${m.nome}</option>`).join('');
-                
                 ['grade-modalidade', 'modal-modalidade'].forEach(id => { const el = document.getElementById(id); if(el) el.innerHTML = ops(this.db.modalidades); });
                 
                 let unidadesVisiveis = this.db.unidades;
@@ -1003,17 +984,12 @@
                         const v = el.value; 
                         el.innerHTML = opsUni; 
                         if(this.currentUser?.role === 'unidade') {
-                            el.value = this.currentUser.id;
-                            el.disabled = true;
-                        } else if(v) {
-                            el.value = v; 
-                        }
+                            el.value = this.currentUser.id; el.disabled = true;
+                        } else if(v) el.value = v; 
                     } 
                 });
-
                 const paises = Object.keys(this.constantes.paisesEstados);
                 const relPais = document.getElementById('rel-pais'); if(relPais) relPais.innerHTML = '<option value="">TODOS</option>' + paises.map(p => `<option value="${p}">${p}</option>`).join('');
-                
                 this.renderGradesRecentes();
                 lucide.createIcons();
             }
@@ -1038,45 +1014,53 @@
             }
 
             gerarRelatorio() {
+                if (this.currentUser) {
+                    if (this.currentUser.role === 'mentor') {
+                        const sel = document.getElementById('rel-mentor');
+                        if(sel && sel.value != this.currentUser.id) sel.value = this.currentUser.id;
+                        sel.disabled = true;
+                    }
+                    if (this.currentUser.role === 'unidade') {
+                        const sel = document.getElementById('rel-unidade');
+                        if(sel && (sel.value != this.currentUser.id || sel.value === "")) sel.value = this.currentUser.id;
+                        sel.disabled = true;
+                    }
+                }
+
                 const elMes = document.getElementById('rel-mes'); if(!elMes) return;
                 const mes = parseInt(elMes.value), ano = parseInt(document.getElementById('rel-ano').value);
-                const fPais = document.getElementById('rel-pais').value, fEst = document.getElementById('rel-estado').value, fMent = document.getElementById('rel-mentor').value, fUni = document.getElementById('rel-unidade').value, fMod = document.getElementById('rel-modalidade').value;
-                const feriados = [...this.constantes.feriadosFixos.filter(f => f.m === mes), ...this.getFeriadosMoveis(ano).filter(f => f.m === mes)];
+                const fPais = document.getElementById('rel-pais').value;
+                const fEst = document.getElementById('rel-estado').value;
+                const fMent = document.getElementById('rel-mentor').value;
+                const fUni = document.getElementById('rel-unidade').value;
+                const fMod = document.getElementById('rel-modalidade').value;
                 
-                if (this.currentUser && this.currentUser.role === 'mentor') {
-                    const selMentor = document.getElementById('rel-mentor');
-                    selMentor.value = this.currentUser.id;
-                    selMentor.disabled = true;
-                }
-
-                // UNIDADE LOCK
-                if (this.currentUser && this.currentUser.role === 'unidade') {
-                    // Ignora filtros visuais e usa ID direto
-                }
-
+                const feriados = [...this.constantes.feriadosFixos.filter(f => f.m === mes), ...this.getFeriadosMoveis(ano).filter(f => f.m === mes)];
                 const divFeriados = document.getElementById('section-feriados');
                 let totalEconomizado = 0;
 
                 if(feriados.length > 0) { 
                     divFeriados.classList.remove('hidden'); 
                     document.getElementById('feriados-lista-nomes').innerText = "FERIADOS DO MÊS: " + feriados.map(f => `${f.d}/${f.m+1} (${f.nome})`).join(', '); 
-                } else { 
-                    divFeriados.classList.add('hidden'); 
-                }
+                } else { divFeriados.classList.add('hidden'); }
                 
                 let filtered = this.db.horarios.filter(h => {
-                    const u = this.db.unidades.find(x => x.id == h.unidadeId); if(!u) return false;
+                    const u = this.db.unidades.find(x => x.id == h.unidadeId || parseInt(x.id) === parseInt(h.unidadeId)); 
+                    if(!u) return false;
                     
                     if (this.currentUser && this.currentUser.role === 'mentor' && u.mentorId != this.currentUser.id) return false;
                     if (this.currentUser && this.currentUser.role === 'unidade' && u.id != this.currentUser.id) return false;
 
                     if (this.currentUser?.role !== 'unidade') {
-                        if(fPais && u.pais !== fPais) return false; 
-                        if(fEst && u.estado !== fEst) return false; 
+                        if(this.currentUser?.role !== 'mentor') {
+                            if(fPais && u.pais !== fPais) return false; 
+                            if(fEst && u.estado !== fEst) return false; 
+                        }
                         if(fMent && u.mentorId != fMent) return false; 
-                        if(fUni && u.id != fUni) return false; 
+                        if(fUni && (u.id != fUni && parseInt(u.id) !== parseInt(fUni))) return false; 
+                    } else {
+                        if (u.id != this.currentUser.id) return false;
                     }
-                    
                     if(fMod && h.modalidadeId != fMod) return false;
                     return true;
                 });
@@ -1086,8 +1070,10 @@
                 let canceladas = [], rows = [];
 
                 filtered.forEach(h => {
-                    const u = this.db.unidades.find(x => x.id == h.unidadeId), m = this.db.modalidades.find(x => x.id == h.modalidadeId);
-                    if(u) stats.uni.add(h.unidadeId);
+                    const u = this.db.unidades.find(x => x.id == h.unidadeId || parseInt(x.id) === parseInt(h.unidadeId));
+                    const m = this.db.modalidades.find(x => x.id == h.modalidadeId || parseInt(x.id) === parseInt(h.modalidadeId));
+                    
+                    if(u) stats.uni.add(parseInt(h.unidadeId));
                     let ac = 0;
                     for(let d=1; d<=daysInMonth; d++) {
                         const dia = this.constantes.dias[new Date(ano, mes, d).getDay() === 0 ? 6 : new Date(ano, mes, d).getDay() - 1];
@@ -1109,41 +1095,80 @@
                 document.getElementById('kpi-media-alunos').innerText = stats.aul ? Math.round(stats.alu/stats.aul) : 0;
                 const mediaValor = stats.aul > 0 ? stats.rec / stats.aul : 0;
                 document.getElementById('kpi-media-valor').innerText = `R$ ${mediaValor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-
                 document.getElementById('kpi-canceladas').innerText = stats.canc;
-                document.getElementById('kpi-unidades-count').innerText = stats.uni.size;
-                
+
+                let unitsForCount = this.db.unidades.filter(u => {
+                     if (this.currentUser && this.currentUser.role === 'mentor' && u.mentorId != this.currentUser.id) return false;
+                     if (this.currentUser && this.currentUser.role === 'unidade' && u.id != this.currentUser.id) return false;
+                     if (this.currentUser?.role !== 'unidade') {
+                         if(this.currentUser?.role !== 'mentor') {
+                             if(fPais && u.pais !== fPais) return false;
+                             if(fEst && u.estado !== fEst) return false;
+                         }
+                         if(fMent && u.mentorId != fMent) return false;
+                         if(fUni && (u.id != fUni && parseInt(u.id) !== parseInt(fUni))) return false;
+                     }
+                     return true;
+                });
+                document.getElementById('kpi-unidades-count').innerText = unitsForCount.length;
                 document.getElementById('total-economizado').innerText = `R$ ${totalEconomizado.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
                 document.querySelector('#tabela-canceladas tbody').innerHTML = canceladas.map(c => `<tr><td>${c.data}</td><td>${c.feriado}</td><td>${c.unidade}</td><td class="text-right text-red-600">- R$ ${c.impacto.toFixed(2)}</td></tr>`).join('');
                 
                 this.dadosBrutosFiltrados = rows;
                 this.processarExibicaoTabela();
-                this.gerarRankings(rows);
+                this.prepararDadosRanking(rows);
                 document.getElementById('relatorio-empty').classList.toggle('hidden', rows.length > 0);
             }
 
-            gerarRankings(rows) {
-                const byBest = [...rows].sort((a,b) => b.mediaAlunos - a.mediaAlunos).slice(0, 10);
-                const byWorst = [...rows].sort((a,b) => a.mediaAlunos - b.mediaAlunos).slice(0, 10);
+            prepararDadosRanking(rows) {
+                let ag = {};
+                rows.forEach(r => {
+                    if(!ag[r.unidade]) ag[r.unidade] = { nome: r.unidade, alunos: 0, aulas: 0 };
+                    ag[r.unidade].alunos += (r.mediaAlunos * r.aulas);
+                    ag[r.unidade].aulas += r.aulas;
+                });
+                this.rankingData = Object.values(ag).map(i => ({
+                    nome: i.nome,
+                    media: i.aulas > 0 ? Math.round(i.alunos / i.aulas) : 0
+                }));
+                this.renderRanking();
+            }
 
-                const renderTable = (arr, isWorst) => {
-                    if(!arr.length) return '<tr><td colspan="3" class="text-center py-4 text-gray-400">SEM DADOS</td></tr>';
-                    return arr.map((i, idx) => `
-                        <tr class="border-b border-gray-100 hover:bg-gray-50">
-                            <td class="py-2 font-bold ${idx < 3 ? (isWorst ? 'text-red-600' : 'text-blue-600') : 'text-gray-500'}">${idx + 1}º</td>
-                            <td class="py-2 truncate max-w-[200px] font-medium text-gray-700">
-                                ${i.unidade}<br>
-                                <span class="text-[9px] text-gray-400 uppercase">${i.modalidade} | ${i.professor}</span>
-                            </td>
-                            <td class="py-2 text-right font-bold ${isWorst ? 'text-red-500' : 'text-green-600'}">
-                                ${i.mediaAlunos}
-                            </td>
-                        </tr>
-                    `).join('');
-                };
+            ordenarRanking(campo) {
+                if (this.ordenacaoRanking.campo === campo) {
+                    this.ordenacaoRanking.direcao = this.ordenacaoRanking.direcao === 'asc' ? 'desc' : 'asc';
+                } else {
+                    this.ordenacaoRanking.campo = campo;
+                    this.ordenacaoRanking.direcao = 'desc';
+                }
+                this.renderRanking();
+            }
 
-                document.querySelector('#tabela-ranking-alunos tbody').innerHTML = renderTable(byBest, false);
-                document.querySelector('#tabela-ranking-gastos tbody').innerHTML = renderTable(byWorst, true);
+            renderRanking() {
+                const { campo, direcao } = this.ordenacaoRanking;
+                let data = [...this.rankingData];
+                data.sort((a,b) => {
+                    let valA = a[campo] || 0;
+                    let valB = b[campo] || 0;
+                    if(campo === 'unidade') { valA = a.nome; valB = b.nome; }
+                    if(campo === 'pos') { return 0; }
+                    if (typeof valA === 'string') { valA = valA.toLowerCase(); valB = valB.toLowerCase(); }
+                    return (valA < valB ? -1 : 1) * (direcao === 'asc' ? 1 : -1);
+                });
+                if(campo === 'pos') data.sort((a,b) => (b.media - a.media) * (direcao === 'asc' ? -1 : 1));
+                const top10 = data.slice(0, 10);
+                const bottom10 = [...data].sort((a,b) => a.media - b.media).slice(0, 10);
+                const renderRow = (i, idx, isWorst) => `
+                    <tr class="border-b border-gray-100 hover:bg-gray-50 transition">
+                        <td class="py-2 font-bold ${idx < 3 ? (isWorst ? 'text-red-600' : 'text-blue-600') : 'text-gray-500'}">${idx + 1}º</td>
+                        <td class="py-2 truncate max-w-[200px] font-medium text-gray-700">${i.nome}</td>
+                        <td class="py-2 text-right font-bold ${isWorst ? 'text-red-500' : 'text-green-600'}">${i.media}</td>
+                    </tr>`;
+                let sortedBottom = [...bottom10];
+                if (campo === 'unidade') sortedBottom.sort((a,b) => a.nome.localeCompare(b.nome) * (direcao === 'asc' ? 1 : -1));
+                if (campo === 'media') sortedBottom.sort((a,b) => (a.media - b.media) * (direcao === 'asc' ? 1 : -1));
+                document.querySelector('#tabela-ranking-alunos tbody').innerHTML = top10.length ? top10.map((i, idx) => renderRow(i, idx, false)).join('') : '<tr><td colspan="3" class="p-4 text-center text-gray-400">SEM DADOS</td></tr>';
+                document.querySelector('#tabela-ranking-gastos tbody').innerHTML = sortedBottom.length ? sortedBottom.map((i, idx) => renderRow(i, idx, true)).join('') : '<tr><td colspan="3" class="p-4 text-center text-gray-400">SEM DADOS</td></tr>';
             }
 
             setAgrupamento(modo) {
@@ -1182,7 +1207,6 @@
             ordenarRelatorio(campo, forceRender = false) {
                 if (!forceRender && this.ordenacao.campo === campo) this.ordenacao.direcao = this.ordenacao.direcao === 'asc' ? 'desc' : 'asc';
                 else this.ordenacao.campo = campo;
-                
                 this.dadosExibidos.sort((a, b) => {
                     let valA = a[campo] || a.grupo || 0, valB = b[campo] || b.grupo || 0;
                     if (typeof valA === 'string') { valA = valA.toLowerCase(); valB = valB.toLowerCase(); }
@@ -1196,7 +1220,6 @@
                 const thead = document.getElementById('header-relatorio');
                 const modo = this.modoAgrupamento;
                 const arr = this.ordenacao.direcao === 'asc' ? '↑' : '↓';
-                
                 if (modo === 'detalhado') {
                     thead.innerHTML = `
                         <th onclick="app.ordenarRelatorio('unidade')">UNIDADE ${this.ordenacao.campo === 'unidade' ? arr : ''}</th>
@@ -1251,7 +1274,7 @@
                 const h=document.getElementById('grade-hora').value, v=parseFloat(document.getElementById('grade-valor').value)||0, al=parseInt(document.getElementById('grade-alunos').value)||0;
                 const ds=Array.from(document.querySelectorAll('.check-dia-input:checked')).map(c=>c.value);
                 if(!u||!m||!p||!h||!ds.length) return alert('PREENCHA TUDO');
-                const novo = { id: this.editingId || Date.now(), unidadeId: parseInt(u), modalidadeId: parseInt(m), professor: p.toUpperCase(), valor: v, mediaAlunos: al, hora: h, dias: ds };
+                const novo = { id: this.editingId || Date.now(), unidadeId: Number(u), modalidadeId: Number(m), professor: p.toUpperCase(), valor: v, mediaAlunos: al, hora: h, dias: ds };
                 if(this.editingId) { const i = this.db.horarios.findIndex(x=>x.id==this.editingId); if(i!==-1) this.db.horarios[i]=novo; this.cancelarEdicao(); }
                 else this.db.horarios.push(novo);
                 this.salvarDados(); this.notify('success', 'SALVO!'); this.renderGradesRecentes();
@@ -1260,7 +1283,6 @@
             remove(t,id) { 
                 if(this.currentUser && (this.currentUser.role === 'mentor' || this.currentUser.role === 'unidade') && t !== 'unidades') return alert('ACESSO NEGADO');
                 if(this.currentUser && this.currentUser.role === 'unidade') return alert('ACESSO NEGADO');
-
                 if(confirm('EXCLUIR?')) { this.db[t]=this.db[t].filter(x=>x.id!=id); if(t=='unidades') this.db.horarios=this.db.horarios.filter(x=>x.unidadeId!=id); this.salvarDados(); this.atualizarListas(); this.renderCronograma(); } 
             }
             
@@ -1289,7 +1311,7 @@
                 }
                 
                 lista.innerHTML = grades.slice(-5).reverse().map(h => {
-                    const u = this.db.unidades.find(x=>x.id==h.unidadeId)?.nome || '?';
+                    const u = this.db.unidades.find(x=>x.id==h.unidadeId || parseInt(x.id) === parseInt(h.unidadeId))?.nome || '?';
                     return `<div class="flex justify-between items-center border-b p-1 text-xs mb-1 bg-white uppercase">
                         <span><b>${u}</b><br>${h.professor} - ${h.hora}</span> 
                         <div class="flex gap-1">
@@ -1305,15 +1327,10 @@
                 let mId = this.currentUser && this.currentUser.role === 'mentor' ? this.currentUser.id : parseInt(document.getElementById('cad-unidade-mentor').value);
                 const p=document.getElementById('cad-unidade-pais').value;
                 const e=document.getElementById('cad-unidade-estado').value;
-                
                 if(n && mId && p && e) { 
                     this.db.unidades.push({id:Date.now(), nome:n, mentorId:mId, estado:e, pais:p, senha:'1234'}); 
-                    this.salvarDados(); 
-                    this.atualizarListas(); 
-                    document.getElementById('cad-unidade-nome').value=''; 
-                } else {
-                    alert("PREENCHA TODOS OS CAMPOS!");
-                }
+                    this.salvarDados(); this.atualizarListas(); document.getElementById('cad-unidade-nome').value=''; 
+                } else { alert("PREENCHA TODOS OS CAMPOS!"); }
             }
             addModalidade() { const n=document.getElementById('cad-mod-nome').value.toUpperCase(); if(n) { this.db.modalidades.push({id:Date.now(), nome:n, cor:document.getElementById('cad-mod-cor').value}); this.salvarDados(); this.atualizarListas(); document.getElementById('cad-mod-nome').value=''; } }
             addMentor() { const n=document.getElementById('cad-mentor-nome').value.toUpperCase(); if(n) { this.db.mentores.push({id:Date.now(), nome:n, senha:'1234'}); this.salvarDados(); this.atualizarListas(); document.getElementById('cad-mentor-nome').value=''; } }
@@ -1328,7 +1345,7 @@
             }
             abrirModalEdicao(id) {
                 const h = this.db.horarios.find(x=>x.id==id); if(!h) return;
-                const u = this.db.unidades.find(x=>x.id==h.unidadeId);
+                const u = this.db.unidades.find(x=>x.id==h.unidadeId || parseInt(x.id) === parseInt(h.unidadeId));
                 document.getElementById('modal-id').value=h.id; document.getElementById('modal-titulo').innerText='EDITAR AULA';
                 document.getElementById('modal-unidade-view').value=u?u.nome:'-'; document.getElementById('modal-modalidade').value=h.modalidadeId;
                 document.getElementById('modal-prof').value=h.professor; document.getElementById('modal-hora').value=h.hora;
@@ -1342,29 +1359,28 @@
                 const h=document.getElementById('modal-hora').value, v=parseFloat(document.getElementById('modal-valor').value)||0, al=parseInt(document.getElementById('modal-alunos').value)||0;
                 const dias=Array.from(document.querySelectorAll('.modal-check-dia:checked')).map(c=>c.value);
                 if(!m||!p||!h||!dias.length) return alert('PREENCHA TUDO');
-                
                 if(id) {
-                    const i = this.db.horarios.findIndex(x=>x.id==id); if(i!==-1) this.db.horarios[i]={...this.db.horarios[i], modalidadeId:parseInt(m), professor:p, hora:h, valor:v, mediaAlunos:al, dias:dias};
+                    const i = this.db.horarios.findIndex(x=>x.id==id); if(i!==-1) this.db.horarios[i]={...this.db.horarios[i], modalidadeId:Number(m), professor:p, hora:h, valor:v, mediaAlunos:al, dias:dias};
                 } else {
-                    this.db.horarios.push({id:Date.now(), unidadeId:parseInt(document.getElementById('cronograma-unidade-select').value), modalidadeId:parseInt(m), professor:p, hora:h, valor:v, mediaAlunos:al, dias:dias});
+                    this.db.horarios.push({id:Date.now(), unidadeId:Number(document.getElementById('cronograma-unidade-select').value), modalidadeId:Number(m), professor:p, hora:h, valor:v, mediaAlunos:al, dias:dias});
                 }
                 this.salvarDados(); this.renderCronograma(); this.fecharModal(); this.notify('success', 'SALVO!');
             }
             excluirViaModal() { if(confirm('EXCLUIR?')) { this.db.horarios=this.db.horarios.filter(x=>x.id!=document.getElementById('modal-id').value); this.salvarDados(); this.renderCronograma(); this.fecharModal(); } }
             fecharModal() { document.getElementById('modal-editor').classList.add('hidden'); }
             
-            // Cronograma
             renderCronograma() {
                 const uid = document.getElementById('cronograma-unidade-select').value; const c = document.getElementById('cronograma-container');
                 if(!uid) return c.innerHTML='<div class="py-10 text-center text-gray-400 uppercase">SELECIONE UMA UNIDADE</div>';
-                const h = this.db.horarios.filter(x=>x.unidadeId==uid); const times = [...new Set(h.map(x=>x.hora))].sort();
+                const h = this.db.horarios.filter(x=>x.unidadeId==uid || parseInt(x.unidadeId) === parseInt(uid)); 
+                const times = [...new Set(h.map(x=>x.hora))].sort();
                 let ht = `<table class="w-full border-collapse min-w-[800px]"><thead><tr><th class="p-2 border bg-gray-50 text-xs w-20">HORA</th>${this.constantes.dias.map(d=>`<th class="p-2 border bg-gray-50 text-xs uppercase">${d}</th>`).join('')}</tr></thead><tbody>`;
                 times.forEach(t => {
                     ht += `<tr><td class="p-2 border text-center text-xs font-bold bg-slate-50">${t}</td>`;
                     this.constantes.dias.forEach(d => {
                         const a = h.find(x=>x.hora===t && x.dias.includes(d));
                         if(a) {
-                            const mod = this.db.modalidades.find(m=>m.id==a.modalidadeId);
+                            const mod = this.db.modalidades.find(m=>m.id==a.modalidadeId || parseInt(m.id) === parseInt(a.modalidadeId));
                             ht += `<td class="p-1 border h-20 w-[13%] align-top"><div onclick="app.abrirModalEdicao(${a.id})" class="aula-card p-2 rounded text-xs text-white shadow relative cursor-pointer group flex flex-col justify-between h-full uppercase" style="background:${mod?.cor||'#999'}"><div><div class="font-bold uppercase mb-1 leading-tight">${mod?.nome}</div><div class="opacity-90 truncate">${a.professor}</div></div><div class="flex justify-between items-end mt-1 border-t border-white/20 pt-1"><span class="text-[9px]">👥 ${a.mediaAlunos}</span><i data-lucide="edit" class="w-3 h-3 opacity-0 group-hover:opacity-100"></i></div></div></td>`;
                         } else ht += `<td class="border bg-slate-50/20"></td>`;
                     });
@@ -1376,7 +1392,6 @@
             importarUnidades() { const l=this.parseImportLines(document.getElementById('import-unidades-text').value); l.forEach(c=>{ if(c[0]){ this.db.unidades.push({id:Date.now()+Math.random(), nome:c[0].toUpperCase(), mentorId:1, estado:c[2]||'MG', pais:c[3]||'BR', senha:'1234'}); } }); this.salvarDados(); this.atualizarListas(); }
             importarGrades() { const l=this.parseImportLines(document.getElementById('import-grades-text').value); l.forEach(c=>{ if(c.length>=5){ const u=this.db.unidades.find(x=>x.nome==c[0]); const m=this.db.modalidades.find(x=>x.nome==c[1]); if(u&&m) this.db.horarios.push({id:Date.now()+Math.random(), unidadeId:u.id, modalidadeId:m.id, professor:c[2], dias:c[3].split(','), hora:c[4], valor:parseFloat(c[5])||0, mediaAlunos:parseInt(c[6])||0}); } }); this.salvarDados(); this.renderGradesRecentes(); }
             
-            // Backup e Restauração
             salvarBackup() {
                 const data = JSON.stringify(this.db, null, 2);
                 const blob = new Blob([data], {type: 'application/json'});
@@ -1414,7 +1429,6 @@
                 reader.readAsText(file);
             }
 
-            // Exportações
             exportarRelatorioGeral() { this.exportarExcel(); }
             exportarGrades() {
                 let csv = "Unidade;Modalidade;Professor;Dias;Hora;Valor;MediaAlunos\n";
