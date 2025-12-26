@@ -45,7 +45,6 @@
         .sidebar-link.active { background-color: rgba(59, 130, 246, 0.1); color: #60a5fa; border-left-color: #60a5fa; }
         .sidebar-link.disabled { opacity: 0.3; pointer-events: none; display: none; }
 
-        /* Tabela interativa com cursor pointer nos headers */
         .table-custom th {
             background-color: #f8fafc; color: #475569; font-size: 0.75rem;
             text-transform: uppercase; letter-spacing: 0.05em; padding: 12px 16px; font-weight: 700;
@@ -73,7 +72,6 @@
         .status-sync { background-color: #f59e0b; animation: pulse 1s infinite; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
 
-        /* Login Screen Styles */
         .login-bg {
             background-color: #0f172a;
             background-image: radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%), radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%);
@@ -171,6 +169,10 @@
                 </button>
                 <button onclick="app.nav('importacao')" id="nav-importacao" class="sidebar-link w-full text-left px-6 py-4 md:py-3 flex items-center gap-3">
                     <i data-lucide="database" class="w-5 h-5"></i> <span class="font-medium">Ferramentas Avançadas</span>
+                </button>
+                <!-- NOVA ABA: HISTÓRICO (Admin Only) -->
+                <button onclick="app.nav('historico')" id="nav-historico" class="sidebar-link w-full text-left px-6 py-4 md:py-3 flex items-center gap-3 admin-only-block hidden">
+                    <i data-lucide="history" class="w-5 h-5"></i> <span class="font-medium">Histórico</span>
                 </button>
             </nav>
 
@@ -322,7 +324,9 @@
                         </div>
                         <div class="overflow-x-auto max-h-[500px]">
                             <table class="w-full table-custom text-left min-w-[800px] md:min-w-full uppercase" id="tabela-relatorio">
-                                <thead class="sticky top-0 shadow-sm bg-gray-50 z-10 text-gray-600" id="header-relatorio"></thead>
+                                <thead class="sticky top-0 shadow-sm bg-gray-50 z-10 text-gray-600" id="header-relatorio">
+                                    <!-- Headers gerados via JS com ordenação -->
+                                </thead>
                                 <tbody id="body-relatorio"></tbody>
                             </table>
                         </div>
@@ -334,12 +338,9 @@
                         <!-- RANKING DETALHADO -->
                         <div class="glass-panel p-4 md:p-6 border-t-4 border-gray-800">
                             <h3 class="font-bold text-gray-800 mb-6 flex items-center gap-2 text-lg uppercase"><i data-lucide="award" class="w-5 h-5"></i> Fluxo Geral Coletivas</h3>
-                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                                <!-- Ranking 1: Melhores Médias -->
+                            <div class="grid grid-cols-1">
+                                <!-- Ranking Único: Fluxo Geral -->
                                 <div>
-                                    <h4 class="text-sm font-bold text-blue-700 uppercase mb-3 border-b-2 border-blue-100 pb-2">
-                                        <i data-lucide="trending-up" class="w-4 h-4 inline mr-1"></i> Top Fluxo 
-                                    </h4>
                                     <div class="overflow-x-auto">
                                         <table class="w-full text-xs text-left uppercase table-custom" id="tabela-ranking-alunos">
                                             <thead class="text-gray-500 border-b">
@@ -347,25 +348,6 @@
                                                     <th onclick="app.ordenarRanking('pos')" class="py-2 w-10 cursor-pointer hover:text-blue-600">Pos. ↕</th>
                                                     <th onclick="app.ordenarRanking('unidade')" class="py-2 cursor-pointer hover:text-blue-600">Unidade ↕</th>
                                                     <th onclick="app.ordenarRanking('media')" class="py-2 text-right w-24 cursor-pointer hover:text-blue-600">Média ↕</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody class="text-gray-700"></tbody>
-                                        </table>
-                                    </div>
-                                </div>
-
-                                <!-- Ranking 2: Piores Médias -->
-                                <div>
-                                    <h4 class="text-sm font-bold text-red-600 uppercase mb-3 border-b-2 border-red-100 pb-2">
-                                        <i data-lucide="alert-triangle" class="w-4 h-4 inline mr-1"></i> Atenção: Baixo Fluxo
-                                    </h4>
-                                    <div class="overflow-x-auto">
-                                        <table class="w-full text-xs text-left uppercase table-custom" id="tabela-ranking-gastos">
-                                            <thead class="text-gray-500 border-b">
-                                                <tr>
-                                                    <th onclick="app.ordenarRanking('pos')" class="py-2 w-10 cursor-pointer hover:text-red-600">Pos. ↕</th>
-                                                    <th onclick="app.ordenarRanking('unidade')" class="py-2 cursor-pointer hover:text-red-600">Unidade ↕</th>
-                                                    <th onclick="app.ordenarRanking('media')" class="py-2 text-right w-24 cursor-pointer hover:text-red-600">Média ↕</th>
                                                 </tr>
                                             </thead>
                                             <tbody class="text-gray-700"></tbody>
@@ -537,6 +519,32 @@
                     </div>
                 </div>
 
+                <!-- ================= NOVA ABA: HISTÓRICO ================= -->
+                <div id="view-historico" class="view-section hidden fade-in pb-20">
+                    <div class="glass-panel p-6">
+                        <h2 class="font-bold text-gray-800 mb-4 flex items-center gap-2 uppercase">
+                            <i data-lucide="history" class="w-5 h-5 text-blue-600"></i> Histórico de Alterações
+                        </h2>
+                        <div class="overflow-x-auto max-h-[600px] border rounded-lg">
+                            <table class="w-full text-xs text-left uppercase table-custom">
+                                <thead class="sticky top-0 bg-gray-50 shadow-sm z-10 text-gray-600">
+                                    <tr>
+                                        <th class="p-3">Data/Hora</th>
+                                        <th class="p-3">Usuário</th>
+                                        <th class="p-3">Ação</th>
+                                        <th class="p-3">Detalhe</th>
+                                        <th class="p-3">Anterior</th>
+                                        <th class="p-3">Novo</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="lista-historico" class="bg-white text-gray-700">
+                                    <!-- Preenchido via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </main>
     </div>
@@ -582,7 +590,7 @@
 
         class SistemaPratique {
             constructor() {
-                this.db = { mentores: [], unidades: [], modalidades: [], horarios: [] };
+                this.db = { mentores: [], unidades: [], modalidades: [], horarios: [], historico: [] }; // Adicionado historico
                 this.apiUrl = 'https://script.google.com/macros/s/AKfycbz8LU_ekbnZ7tAwrvxyaASzql0Cvqe-HAVGhWpO-TkOWot3AcWjpAALTB3u2bOGx8hbfA/exec';
                 
                 this.editingId = null;
@@ -620,30 +628,91 @@
                 setTimeout(() => lucide.createIcons(), 500);
             }
 
-            // ================== AUTH SYSTEM ==================
+            // ================== LOGGING SYSTEM ==================
+            registrarLog(acao, detalhe, antigo, novo) {
+                if (!this.db.historico) this.db.historico = [];
+                
+                const log = {
+                    id: Date.now(),
+                    data: new Date().toLocaleString('pt-BR'),
+                    usuario: this.currentUser ? this.currentUser.name : 'Sistema/Import',
+                    acao: acao,
+                    detalhe: detalhe,
+                    anterior: antigo,
+                    novo: novo
+                };
+                
+                this.db.historico.unshift(log); // Adiciona no início
+                // Limita a 1000 logs para não pesar
+                if(this.db.historico.length > 1000) this.db.historico.length = 1000;
+                
+                this.salvarDados();
+                
+                if (this.currentUser && this.currentUser.role === 'admin') {
+                    this.renderHistorico();
+                }
+            }
+
+            renderHistorico() {
+                const tbody = document.getElementById('lista-historico');
+                if (!tbody) return;
+                
+                if (!this.db.historico || this.db.historico.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-gray-400">NENHUM REGISTRO ENCONTRADO</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = this.db.historico.map(log => `
+                    <tr class="border-b border-gray-100 hover:bg-gray-50">
+                        <td class="p-3 text-gray-500 whitespace-nowrap">${log.data}</td>
+                        <td class="p-3 font-bold text-gray-700">${log.usuario}</td>
+                        <td class="p-3"><span class="px-2 py-1 rounded text-[10px] font-bold ${log.acao.includes('Exclusão') ? 'bg-red-100 text-red-600' : (log.acao.includes('Edição') || log.acao.includes('Alteração') ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-600')}">${log.acao}</span></td>
+                        <td class="p-3 font-medium">${log.detalhe}</td>
+                        <td class="p-3 text-red-400 max-w-xs truncate" title="${log.anterior}">${log.anterior}</td>
+                        <td class="p-3 text-green-600 max-w-xs truncate" title="${log.novo}">${log.novo}</td>
+                    </tr>
+                `).join('');
+            }
+            // ====================================================
+
             login() {
-                const user = document.getElementById('login-user').value.trim().toUpperCase();
+                const rawUser = document.getElementById('login-user').value;
+                const userClean = rawUser.trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "");
                 const pass = document.getElementById('login-pass').value.trim();
                 const errorDiv = document.getElementById('login-error');
                 
-                if (user === 'ADMIN' && pass === 'admin123') {
+                // Helper para limpar nomes do banco para comparação
+                const cleanName = (name) => name ? name.trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "") : "";
+
+                // 1. ADMIN CHECK
+                if (userClean === 'ADMIN' && pass === 'admin123') {
                     this.completeLogin({ id: 'admin', name: 'ADMINISTRADOR', role: 'admin' });
                     return;
                 }
 
-                const mentorFound = this.db.mentores.find(m => m.nome.toUpperCase() === user);
-                const mentorPass = mentorFound?.senha || '1234';
-                if (mentorFound && pass === mentorPass) {
-                    this.completeLogin({ id: mentorFound.id, name: mentorFound.nome, role: 'mentor' });
-                    return;
+                // 2. MENTOR CHECK
+                const mentorFound = this.db.mentores.find(m => cleanName(m.nome) === userClean);
+                if (mentorFound) {
+                     const mentorPass = mentorFound.senha || '1234';
+                     if(pass === mentorPass) {
+                         this.completeLogin({ id: mentorFound.id, name: mentorFound.nome, role: 'mentor' });
+                         return;
+                     }
                 }
 
-                const unitFound = this.db.unidades.find(u => u.nome.toUpperCase() === user);
-                const unitPass = unitFound?.senha || '1234';
-                if (unitFound && pass === unitPass) {
-                    this.completeLogin({ id: unitFound.id, name: unitFound.nome, role: 'unidade' });
-                    return;
+                // 3. UNIDADE CHECK
+                const unitFound = this.db.unidades.find(u => cleanName(u.nome) === userClean);
+                if (unitFound) {
+                     const unitPass = unitFound.senha || '1234';
+                     if(pass === unitPass) {
+                         this.completeLogin({ id: unitFound.id, name: unitFound.nome, role: 'unidade' });
+                         return;
+                     }
                 }
+                
+                // Debug para o usuário ver o que está acontecendo se falhar
+                console.log("Falha Login. Tentado:", userClean);
+                console.log("Unidades disponíveis:", this.db.unidades.map(u => cleanName(u.nome)));
 
                 errorDiv.classList.remove('hidden');
                 errorDiv.innerText = "USUÁRIO OU SENHA INVÁLIDOS";
@@ -675,10 +744,22 @@
                 document.getElementById('user-role').innerText = roleLabel;
                 document.getElementById('user-avatar').innerText = this.currentUser.name.charAt(0);
 
+                // Reset Defaults
                 document.getElementById('nav-importacao').classList.remove('disabled');
                 document.getElementById('nav-config').classList.remove('disabled');
                 document.getElementById('admin-filters-container').classList.remove('hidden');
+                document.getElementById('nav-historico').classList.add('hidden'); // Hide by default
                 document.querySelectorAll('.admin-only-block').forEach(el => el.classList.remove('hidden'));
+                
+                // Exibe os filtros (podem ter sido ocultados)
+                document.getElementById('filter-mentor-wrapper').classList.remove('hidden');
+                document.getElementById('filter-unidade-wrapper').classList.remove('hidden');
+
+                if(this.currentUser.role === 'admin') {
+                    document.getElementById('nav-historico').classList.remove('hidden');
+                    this.renderAcessos();
+                    this.renderHistorico();
+                }
 
                 if(this.currentUser.role === 'mentor') {
                     document.getElementById('nav-importacao').classList.add('disabled');
@@ -695,9 +776,6 @@
                 }
 
                 this.atualizarFiltrosRelatorio('init');
-                if(this.currentUser.role === 'admin') {
-                    this.renderAcessos();
-                }
                 this.nav('relatorio');
                 this.atualizarListas();
             }
@@ -711,12 +789,29 @@
                             mentores: parsed.mentores || [], 
                             unidades: parsed.unidades || [], 
                             modalidades: parsed.modalidades || [], 
-                            horarios: parsed.horarios || [] 
+                            horarios: parsed.horarios || [],
+                            historico: parsed.historico || [] // Ensure history exists
                         }; 
                         this.db.mentores.forEach(m => { if(!m.senha) m.senha = '1234'; });
                         this.db.unidades.forEach(u => { if(!u.senha) u.senha = '1234'; });
                     } catch(e) { this.seedInicial(); } 
                 } else { this.seedInicial(); }
+                
+                this.sanitizeDB(); // Limpeza automática ao carregar
+            }
+
+            // FUNÇÃO NOVA: LIMPEZA DE DADOS
+            sanitizeDB() {
+                if(this.db.unidades) {
+                    this.db.unidades.forEach(u => {
+                        if(u.nome) u.nome = u.nome.trim().toUpperCase();
+                    });
+                }
+                if(this.db.mentores) {
+                    this.db.mentores.forEach(m => {
+                        if(m.nome) m.nome = m.nome.trim().toUpperCase();
+                    });
+                }
             }
 
             salvarDados() { 
@@ -737,12 +832,19 @@
                         const cloudData = await response.json();
                         if (cloudData && (cloudData.mentores || cloudData.unidades || cloudData.horarios)) {
                             this.db = cloudData;
+                            if(!this.db.historico) this.db.historico = []; // Ensure history exists on download
                             this.db.mentores.forEach(m => { if(!m.senha) m.senha = '1234'; });
                             this.db.unidades.forEach(u => { if(!u.senha) u.senha = '1234'; });
+                            
+                            this.sanitizeDB(); // Limpa dados baixados também
+
                             localStorage.setItem('pratique_global_db_v5', JSON.stringify(this.db));
                             this.atualizarListas();
                             this.renderCronograma();
-                            if(this.currentUser?.role === 'admin') this.renderAcessos();
+                            if(this.currentUser?.role === 'admin') {
+                                this.renderAcessos();
+                                this.renderHistorico();
+                            }
                             if(!document.getElementById('view-relatorio').classList.contains('hidden')) {
                                 this.atualizarFiltrosRelatorio('init');
                                 this.gerarRelatorio();
@@ -765,7 +867,13 @@
             forcarSincronizacao() { this.sincronizarNuvem('download'); }
 
             seedInicial() { 
-                this.db = { mentores: [{id:1,nome:"FELIPE SOUZA", senha:"1234"}], modalidades: [{id:1,nome:"JUMP",cor:"#ff5722"}], unidades: [{id:101,nome:"PRATIQUE SAVASSI",mentorId:1,estado:"MG",pais:"Brasil", senha:"1234"}], horarios: [] }; 
+                this.db = { 
+                    mentores: [{id:1,nome:"FELIPE SOUZA", senha:"1234"}], 
+                    modalidades: [{id:1,nome:"JUMP",cor:"#ff5722"}], 
+                    unidades: [{id:101,nome:"PRATIQUE SAVASSI",mentorId:1,estado:"MG",pais:"Brasil", senha:"1234"}], 
+                    horarios: [],
+                    historico: []
+                }; 
                 localStorage.setItem('pratique_global_db_v5', JSON.stringify(this.db));
             }
             
@@ -790,6 +898,7 @@
             nav(viewId) {
                 if (this.currentUser && (this.currentUser.role === 'mentor' || this.currentUser.role === 'unidade') && viewId === 'importacao') return this.notify('error', 'ACESSO NEGADO');
                 if (this.currentUser && this.currentUser.role === 'unidade' && viewId === 'config') return this.notify('error', 'ACESSO NEGADO');
+                if (this.currentUser && this.currentUser.role !== 'admin' && viewId === 'historico') return this.notify('error', 'ACESSO NEGADO');
 
                 document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
                 const target = document.getElementById(`view-${viewId}`);
@@ -804,6 +913,10 @@
                     this.gerarRelatorio();
                 }, 100);
                 
+                if(viewId === 'historico' && this.currentUser.role === 'admin') {
+                    this.renderHistorico();
+                }
+
                 this.cancelarEdicao();
                 lucide.createIcons();
             }
@@ -853,7 +966,9 @@
                 if(!newVal) return alert('Senha vazia!');
                 const item = this.db[type].find(x => x.id === id);
                 if(item) {
+                    const oldPass = item.senha;
                     item.senha = newVal;
+                    this.registrarLog('Alteração Senha', `${type === 'mentores' ? 'Mentor' : 'Unidade'}: ${item.nome}`, oldPass, newVal);
                     this.salvarDados();
                     this.notify('success', 'SENHA ATUALIZADA!');
                 }
@@ -863,8 +978,10 @@
                 if(confirm('Resetar senha para 1234?')) {
                     const item = this.db[type].find(x => x.id === id);
                     if(item) {
+                        const oldPass = item.senha;
                         item.senha = '1234';
                         document.getElementById(`pass-${type}-${id}`).value = '1234';
+                        this.registrarLog('Reset Senha', `${type === 'mentores' ? 'Mentor' : 'Unidade'}: ${item.nome}`, oldPass, '1234');
                         this.salvarDados();
                         this.notify('success', 'SENHA RESETADA!');
                     }
@@ -1164,11 +1281,9 @@
                         <td class="py-2 truncate max-w-[200px] font-medium text-gray-700">${i.nome}</td>
                         <td class="py-2 text-right font-bold ${isWorst ? 'text-red-500' : 'text-green-600'}">${i.media}</td>
                     </tr>`;
-                let sortedBottom = [...bottom10];
-                if (campo === 'unidade') sortedBottom.sort((a,b) => a.nome.localeCompare(b.nome) * (direcao === 'asc' ? 1 : -1));
-                if (campo === 'media') sortedBottom.sort((a,b) => (a.media - b.media) * (direcao === 'asc' ? 1 : -1));
-                document.querySelector('#tabela-ranking-alunos tbody').innerHTML = top10.length ? top10.map((i, idx) => renderRow(i, idx, false)).join('') : '<tr><td colspan="3" class="p-4 text-center text-gray-400">SEM DADOS</td></tr>';
-                document.querySelector('#tabela-ranking-gastos tbody').innerHTML = sortedBottom.length ? sortedBottom.map((i, idx) => renderRow(i, idx, true)).join('') : '<tr><td colspan="3" class="p-4 text-center text-gray-400">SEM DADOS</td></tr>';
+                
+                // Exibe apenas UMA tabela (unificando Top e Geral)
+                document.querySelector('#tabela-ranking-alunos tbody').innerHTML = data.length ? data.map((i, idx) => renderRow(i, idx, false)).join('') : '<tr><td colspan="3" class="p-4 text-center text-gray-400">SEM DADOS</td></tr>';
             }
 
             setAgrupamento(modo) {
@@ -1228,7 +1343,7 @@
                         <th onclick="app.ordenarRelatorio('valorHora')" class="text-center">VALOR ${this.ordenacao.campo === 'valorHora' ? arr : ''}</th>
                         <th onclick="app.ordenarRelatorio('aulas')" class="text-center">AULAS ${this.ordenacao.campo === 'aulas' ? arr : ''}</th>
                         <th onclick="app.ordenarRelatorio('mediaAlunos')" class="text-center">MÉDIA ${this.ordenacao.campo === 'mediaAlunos' ? arr : ''}</th>
-                        <th onclick="app.ordenarRelatorio('receita')" class="text-right">INVESTIMENTO ${this.ordenacao.campo === 'receita' ? arr : ''}</th>`;
+                        <th onclick="app.ordenarRelatorio('receita')" class="text-right">VALOR TOTAL MENSAL ${this.ordenacao.campo === 'receita' ? arr : ''}</th>`;
                     tbody.innerHTML = this.dadosExibidos.map(r => `
                         <tr><td class="font-bold text-gray-700 text-xs">${r.unidade}</td><td class="text-blue-600 font-bold text-xs">${r.modalidade}</td><td class="text-xs">${r.professor}</td><td class="text-center font-mono text-xs">R$ ${r.valorHora.toFixed(2)}</td><td class="text-center font-bold text-xs">${r.aulas}</td><td class="text-center text-xs">${r.mediaAlunos}</td><td class="text-right font-bold text-green-600 text-xs">R$ ${r.receita.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td></tr>`).join('');
                 } else {
@@ -1236,7 +1351,7 @@
                         <th onclick="app.ordenarRelatorio('grupo')">GRUPO ${this.ordenacao.campo === 'grupo' ? arr : ''}</th>
                         <th class="text-center" onclick="app.ordenarRelatorio('aulas')" class="text-center">AULAS ${this.ordenacao.campo === 'aulas' ? arr : ''}</th>
                         <th class="text-center" onclick="app.ordenarRelatorio('mediaAlunos')" class="text-center">MÉDIA ${this.ordenacao.campo === 'mediaAlunos' ? arr : ''}</th>
-                        <th class="text-right" onclick="app.ordenarRelatorio('receita')" class="text-right">INVESTIMENTO ${this.ordenacao.campo === 'receita' ? arr : ''}</th>`;
+                        <th class="text-right" onclick="app.ordenarRelatorio('receita')" class="text-right">VALOR TOTAL MENSAL ${this.ordenacao.campo === 'receita' ? arr : ''}</th>`;
                     tbody.innerHTML = this.dadosExibidos.map(r => `
                         <tr><td class="font-bold text-gray-800 text-sm">${r.grupo}</td><td class="text-center text-sm">${r.aulas}</td><td class="text-center text-sm">${r.mediaAlunos}</td><td class="text-right font-bold text-green-600 text-sm">R$ ${r.receita.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td></tr>`).join('');
                 }
@@ -1245,10 +1360,10 @@
             exportarExcel() {
                 let csv = "\uFEFF";
                 if(this.modoAgrupamento === 'detalhado') {
-                    csv += "Unidade;Modalidade;Professor;Dias;Valor;Aulas;Media;Investimento\n";
+                    csv += "Unidade;Modalidade;Professor;Dias;Valor;Aulas;Media;ValorTotalMensal\n";
                     this.dadosExibidos.forEach(r => csv += `${r.unidade};${r.modalidade};${r.professor};${r.diasStr};${r.valorHora};${r.aulas};${r.mediaAlunos};${r.receita.toFixed(2).replace('.',',')}\n`);
                 } else {
-                    csv += "Grupo;Aulas;Media;Investimento\n";
+                    csv += "Grupo;Aulas;Media;ValorTotalMensal\n";
                     this.dadosExibidos.forEach(r => csv += `${r.grupo};${r.aulas};${r.mediaAlunos};${r.receita.toFixed(2).replace('.',',')}\n`);
                 }
                 this.downloadCSV(csv, `Relatorio_Pratique.csv`);
@@ -1283,7 +1398,16 @@
             remove(t,id) { 
                 if(this.currentUser && (this.currentUser.role === 'mentor' || this.currentUser.role === 'unidade') && t !== 'unidades') return alert('ACESSO NEGADO');
                 if(this.currentUser && this.currentUser.role === 'unidade') return alert('ACESSO NEGADO');
-                if(confirm('EXCLUIR?')) { this.db[t]=this.db[t].filter(x=>x.id!=id); if(t=='unidades') this.db.horarios=this.db.horarios.filter(x=>x.unidadeId!=id); this.salvarDados(); this.atualizarListas(); this.renderCronograma(); } 
+
+                if(confirm('EXCLUIR?')) { 
+                    const item = this.db[t].find(x => x.id == id);
+                    if(item) {
+                        this.registrarLog('Exclusão', `${t}: ${item.nome || item.professor}`, 'ID: ' + id, '-');
+                    }
+                    this.db[t]=this.db[t].filter(x=>x.id!=id); 
+                    if(t=='unidades') this.db.horarios=this.db.horarios.filter(x=>x.unidadeId!=id); 
+                    this.salvarDados(); this.atualizarListas(); this.renderCronograma(); 
+                } 
             }
             
             cancelarEdicao() { this.editingId=null; document.getElementById('grade-prof').value=''; document.querySelectorAll('.check-dia-input').forEach(c=>c.checked=false); document.getElementById('btn-save-grade').innerText='ADICIONAR'; document.getElementById('btn-cancel-grade').classList.add('hidden'); }
@@ -1323,17 +1447,41 @@
             }
             
             addUnidade() { 
-                const n=document.getElementById('cad-unidade-nome').value.toUpperCase(); 
+                const n=document.getElementById('cad-unidade-nome').value.trim().toUpperCase(); 
                 let mId = this.currentUser && this.currentUser.role === 'mentor' ? this.currentUser.id : parseInt(document.getElementById('cad-unidade-mentor').value);
                 const p=document.getElementById('cad-unidade-pais').value;
                 const e=document.getElementById('cad-unidade-estado').value;
+                
                 if(n && mId && p && e) { 
+                    this.registrarLog('Criação', 'Nova Unidade', '-', n);
                     this.db.unidades.push({id:Date.now(), nome:n, mentorId:mId, estado:e, pais:p, senha:'1234'}); 
-                    this.salvarDados(); this.atualizarListas(); document.getElementById('cad-unidade-nome').value=''; 
-                } else { alert("PREENCHA TODOS OS CAMPOS!"); }
+                    this.salvarDados(); 
+                    this.atualizarListas(); 
+                    document.getElementById('cad-unidade-nome').value=''; 
+                } else {
+                    alert("PREENCHA TODOS OS CAMPOS!");
+                }
             }
-            addModalidade() { const n=document.getElementById('cad-mod-nome').value.toUpperCase(); if(n) { this.db.modalidades.push({id:Date.now(), nome:n, cor:document.getElementById('cad-mod-cor').value}); this.salvarDados(); this.atualizarListas(); document.getElementById('cad-mod-nome').value=''; } }
-            addMentor() { const n=document.getElementById('cad-mentor-nome').value.toUpperCase(); if(n) { this.db.mentores.push({id:Date.now(), nome:n, senha:'1234'}); this.salvarDados(); this.atualizarListas(); document.getElementById('cad-mentor-nome').value=''; } }
+            addModalidade() { 
+                const n=document.getElementById('cad-mod-nome').value.trim().toUpperCase(); 
+                if(n) { 
+                    this.registrarLog('Criação', 'Nova Modalidade', '-', n);
+                    this.db.modalidades.push({id:Date.now(), nome:n, cor:document.getElementById('cad-mod-cor').value}); 
+                    this.salvarDados(); 
+                    this.atualizarListas(); 
+                    document.getElementById('cad-mod-nome').value=''; 
+                } 
+            }
+            addMentor() { 
+                const n=document.getElementById('cad-mentor-nome').value.trim().toUpperCase(); 
+                if(n) { 
+                    this.registrarLog('Criação', 'Novo Mentor', '-', n);
+                    this.db.mentores.push({id:Date.now(), nome:n, senha:'1234'}); 
+                    this.salvarDados(); 
+                    this.atualizarListas(); 
+                    document.getElementById('cad-mentor-nome').value=''; 
+                } 
+            }
             
             abrirModalAdicao() { 
                 const uId = document.getElementById('cronograma-unidade-select').value; if(!uId) return alert('SELECIONE UNIDADE'); 
@@ -1359,14 +1507,35 @@
                 const h=document.getElementById('modal-hora').value, v=parseFloat(document.getElementById('modal-valor').value)||0, al=parseInt(document.getElementById('modal-alunos').value)||0;
                 const dias=Array.from(document.querySelectorAll('.modal-check-dia:checked')).map(c=>c.value);
                 if(!m||!p||!h||!dias.length) return alert('PREENCHA TUDO');
+                
+                const novo = {id:Date.now(), unidadeId:Number(document.getElementById('cronograma-unidade-select').value), modalidadeId:Number(m), professor:p, hora:h, valor:v, mediaAlunos:al, dias:dias};
+                const uNome = document.getElementById('modal-unidade-view').value;
+
                 if(id) {
-                    const i = this.db.horarios.findIndex(x=>x.id==id); if(i!==-1) this.db.horarios[i]={...this.db.horarios[i], modalidadeId:Number(m), professor:p, hora:h, valor:v, mediaAlunos:al, dias:dias};
+                    const i = this.db.horarios.findIndex(x=>x.id==id); 
+                    if(i!==-1) {
+                        const old = this.db.horarios[i];
+                        this.registrarLog('Edição Aula', `${uNome}`, `Prof: ${old.professor}, Valor: ${old.valor}`, `Prof: ${p}, Valor: ${v}`);
+                        this.db.horarios[i]={...this.db.horarios[i], modalidadeId:Number(m), professor:p, hora:h, valor:v, mediaAlunos:al, dias:dias};
+                    }
                 } else {
-                    this.db.horarios.push({id:Date.now(), unidadeId:Number(document.getElementById('cronograma-unidade-select').value), modalidadeId:Number(m), professor:p, hora:h, valor:v, mediaAlunos:al, dias:dias});
+                    this.registrarLog('Criação Aula', `${uNome}`, '-', `Prof: ${p}, Valor: ${v}`);
+                    this.db.horarios.push(novo);
                 }
                 this.salvarDados(); this.renderCronograma(); this.fecharModal(); this.notify('success', 'SALVO!');
             }
-            excluirViaModal() { if(confirm('EXCLUIR?')) { this.db.horarios=this.db.horarios.filter(x=>x.id!=document.getElementById('modal-id').value); this.salvarDados(); this.renderCronograma(); this.fecharModal(); } }
+            excluirViaModal() { 
+                if(confirm('EXCLUIR?')) { 
+                    const id = document.getElementById('modal-id').value;
+                    const item = this.db.horarios.find(x => x.id == id);
+                    if(item) {
+                        const uNome = document.getElementById('modal-unidade-view').value;
+                        this.registrarLog('Exclusão Aula', `${uNome}`, `Prof: ${item.professor}`, '-');
+                    }
+                    this.db.horarios=this.db.horarios.filter(x=>x.id!=id); 
+                    this.salvarDados(); this.renderCronograma(); this.fecharModal(); 
+                } 
+            }
             fecharModal() { document.getElementById('modal-editor').classList.add('hidden'); }
             
             renderCronograma() {
@@ -1389,8 +1558,18 @@
                 c.innerHTML = ht + `</tbody></table>`; lucide.createIcons();
             }
             notify(t,m) { const x=document.getElementById('toast'); document.getElementById('toast-msg').innerText=m; x.classList.remove('translate-x-full'); setTimeout(()=>x.classList.add('translate-x-full'),3000); }
-            importarUnidades() { const l=this.parseImportLines(document.getElementById('import-unidades-text').value); l.forEach(c=>{ if(c[0]){ this.db.unidades.push({id:Date.now()+Math.random(), nome:c[0].toUpperCase(), mentorId:1, estado:c[2]||'MG', pais:c[3]||'BR', senha:'1234'}); } }); this.salvarDados(); this.atualizarListas(); }
-            importarGrades() { const l=this.parseImportLines(document.getElementById('import-grades-text').value); l.forEach(c=>{ if(c.length>=5){ const u=this.db.unidades.find(x=>x.nome==c[0]); const m=this.db.modalidades.find(x=>x.nome==c[1]); if(u&&m) this.db.horarios.push({id:Date.now()+Math.random(), unidadeId:u.id, modalidadeId:m.id, professor:c[2], dias:c[3].split(','), hora:c[4], valor:parseFloat(c[5])||0, mediaAlunos:parseInt(c[6])||0}); } }); this.salvarDados(); this.renderGradesRecentes(); }
+            importarUnidades() { 
+                const l=this.parseImportLines(document.getElementById('import-unidades-text').value); 
+                l.forEach(c=>{ if(c[0]){ this.db.unidades.push({id:Date.now()+Math.random(), nome:c[0].toUpperCase(), mentorId:1, estado:c[2]||'MG', pais:c[3]||'BR', senha:'1234'}); } }); 
+                this.registrarLog('Importação', 'Unidades em Massa', '-', `${l.length} registros`);
+                this.salvarDados(); this.atualizarListas(); 
+            }
+            importarGrades() { 
+                const l=this.parseImportLines(document.getElementById('import-grades-text').value); 
+                l.forEach(c=>{ if(c.length>=5){ const u=this.db.unidades.find(x=>x.nome==c[0]); const m=this.db.modalidades.find(x=>x.nome==c[1]); if(u&&m) this.db.horarios.push({id:Date.now()+Math.random(), unidadeId:u.id, modalidadeId:m.id, professor:c[2], dias:c[3].split(','), hora:c[4], valor:parseFloat(c[5])||0, mediaAlunos:parseInt(c[6])||0}); } }); 
+                this.registrarLog('Importação', 'Grades em Massa', '-', `${l.length} registros`);
+                this.salvarDados(); this.renderGradesRecentes(); 
+            }
             
             salvarBackup() {
                 const data = JSON.stringify(this.db, null, 2);
@@ -1416,6 +1595,7 @@
                         const json = JSON.parse(e.target.result);
                         if(json.mentores && json.unidades && json.horarios) {
                             this.db = json;
+                            this.registrarLog('Restauração', 'Backup Completo', '-', 'Sistema Restaurado');
                             this.salvarDados();
                             this.init();
                             this.notify('success', 'SISTEMA RESTAURADO!');
