@@ -108,7 +108,7 @@
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <i data-lucide="user" class="h-5 w-5 text-blue-300"></i>
                         </div>
-                        <input type="text" id="login-user" class="pl-10 w-full p-3 bg-slate-900/50 border border-slate-700 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 transition uppercase" placeholder="Nome de Acesso" required>
+                        <input type="text" id="login-user" class="pl-10 w-full p-3 bg-slate-900/50 border border-slate-700 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 transition uppercase" placeholder="Nome de Acesso (Ex: Castelinho)" required>
                     </div>
                 </div>
                 
@@ -130,7 +130,7 @@
             <div class="mt-6 text-center">
                 <p class="text-[10px] text-slate-400">
                     <span class="font-bold text-blue-400">Admin:</span> admin / admin123 <br>
-                    <span class="font-bold text-blue-400">Padrão:</span> Nome / 1234
+                    <span class="font-bold text-blue-400">Padrão:</span> Nome da Unidade ou Mentor / 1234
                 </p>
             </div>
             <div id="login-error" class="hidden mt-4 p-3 bg-red-500/20 border border-red-500/50 rounded text-red-200 text-xs text-center font-bold uppercase">
@@ -335,9 +335,9 @@
 
                     <!-- Rankings e Feriados -->
                     <div class="grid grid-cols-1 gap-6">
-                        <!-- RANKING DETALHADO -->
+                        <!-- RANKING DETALHADO (RESTAURADO) -->
                         <div class="glass-panel p-4 md:p-6 border-t-4 border-gray-800">
-                            <h3 class="font-bold text-gray-800 mb-6 flex items-center gap-2 text-lg uppercase"><i data-lucide="award" class="w-5 h-5"></i> Fluxo Geral Coletivas</h3>
+                            <h3 class="font-bold text-gray-800 mb-6 flex items-center gap-2 text-lg uppercase"><i data-lucide="award" class="w-5 h-5"></i> Ranking Fluxo de Coletivas</h3>
                             <div class="grid grid-cols-1">
                                 <!-- Ranking Único: Fluxo Geral -->
                                 <div>
@@ -346,7 +346,7 @@
                                             <thead class="text-gray-500 border-b">
                                                 <tr>
                                                     <th onclick="app.ordenarRanking('pos')" class="py-2 w-10 cursor-pointer hover:text-blue-600">Pos. ↕</th>
-                                                    <th onclick="app.ordenarRanking('unidade')" class="py-2 cursor-pointer hover:text-blue-600">Unidade ↕</th>
+                                                    <th onclick="app.ordenarRanking('unidade')" class="py-2 cursor-pointer hover:text-blue-600">Unidade/Detalhe ↕</th>
                                                     <th onclick="app.ordenarRanking('media')" class="py-2 text-right w-24 cursor-pointer hover:text-blue-600">Média ↕</th>
                                                 </tr>
                                             </thead>
@@ -385,10 +385,14 @@
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
                         <!-- Coluna 1 -->
                         <div class="lg:col-span-1 space-y-6">
-                            <!-- BLOQUEIO ADMIN: Mentores -->
+                            <!-- BLOQUEIO ADMIN: Mentores (COM SENHA MANUAL) -->
                             <div class="glass-panel p-4 md:p-5 admin-only-block relative">
                                 <h3 class="font-bold text-gray-800 mb-3 border-b pb-2 text-xs uppercase">1. Mentores (Admin)</h3>
-                                <div class="flex gap-2 mb-3"><input type="text" id="cad-mentor-nome" placeholder="NOME" class="w-full p-2 border rounded text-xs h-9 uppercase"><button onclick="app.addMentor()" class="bg-gray-800 text-white px-3 rounded text-xs hover:bg-black h-9">+</button></div>
+                                <div class="flex gap-2 mb-3">
+                                    <input type="text" id="cad-mentor-nome" placeholder="NOME" class="w-full p-2 border rounded text-xs h-9 uppercase">
+                                    <input type="text" id="cad-mentor-senha" placeholder="SENHA" class="w-24 p-2 border rounded text-xs h-9 text-center bg-yellow-50" value="12345">
+                                    <button onclick="app.addMentor()" class="bg-gray-800 text-white px-3 rounded text-xs hover:bg-black h-9">+</button>
+                                </div>
                                 <ul id="lista-mentores" class="space-y-1 max-h-32 overflow-y-auto text-xs text-gray-600 uppercase"></ul>
                             </div>
                             <!-- BLOQUEIO ADMIN: Modalidades -->
@@ -397,15 +401,49 @@
                                 <div class="flex gap-2 mb-3 items-center"><input type="text" id="cad-mod-nome" placeholder="NOME" class="flex-1 p-2 border rounded text-xs h-9 uppercase"><input type="color" id="cad-mod-cor" class="w-9 h-9 rounded cursor-pointer border p-0" value="#3b82f6"><button onclick="app.addModalidade()" class="bg-pink-600 text-white px-3 py-2 rounded text-xs hover:bg-pink-700 h-9 uppercase">Add</button></div>
                                 <ul id="lista-modalidades" class="space-y-1 max-h-40 overflow-y-auto text-xs uppercase"></ul>
                             </div>
+                            
+                            <!-- BLOQUEIO ADMIN: Cadastro de Feriados -->
+                            <div class="glass-panel p-4 md:p-5 border-l-4 border-yellow-500 admin-only-block">
+                                <h3 class="font-bold text-gray-800 mb-3 border-b pb-2 text-xs uppercase">5. Cadastro de Feriados (Admin)</h3>
+                                <div class="space-y-2 mb-3">
+                                    <input type="text" id="feriado-nome" placeholder="NOME DO FERIADO" class="w-full p-2 border rounded text-xs h-9 uppercase">
+                                    <div class="flex gap-2">
+                                        <div class="w-1/2">
+                                            <label class="text-[10px] text-gray-500 font-bold">INÍCIO</label>
+                                            <input type="date" id="feriado-data" class="w-full p-2 border rounded text-xs h-9 uppercase">
+                                        </div>
+                                        <div class="w-1/2">
+                                            <label class="text-[10px] text-gray-500 font-bold">FIM (OPCIONAL)</label>
+                                            <input type="date" id="feriado-data-fim" class="w-full p-2 border rounded text-xs h-9 uppercase">
+                                        </div>
+                                    </div>
+                                    
+                                    <select id="feriado-tipo" class="w-full p-2 border rounded text-xs bg-white h-9 uppercase" onchange="app.toggleFeriadoLocal()">
+                                        <option value="global">MUNDIAL (TODAS UNIDADES)</option>
+                                        <option value="nacional">NACIONAL (PAÍS)</option>
+                                        <option value="estadual">ESTADUAL (ESTADO)</option>
+                                    </select>
+                                    
+                                    <select id="feriado-local" class="w-full p-2 border rounded text-xs bg-white h-9 uppercase hidden">
+                                        <!-- Preenchido via JS -->
+                                    </select>
+
+                                    <button onclick="app.addFeriado()" class="w-full bg-yellow-600 text-white py-2 rounded text-xs font-bold hover:bg-yellow-700 h-9 uppercase">ADICIONAR FERIADO</button>
+                                </div>
+                                <ul id="lista-feriados" class="space-y-1 max-h-40 overflow-y-auto text-xs uppercase"></ul>
+                            </div>
                         </div>
                         <!-- Coluna 2 -->
                         <div class="lg:col-span-1">
                             <div class="glass-panel p-4 md:p-5 h-full">
-                                <h3 class="font-bold text-gray-800 mb-3 border-b pb-2 text-xs uppercase">3. Unidades</h3>
+                                <h3 class="font-bold text-gray-800 mb-3 border-b pb-2 text-xs uppercase">3. Unidades (COM SENHA MANUAL)</h3>
                                 <div class="space-y-2 mb-3">
                                     <select id="cad-unidade-mentor" class="w-full p-2 border rounded text-xs bg-white h-9 uppercase"><option value="">SELECIONE MENTOR...</option></select>
                                     <input type="text" id="cad-unidade-nome" placeholder="NOME DA UNIDADE" class="w-full p-2 border rounded text-xs h-9 uppercase">
                                     
+                                    <!-- CAMPO DE SENHA ADICIONADO AQUI -->
+                                    <input type="text" id="cad-unidade-senha" placeholder="SENHA DE ACESSO" class="w-full p-2 border rounded text-xs h-9 bg-yellow-50 text-center font-bold" value="12345">
+
                                     <div class="grid grid-cols-2 gap-2">
                                         <select id="cad-unidade-pais" class="w-full p-2 border rounded text-xs bg-white h-9 uppercase" onchange="app.atualizarEstados()">
                                             <option value="Brasil">BRASIL</option>
@@ -465,7 +503,10 @@
                         
                         <!-- CARD GESTÃO DE ACESSOS (NOVO) -->
                         <div class="glass-panel p-6 md:col-span-2 border-l-4 border-blue-600">
-                            <h2 class="font-bold text-gray-800 mb-4 flex items-center gap-2 uppercase"><i data-lucide="key" class="w-5 h-5 text-blue-600"></i> Gestão de Acessos & Senhas</h2>
+                            <div class="flex justify-between items-center mb-4">
+                                <h2 class="font-bold text-gray-800 flex items-center gap-2 uppercase"><i data-lucide="key" class="w-5 h-5 text-blue-600"></i> Gestão de Acessos & Senhas</h2>
+                                <button onclick="app.resetarBancoDeDados()" class="bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold px-3 py-1.5 rounded uppercase">⚠️ Resetar Banco de Dados (Pânico)</button>
+                            </div>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <!-- Mentores -->
                                 <div>
@@ -590,7 +631,7 @@
 
         class SistemaPratique {
             constructor() {
-                this.db = { mentores: [], unidades: [], modalidades: [], horarios: [], historico: [] }; // Adicionado historico
+                this.db = { mentores: [], unidades: [], modalidades: [], horarios: [], historico: [], feriados: [] }; // Adicionado feriados
                 this.apiUrl = 'https://script.google.com/macros/s/AKfycbz8LU_ekbnZ7tAwrvxyaASzql0Cvqe-HAVGhWpO-TkOWot3AcWjpAALTB3u2bOGx8hbfA/exec';
                 
                 this.editingId = null;
@@ -626,6 +667,97 @@
                     this.postLoginSetup();
                 }
                 setTimeout(() => lucide.createIcons(), 500);
+            }
+
+            atualizarListas() {
+                // 1. Render Mentors List (Admin Only visible usually, but let's render anyway)
+                const listaMentores = document.getElementById('lista-mentores');
+                if(listaMentores) {
+                    listaMentores.innerHTML = this.db.mentores.map(m => 
+                        `<li class="flex justify-between items-center bg-gray-50 p-2 rounded border border-gray-100">
+                            <span>${m.nome}</span>
+                            <button onclick="app.remove('mentores', ${m.id})" class="text-red-400 hover:text-red-600 font-bold">×</button>
+                        </li>`
+                    ).join('');
+                }
+
+                // 2. Render Modalities List
+                const listaModalidades = document.getElementById('lista-modalidades');
+                if(listaModalidades) {
+                    listaModalidades.innerHTML = this.db.modalidades.map(m => 
+                        `<li class="flex justify-between items-center bg-white p-2 rounded border-l-4 shadow-sm" style="border-left-color:${m.cor}">
+                            <span class="font-bold text-gray-700">${m.nome}</span>
+                            <button onclick="app.remove('modalidades', ${m.id})" class="text-red-400 hover:text-red-600 font-bold">×</button>
+                        </li>`
+                    ).join('');
+                }
+
+                // 3. Render Units List (All units or filtered?) - In config list, usually show all for admin/mentor management
+                const listaUnidades = document.getElementById('lista-unidades');
+                if(listaUnidades) {
+                    let unitsToShow = this.db.unidades;
+                    if(this.currentUser && this.currentUser.role === 'mentor') {
+                        unitsToShow = unitsToShow.filter(u => u.mentorId == this.currentUser.id);
+                    }
+                    // Sort
+                    unitsToShow.sort((a,b) => a.nome.localeCompare(b.nome));
+
+                    listaUnidades.innerHTML = unitsToShow.map(u => {
+                        const mentorNome = this.db.mentores.find(m => m.id == u.mentorId)?.nome || '-';
+                        return `<li class="bg-white p-2 rounded border shadow-sm hover:bg-blue-50 transition relative group">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <div class="font-bold text-gray-800">${u.nome}</div>
+                                    <div class="text-[10px] text-gray-400">${u.estado} • ${mentorNome}</div>
+                                </div>
+                                <button onclick="app.remove('unidades', ${u.id})" class="text-gray-300 hover:text-red-500 absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </li>`;
+                    }).join('');
+                }
+
+                // 4. Populate Dropdowns
+                const populateSelect = (id, data, valueKey='id', labelKey='nome', defaultTxt='SELECIONE...') => {
+                    const el = document.getElementById(id);
+                    if(!el) return;
+                    const val = el.value;
+                    el.innerHTML = `<option value="">${defaultTxt}</option>` + 
+                        data.map(i => `<option value="${i[valueKey]}">${i[labelKey]}</option>`).join('');
+                    if(val) el.value = val;
+                };
+
+                populateSelect('cad-unidade-mentor', this.db.mentores);
+                
+                // Filter units for dropdowns based on role
+                let unitsForDropdown = [...this.db.unidades].sort((a,b) => a.nome.localeCompare(b.nome));
+                if(this.currentUser && this.currentUser.role === 'mentor') {
+                    unitsForDropdown = unitsForDropdown.filter(u => u.mentorId == this.currentUser.id);
+                } else if(this.currentUser && this.currentUser.role === 'unidade') {
+                    unitsForDropdown = unitsForDropdown.filter(u => u.id == this.currentUser.id);
+                }
+
+                populateSelect('grade-unidade', unitsForDropdown);
+                populateSelect('cronograma-unidade-select', unitsForDropdown);
+                
+                // Modalities
+                populateSelect('grade-modalidade', this.db.modalidades);
+                populateSelect('modal-modalidade', this.db.modalidades);
+
+                this.renderGradesRecentes();
+                lucide.createIcons();
+            }
+            
+            // NORMALIZAÇÃO DE STRING (CRÍTICO PARA O LOGIN)
+            normalizeStr(str) {
+                if (!str) return "";
+                // Adicionado .replace(/\s+/g, ' ') para unificar múltiplos espaços em um só e remover caracteres invisíveis
+                return str.toString().trim()
+                    .toUpperCase()
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, "")
+                    .replace(/\s+/g, ' '); 
             }
 
             // ================== LOGGING SYSTEM ==================
@@ -676,13 +808,18 @@
             // ====================================================
 
             login() {
-                const rawUser = document.getElementById('login-user').value;
-                const userClean = rawUser.trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "");
+                const userRaw = document.getElementById('login-user').value;
                 const pass = document.getElementById('login-pass').value.trim();
                 const errorDiv = document.getElementById('login-error');
                 
-                // Helper para limpar nomes do banco para comparação
-                const cleanName = (name) => name ? name.trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "") : "";
+                // Normaliza o input do usuário (remove acentos, espaços, etc)
+                const userClean = this.normalizeStr(userRaw);
+                
+                console.log("🔍 DEBUG LOGIN TENTATIVA:", {
+                    digitado: userRaw,
+                    normalizado: userClean,
+                    senha_digitada: pass
+                });
 
                 // 1. ADMIN CHECK
                 if (userClean === 'ADMIN' && pass === 'admin123') {
@@ -691,31 +828,59 @@
                 }
 
                 // 2. MENTOR CHECK
-                const mentorFound = this.db.mentores.find(m => cleanName(m.nome) === userClean);
+                const mentorFound = this.db.mentores.find(m => {
+                    const match = this.normalizeStr(m.nome) === userClean;
+                    if(match) console.log("✅ Mentor encontrado:", m.nome);
+                    return match;
+                });
+
                 if (mentorFound) {
-                     const mentorPass = mentorFound.senha || '1234';
+                     // Força conversão para String para evitar erro de tipo (Número x Texto)
+                     const mentorPass = String(mentorFound.senha || '1234');
                      if(pass === mentorPass) {
                          this.completeLogin({ id: mentorFound.id, name: mentorFound.nome, role: 'mentor' });
+                         return;
+                     } else {
+                         // Erro Específico
+                         errorDiv.classList.remove('hidden');
+                         errorDiv.innerText = `SENHA INCORRETA PARA MENTOR: ${mentorFound.nome}`;
+                         const box = document.querySelector('.bg-white\\/10');
+                         box.classList.add('animate-pulse');
+                         setTimeout(()=>box.classList.remove('animate-pulse'), 500);
                          return;
                      }
                 }
 
                 // 3. UNIDADE CHECK
-                const unitFound = this.db.unidades.find(u => cleanName(u.nome) === userClean);
+                const unitFound = this.db.unidades.find(u => {
+                    const match = this.normalizeStr(u.nome) === userClean;
+                    if(match) console.log("✅ Unidade encontrada:", u.nome);
+                    return match;
+                });
+
                 if (unitFound) {
-                     const unitPass = unitFound.senha || '1234';
+                     // Força conversão para String para evitar erro de tipo (Número x Texto)
+                     const unitPass = String(unitFound.senha || '1234');
                      if(pass === unitPass) {
                          this.completeLogin({ id: unitFound.id, name: unitFound.nome, role: 'unidade' });
+                         return;
+                     } else {
+                         // Erro Específico
+                         errorDiv.classList.remove('hidden');
+                         errorDiv.innerText = `SENHA INCORRETA PARA UNIDADE: ${unitFound.nome}`;
+                         const box = document.querySelector('.bg-white\\/10');
+                         box.classList.add('animate-pulse');
+                         setTimeout(()=>box.classList.remove('animate-pulse'), 500);
                          return;
                      }
                 }
                 
-                // Debug para o usuário ver o que está acontecendo se falhar
-                console.log("Falha Login. Tentado:", userClean);
-                console.log("Unidades disponíveis:", this.db.unidades.map(u => cleanName(u.nome)));
-
+                // Fail Geral (Não achou usuário)
+                console.warn("⚠️ Falha Login. Usuário não encontrado no banco:", userClean);
+                console.log("Banco de Unidades disponível:", this.db.unidades.map(u => this.normalizeStr(u.nome)));
+                
                 errorDiv.classList.remove('hidden');
-                errorDiv.innerText = "USUÁRIO OU SENHA INVÁLIDOS";
+                errorDiv.innerText = "USUÁRIO NÃO ENCONTRADO (VERIFIQUE O NOME)";
                 const box = document.querySelector('.bg-white\\/10');
                 box.classList.add('animate-pulse');
                 setTimeout(()=>box.classList.remove('animate-pulse'), 500);
@@ -759,6 +924,7 @@
                     document.getElementById('nav-historico').classList.remove('hidden');
                     this.renderAcessos();
                     this.renderHistorico();
+                    this.renderListaFeriados(); // Novo
                 }
 
                 if(this.currentUser.role === 'mentor') {
@@ -790,27 +956,40 @@
                             unidades: parsed.unidades || [], 
                             modalidades: parsed.modalidades || [], 
                             horarios: parsed.horarios || [],
-                            historico: parsed.historico || [] // Ensure history exists
+                            historico: parsed.historico || [],
+                            feriados: parsed.feriados || [] // Ensure feriados exists
                         }; 
-                        this.db.mentores.forEach(m => { if(!m.senha) m.senha = '1234'; });
-                        this.db.unidades.forEach(u => { if(!u.senha) u.senha = '1234'; });
+                        
+                        this.sanitizeDB(); // Limpeza automática ao carregar
+
                     } catch(e) { this.seedInicial(); } 
                 } else { this.seedInicial(); }
-                
-                this.sanitizeDB(); // Limpeza automática ao carregar
             }
 
-            // FUNÇÃO NOVA: LIMPEZA DE DADOS
+            // FUNÇÃO NOVA: LIMPEZA DE DADOS E SENHAS
             sanitizeDB() {
+                // Garante senhas, converte para string e limpa espaços
                 if(this.db.unidades) {
                     this.db.unidades.forEach(u => {
-                        if(u.nome) u.nome = u.nome.trim().toUpperCase();
+                        if(u.nome) u.nome = this.normalizeStr(u.nome); // Normaliza direto no banco também para garantir
+                        if(!u.senha) u.senha = '1234';
+                        else u.senha = String(u.senha); // Força string
                     });
                 }
                 if(this.db.mentores) {
                     this.db.mentores.forEach(m => {
-                        if(m.nome) m.nome = m.nome.trim().toUpperCase();
+                        if(m.nome) m.nome = this.normalizeStr(m.nome);
+                        if(!m.senha) m.senha = '1234';
+                        else m.senha = String(m.senha); // Força string
                     });
+                }
+            }
+
+            resetarBancoDeDados() {
+                if(confirm("ATENÇÃO: ISSO APAGARÁ TODOS OS DADOS E RESTAURARÁ O PADRÃO DE FÁBRICA. TEM CERTEZA?")) {
+                    this.seedInicial();
+                    alert("Banco de dados resetado com sucesso! O sistema será recarregado.");
+                    window.location.reload();
                 }
             }
 
@@ -833,8 +1012,7 @@
                         if (cloudData && (cloudData.mentores || cloudData.unidades || cloudData.horarios)) {
                             this.db = cloudData;
                             if(!this.db.historico) this.db.historico = []; // Ensure history exists on download
-                            this.db.mentores.forEach(m => { if(!m.senha) m.senha = '1234'; });
-                            this.db.unidades.forEach(u => { if(!u.senha) u.senha = '1234'; });
+                            if(!this.db.feriados) this.db.feriados = []; // Ensure feriados exists on download
                             
                             this.sanitizeDB(); // Limpa dados baixados também
 
@@ -844,6 +1022,7 @@
                             if(this.currentUser?.role === 'admin') {
                                 this.renderAcessos();
                                 this.renderHistorico();
+                                this.renderListaFeriados();
                             }
                             if(!document.getElementById('view-relatorio').classList.contains('hidden')) {
                                 this.atualizarFiltrosRelatorio('init');
@@ -872,7 +1051,8 @@
                     modalidades: [{id:1,nome:"JUMP",cor:"#ff5722"}], 
                     unidades: [{id:101,nome:"PRATIQUE SAVASSI",mentorId:1,estado:"MG",pais:"Brasil", senha:"1234"}], 
                     horarios: [],
-                    historico: []
+                    historico: [],
+                    feriados: []
                 }; 
                 localStorage.setItem('pratique_global_db_v5', JSON.stringify(this.db));
             }
@@ -1072,45 +1252,107 @@
                 }
             }
 
-            atualizarListas() {
-                const renderList = (id, list, renderFn) => { const el = document.getElementById(id); if(el) el.innerHTML = list.map(renderFn).join(''); };
-                renderList('lista-mentores', this.db.mentores, m => `<li class="flex justify-between bg-slate-50 p-1 px-2 rounded border"><span>${m.nome}</span> <button onclick="app.remove('mentores', ${m.id})" class="text-red-400">×</button></li>`);
-                renderList('lista-modalidades', this.db.modalidades, m => `<li class="flex justify-between bg-slate-50 p-1 rounded border"><div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full" style="background:${m.cor}"></div>${m.nome}</div><button onclick="app.remove('modalidades', ${m.id})" class="text-red-400">×</button></li>`);
-                const ops = (list) => `<option value="">SELECIONE...</option>` + list.map(i => `<option value="${i.id}">${i.nome}</option>`).join('');
-                const selMentorCad = document.getElementById('cad-unidade-mentor');
-                if(selMentorCad) selMentorCad.innerHTML = `<option value="">TODOS</option>` + this.db.mentores.map(m => `<option value="${m.id}">${m.nome}</option>`).join('');
-                ['grade-modalidade', 'modal-modalidade'].forEach(id => { const el = document.getElementById(id); if(el) el.innerHTML = ops(this.db.modalidades); });
+            // --- FERIADOS FUNCTIONS ---
+            toggleFeriadoLocal() {
+                const tipo = document.getElementById('feriado-tipo').value;
+                const localSelect = document.getElementById('feriado-local');
+                localSelect.innerHTML = '';
                 
-                let unidadesVisiveis = this.db.unidades;
-                if (this.currentUser && this.currentUser.role === 'mentor') {
-                    unidadesVisiveis = this.db.unidades.filter(u => u.mentorId == this.currentUser.id);
-                    if(selMentorCad) { selMentorCad.value = this.currentUser.id; selMentorCad.disabled = true; }
-                } else if(this.currentUser && this.currentUser.role === 'unidade') {
-                    unidadesVisiveis = this.db.unidades.filter(u => u.id == this.currentUser.id);
-                } else {
-                    if(selMentorCad) selMentorCad.disabled = false;
+                if (tipo === 'global') {
+                    localSelect.classList.add('hidden');
+                } else if (tipo === 'nacional') {
+                    localSelect.classList.remove('hidden');
+                    const paises = Object.keys(this.constantes.paisesEstados);
+                    localSelect.innerHTML = paises.map(p => `<option value="${p}">${p}</option>`).join('');
+                } else if (tipo === 'estadual') {
+                    localSelect.classList.remove('hidden');
+                    // Combina todos os estados de todos os países para simplificar ou pega do país padrão (Brasil)
+                    // Idealmente deveria ter um seletor de país antes, mas vamos simplificar pegando todos os estados únicos
+                    const todosEstados = [];
+                    Object.values(this.constantes.paisesEstados).forEach(arr => todosEstados.push(...arr));
+                    const estadosUnicos = [...new Set(todosEstados)].sort();
+                    localSelect.innerHTML = estadosUnicos.map(e => `<option value="${e}">${e}</option>`).join('');
+                }
+            }
+
+            addFeriado() {
+                const nome = document.getElementById('feriado-nome').value.trim().toUpperCase();
+                const dataInicio = document.getElementById('feriado-data').value;
+                const dataFim = document.getElementById('feriado-data-fim').value;
+                const tipo = document.getElementById('feriado-tipo').value;
+                let local = null;
+                
+                if(tipo !== 'global') {
+                    local = document.getElementById('feriado-local').value;
                 }
 
-                const renderUni = u => `<li class="flex justify-between items-center bg-white p-2 rounded border shadow-sm"><div><div class="font-bold text-gray-700">${u.nome}</div><div class="text-[10px] text-gray-400">${u.estado}, ${u.pais}</div></div><button onclick="app.remove('unidades', ${u.id})" class="text-red-400">×</button></li>`;
-                renderList('lista-unidades', unidadesVisiveis.sort((a,b)=>a.nome.localeCompare(b.nome)), renderUni);
+                if(!nome || !dataInicio) return alert('PREENCHA NOME E DATA!');
+
+                // Verifica se é intervalo ou data única
+                if (dataFim && dataFim > dataInicio) {
+                    // Loop para criar feriado para cada dia do intervalo
+                    let current = new Date(dataInicio);
+                    const end = new Date(dataFim);
+                    
+                    while (current <= end) {
+                        const dateStr = current.toISOString().split('T')[0];
+                        this.salvarFeriado(nome, dateStr, tipo, local);
+                        current.setDate(current.getDate() + 1);
+                    }
+                    this.registrarLog('Criação', 'Recesso/Feriado em Massa', '-', `${nome} (${dataInicio} a ${dataFim})`);
+                } else {
+                    this.salvarFeriado(nome, dataInicio, tipo, local);
+                    this.registrarLog('Criação', 'Novo Feriado', '-', `${nome} (${dataInicio})`);
+                }
                 
-                const opsUni = `<option value="">${(this.currentUser?.role === 'mentor' || this.currentUser?.role === 'unidade') ? 'SELECIONE' : 'TODAS/SELECIONE'}</option>` + unidadesVisiveis.sort((a,b)=>a.nome.localeCompare(b.nome)).map(u => `<option value="${u.id}">${u.nome}</option>`).join('');
-                ['grade-unidade', 'cronograma-unidade-select'].forEach(id => { 
-                    const el = document.getElementById(id); 
-                    if(el) { 
-                        const v = el.value; 
-                        el.innerHTML = opsUni; 
-                        if(this.currentUser?.role === 'unidade') {
-                            el.value = this.currentUser.id; el.disabled = true;
-                        } else if(v) el.value = v; 
-                    } 
-                });
-                const paises = Object.keys(this.constantes.paisesEstados);
-                const relPais = document.getElementById('rel-pais'); if(relPais) relPais.innerHTML = '<option value="">TODOS</option>' + paises.map(p => `<option value="${p}">${p}</option>`).join('');
-                this.renderGradesRecentes();
-                lucide.createIcons();
+                this.salvarDados();
+                this.renderListaFeriados();
+                
+                // Limpa campos
+                document.getElementById('feriado-nome').value = '';
+                document.getElementById('feriado-data').value = '';
+                document.getElementById('feriado-data-fim').value = '';
             }
-            
+
+            salvarFeriado(nome, data, tipo, local) {
+                const novoFeriado = {
+                    id: Date.now() + Math.random(), // ID único
+                    nome: nome,
+                    data: data, // YYYY-MM-DD
+                    tipo: tipo,
+                    local: local
+                };
+                if(!this.db.feriados) this.db.feriados = [];
+                this.db.feriados.push(novoFeriado);
+            }
+
+            renderListaFeriados() {
+                const lista = document.getElementById('lista-feriados');
+                if(!lista) return;
+                
+                if(!this.db.feriados || this.db.feriados.length === 0) {
+                    lista.innerHTML = '<li class="text-gray-400 p-2">Nenhum feriado cadastrado.</li>';
+                    return;
+                }
+
+                // Ordena por data
+                const sorted = [...this.db.feriados].sort((a,b) => a.data.localeCompare(b.data));
+
+                lista.innerHTML = sorted.map(f => {
+                    const dataFormatada = f.data.split('-').reverse().join('/');
+                    let infoLocal = f.tipo === 'global' ? 'GLOBAL' : `${f.tipo.toUpperCase()} - ${f.local}`;
+                    return `
+                    <li class="flex justify-between items-center bg-white p-2 rounded border shadow-sm">
+                        <div>
+                            <div class="font-bold text-gray-700">${f.nome}</div>
+                            <div class="text-[10px] text-gray-400">${dataFormatada} • ${infoLocal}</div>
+                        </div>
+                        <button onclick="app.remove('feriados', ${f.id})" class="text-red-400 hover:text-red-600">×</button>
+                    </li>`;
+                }).join('');
+            }
+            // --------------------------
+
             filtrarListaUnidades(termo) {
                 const lista = document.getElementById('lista-unidades'); if(!lista) return;
                 const items = lista.getElementsByTagName('li'); termo = termo.toLowerCase();
@@ -1152,13 +1394,32 @@
                 const fUni = document.getElementById('rel-unidade').value;
                 const fMod = document.getElementById('rel-modalidade').value;
                 
-                const feriados = [...this.constantes.feriadosFixos.filter(f => f.m === mes), ...this.getFeriadosMoveis(ano).filter(f => f.m === mes)];
+                // 1. Feriados Padrão
+                let listaFeriados = [...this.constantes.feriadosFixos.filter(f => f.m === mes), ...this.getFeriadosMoveis(ano).filter(f => f.m === mes)];
+                
+                // 2. Feriados Customizados do BD (Filtrar pelo mês/ano atual)
+                const feriadosCustomDB = (this.db.feriados || []).filter(f => {
+                    if(!f.data) return false;
+                    // f.data é YYYY-MM-DD
+                    const parts = f.data.split('-');
+                    const fAno = parseInt(parts[0]);
+                    const fMes = parseInt(parts[1]) - 1; // JS month 0-11
+                    return fAno === ano && fMes === mes;
+                });
+
                 const divFeriados = document.getElementById('section-feriados');
                 let totalEconomizado = 0;
 
-                if(feriados.length > 0) { 
+                // Montar lista de nomes para exibição
+                let nomesFeriados = listaFeriados.map(f => `${f.d}/${f.m+1} (${f.nome})`);
+                feriadosCustomDB.forEach(f => {
+                    const d = parseInt(f.data.split('-')[2]);
+                    nomesFeriados.push(`${d}/${mes+1} (${f.nome})`);
+                });
+
+                if(nomesFeriados.length > 0) { 
                     divFeriados.classList.remove('hidden'); 
-                    document.getElementById('feriados-lista-nomes').innerText = "FERIADOS DO MÊS: " + feriados.map(f => `${f.d}/${f.m+1} (${f.nome})`).join(', '); 
+                    document.getElementById('feriados-lista-nomes').innerText = "FERIADOS DO MÊS: " + nomesFeriados.join(', '); 
                 } else { divFeriados.classList.add('hidden'); }
                 
                 let filtered = this.db.horarios.filter(h => {
@@ -1195,12 +1456,35 @@
                     for(let d=1; d<=daysInMonth; d++) {
                         const dia = this.constantes.dias[new Date(ano, mes, d).getDay() === 0 ? 6 : new Date(ano, mes, d).getDay() - 1];
                         if(h.dias.includes(dia)) {
-                            const isFer = feriados.find(f => f.d === d);
-                            if(isFer) { 
+                            // 1. Checa Feriados Padrão (Nacionais fixos/móveis)
+                            const isFerPadrao = listaFeriados.find(f => f.d === d);
+                            if(isFerPadrao) { 
                                 stats.canc++; 
                                 totalEconomizado += h.valor;
-                                canceladas.push({ data: `${d}/${mes+1}`, feriado: isFer.nome, unidade: u?.nome, impacto: h.valor }); 
-                            } else ac++;
+                                canceladas.push({ data: `${d}/${mes+1}`, feriado: isFerPadrao.nome, unidade: u?.nome, impacto: h.valor }); 
+                                continue;
+                            }
+
+                            // 2. Checa Feriados Customizados (Com lógica de Local)
+                            const isFerCustom = feriadosCustomDB.find(f => {
+                                const fDia = parseInt(f.data.split('-')[2]);
+                                if (fDia !== d) return false;
+
+                                // Verifica escopo
+                                if (f.tipo === 'global') return true;
+                                if (f.tipo === 'nacional' && f.local === u.pais) return true;
+                                if (f.tipo === 'estadual' && f.local === u.estado) return true;
+                                
+                                return false;
+                            });
+
+                            if(isFerCustom) {
+                                stats.canc++; 
+                                totalEconomizado += h.valor;
+                                canceladas.push({ data: `${d}/${mes+1}`, feriado: isFerCustom.nome, unidade: u?.nome, impacto: h.valor }); 
+                            } else {
+                                ac++; // Se não caiu em nenhum feriado, conta a aula
+                            }
                         }
                     }
                     const rec = ac * h.valor; stats.rec += rec; stats.aul += ac; stats.alu += (h.mediaAlunos * ac);
@@ -1233,21 +1517,27 @@
                 
                 this.dadosBrutosFiltrados = rows;
                 this.processarExibicaoTabela();
-                this.prepararDadosRanking(rows);
+                
+                // AQUI FOI ALTERADO PARA RESTAURAR O RANKING DETALHADO POR AULA/PROFESSOR
+                this.prepararDadosRanking(filtered); // Passa 'filtered' (objetos originais do DB) em vez de 'rows' (formatados) para ter acesso aos IDs
                 document.getElementById('relatorio-empty').classList.toggle('hidden', rows.length > 0);
             }
 
-            prepararDadosRanking(rows) {
-                let ag = {};
-                rows.forEach(r => {
-                    if(!ag[r.unidade]) ag[r.unidade] = { nome: r.unidade, alunos: 0, aulas: 0 };
-                    ag[r.unidade].alunos += (r.mediaAlunos * r.aulas);
-                    ag[r.unidade].aulas += r.aulas;
+            prepararDadosRanking(horariosFiltrados) {
+                // RESTAURAÇÃO: Ranking agora é baseado em aulas individuais (horarios), não agrupado por unidade.
+                // Isso permite mostrar: Unidade (Em cima), Modalidade + Professor (Em baixo)
+                
+                const ranking = horariosFiltrados.map(h => {
+                    const u = this.db.unidades.find(x => x.id == h.unidadeId || parseInt(x.id) === parseInt(h.unidadeId));
+                    const m = this.db.modalidades.find(x => x.id == h.modalidadeId || parseInt(x.id) === parseInt(h.modalidadeId));
+                    return {
+                        unidadeNome: u ? u.nome : '?',
+                        detalhe: `${m ? m.nome : '?'} - ${h.professor}`,
+                        media: h.mediaAlunos || 0
+                    };
                 });
-                this.rankingData = Object.values(ag).map(i => ({
-                    nome: i.nome,
-                    media: i.aulas > 0 ? Math.round(i.alunos / i.aulas) : 0
-                }));
+
+                this.rankingData = ranking;
                 this.renderRanking();
             }
 
@@ -1264,26 +1554,39 @@
             renderRanking() {
                 const { campo, direcao } = this.ordenacaoRanking;
                 let data = [...this.rankingData];
+                
                 data.sort((a,b) => {
-                    let valA = a[campo] || 0;
-                    let valB = b[campo] || 0;
-                    if(campo === 'unidade') { valA = a.nome; valB = b.nome; }
-                    if(campo === 'pos') { return 0; }
+                    let valA, valB;
+                    if (campo === 'unidade') { valA = a.unidadeNome; valB = b.unidadeNome; }
+                    else if (campo === 'media') { valA = a.media; valB = b.media; }
+                    else { return 0; } // pos
+
                     if (typeof valA === 'string') { valA = valA.toLowerCase(); valB = valB.toLowerCase(); }
                     return (valA < valB ? -1 : 1) * (direcao === 'asc' ? 1 : -1);
                 });
+
+                // Se for por posição, ordena pela média decrescente final
                 if(campo === 'pos') data.sort((a,b) => (b.media - a.media) * (direcao === 'asc' ? -1 : 1));
-                const top10 = data.slice(0, 10);
-                const bottom10 = [...data].sort((a,b) => a.media - b.media).slice(0, 10);
+                
+                // Limita a exibição (opcional, mas bom para performance se tiver muitos itens)
+                // data = data.slice(0, 50); 
+
                 const renderRow = (i, idx, isWorst) => `
                     <tr class="border-b border-gray-100 hover:bg-gray-50 transition">
-                        <td class="py-2 font-bold ${idx < 3 ? (isWorst ? 'text-red-600' : 'text-blue-600') : 'text-gray-500'}">${idx + 1}º</td>
-                        <td class="py-2 truncate max-w-[200px] font-medium text-gray-700">${i.nome}</td>
-                        <td class="py-2 text-right font-bold ${isWorst ? 'text-red-500' : 'text-green-600'}">${i.media}</td>
+                        <td class="py-2 px-2 font-bold ${idx < 3 ? 'text-blue-600' : 'text-gray-500'} w-10 text-center">${idx + 1}º</td>
+                        <td class="py-2 px-2">
+                            <div class="font-bold text-gray-800 text-xs truncate max-w-[180px]">${i.unidadeNome}</div>
+                            <div class="text-[10px] text-gray-400 font-medium truncate max-w-[180px]">${i.detalhe}</div>
+                        </td>
+                        <td class="py-2 px-2 text-right font-bold text-green-600 text-sm">${i.media}</td>
                     </tr>`;
                 
-                // Exibe apenas UMA tabela (unificando Top e Geral)
-                document.querySelector('#tabela-ranking-alunos tbody').innerHTML = data.length ? data.map((i, idx) => renderRow(i, idx, false)).join('') : '<tr><td colspan="3" class="p-4 text-center text-gray-400">SEM DADOS</td></tr>';
+                const tbody = document.querySelector('#tabela-ranking-alunos tbody');
+                if(data.length > 0) {
+                    tbody.innerHTML = data.map((i, idx) => renderRow(i, idx, false)).join('');
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="3" class="p-4 text-center text-gray-400 text-xs">SEM DADOS PARA O PERÍODO</td></tr>';
+                }
             }
 
             setAgrupamento(modo) {
@@ -1382,7 +1685,18 @@
                 this.downloadCSV(csv, "Lista_Unidades.csv");
             }
             
-            parseImportLines(t) { if(!t.trim()) return []; return t.split('\n').map(l=>l.includes('\t')?l.split('\t'):l.split(';')).filter(c=>c.length>1 && c[0]); }
+            parseImportLines(t) { 
+                if(!t.trim()) return []; 
+                return t.split('\n')
+                    .map(l => l.trim()) // Remove espaços no início e fim
+                    .filter(l => l) // Remove linhas vazias
+                    .map(l => {
+                        // Determina o separador
+                        const delimiter = l.includes('\t') ? '\t' : (l.includes(';') ? ';' : ',');
+                        return l.split(delimiter).map(c => c.trim()); // Remove espaços de cada célula
+                    })
+                    .filter(c => c[0]); // Garante que a linha tem conteúdo
+            }
             
             addHorario() {
                 const u=document.getElementById('grade-unidade').value, m=document.getElementById('grade-modalidade').value, p=document.getElementById('grade-prof').value;
@@ -1390,8 +1704,21 @@
                 const ds=Array.from(document.querySelectorAll('.check-dia-input:checked')).map(c=>c.value);
                 if(!u||!m||!p||!h||!ds.length) return alert('PREENCHA TUDO');
                 const novo = { id: this.editingId || Date.now(), unidadeId: Number(u), modalidadeId: Number(m), professor: p.toUpperCase(), valor: v, mediaAlunos: al, hora: h, dias: ds };
-                if(this.editingId) { const i = this.db.horarios.findIndex(x=>x.id==this.editingId); if(i!==-1) this.db.horarios[i]=novo; this.cancelarEdicao(); }
-                else this.db.horarios.push(novo);
+                
+                if(this.editingId) { 
+                    const i = this.db.horarios.findIndex(x=>x.id==this.editingId); 
+                    if(i!==-1) {
+                        const old = this.db.horarios[i];
+                        const uNome = this.db.unidades.find(un=>un.id==old.unidadeId)?.nome;
+                        this.registrarLog('Edição Aula', `${uNome}`, `Prof: ${old.professor}, Valor: ${old.valor}`, `Prof: ${novo.professor}, Valor: ${novo.valor}`);
+                        this.db.horarios[i]=novo; 
+                    }
+                    this.cancelarEdicao(); 
+                } else {
+                     const uNome = this.db.unidades.find(un=>un.id==novo.unidadeId)?.nome;
+                     this.registrarLog('Criação Aula', `${uNome}`, '-', `Prof: ${novo.professor}, Valor: ${novo.valor}`);
+                     this.db.horarios.push(novo);
+                }
                 this.salvarDados(); this.notify('success', 'SALVO!'); this.renderGradesRecentes();
             }
             
@@ -1447,23 +1774,38 @@
             }
             
             addUnidade() { 
-                const n=document.getElementById('cad-unidade-nome').value.trim().toUpperCase(); 
+                const n = this.normalizeStr(document.getElementById('cad-unidade-nome').value); 
                 let mId = this.currentUser && this.currentUser.role === 'mentor' ? this.currentUser.id : parseInt(document.getElementById('cad-unidade-mentor').value);
-                const p=document.getElementById('cad-unidade-pais').value;
-                const e=document.getElementById('cad-unidade-estado').value;
+                const p = document.getElementById('cad-unidade-pais').value;
+                const e = document.getElementById('cad-unidade-estado').value;
                 
-                if(n && mId && p && e) { 
+                // ADDED: Password Input
+                const senhaInput = document.getElementById('cad-unidade-senha').value.trim();
+                const senhaFinal = senhaInput || '1234'; // Fallback if empty, though input has default value
+
+                // MENTOR OPCIONAL SE ADMIN
+                if(!mId && this.currentUser && this.currentUser.role === 'admin'){
+                    if(!confirm("Tem certeza que deseja criar unidade SEM mentor?")) return;
+                    mId = 0; // 0 = Sem mentor
+                }
+                
+                if(n && p && e) { 
                     this.registrarLog('Criação', 'Nova Unidade', '-', n);
-                    this.db.unidades.push({id:Date.now(), nome:n, mentorId:mId, estado:e, pais:p, senha:'1234'}); 
+                    // NOW SAVING CUSTOM PASSWORD
+                    this.db.unidades.push({id:Date.now(), nome:n, mentorId:mId || 0, estado:e, pais:p, senha: senhaFinal}); 
                     this.salvarDados(); 
                     this.atualizarListas(); 
                     document.getElementById('cad-unidade-nome').value=''; 
+                    // Reset password field to default suggestion or keep it? Let's reset to suggested '12345'
+                    document.getElementById('cad-unidade-senha').value='12345';
+                    this.notify('success', `UNIDADE CRIADA (SENHA: ${senhaFinal})`);
                 } else {
-                    alert("PREENCHA TODOS OS CAMPOS!");
+                    alert("PREENCHA NOME, PAÍS E ESTADO!");
                 }
             }
+
             addModalidade() { 
-                const n=document.getElementById('cad-mod-nome').value.trim().toUpperCase(); 
+                const n=document.getElementById('cad-mod-nome').value.toUpperCase(); 
                 if(n) { 
                     this.registrarLog('Criação', 'Nova Modalidade', '-', n);
                     this.db.modalidades.push({id:Date.now(), nome:n, cor:document.getElementById('cad-mod-cor').value}); 
@@ -1472,14 +1814,22 @@
                     document.getElementById('cad-mod-nome').value=''; 
                 } 
             }
+            
             addMentor() { 
-                const n=document.getElementById('cad-mentor-nome').value.trim().toUpperCase(); 
+                const n = this.normalizeStr(document.getElementById('cad-mentor-nome').value); 
+                // ADDED: Password Input
+                const senhaInput = document.getElementById('cad-mentor-senha').value.trim();
+                const senhaFinal = senhaInput || '1234';
+
                 if(n) { 
                     this.registrarLog('Criação', 'Novo Mentor', '-', n);
-                    this.db.mentores.push({id:Date.now(), nome:n, senha:'1234'}); 
+                    // NOW SAVING CUSTOM PASSWORD
+                    this.db.mentores.push({id:Date.now(), nome:n, senha: senhaFinal}); 
                     this.salvarDados(); 
                     this.atualizarListas(); 
                     document.getElementById('cad-mentor-nome').value=''; 
+                    document.getElementById('cad-mentor-senha').value='12345';
+                    this.notify('success', `MENTOR CRIADO (SENHA: ${senhaFinal})`);
                 } 
             }
             
@@ -1499,8 +1849,7 @@
                 document.getElementById('modal-prof').value=h.professor; document.getElementById('modal-hora').value=h.hora;
                 document.getElementById('modal-valor').value=h.valor; document.getElementById('modal-alunos').value=h.mediaAlunos;
                 document.querySelectorAll('.modal-check-dia').forEach(c=>c.checked=h.dias.includes(c.value));
-                document.getElementById('btn-excluir-modal').classList.remove('hidden');
-                document.getElementById('modal-editor').classList.remove('hidden');
+                this.editingId=id; document.getElementById('btn-save-grade').innerText='SALVAR'; document.getElementById('btn-cancel-grade').classList.remove('hidden');
             }
             salvarModal() {
                 const id = document.getElementById('modal-id').value, m=document.getElementById('modal-modalidade').value, p=document.getElementById('modal-prof').value.toUpperCase();
