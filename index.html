@@ -79,10 +79,10 @@
         
         /* Estilos específicos para o Validador */
         .validation-box {
-            @apply border border-blue-100 bg-blue-50 rounded-lg p-4 mb-6 relative overflow-hidden;
+            @apply border border-blue-100 bg-blue-50 rounded-lg p-6 mb-6 relative overflow-hidden shadow-sm;
         }
         .validation-box.validated {
-            @apply border-green-100 bg-green-50;
+            @apply border-green-200 bg-green-50;
         }
         
         @media print {
@@ -514,7 +514,7 @@
                             </div>
                         </div>
                         
-                        <!-- ÁREA DE VALIDAÇÃO MENSAL (Injetada via JS se for unidade) -->
+                        <!-- ÁREA DE VALIDAÇÃO MENSAL (Injetada via JS se for unidade/mentor) -->
                         <div id="cronograma-validacao-container"></div>
 
                         <div class="overflow-x-auto rounded-lg border border-gray-100 bg-white min-h-[300px]" id="cronograma-container">
@@ -634,7 +634,7 @@
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                             <div class="p-6 bg-white border-l-4 border-blue-500 shadow-sm rounded-r-lg flex justify-between items-center">
                                 <div>
-                                    <p class="text-xs text-gray-400 font-bold uppercase mb-1">Total Unidades</p>
+                                    <p class="text-xs text-gray-400 font-bold uppercase mb-1">Total Unidades (Visíveis)</p>
                                     <p class="text-3xl font-black text-gray-800" id="acesso-total">0</p>
                                 </div>
                                 <div class="p-3 bg-blue-50 rounded-full text-blue-600"><i data-lucide="building" class="w-6 h-6"></i></div>
@@ -663,10 +663,31 @@
                             <!-- Cards de Mentores injetados via JS -->
                         </div>
 
-                        <!-- Detalhamento Expandido (Opcional, mas útil) -->
-                        <div id="detalhe-acesso-container" class="border rounded-lg overflow-hidden bg-white shadow-sm hidden">
-                            <!-- Tabela detalhada injetada se necessário -->
+                        <!-- LISTA DE STATUS POR UNIDADE (NOVO) -->
+                         <h3 class="font-bold text-gray-700 mb-4 flex items-center gap-2 uppercase text-sm border-b pb-2 mt-8">
+                            <i data-lucide="list-checks" class="w-4 h-4"></i> Status Detalhado por Unidade
+                        </h3>
+                        <div class="border rounded-lg overflow-hidden bg-white shadow-sm">
+                            <div class="max-h-[500px] overflow-y-auto">
+                                <table class="w-full text-xs text-left uppercase">
+                                    <thead class="bg-gray-50 text-gray-500 sticky top-0 z-10 shadow-sm">
+                                        <tr>
+                                            <th class="p-3 border-b">Unidade</th>
+                                            <th class="p-3 border-b">Mentor</th>
+                                            <th class="p-3 border-b text-center">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tabela-status-unidades" class="text-gray-700">
+                                        <!-- Injetado via JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="bg-gray-50 p-3 border-t flex justify-between items-center text-xs font-bold text-gray-500 uppercase">
+                                <span id="footer-total-validadas" class="text-green-600">Validadas: 0</span>
+                                <span id="footer-total-pendentes" class="text-red-600">Pendentes: 0</span>
+                            </div>
                         </div>
+
                     </div>
                 </div>
 
@@ -1134,10 +1155,12 @@
             }
             
             nav(viewId) {
+                // Strict check for historico access
+                if (viewId === 'historico' && this.currentUser.role !== 'admin') return this.notify('error', 'ACESSO NEGADO');
+                
                 if (this.currentUser && (this.currentUser.role === 'mentor' || this.currentUser.role === 'unidade') && viewId === 'importacao') return this.notify('error', 'ACESSO NEGADO');
                 if (this.currentUser && this.currentUser.role === 'unidade' && viewId === 'config') return this.notify('error', 'ACESSO NEGADO');
-                if (this.currentUser && this.currentUser.role !== 'admin' && viewId === 'historico') return this.notify('error', 'ACESSO NEGADO');
-
+                
                 document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
                 const target = document.getElementById(`view-${viewId}`);
                 if (target) target.classList.remove('hidden');
@@ -1336,32 +1359,44 @@
             
             // Método chamado ao clicar nos botões de validação no Cronograma
             confirmarValidacao(tipo) {
-                if(!this.currentUser || this.currentUser.role !== 'unidade') return;
+                // Validation accessible for 'unidade' and 'mentor'
+                if(!this.currentUser || (this.currentUser.role !== 'unidade' && this.currentUser.role !== 'mentor' && this.currentUser.role !== 'admin')) return;
                 
                 const check = document.getElementById('check-validacao');
                 if(!check.checked) return alert("Por favor, marque a caixa confirmando que você revisou o cronograma.");
 
+                // For validation, we need the target unit ID. If user is unit, it's their ID. If mentor, it's the currently selected unit ID in the dropdown.
+                let targetUnitId = null;
+                
+                if (this.currentUser.role === 'unidade') {
+                     targetUnitId = this.currentUser.id;
+                } else {
+                     // For Mentor/Admin, get from dropdown
+                     targetUnitId = document.getElementById('cronograma-unidade-select').value;
+                     if(!targetUnitId) return alert('Selecione uma unidade para validar.');
+                }
+
                 const hoje = new Date();
                 const mes = hoje.getMonth();
                 const ano = hoje.getFullYear();
-                const uid = this.currentUser.id;
 
                 if(!this.db.acessos) this.db.acessos = [];
                 
                 // Remove validação anterior se houver (para atualizar)
-                this.db.acessos = this.db.acessos.filter(a => !(a.unidadeId == uid && a.mes == mes && a.ano == ano));
+                this.db.acessos = this.db.acessos.filter(a => !(a.unidadeId == targetUnitId && a.mes == mes && a.ano == ano));
 
                 this.db.acessos.push({
-                    unidadeId: uid,
+                    unidadeId: targetUnitId, // Ensure string/number consistency logic handles this, but saving ID directly
                     mes: mes,
                     ano: ano,
                     data: new Date().toISOString(),
-                    tipo: tipo // 'com_alteracao' ou 'sem_alteracao'
+                    tipo: tipo, // 'com_alteracao' ou 'sem_alteracao'
+                    validadoPor: this.currentUser.name // Audit trail
                 });
                 
                 this.salvarDados();
                 this.notify('success', 'CRONOGRAMA VALIDADO!');
-                this.registrarLog('Validação', 'Revisão Mensal', '-', `Status: ${tipo.replace('_', ' ').toUpperCase()}`);
+                this.registrarLog('Validação', 'Revisão Mensal', '-', `Unidade ID: ${targetUnitId} - Status: ${tipo.replace('_', ' ').toUpperCase()}`);
                 
                 // Re-renderiza para mostrar o status verde
                 this.renderCronograma();
@@ -1375,8 +1410,18 @@
                 if(isNaN(mes) || isNaN(ano)) return;
 
                 const todosAcessos = this.db.acessos || [];
-                const unidades = this.db.unidades;
-                const mentores = this.db.mentores;
+                
+                // ----------------- FILTRAGEM POR PERFIL -----------------
+                let unidades = this.db.unidades;
+                let mentores = this.db.mentores;
+
+                if (this.currentUser.role === 'mentor') {
+                    // Mentor vê apenas suas unidades e a si mesmo
+                    mentores = this.db.mentores.filter(m => m.id == this.currentUser.id);
+                    unidades = this.db.unidades.filter(u => u.mentorId == this.currentUser.id);
+                }
+                // Admin vê tudo (default)
+                // --------------------------------------------------------
 
                 // IDs de quem já validou neste mês/ano
                 const validaramMap = {}; // Map para acesso rápido
@@ -1386,9 +1431,9 @@
                     }
                 });
 
-                // KPIs Globais
+                // KPIs Globais (Baseados na visão filtrada)
                 const totalUnits = unidades.length;
-                const totalValidados = Object.keys(validaramMap).length;
+                const totalValidados = unidades.filter(u => validaramMap[u.id]).length;
                 const totalPendentes = totalUnits - totalValidados;
 
                 document.getElementById('acesso-total').innerText = totalUnits;
@@ -1402,12 +1447,13 @@
                 // Agrupa unidades por mentor
                 const unidadesPorMentor = {};
                 mentores.forEach(m => unidadesPorMentor[m.id] = []);
-                // Também agrupa unidades sem mentor (opcional) ou com mentor deletado
+                
+                // Distribui unidades para os mentores filtrados
                 unidades.forEach(u => {
                     if(unidadesPorMentor[u.mentorId]) {
                         unidadesPorMentor[u.mentorId].push(u);
-                    } else {
-                        // Caso mentor não exista mais ou ID 0
+                    } else if (this.currentUser.role === 'admin') {
+                        // Apenas admin vê "Outros/Sem Mentor" ou mentores deletados
                         if(!unidadesPorMentor['outros']) unidadesPorMentor['outros'] = [];
                         unidadesPorMentor['outros'].push(u);
                     }
@@ -1416,12 +1462,14 @@
                 // Renderiza Cards
                 mentores.forEach(m => {
                     const unitsDoMentor = unidadesPorMentor[m.id] || [];
-                    if(unitsDoMentor.length === 0) return;
-
+                    
+                    // Se for mentor logado, mostra o card mesmo se não tiver unidades (para ele saber)
+                    // Se for admin, mostra apenas se tiver unidades ou se o mentor existir
+                    
                     const validados = unitsDoMentor.filter(u => validaramMap[u.id]);
                     const pendentes = unitsDoMentor.filter(u => !validaramMap[u.id]);
                     
-                    const pct = Math.round((validados.length / unitsDoMentor.length) * 100);
+                    const pct = unitsDoMentor.length > 0 ? Math.round((validados.length / unitsDoMentor.length) * 100) : 0;
                     const corBarra = pct === 100 ? 'bg-green-500' : (pct > 50 ? 'bg-blue-500' : 'bg-red-500');
 
                     // Lista de Pendentes (Nome da unidade) - Limitada a 3 visualmente, ou scroll
@@ -1460,7 +1508,7 @@
                     grid.innerHTML += card;
                 });
 
-                // Renderiza grupo "Sem Mentor" se houver
+                // Renderiza grupo "Sem Mentor" se houver (Apenas Admin vê isso pela logica acima)
                 if(unidadesPorMentor['outros'] && unidadesPorMentor['outros'].length > 0) {
                     const unitsOutros = unidadesPorMentor['outros'];
                     const validados = unitsOutros.filter(u => validaramMap[u.id]);
@@ -1475,6 +1523,37 @@
                         </div>
                     `;
                 }
+
+                // ----------------- NOVA SEÇÃO: STATUS DETALHADO POR UNIDADE -----------------
+                const tabelaBody = document.getElementById('tabela-status-unidades');
+                
+                // Ordenar unidades alfabeticamente
+                const unidadesOrdenadas = [...unidades].sort((a,b) => a.nome.localeCompare(b.nome));
+
+                const rowsHTML = unidadesOrdenadas.map(u => {
+                    const mentor = this.db.mentores.find(m => m.id == u.mentorId);
+                    const mentorNome = mentor ? mentor.nome : '-';
+                    const isValidado = !!validaramMap[u.id];
+                    
+                    const badge = isValidado 
+                        ? `<span class="px-2 py-1 rounded bg-green-100 text-green-700 text-[10px] font-bold">VALIDADO</span>`
+                        : `<span class="px-2 py-1 rounded bg-red-100 text-red-700 text-[10px] font-bold">PENDENTE</span>`;
+
+                    return `
+                        <tr class="border-b hover:bg-gray-50 transition">
+                            <td class="p-3 font-bold text-gray-700">${u.nome}</td>
+                            <td class="p-3 text-gray-500">${mentorNome}</td>
+                            <td class="p-3 text-center">${badge}</td>
+                        </tr>
+                    `;
+                }).join('');
+
+                tabelaBody.innerHTML = rowsHTML;
+
+                // Rodapé Totais
+                document.getElementById('footer-total-validadas').innerText = `Validadas: ${totalValidados}`;
+                document.getElementById('footer-total-pendentes').innerText = `Pendentes: ${totalPendentes}`;
+
 
                 lucide.createIcons();
             }
@@ -1816,7 +1895,7 @@
                     let valA, valB;
                     if (campo === 'unidade') { valA = a.unidadeNome; valB = b.unidadeNome; }
                     else if (campo === 'media') { valA = a.media; valB = b.media; }
-                    else { return 0; } // pos
+                    else { return 0; } 
 
                     if (typeof valA === 'string') { valA = valA.toLowerCase(); valB = valB.toLowerCase(); }
                     return (valA < valB ? -1 : 1) * (direcao === 'asc' ? 1 : -1);
@@ -2156,7 +2235,16 @@
                 }
 
                 // --- NOVA ÁREA DE VALIDAÇÃO MENSAL (LÓGICA INJETADA) ---
-                if(this.currentUser && this.currentUser.role === 'unidade' && this.currentUser.id == uid) {
+                // Verifica unidade atual selecionada (Objeto Unidade)
+                const unidadeSelecionada = this.db.unidades.find(u => u.id == uid);
+
+                // Permissão: Admin, Unidade (se for a própria), ou Mentor (se for responsável)
+                const podeValidar = 
+                    (this.currentUser.role === 'admin') ||
+                    (this.currentUser.role === 'unidade' && this.currentUser.id == uid) || 
+                    (this.currentUser.role === 'mentor' && unidadeSelecionada && unidadeSelecionada.mentorId == this.currentUser.id);
+
+                if(podeValidar) {
                     const hoje = new Date();
                     const mes = hoje.getMonth();
                     const ano = hoje.getFullYear();
@@ -2186,25 +2274,25 @@
                                 <h4 class="font-bold text-blue-800 flex items-center gap-2 uppercase mb-2">
                                     <i data-lucide="alert-circle" class="w-5 h-5"></i> Validação Mensal Obrigatória (${nomeMes})
                                 </h4>
-                                <p class="text-xs text-blue-600 mb-4">Por favor, revise o quadro de aulas abaixo e confirme o status deste mês.</p>
+                                <p class="text-xs text-blue-600 mb-4">Por favor, confirme a revisão do quadro de aulas deste mês.</p>
                                 
-                                <div class="flex gap-4 mb-4">
-                                    <button onclick="app.confirmarValidacao('com_alteracao')" class="flex-1 bg-white border border-blue-300 hover:bg-blue-100 text-blue-800 font-bold py-3 rounded text-xs transition uppercase shadow-sm">
-                                        Houve Alteração
+                                <div class="flex flex-col md:flex-row gap-3 mb-4">
+                                    <button onclick="app.confirmarValidacao('com_alteracao')" class="flex-1 bg-white border-2 border-orange-200 hover:bg-orange-50 text-orange-700 font-bold py-3 rounded text-xs transition uppercase shadow-sm flex items-center justify-center gap-2">
+                                        <i data-lucide="edit-3" class="w-4 h-4"></i> Houve alteração no cronograma
                                     </button>
-                                    <button onclick="app.confirmarValidacao('sem_alteracao')" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded text-xs transition uppercase shadow-sm">
-                                        Não Houve Alteração
+                                    <button onclick="app.confirmarValidacao('sem_alteracao')" class="flex-1 bg-white border-2 border-green-200 hover:bg-green-50 text-green-700 font-bold py-3 rounded text-xs transition uppercase shadow-sm flex items-center justify-center gap-2">
+                                        <i data-lucide="check" class="w-4 h-4"></i> Não houve alteração
                                     </button>
                                 </div>
-                                <label class="flex items-start gap-2 text-xs text-gray-600 cursor-pointer select-none">
+                                <label class="flex items-start gap-2 text-xs text-gray-600 cursor-pointer select-none bg-white p-3 rounded border border-blue-100">
                                     <input type="checkbox" id="check-validacao" class="mt-0.5">
-                                    <span>Declaro que revisei os horários, professores e estrutura do quadro de aulas coletivas desta unidade.</span>
+                                    <span>Confirmo que revisei: <strong>Horários das aulas</strong>, <strong>Professores</strong> e a <strong>Estrutura do quadro</strong> de coletivas.</span>
                                 </label>
                             </div>
                         `;
                     }
                 } else {
-                    // Se for admin vendo, mostra status se tiver
+                    // Sem permissão para validar essa unidade específica
                     validacaoContainer.innerHTML = '';
                 }
                 // -----------------------------------------------------
@@ -2218,6 +2306,7 @@
                         const a = h.find(x=>x.hora===t && x.dias.includes(d));
                         if(a) {
                             const mod = this.db.modalidades.find(m=>m.id==a.modalidadeId || parseInt(m.id) === parseInt(a.modalidadeId));
+                            // GARANTIDO: ASPAS NO ID PARA SUPORTAR STRINGS E NÚMEROS E CLIQUE NO PAI E IDS COM ASPAS
                             ht += `<td class="p-1 border h-20 w-[13%] align-top">
                                 <div onclick="app.abrirModalEdicao('${a.id}')" class="aula-card p-2 rounded text-xs text-white shadow relative cursor-pointer group flex flex-col justify-between h-full uppercase select-none pointer-events-auto" style="background:${mod?.cor||'#999'}">
                                     <div>
