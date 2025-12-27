@@ -55,7 +55,7 @@
         .table-custom tr:last-child td { border-bottom: none; }
         .table-custom tr:hover { background-color: #f8fafc; }
 
-        .aula-card { transition: transform 0.2s, box-shadow 0.2s; position: relative; }
+        .aula-card { transition: transform 0.2s, box-shadow 0.2s; position: relative; cursor: pointer; }
         .aula-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 10; }
         
         .group-btn {
@@ -337,7 +337,7 @@
                     <div class="grid grid-cols-1 gap-6">
                         <!-- RANKING DETALHADO (RESTAURADO) -->
                         <div class="glass-panel p-4 md:p-6 border-t-4 border-gray-800">
-                            <h3 class="font-bold text-gray-800 mb-6 flex items-center gap-2 text-lg uppercase"><i data-lucide="award" class="w-5 h-5"></i> Ranking Fluxo de Coletivas</h3>
+                            <h3 class="font-bold text-gray-800 mb-6 flex items-center gap-2 text-lg uppercase"><i data-lucide="award" class="w-5 h-5"></i> Ranking Fluxo de Coletivas (Top 15)</h3>
                             <div class="grid grid-cols-1">
                                 <!-- Ranking Único: Fluxo Geral -->
                                 <div>
@@ -357,7 +357,7 @@
                             </div>
                         </div>
                         
-                        <!-- FERIADOS MOVED TO BOTTOM -->
+                        <!-- FERIADOS MOVED TO BOTTOM (AGRUPADO) -->
                         <div id="section-feriados" class="glass-panel border-l-4 border-red-400 bg-red-50/50 p-4 md:p-6 hidden">
                             <div class="flex justify-between items-start mb-4">
                                 <div>
@@ -370,10 +370,18 @@
                                 </div>
                             </div>
                             
-                            <div class="overflow-x-auto">
+                            <!-- Adicionado max-h-60 e overflow-y-auto para barra de rolagem -->
+                            <div class="overflow-x-auto max-h-60 overflow-y-auto border border-red-200 rounded-lg bg-white">
                                 <table class="w-full text-xs text-left uppercase" id="tabela-canceladas">
-                                    <thead class="text-red-900 border-b border-red-200"><tr><th class="py-2">Data</th><th class="py-2">Feriado</th><th class="py-2">Unidade</th><th class="py-2 text-right">Impacto</th></tr></thead>
-                                    <tbody class="text-red-800"></tbody>
+                                    <thead class="text-red-900 border-b border-red-200 sticky top-0 bg-red-50">
+                                        <tr>
+                                            <th class="py-2 px-3">Data</th>
+                                            <th class="py-2 px-3">Feriado</th>
+                                            <th class="py-2 px-3">Unidade</th>
+                                            <th class="py-2 px-3 text-right">Impacto</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="text-red-800 text-xs"></tbody>
                                 </table>
                             </div>
                         </div>
@@ -676,7 +684,7 @@
                     listaMentores.innerHTML = this.db.mentores.map(m => 
                         `<li class="flex justify-between items-center bg-gray-50 p-2 rounded border border-gray-100">
                             <span>${m.nome}</span>
-                            <button onclick="app.remove('mentores', ${m.id})" class="text-red-400 hover:text-red-600 font-bold">×</button>
+                            <button onclick="app.remove('mentores', '${m.id}')" class="text-red-400 hover:text-red-600 font-bold">×</button>
                         </li>`
                     ).join('');
                 }
@@ -687,7 +695,7 @@
                     listaModalidades.innerHTML = this.db.modalidades.map(m => 
                         `<li class="flex justify-between items-center bg-white p-2 rounded border-l-4 shadow-sm" style="border-left-color:${m.cor}">
                             <span class="font-bold text-gray-700">${m.nome}</span>
-                            <button onclick="app.remove('modalidades', ${m.id})" class="text-red-400 hover:text-red-600 font-bold">×</button>
+                            <button onclick="app.remove('modalidades', '${m.id}')" class="text-red-400 hover:text-red-600 font-bold">×</button>
                         </li>`
                     ).join('');
                 }
@@ -710,7 +718,7 @@
                                     <div class="font-bold text-gray-800">${u.nome}</div>
                                     <div class="text-[10px] text-gray-400">${u.estado} • ${mentorNome}</div>
                                 </div>
-                                <button onclick="app.remove('unidades', ${u.id})" class="text-gray-300 hover:text-red-500 absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition">
+                                <button onclick="app.remove('unidades', '${u.id}')" class="text-gray-300 hover:text-red-500 absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition">
                                     <i data-lucide="trash-2" class="w-4 h-4"></i>
                                 </button>
                             </div>
@@ -1123,8 +1131,8 @@
                     <div class="flex items-center gap-2 bg-slate-50 p-2 rounded border border-gray-200">
                         <div class="flex-1 min-w-0"><p class="text-xs font-bold text-gray-700 truncate">${item.nome}</p></div>
                         <input type="text" value="${item.senha || '1234'}" id="pass-${type}-${item.id}" class="w-20 p-1 text-xs border rounded text-center bg-white" placeholder="Senha">
-                        <button onclick="app.savePassword('${type}', ${item.id})" class="text-green-600 hover:text-green-800 p-1"><i data-lucide="save" class="w-3 h-3"></i></button>
-                        <button onclick="app.resetPassword('${type}', ${item.id})" class="text-gray-400 hover:text-red-500 p-1"><i data-lucide="rotate-ccw" class="w-3 h-3"></i></button>
+                        <button onclick="app.savePassword('${type}', '${item.id}')" class="text-green-600 hover:text-green-800 p-1"><i data-lucide="save" class="w-3 h-3"></i></button>
+                        <button onclick="app.resetPassword('${type}', '${item.id}')" class="text-gray-400 hover:text-red-500 p-1"><i data-lucide="rotate-ccw" class="w-3 h-3"></i></button>
                     </div>`;
 
                 let listaMentores = this.db.mentores;
@@ -1144,7 +1152,7 @@
             savePassword(type, id) {
                 const newVal = document.getElementById(`pass-${type}-${id}`).value;
                 if(!newVal) return alert('Senha vazia!');
-                const item = this.db[type].find(x => x.id === id);
+                const item = this.db[type].find(x => x.id == id);
                 if(item) {
                     const oldPass = item.senha;
                     item.senha = newVal;
@@ -1156,7 +1164,7 @@
 
             resetPassword(type, id) {
                 if(confirm('Resetar senha para 1234?')) {
-                    const item = this.db[type].find(x => x.id === id);
+                    const item = this.db[type].find(x => x.id == id);
                     if(item) {
                         const oldPass = item.senha;
                         item.senha = '1234';
@@ -1347,7 +1355,7 @@
                             <div class="font-bold text-gray-700">${f.nome}</div>
                             <div class="text-[10px] text-gray-400">${dataFormatada} • ${infoLocal}</div>
                         </div>
-                        <button onclick="app.remove('feriados', ${f.id})" class="text-red-400 hover:text-red-600">×</button>
+                        <button onclick="app.remove('feriados', '${f.id}')" class="text-red-400 hover:text-red-600">×</button>
                     </li>`;
                 }).join('');
             }
@@ -1445,7 +1453,10 @@
                 
                 const daysInMonth = new Date(ano, mes + 1, 0).getDate();
                 let stats = { rec:0, aul:0, alu:0, canc:0, uni:new Set() };
-                let canceladas = [], rows = [];
+                
+                // NOVO: Agrupamento de Cancelamentos
+                // Chave será "DATA|UNIT_ID" para agrupar por dia e unidade
+                let cancelamentosAgrupados = {};
 
                 filtered.forEach(h => {
                     const u = this.db.unidades.find(x => x.id == h.unidadeId || parseInt(x.id) === parseInt(h.unidadeId));
@@ -1456,39 +1467,45 @@
                     for(let d=1; d<=daysInMonth; d++) {
                         const dia = this.constantes.dias[new Date(ano, mes, d).getDay() === 0 ? 6 : new Date(ano, mes, d).getDay() - 1];
                         if(h.dias.includes(dia)) {
-                            // 1. Checa Feriados Padrão (Nacionais fixos/móveis)
-                            const isFerPadrao = listaFeriados.find(f => f.d === d);
-                            if(isFerPadrao) { 
-                                stats.canc++; 
-                                totalEconomizado += h.valor;
-                                canceladas.push({ data: `${d}/${mes+1}`, feriado: isFerPadrao.nome, unidade: u?.nome, impacto: h.valor }); 
-                                continue;
+                            // Verifica Feriado Padrão
+                            let feriadoEncontrado = listaFeriados.find(f => f.d === d);
+                            
+                            // Se não, verifica Customizado
+                            if (!feriadoEncontrado) {
+                                feriadoEncontrado = feriadosCustomDB.find(f => {
+                                    const fDia = parseInt(f.data.split('-')[2]);
+                                    if (fDia !== d) return false;
+                                    if (f.tipo === 'global') return true;
+                                    if (f.tipo === 'nacional' && f.local === u.pais) return true;
+                                    if (f.tipo === 'estadual' && f.local === u.estado) return true;
+                                    return false;
+                                });
                             }
 
-                            // 2. Checa Feriados Customizados (Com lógica de Local)
-                            const isFerCustom = feriadosCustomDB.find(f => {
-                                const fDia = parseInt(f.data.split('-')[2]);
-                                if (fDia !== d) return false;
-
-                                // Verifica escopo
-                                if (f.tipo === 'global') return true;
-                                if (f.tipo === 'nacional' && f.local === u.pais) return true;
-                                if (f.tipo === 'estadual' && f.local === u.estado) return true;
-                                
-                                return false;
-                            });
-
-                            if(isFerCustom) {
+                            if(feriadoEncontrado) { 
                                 stats.canc++; 
                                 totalEconomizado += h.valor;
-                                canceladas.push({ data: `${d}/${mes+1}`, feriado: isFerCustom.nome, unidade: u?.nome, impacto: h.valor }); 
+                                
+                                // Lógica de Agrupamento
+                                const key = `${d}-${u?.id}`;
+                                if (!cancelamentosAgrupados[key]) {
+                                    cancelamentosAgrupados[key] = {
+                                        data: `${d}/${mes+1}`,
+                                        feriado: feriadoEncontrado.nome,
+                                        unidade: u?.nome || '?',
+                                        impactoTotal: 0,
+                                        detalhes: []
+                                    };
+                                }
+                                cancelamentosAgrupados[key].impactoTotal += h.valor;
+                                cancelamentosAgrupados[key].detalhes.push(`${m?.nome || '?'} - ${h.professor}`);
                             } else {
-                                ac++; // Se não caiu em nenhum feriado, conta a aula
+                                ac++; // Aula Normal
                             }
                         }
                     }
                     const rec = ac * h.valor; stats.rec += rec; stats.aul += ac; stats.alu += (h.mediaAlunos * ac);
-                    rows.push({ unidade: u?.nome||'?', modalidade: m?.nome||'?', professor: h.professor, diasStr: h.dias.map(d=>d.substring(0,3)).join(','), valorHora: h.valor, aulas: ac, mediaAlunos: h.mediaAlunos, receita: rec, dias: h.dias });
+                    // rows.push logic remains same for main report
                 });
 
                 document.getElementById('kpi-receita').innerText = `R$ ${stats.rec.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
@@ -1513,20 +1530,54 @@
                 });
                 document.getElementById('kpi-unidades-count').innerText = unitsForCount.length;
                 document.getElementById('total-economizado').innerText = `R$ ${totalEconomizado.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-                document.querySelector('#tabela-canceladas tbody').innerHTML = canceladas.map(c => `<tr><td>${c.data}</td><td>${c.feriado}</td><td>${c.unidade}</td><td class="text-right text-red-600">- R$ ${c.impacto.toFixed(2)}</td></tr>`).join('');
                 
+                // Renderizar Tabela de Feriados Otimizada
+                const tbodyCanceladas = document.querySelector('#tabela-canceladas tbody');
+                tbodyCanceladas.innerHTML = Object.values(cancelamentosAgrupados).map(c => `
+                    <tr class="hover:bg-red-50 transition" title="Aulas Canceladas: ${c.detalhes.join(', ')}">
+                        <td class="py-2 px-3 border-b border-red-100">${c.data}</td>
+                        <td class="py-2 px-3 border-b border-red-100 text-[10px] truncate max-w-[100px]">${c.feriado}</td>
+                        <td class="py-2 px-3 border-b border-red-100 font-bold truncate max-w-[150px] cursor-help decoration-dotted underline underline-offset-2 decoration-red-300">${c.unidade}</td>
+                        <td class="py-2 px-3 border-b border-red-100 text-right text-red-600 font-mono font-bold">- R$ ${c.impactoTotal.toFixed(2)}</td>
+                    </tr>
+                `).join('');
+                
+                // Recalcula rows para o relatório principal (mantido igual)
+                let rows = [];
+                filtered.forEach(h => {
+                    const u = this.db.unidades.find(x => x.id == h.unidadeId || parseInt(x.id) === parseInt(h.unidadeId));
+                    const m = this.db.modalidades.find(x => x.id == h.modalidadeId || parseInt(x.id) === parseInt(h.modalidadeId));
+                    let ac = 0;
+                    for(let d=1; d<=daysInMonth; d++) {
+                        const dia = this.constantes.dias[new Date(ano, mes, d).getDay() === 0 ? 6 : new Date(ano, mes, d).getDay() - 1];
+                        if(h.dias.includes(dia)) {
+                            // Check feriado again broadly just to count classes
+                            let isFeriado = listaFeriados.some(f => f.d === d);
+                            if (!isFeriado) {
+                                isFeriado = feriadosCustomDB.some(f => {
+                                    const fDia = parseInt(f.data.split('-')[2]);
+                                    if (fDia !== d) return false;
+                                    if (f.tipo === 'global') return true;
+                                    if (f.tipo === 'nacional' && f.local === u.pais) return true;
+                                    if (f.tipo === 'estadual' && f.local === u.estado) return true;
+                                    return false;
+                                });
+                            }
+                            if(!isFeriado) ac++;
+                        }
+                    }
+                    const rec = ac * h.valor;
+                    rows.push({ unidade: u?.nome||'?', modalidade: m?.nome||'?', professor: h.professor, diasStr: h.dias.map(d=>d.substring(0,3)).join(','), valorHora: h.valor, aulas: ac, mediaAlunos: h.mediaAlunos, receita: rec, dias: h.dias });
+                });
+
                 this.dadosBrutosFiltrados = rows;
                 this.processarExibicaoTabela();
-                
-                // AQUI FOI ALTERADO PARA RESTAURAR O RANKING DETALHADO POR AULA/PROFESSOR
-                this.prepararDadosRanking(filtered); // Passa 'filtered' (objetos originais do DB) em vez de 'rows' (formatados) para ter acesso aos IDs
+                this.prepararDadosRanking(filtered); 
                 document.getElementById('relatorio-empty').classList.toggle('hidden', rows.length > 0);
             }
 
             prepararDadosRanking(horariosFiltrados) {
-                // RESTAURAÇÃO: Ranking agora é baseado em aulas individuais (horarios), não agrupado por unidade.
-                // Isso permite mostrar: Unidade (Em cima), Modalidade + Professor (Em baixo)
-                
+                // RESTAURAÇÃO: Ranking detalhado Aula/Professor
                 const ranking = horariosFiltrados.map(h => {
                     const u = this.db.unidades.find(x => x.id == h.unidadeId || parseInt(x.id) === parseInt(h.unidadeId));
                     const m = this.db.modalidades.find(x => x.id == h.modalidadeId || parseInt(x.id) === parseInt(h.modalidadeId));
@@ -1565,11 +1616,10 @@
                     return (valA < valB ? -1 : 1) * (direcao === 'asc' ? 1 : -1);
                 });
 
-                // Se for por posição, ordena pela média decrescente final
                 if(campo === 'pos') data.sort((a,b) => (b.media - a.media) * (direcao === 'asc' ? -1 : 1));
                 
-                // Limita a exibição (opcional, mas bom para performance se tiver muitos itens)
-                // data = data.slice(0, 50); 
+                // LIMITADO AO TOP 15
+                data = data.slice(0, 15); 
 
                 const renderRow = (i, idx, isWorst) => `
                     <tr class="border-b border-gray-100 hover:bg-gray-50 transition">
@@ -1766,8 +1816,8 @@
                     return `<div class="flex justify-between items-center border-b p-1 text-xs mb-1 bg-white uppercase">
                         <span><b>${u}</b><br>${h.professor} - ${h.hora}</span> 
                         <div class="flex gap-1">
-                            <button onclick="app.editarHorario(${h.id})" class="text-blue-500 p-1">✏️</button>
-                            <button onclick="app.remove('horarios',${h.id})" class="text-red-500 p-1">🗑️</button>
+                            <button onclick="app.editarHorario('${h.id}')" class="text-blue-500 p-1">✏️</button>
+                            <button onclick="app.remove('horarios','${h.id}')" class="text-red-500 p-1">🗑️</button>
                         </div>
                     </div>`
                 }).join(''); 
@@ -1842,14 +1892,24 @@
                 document.querySelectorAll('.modal-check-dia').forEach(c=>c.checked=false);
             }
             abrirModalEdicao(id) {
-                const h = this.db.horarios.find(x=>x.id==id); if(!h) return;
+                const h = this.db.horarios.find(x=>x.id==id); if(!h) { console.error("Horario nao encontrado para ID:", id); return; }
                 const u = this.db.unidades.find(x=>x.id==h.unidadeId || parseInt(x.id) === parseInt(h.unidadeId));
-                document.getElementById('modal-id').value=h.id; document.getElementById('modal-titulo').innerText='EDITAR AULA';
-                document.getElementById('modal-unidade-view').value=u?u.nome:'-'; document.getElementById('modal-modalidade').value=h.modalidadeId;
-                document.getElementById('modal-prof').value=h.professor; document.getElementById('modal-hora').value=h.hora;
-                document.getElementById('modal-valor').value=h.valor; document.getElementById('modal-alunos').value=h.mediaAlunos;
+                
+                // Popula o MODAL
+                document.getElementById('modal-id').value=h.id; 
+                document.getElementById('modal-titulo').innerText='EDITAR AULA';
+                document.getElementById('modal-unidade-view').value=u?u.nome:'-'; 
+                document.getElementById('modal-modalidade').value=h.modalidadeId;
+                document.getElementById('modal-prof').value=h.professor; 
+                document.getElementById('modal-hora').value=h.hora;
+                document.getElementById('modal-valor').value=h.valor; 
+                document.getElementById('modal-alunos').value=h.mediaAlunos;
                 document.querySelectorAll('.modal-check-dia').forEach(c=>c.checked=h.dias.includes(c.value));
-                this.editingId=id; document.getElementById('btn-save-grade').innerText='SALVAR'; document.getElementById('btn-cancel-grade').classList.remove('hidden');
+                
+                // Exibe o botão de excluir
+                document.getElementById('btn-excluir-modal').classList.remove('hidden');
+                // Abre o modal
+                document.getElementById('modal-editor').classList.remove('hidden');
             }
             salvarModal() {
                 const id = document.getElementById('modal-id').value, m=document.getElementById('modal-modalidade').value, p=document.getElementById('modal-prof').value.toUpperCase();
@@ -1899,7 +1959,22 @@
                         const a = h.find(x=>x.hora===t && x.dias.includes(d));
                         if(a) {
                             const mod = this.db.modalidades.find(m=>m.id==a.modalidadeId || parseInt(m.id) === parseInt(a.modalidadeId));
-                            ht += `<td class="p-1 border h-20 w-[13%] align-top"><div onclick="app.abrirModalEdicao(${a.id})" class="aula-card p-2 rounded text-xs text-white shadow relative cursor-pointer group flex flex-col justify-between h-full uppercase" style="background:${mod?.cor||'#999'}"><div><div class="font-bold uppercase mb-1 leading-tight">${mod?.nome}</div><div class="opacity-90 truncate">${a.professor}</div></div><div class="flex justify-between items-end mt-1 border-t border-white/20 pt-1"><span class="text-[9px]">👥 ${a.mediaAlunos}</span><i data-lucide="edit" class="w-3 h-3 opacity-0 group-hover:opacity-100"></i></div></div></td>`;
+                            // GARANTIDO: ASPAS NO ID PARA SUPORTAR STRINGS E NÚMEROS E CLIQUE NO PAI
+                            ht += `<td class="p-1 border h-20 w-[13%] align-top">
+                                <div onclick="app.abrirModalEdicao('${a.id}')" class="aula-card p-2 rounded text-xs text-white shadow relative cursor-pointer group flex flex-col justify-between h-full uppercase select-none pointer-events-auto" style="background:${mod?.cor||'#999'}">
+                                    <div>
+                                        <div class="font-bold uppercase mb-1 leading-tight">${mod?.nome}</div>
+                                        <div class="opacity-90 truncate">${a.professor}</div>
+                                    </div>
+                                    <div class="flex justify-between items-end mt-1 border-t border-white/20 pt-1">
+                                        <span class="text-[9px]">👥 ${a.mediaAlunos}</span>
+                                        <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition pointer-events-auto">
+                                            <button onclick="event.stopPropagation(); app.remove('horarios', '${a.id}')" class="hover:text-red-200 p-1" title="Excluir"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+                                            <i data-lucide="edit" class="w-3 h-3"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>`;
                         } else ht += `<td class="border bg-slate-50/20"></td>`;
                     });
                     ht += `</tr>`;
