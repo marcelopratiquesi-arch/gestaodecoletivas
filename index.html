@@ -20,7 +20,11 @@
                         pratique: {
                             blue: '#0056b3', lightBlue: '#3b82f6', red: '#e63946',
                             gray: '#f3f4f6', dark: '#1e293b', sidebar: '#0f172a'
-                        }
+                        },
+                        'custom-green': '#10b981', // emerald-500
+                        'custom-yellow': '#eab308', // yellow-500
+                        'custom-red': '#ef4444', // red-500
+                        'custom-blue': '#4f46e5', // indigo-600
                     },
                     animation: {
                         'fade-in': 'fadeIn 0.5s ease-out',
@@ -85,12 +89,16 @@
         .custom-tooltip { opacity: 0; visibility: hidden; transition: opacity 0.2s; }
 
         /* Sort Header Indicator */
-        .sort-header:hover { color: #2563eb; }
-        .sort-icon { display: inline-block; width: 12px; height: 12px; margin-left: 4px; }
+        .sort-header:hover { color: #2563eb; cursor: pointer; user-select: none; }
+        .sort-icon { display: inline-block; width: 12px; height: 12px; margin-left: 4px; opacity: 0.5; }
+        .sort-active .sort-icon { opacity: 1; color: #2563eb; }
         
         /* Modal Dragging */
         .cursor-grab { cursor: grab; }
         .cursor-grabbing { cursor: grabbing; }
+        
+        /* Sticky Tabs */
+        .sticky-tabs { position: sticky; top: 0; z-index: 40; background-color: rgba(255, 255, 255, 0.95); backdrop-filter: blur(5px); }
     </style>
 </head>
 <body class="h-screen flex overflow-hidden text-sm font-sans bg-slate-50">
@@ -185,14 +193,13 @@
                         <div class="overflow-x-auto max-h-[500px]">
                             <table class="w-full table-custom text-left min-w-[800px] uppercase" id="tabela-relatorio">
                                 <thead class="sticky top-0 bg-gray-50 shadow-sm z-10 text-gray-600" id="header-relatorio">
-                                    <!-- Cabeçalho agora fixo no HTML para garantir a estrutura correta -->
                                     <tr>
-                                        <th class="p-3">Unidade</th>
-                                        <th class="p-3">Mentor</th>
-                                        <th class="p-3">Professor</th>
-                                        <th class="p-3 text-center">Média Alunos</th>
-                                        <th class="p-3 text-center">Valor Hora Aula</th>
-                                        <th class="p-3 text-center">Valor Mensal</th>
+                                        <th class="p-3 sort-header" onclick="window.app.ordenarRelatorio('unidade')">Unidade <i data-lucide="arrow-up-down" class="sort-icon"></i></th>
+                                        <th class="p-3 sort-header" onclick="window.app.ordenarRelatorio('mentor')">Mentor <i data-lucide="arrow-up-down" class="sort-icon"></i></th>
+                                        <th class="p-3 sort-header" onclick="window.app.ordenarRelatorio('professor')">Professor <i data-lucide="arrow-up-down" class="sort-icon"></i></th>
+                                        <th class="p-3 text-center sort-header" onclick="window.app.ordenarRelatorio('media')">Média Alunos <i data-lucide="arrow-up-down" class="sort-icon"></i></th>
+                                        <th class="p-3 text-center sort-header" onclick="window.app.ordenarRelatorio('valor')">Valor Hora Aula <i data-lucide="arrow-up-down" class="sort-icon"></i></th>
+                                        <th class="p-3 text-center sort-header" onclick="window.app.ordenarRelatorio('mensal')">Valor Mensal <i data-lucide="arrow-up-down" class="sort-icon"></i></th>
                                     </tr>
                                 </thead>
                                 <tbody id="body-relatorio"></tbody>
@@ -201,7 +208,7 @@
                         <div id="relatorio-empty" class="p-8 text-center text-gray-400 hidden">Nenhum dado encontrado.</div>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="glass-panel p-4 border-t-4 border-gray-800"><h3 class="font-bold text-gray-800 mb-4 text-sm uppercase"><i data-lucide="award" class="w-5 h-5 inline"></i> Ranking Top 15</h3><table class="w-full text-xs text-left uppercase table-custom" id="tabela-ranking-alunos"><thead><tr><th onclick="window.app.ordenarRanking('pos')">Pos</th><th onclick="window.app.ordenarRanking('unidade')">Unidade/Detalhe</th><th onclick="window.app.ordenarRanking('media')" class="text-right">Média</th></tr></thead><tbody></tbody></table></div>
+                        <div class="glass-panel p-4 border-t-4 border-gray-800"><h3 class="font-bold text-gray-800 mb-4 text-sm uppercase"><i data-lucide="award" class="w-5 h-5 inline"></i> Ranking Top 15</h3><table class="w-full text-xs text-left uppercase table-custom" id="tabela-ranking-alunos"><thead><tr><th onclick="window.app.ordenarRanking('pos')" class="cursor-pointer">Pos</th><th onclick="window.app.ordenarRanking('unidade')" class="cursor-pointer">Unidade/Detalhe</th><th onclick="window.app.ordenarRanking('media')" class="text-right cursor-pointer">Média</th></tr></thead><tbody></tbody></table></div>
                         <div id="section-feriados" class="glass-panel border-l-4 border-red-400 bg-red-50/50 p-4 hidden"><div class="flex justify-between items-start mb-2"><h3 class="font-bold text-red-800 mb-2 uppercase"><i data-lucide="calendar-off" class="w-4 h-4"></i> Impacto Feriados</h3><p class="text-xl font-bold text-red-800" id="total-economizado">R$ 0,00</p></div><div class="text-[10px] text-red-600 mb-2 uppercase" id="feriados-lista-nomes"></div><div class="overflow-x-auto max-h-60 border border-red-200 rounded-lg bg-white"><table class="w-full text-xs text-left uppercase" id="tabela-canceladas"><thead class="text-red-900 border-b border-red-200 sticky top-0 bg-red-50"><tr><th class="py-2 px-3">Data</th><th class="py-2 px-3">Feriado</th><th class="py-2 px-3">Unidade</th><th class="py-2 px-3 text-right">Impacto</th></tr></thead><tbody class="text-red-800 text-xs"></tbody></table></div></div>
                     </div>
                 </div>
@@ -610,17 +617,17 @@
                 this.editingId = null;
                 this.dadosExibidos = [];
                 this.modoAgrupamento = 'detalhado';
-                this.ordenacao = { campo: 'receita', direcao: 'desc' };
+                this.ordenacaoRelatorio = { campo: 'unidade', direcao: 'asc' }; // Estado de ordenação
                 this.rankingData = [];
                 this.ordenacaoRanking = { campo: 'media', direcao: 'desc' };
                 this.ordenacaoStatus = { campo: 'unidade', direcao: 'asc' };
                 this.mobileMenuOpen = false;
                 
                 // --- NOVOS STATES ACESSO MENSAL ---
-                this.currentAcessoTab = 'ranking'; // 'ranking', 'status', 'detalhe'
+                this.currentAcessoTab = 'ranking'; 
                 this.acessoFilterTerm = '';
                 this.acessoStatusSort = { field: 'unidade', direction: 'asc' };
-                this.validacaoCheck = false; // Checkbox de validação mensal
+                this.validacaoCheck = false; 
 
                 this.constantes = {
                     dias: ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"],
@@ -698,6 +705,7 @@
                 const divDiasModal = document.getElementById('modal-dias-container');
                 if(divDiasModal) divDiasModal.innerHTML = this.constantes.dias.map(d => `<label class="cursor-pointer select-none"><input type="checkbox" value="${d}" class="peer sr-only modal-check-dia"><div class="px-2 py-1 text-[10px] uppercase border rounded bg-white text-gray-400 peer-checked:bg-blue-600 peer-checked:text-white transition shadow-sm hover:bg-gray-50">${d.substring(0,3)}</div></label>`).join('');
                 this.atualizarEstados();
+                this.atualizarFiltrosRelatorio('init'); // Inicializa filtros de País e Estado
             }
             
             atualizarEstados() {
@@ -1447,6 +1455,22 @@
             
             // --- RELATORIO ---
             
+            ordenarRelatorio(campo) {
+                if (this.ordenacaoRelatorio.campo === campo) {
+                    this.ordenacaoRelatorio.direcao = this.ordenacaoRelatorio.direcao === 'asc' ? 'desc' : 'asc';
+                } else {
+                    this.ordenacaoRelatorio.campo = campo;
+                    this.ordenacaoRelatorio.direcao = 'asc';
+                }
+                
+                // Atualizar ícones visuais
+                document.querySelectorAll('.sort-header').forEach(th => th.classList.remove('sort-active'));
+                const th = Array.from(document.querySelectorAll('.sort-header')).find(el => el.onclick.toString().includes(campo));
+                if(th) th.classList.add('sort-active');
+
+                this.gerarRelatorio();
+            }
+
             gerarRelatorio() {
                 const mes = parseInt(document.getElementById('rel-mes').value);
                 const ano = parseInt(document.getElementById('rel-ano').value);
@@ -1471,6 +1495,29 @@
                     if(fPais && u.pais != fPais) return false;
                     if(fEst && u.estado != fEst) return false;
                     return true;
+                });
+
+                // Ordenação
+                lista.sort((a, b) => {
+                    let valA, valB;
+                    const uA = this.db.unidades.find(x => x.id == a.unidadeId);
+                    const uB = this.db.unidades.find(x => x.id == b.unidadeId);
+                    const mA = this.db.mentores.find(x => x.id == uA?.mentorId);
+                    const mB = this.db.mentores.find(x => x.id == uB?.mentorId);
+
+                    switch (this.ordenacaoRelatorio.campo) {
+                        case 'unidade': valA = uA?.nome || ''; valB = uB?.nome || ''; break;
+                        case 'mentor': valA = mA?.nome || ''; valB = mB?.nome || ''; break;
+                        case 'professor': valA = a.professor || ''; valB = b.professor || ''; break;
+                        case 'media': valA = a.mediaAlunos || 0; valB = b.mediaAlunos || 0; break;
+                        case 'valor': valA = a.valor || 0; valB = b.valor || 0; break;
+                        case 'mensal': valA = (a.valor || 0) * 4; valB = (b.valor || 0) * 4; break;
+                        default: valA = uA?.nome || ''; valB = uB?.nome || '';
+                    }
+
+                    if (valA < valB) return this.ordenacaoRelatorio.direcao === 'asc' ? -1 : 1;
+                    if (valA > valB) return this.ordenacaoRelatorio.direcao === 'asc' ? 1 : -1;
+                    return 0;
                 });
 
                 const totalReceita = lista.reduce((acc, h) => acc + (h.valor * 4), 0);
@@ -1503,7 +1550,15 @@
                 const rankBody = document.querySelector('#tabela-ranking-alunos tbody');
                 rankBody.innerHTML = lista.slice(0, 15).map((h, i) => {
                      const u = this.db.unidades.find(x => x.id == h.unidadeId);
-                     return `<tr class="border-b"><td class="font-bold text-blue-600">${i+1}</td><td>${u?.nome} - ${h.professor}</td><td class="text-right font-bold">${h.mediaAlunos}</td></tr>`;
+                     const mod = this.db.modalidades.find(md => md.id == h.modalidadeId);
+                     return `<tr class="border-b">
+                        <td class="font-bold text-blue-600 p-2 align-middle text-center">${i+1}</td>
+                        <td class="p-2">
+                            <div class="font-bold text-xs uppercase text-gray-800">${u?.nome}</div>
+                            <div class="text-[10px] text-gray-500 uppercase">${mod?.nome || 'MODALIDADE'} / ${h.professor}</div>
+                        </td>
+                        <td class="text-right font-bold p-2 align-middle">${h.mediaAlunos}</td>
+                     </tr>`;
                 }).join('');
             }
             
@@ -1719,6 +1774,7 @@
                 this.renderAcessoMensal();
             }
 
+            // --- LÓGICA DE ACESSO MENSAL RESTAURADA ---
             renderAcessoMensal() {
                 const container = document.getElementById('view-acesso');
                 if(!container) return;
@@ -1730,6 +1786,7 @@
                 let unidades = this.db.unidades;
                 let mentores = this.db.mentores;
                 
+                // Filtros de acesso baseados no usuário
                 if (this.currentUser.role === 'mentor') {
                     mentores = mentores.filter(m => m.id == this.currentUser.id);
                     unidades = unidades.filter(u => u.mentorId == this.currentUser.id);
@@ -1743,8 +1800,10 @@
                 const pendencias = totalUnidades - validacoesMes;
                 const percentualGeral = totalUnidades > 0 ? Math.round((validacoesMes / totalUnidades) * 100) : 0;
 
+                // --- GERAÇÃO HTML ---
                 let html = `
                 <div class="max-w-7xl mx-auto space-y-8 animate-fade-in">
+                    <!-- HEADER SECTION -->
                     <header class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div>
                             <h1 class="text-2xl md:text-3xl font-bold text-slate-900 uppercase">Acesso Mensal</h1>
@@ -1754,19 +1813,241 @@
                             <div class="p-2 bg-slate-100 rounded-md">
                                 <i data-lucide="calendar" class="w-5 h-5 text-slate-600"></i>
                             </div>
-                            <input type="month" value="${ano}-${mesStr}" onchange="window.app.updateAcessoDate(this.value)" class="bg-transparent border-none text-sm font-semibold text-slate-700 focus:ring-0 cursor-pointer uppercase"/>
+                            <input 
+                                type="month" 
+                                value="${ano}-${mesStr}"
+                                onchange="window.app.updateAcessoDate(this.value)"
+                                class="bg-transparent border-none text-sm font-semibold text-slate-700 focus:ring-0 cursor-pointer uppercase"
+                            />
                         </div>
                     </header>
+
+                    <!-- KPIS SECTION -->
                     <section class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-100 flex items-start justify-between"><div><p class="text-sm font-medium text-slate-500 mb-1 uppercase">Total de Unidades</p><h3 class="text-3xl font-bold text-slate-800">${totalUnidades}</h3></div><div class="p-3 rounded-lg bg-blue-500"><i data-lucide="building-2" class="w-6 h-6 text-white"></i></div></div>
-                        <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-100 flex items-start justify-between"><div><p class="text-sm font-medium text-slate-500 mb-1 uppercase">Validações</p><h3 class="text-3xl font-bold text-slate-800">${validacoesMes}</h3></div><div class="p-3 rounded-lg bg-emerald-500"><i data-lucide="check-circle" class="w-6 h-6 text-white"></i></div></div>
-                        <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-100 flex items-start justify-between"><div><p class="text-sm font-medium text-slate-500 mb-1 uppercase">Pendências</p><h3 class="text-3xl font-bold text-slate-800">${pendencias}</h3></div><div class="p-3 rounded-lg bg-red-500"><i data-lucide="alert-circle" class="w-6 h-6 text-white"></i></div></div>
+                        <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-100 flex items-start justify-between hover:shadow-md transition-shadow">
+                            <div><p class="text-sm font-medium text-slate-500 mb-1 uppercase">Total de Unidades</p><h3 class="text-3xl font-bold text-slate-800">${totalUnidades}</h3></div>
+                            <div class="p-3 rounded-lg bg-blue-500"><i data-lucide="building-2" class="w-6 h-6 text-white"></i></div>
+                        </div>
+                        <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-100 flex items-start justify-between hover:shadow-md transition-shadow">
+                            <div><p class="text-sm font-medium text-slate-500 mb-1 uppercase">Validações no Mês</p><h3 class="text-3xl font-bold text-slate-800">${validacoesMes}</h3></div>
+                            <div class="p-3 rounded-lg bg-emerald-500"><i data-lucide="check-circle" class="w-6 h-6 text-white"></i></div>
+                        </div>
+                        <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-100 flex items-start justify-between hover:shadow-md transition-shadow">
+                            <div><p class="text-sm font-medium text-slate-500 mb-1 uppercase">Pendências</p><h3 class="text-3xl font-bold text-slate-800">${pendencias}</h3></div>
+                            <div class="p-3 rounded-lg bg-red-500"><i data-lucide="alert-circle" class="w-6 h-6 text-white"></i></div>
+                        </div>
                     </section>
-                    <div class="min-h-[200px] text-center text-slate-400 p-8 border border-dashed rounded-lg bg-slate-50 uppercase text-xs">Aba simplificada para visualização de dados. Use as abas anteriores para gestão detalhada.</div>
-                </div>`;
+
+                    <!-- MAIN CONTENT AREA -->
+                    <main class="space-y-6">
+                        <!-- Custom Tab Navigation -->
+                        <div class="border-b border-slate-200 sticky-tabs rounded-t-xl px-2 bg-white/90 backdrop-blur-sm">
+                            <nav class="-mb-px flex space-x-8 overflow-x-auto" aria-label="Tabs">
+                                <button onclick="window.app.setAcessoTab('ranking')" class="acesso-tab-btn uppercase ${this.currentAcessoTab === 'ranking' ? 'active' : 'inactive'}">
+                                    <i data-lucide="trending-up" class="w-4 h-4"></i> Ranking de Validação
+                                </button>
+                                <button onclick="window.app.setAcessoTab('status')" class="acesso-tab-btn uppercase ${this.currentAcessoTab === 'status' ? 'active' : 'inactive'}">
+                                    <i data-lucide="list" class="w-4 h-4"></i> Status Individual
+                                </button>
+                                <button onclick="window.app.setAcessoTab('detalhe')" class="acesso-tab-btn uppercase ${this.currentAcessoTab === 'detalhe' ? 'active' : 'inactive'}">
+                                    <i data-lucide="layout-grid" class="w-4 h-4"></i> Detalhamento por Mentor
+                                </button>
+                            </nav>
+                        </div>
+
+                        <!-- Tab Content -->
+                        <div class="min-h-[400px]">
+                `;
+
+                // --- TAB 1: RANKING DE VALIDAÇÃO ---
+                if (this.currentAcessoTab === 'ranking') {
+                    const rankingData = mentores.map(m => {
+                        const unitsDoMentor = this.db.unidades.filter(u => u.mentorId == m.id);
+                        const total = unitsDoMentor.length;
+                        const validated = unitsDoMentor.filter(u => (this.db.acessos||[]).some(a => a.unidadeId == u.id && a.mes == mes && a.ano == ano)).length;
+                        const pct = total > 0 ? Math.round((validated / total) * 100) : 0;
+                        const missing = unitsDoMentor.filter(u => !(this.db.acessos||[]).some(a => a.unidadeId == u.id && a.mes == mes && a.ano == ano)).map(u => u.nome);
+
+                        return { id: m.id, name: m.nome, role: 'MENTOR', avatar: m.nome.substring(0,2), completed: validated, total, score: pct, missing };
+                    }).sort((a,b) => b.score - a.score);
+
+                    html += `
+                        <div class="space-y-6 animate-slide-up">
+                            <div class="flex justify-between items-center mb-4">
+                                <div><h2 class="text-xl font-bold text-slate-800 uppercase">Ranking de Validação</h2><p class="text-sm text-slate-500 uppercase">Desempenho dos mentores neste ciclo.</p></div>
+                            </div>
+                            <div class="grid gap-4">
+                                ${rankingData.map((item, index) => {
+                                    let barColor = item.score >= 80 ? 'bg-emerald-500' : (item.score >= 50 ? 'bg-yellow-500' : 'bg-red-500');
+                                    let badgeColor = item.score === 100 ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-700 border-slate-200';
+                                    let missingList = item.missing.map(x => `<li>${x}</li>`).join('');
+                                    let tooltip = missingList ? `<div class="custom-tooltip absolute bottom-full left-1/2 mb-2 w-64 -translate-x-1/2 rounded-lg bg-slate-800 p-3 text-xs text-white shadow-lg z-50 pointer-events-none"><div class="font-semibold mb-1 text-slate-300 border-b border-slate-600 pb-1">FALTAM VALIDAR:</div><ul class="list-disc pl-4 space-y-0.5">${missingList}</ul><div class="absolute -bottom-1 left-1/2 h-2 w-2 -translate-x-1/2 rotate-45 bg-slate-800"></div></div>` : '';
+
+                                    return `
+                                    <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm hover:border-indigo-100 transition-colors flex flex-col md:flex-row items-center gap-4 md:gap-8 group">
+                                        <div class="flex-shrink-0 w-8 h-8 flex items-center justify-center font-bold text-slate-400 bg-slate-50 rounded-full text-sm border border-slate-200">#${index + 1}</div>
+                                        <div class="flex items-center gap-3 w-full md:w-1/4">
+                                            <div class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-sm uppercase shadow-sm border-2 border-white">${item.avatar}</div>
+                                            <div><h4 class="font-semibold text-slate-800 uppercase text-sm">${item.name}</h4><p class="text-xs text-slate-500 uppercase">${item.total} Unidades</p></div>
+                                        </div>
+                                        <div class="flex-grow w-full md:w-1/3">
+                                            <div class="flex justify-between text-xs mb-1">
+                                                <span class="text-slate-500 uppercase font-medium">Progresso</span>
+                                                <div class="group relative flex items-center custom-tooltip-trigger">
+                                                    <span class="font-bold cursor-help ${item.missing.length > 0 ? 'text-indigo-600 underline decoration-dotted' : 'text-emerald-600'}">${item.completed}/${item.total} Validado</span>
+                                                    ${tooltip}
+                                                </div>
+                                            </div>
+                                            <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden shadow-inner"><div class="h-2.5 rounded-full ${barColor} transition-all duration-500" style="width: ${item.score}%"></div></div>
+                                        </div>
+                                        <div class="flex-shrink-0 flex items-center justify-end w-full md:w-auto mt-2 md:mt-0">
+                                            <span class="px-4 py-1 rounded-full text-xs font-bold uppercase border ${badgeColor}">${item.score}% Concluído</span>
+                                        </div>
+                                    </div>`;
+                                }).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                // --- TAB 2: STATUS INDIVIDUAL ---
+                else if (this.currentAcessoTab === 'status') {
+                    const statusData = unidades.map(u => {
+                        const m = this.db.mentores.find(m => m.id == u.mentorId);
+                        const access = (this.db.acessos || []).find(a => a.unidadeId == u.id && a.mes == mes && a.ano == ano);
+                        const status = access ? 'Validado' : 'Pendente';
+                        return { 
+                            id: u.id, 
+                            mentor: m ? m.nome : 'SEM MENTOR', 
+                            unidade: u.nome, 
+                            status, 
+                            data: access ? new Date(access.data).toLocaleDateString() : '-' 
+                        };
+                    }).filter(item => 
+                        item.mentor.includes(this.acessoFilterTerm.toUpperCase()) || 
+                        item.unidade.includes(this.acessoFilterTerm.toUpperCase())
+                    ).sort((a,b) => {
+                        if (this.acessoStatusSort.direction === 'asc') return a[this.acessoStatusSort.field].localeCompare(b[this.acessoStatusSort.field]);
+                        return b[this.acessoStatusSort.field].localeCompare(a[this.acessoStatusSort.field]);
+                    });
+
+                    html += `
+                        <div class="space-y-6 animate-slide-up">
+                            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
+                                <div class="flex items-center gap-2">
+                                    <div class="p-2 bg-indigo-50 rounded-lg"><i data-lucide="list" class="w-5 h-5 text-indigo-600"></i></div>
+                                    <div><h2 class="font-bold text-slate-800 uppercase text-sm">Status Individual</h2><p class="text-xs text-slate-500 uppercase">Lista completa por unidade</p></div>
+                                </div>
+                                <div class="relative w-full md:w-64">
+                                    <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"></i>
+                                    <input type="text" placeholder="FILTRAR..." value="${this.acessoFilterTerm}" onkeyup="window.app.setAcessoFilter(this.value)" class="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 uppercase transition-all" />
+                                </div>
+                            </div>
+                            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                                <div class="overflow-x-auto">
+                                    <table class="w-full text-xs text-left uppercase">
+                                        <thead class="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
+                                            <tr>
+                                                <th class="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors" onclick="window.app.sortAcessoStatus('mentor')">Mentor <i data-lucide="arrow-up-down" class="w-3 h-3 inline ml-1 opacity-50"></i></th>
+                                                <th class="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors" onclick="window.app.sortAcessoStatus('unidade')">Unidade <i data-lucide="arrow-up-down" class="w-3 h-3 inline ml-1 opacity-50"></i></th>
+                                                <th class="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors" onclick="window.app.sortAcessoStatus('status')">Status <i data-lucide="arrow-up-down" class="w-3 h-3 inline ml-1 opacity-50"></i></th>
+                                                <th class="px-6 py-4">Data Validação</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-slate-100">
+                                            ${statusData.map(item => `
+                                            <tr class="hover:bg-slate-50 transition-colors">
+                                                <td class="px-6 py-4 font-bold text-slate-700">${item.mentor}</td>
+                                                <td class="px-6 py-4 text-slate-600 flex items-center gap-2"><i data-lucide="building-2" class="w-3 h-3 text-slate-400"></i> ${item.unidade}</td>
+                                                <td class="px-6 py-4"><span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border ${item.status === 'Validado' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-red-50 text-red-700 border-red-100'}"><span class="w-1.5 h-1.5 rounded-full ${item.status === 'Validado' ? 'bg-emerald-500' : 'bg-red-500'}"></span>${item.status}</span></td>
+                                                <td class="px-6 py-4 text-slate-500 font-mono">${item.data}</td>
+                                            </tr>`).join('')}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                // --- TAB 3: DETALHAMENTO POR MENTOR ---
+                else if (this.currentAcessoTab === 'detalhe') {
+                    // Prepara dados agrupados por mentor
+                    const cardsData = mentores.map(m => {
+                        const units = this.db.unidades.filter(u => u.mentorId == m.id);
+                        const validated = units.filter(u => (this.db.acessos||[]).some(a => a.unidadeId == u.id && a.mes == mes && a.ano == ano));
+                        const pending = units.filter(u => !(this.db.acessos||[]).some(a => a.unidadeId == u.id && a.mes == mes && a.ano == ano));
+                        const score = units.length > 0 ? Math.round((validated.length / units.length) * 100) : 0;
+                        
+                        return { 
+                            id: m.id, 
+                            nome: m.nome, 
+                            avatar: m.nome.substring(0,2),
+                            total: units.length, 
+                            validated, 
+                            pending, 
+                            score 
+                        };
+                    }).filter(m => m.nome.includes(this.acessoFilterTerm.toUpperCase()));
+
+                    html += `
+                        <div class="space-y-6 animate-slide-up">
+                            <div class="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-4 rounded-xl border border-slate-100 shadow-sm mb-6">
+                                <div class="flex items-center gap-2">
+                                    <div class="p-2 bg-indigo-50 rounded-lg"><i data-lucide="layout-grid" class="w-5 h-5 text-indigo-600"></i></div>
+                                    <div><h2 class="font-bold text-slate-800 uppercase text-sm">Cards de Controle</h2><p class="text-xs text-slate-500 uppercase">Visão consolidada por responsável</p></div>
+                                </div>
+                                <div class="relative w-full md:w-64">
+                                    <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"></i>
+                                    <input type="text" placeholder="BUSCAR MENTOR..." value="${this.acessoFilterTerm}" onkeyup="window.app.setAcessoFilter(this.value)" class="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 uppercase transition-all" />
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    `;
+                    
+                    cardsData.forEach(card => {
+                        const validatedHtml = card.validated.length > 0 
+                            ? `<ul class="space-y-1 max-h-32 overflow-y-auto pr-1 custom-scrollbar">${card.validated.map(u => `<li class="text-[10px] flex items-center gap-2 text-slate-600 bg-emerald-50/50 p-1.5 rounded border border-emerald-100/50"><i data-lucide="check-circle" class="w-3 h-3 text-emerald-500"></i> ${u.nome}</li>`).join('')}</ul>`
+                            : `<p class="text-[10px] text-slate-400 italic pl-1">Nenhuma validação.</p>`;
+                            
+                        const pendingHtml = card.pending.length > 0
+                            ? `<ul class="space-y-1 max-h-32 overflow-y-auto pr-1 custom-scrollbar">${card.pending.map(u => `<li class="text-[10px] flex items-center gap-2 text-slate-600 bg-red-50/50 p-1.5 rounded border border-red-100/50"><i data-lucide="alert-circle" class="w-3 h-3 text-red-500"></i> ${u.nome}</li>`).join('')}</ul>`
+                            : `<p class="text-[10px] text-emerald-600 font-bold pl-1 flex items-center gap-1"><i data-lucide="check-circle" class="w-3 h-3"></i> Tudo validado!</p>`;
+
+                        html += `
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-all flex flex-col">
+                            <div class="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-xs shadow-md border-2 border-white">${card.avatar}</div>
+                                    <div><h3 class="font-bold text-slate-800 uppercase text-xs">${card.nome}</h3><p class="text-[10px] text-slate-500 uppercase">${card.total} Unidades</p></div>
+                                </div>
+                                ${card.score === 100 ? `<div class="bg-emerald-100 text-emerald-700 p-1 rounded-full"><i data-lucide="check-circle" class="w-4 h-4"></i></div>` : ''}
+                            </div>
+                            <div class="p-4 flex-grow flex flex-col gap-4">
+                                <div class="flex-1">
+                                    <h4 class="text-[10px] font-bold text-emerald-700 uppercase mb-2 flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Realizadas (${card.validated.length})</h4>
+                                    ${validatedHtml}
+                                </div>
+                                <div class="flex-1 border-t border-slate-100 pt-3">
+                                    <h4 class="text-[10px] font-bold text-red-700 uppercase mb-2 flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-red-500"></span> Pendentes (${card.pending.length})</h4>
+                                    ${pendingHtml}
+                                </div>
+                            </div>
+                        </div>`;
+                    });
+
+                    html += `</div></div>`;
+                }
+
+                html += `</div></main></div>`;
                 container.innerHTML = html;
                 lucide.createIcons();
             }
+
+            // --- MÉTODOS DE RENDERIZAÇÃO FINAIS ---
+            
+            // ... (Restante dos métodos renderGradesRecentes, savePassword, resetPassword, toggleFeriadoLocal, addFeriado, renderListaFeriados, parseImportLines, importarUnidades, importarGrades, salvarBackup, restaurarBackup, exportarUnidadesCSV, exportarGrades, downloadCSV) ...
         }
 
         window.app = new SistemaPratique();
