@@ -472,7 +472,7 @@
                 this.apiUrl = 'https://script.google.com/macros/s/AKfycbz8LU_ekbnZ7tAwrvxyaASzql0Cvqe-HAVGhWpO-TkOWot3AcWjpAALTB3u2bOGx8hbfA/exec';
                 this.currentUser = null;
                 this.ordenacaoRelatorio = { campo: 'unidade', direcao: 'asc' }; 
-                this.ordenacaoRanking = { campo: 'media', direcao: 'desc' }; // NOVO ESTADO DE ORDENAÇÃO
+                this.ordenacaoRanking = { campo: 'media', direcao: 'desc' }; 
                 this.mobileMenuOpen = false;
                 this.abaRelatorioAtiva = 'geral'; 
                 
@@ -1153,9 +1153,29 @@
                     const statusData = unidades.map(u => {
                         const m = this.db.mentores.find(m => m.id == u.mentorId);
                         const access = (this.db.acessos || []).find(a => a.unidadeId == u.id && a.mes == mes && a.ano == ano);
-                        return { id: u.id, mentor: m ? m.nome : 'SEM MENTOR', unidade: u.nome, status: access ? 'Validado' : 'Pendente', data: access ? new Date(access.data).toLocaleDateString() : '-' };
+                        
+                        // FORMATADOR DE DATA/HORA
+                        let dataFormatada = '-';
+                        if (access && access.data) {
+                            const d = new Date(access.data);
+                            const dia = String(d.getDate()).padStart(2, '0');
+                            const mesNum = String(d.getMonth() + 1).padStart(2, '0');
+                            const anoNum = d.getFullYear();
+                            const hora = String(d.getHours()).padStart(2, '0');
+                            const min = String(d.getMinutes()).padStart(2, '0');
+                            dataFormatada = `${dia}/${mesNum}/${anoNum} - ${hora}:${min}`;
+                        }
+
+                        return { 
+                            id: u.id, 
+                            mentor: m ? m.nome : 'SEM MENTOR', 
+                            unidade: u.nome, 
+                            status: access ? 'Validado' : 'Pendente', 
+                            data: dataFormatada // AQUI ESTÁ A MUDANÇA
+                        };
                     }).filter(item => item.mentor.includes(this.acessoFilterTerm.toUpperCase()) || item.unidade.includes(this.acessoFilterTerm.toUpperCase())).sort((a,b) => this.acessoStatusSort.direction === 'asc' ? a[this.acessoStatusSort.field].localeCompare(b[this.acessoStatusSort.field]) : b[this.acessoStatusSort.field].localeCompare(a[this.acessoStatusSort.field]));
-                    html += `<div class="space-y-6 animate-slide-up"><div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-xl border border-slate-100 shadow-sm"><div class="flex items-center gap-2"><div class="p-2 bg-indigo-50 rounded-lg"><i data-lucide="list" class="w-5 h-5 text-indigo-600"></i></div><div><h2 class="font-bold text-slate-800 uppercase text-sm">Status Individual</h2></div></div><div class="relative w-full md:w-64"><i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"></i><input type="text" placeholder="FILTRAR..." value="${this.acessoFilterTerm}" onkeyup="window.app.setAcessoFilter(this.value)" class="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 uppercase transition-all" /></div></div><div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden"><div class="overflow-x-auto"><table class="w-full text-xs text-left uppercase"><thead class="bg-slate-50 text-slate-600 font-bold border-b border-slate-200"><tr><th class="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors" onclick="window.app.sortAcessoStatus('mentor')">Mentor</th><th class="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors" onclick="window.app.sortAcessoStatus('unidade')">Unidade</th><th class="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors" onclick="window.app.sortAcessoStatus('status')">Status</th><th class="px-6 py-4">Data Validação</th></tr></thead><tbody class="divide-y divide-slate-100">${statusData.map(item => `<tr class="hover:bg-slate-50 transition-colors"><td class="px-6 py-4 font-bold text-slate-700">${item.mentor}</td><td class="px-6 py-4 text-slate-600 flex items-center gap-2"><i data-lucide="building-2" class="w-3 h-3 text-slate-400"></i> ${item.unidade}</td><td class="px-6 py-4"><span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border ${item.status === 'Validado' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-red-50 text-red-700 border-red-100'}"><span class="w-1.5 h-1.5 rounded-full ${item.status === 'Validado' ? 'bg-emerald-500' : 'bg-red-500'}"></span>${item.status}</span></td><td class="px-6 py-4 text-slate-500 font-mono">${item.data}</td></tr>`).join('')}</tbody></table></div></div></div>`;
+                    
+                    html += `<div class="space-y-6 animate-slide-up"><div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-xl border border-slate-100 shadow-sm"><div class="flex items-center gap-2"><div class="p-2 bg-indigo-50 rounded-lg"><i data-lucide="list" class="w-5 h-5 text-indigo-600"></i></div><div><h2 class="font-bold text-slate-800 uppercase text-sm">Status Individual</h2></div></div><div class="relative w-full md:w-64"><i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"></i><input type="text" placeholder="FILTRAR..." value="${this.acessoFilterTerm}" onkeyup="window.app.setAcessoFilter(this.value)" class="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 uppercase transition-all" /></div></div><div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden"><div class="overflow-x-auto"><table class="w-full text-xs text-left uppercase"><thead class="bg-slate-50 text-slate-600 font-bold border-b border-slate-200"><tr><th class="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors" onclick="window.app.sortAcessoStatus('mentor')">Mentor</th><th class="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors" onclick="window.app.sortAcessoStatus('unidade')">Unidade</th><th class="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors" onclick="window.app.sortAcessoStatus('status')">Status</th><th class="px-6 py-4">Data/Hora Validação</th></tr></thead><tbody class="divide-y divide-slate-100">${statusData.map(item => `<tr class="hover:bg-slate-50 transition-colors"><td class="px-6 py-4 font-bold text-slate-700">${item.mentor}</td><td class="px-6 py-4 text-slate-600 flex items-center gap-2"><i data-lucide="building-2" class="w-3 h-3 text-slate-400"></i> ${item.unidade}</td><td class="px-6 py-4"><span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border ${item.status === 'Validado' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-red-50 text-red-700 border-red-100'}"><span class="w-1.5 h-1.5 rounded-full ${item.status === 'Validado' ? 'bg-emerald-500' : 'bg-red-500'}"></span>${item.status}</span></td><td class="px-6 py-4 text-slate-500 font-mono">${item.data}</td></tr>`).join('')}</tbody></table></div></div></div>`;
                 } else if (this.currentAcessoTab === 'detalhe') {
                     const cardsData = mentores.map(m => {
                         const units = this.db.unidades.filter(u => u.mentorId == m.id);
