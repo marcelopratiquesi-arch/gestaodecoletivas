@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -68,15 +69,24 @@
         .tab-btn:hover { color: #3b82f6; background-color: #f8fafc; }
         .tab-btn.active { border-bottom-color: #3b82f6; color: #3b82f6; background-color: white; }
 
+        /* NOVOS ESTILOS PARA SUB-ABAS COLORIDAS E MAIORES (V15) */
         .subtab-btn { 
-            @apply flex items-center gap-2 px-4 py-3 text-xs font-bold uppercase rounded-lg border transition-all shadow-sm; 
-            min-width: max-content;
+            @apply flex flex-col items-center justify-center gap-2 px-4 py-4 text-xs font-bold uppercase rounded-xl border-2 transition-all shadow-sm flex-shrink-0 cursor-pointer; 
+            min-width: 110px;
+            height: 90px; /* Mais alto para caber ícone grande */
         }
-        .subtab-btn.active { 
-            @apply bg-slate-800 text-white border-slate-900 shadow-md transform scale-105; 
-        }
+        .subtab-btn i { width: 32px; height: 32px; margin-bottom: 2px; transition: transform 0.2s; } /* Ícone maior */
+        .subtab-btn:hover i { transform: scale(1.1); }
+        
+        /* Cores Específicas por Aba Ativa */
+        .subtab-btn.mentor-active { background-color: #eff6ff; color: #1d4ed8; border-color: #3b82f6; box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.2); }
+        .subtab-btn.modalidade-active { background-color: #fdf2f8; color: #be185d; border-color: #ec4899; box-shadow: 0 4px 6px -1px rgba(236, 72, 153, 0.2); }
+        .subtab-btn.unidade-active { background-color: #ecfeff; color: #0e7490; border-color: #06b6d4; box-shadow: 0 4px 6px -1px rgba(6, 182, 212, 0.2); }
+        .subtab-btn.grade-active { background-color: #f5f3ff; color: #6d28d9; border-color: #8b5cf6; box-shadow: 0 4px 6px -1px rgba(139, 92, 246, 0.2); }
+        .subtab-btn.feriado-active { background-color: #fefce8; color: #a16207; border-color: #eab308; box-shadow: 0 4px 6px -1px rgba(234, 179, 8, 0.2); }
+        
         .subtab-btn.inactive { 
-            @apply bg-white text-gray-500 border-gray-200 hover:bg-gray-50 hover:text-blue-600 hover:border-blue-200; 
+            @apply bg-white text-gray-400 border-gray-100 hover:bg-gray-50 hover:text-gray-600 hover:border-gray-300; 
         }
 
         /* ACESSO MENSAL STYLES */
@@ -168,7 +178,7 @@
                         </div>
                     </div>
 
-                    <!-- KPIS (Cards Renomeados) -->
+                    <!-- KPIS -->
                     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4 mb-6">
                         <div class="glass-panel p-3 border-l-4 border-blue-500 col-span-2 md:col-span-1"><p class="text-[10px] font-bold text-gray-400 uppercase">Valor Mensal</p><p class="text-lg md:text-xl font-bold text-gray-800 truncate" id="kpi-receita">R$ 0,00</p></div>
                         <div class="glass-panel p-3 border-l-4 border-green-500"><p class="text-[10px] font-bold text-gray-400 uppercase">Aulas</p><p class="text-lg font-bold text-gray-800" id="kpi-aulas">0</p></div>
@@ -192,7 +202,7 @@
                             </button>
                         </div>
 
-                        <!-- CONTEÚDO: ABA GERAL (Atualizado) -->
+                        <!-- CONTEÚDO: ABA GERAL -->
                         <div id="conteudo-rel-geral" class="p-0 animate-fade-in">
                             <div class="p-4 bg-gray-50 border-b border-gray-100 flex justify-between items-center">
                                 <h4 class="text-xs font-bold uppercase text-gray-500">Detalhamento Completo</h4>
@@ -218,7 +228,7 @@
                             <div id="relatorio-empty" class="p-8 text-center text-gray-400 hidden">Nenhum dado encontrado.</div>
                         </div>
 
-                        <!-- CONTEÚDO: ABA RANKING (COM ORDENAÇÃO) -->
+                        <!-- CONTEÚDO: ABA RANKING -->
                         <div id="conteudo-rel-ranking" class="hidden animate-fade-in p-6">
                             <h4 class="text-xs font-bold uppercase text-gray-500 mb-4">Ranking de Unidades por Média de Alunos</h4>
                             <div class="overflow-hidden border rounded-lg">
@@ -293,7 +303,7 @@
                 <!-- ACESSO MENSAL (RESTAURADO) -->
                 <div id="view-acesso" class="view-section hidden pb-20"></div>
 
-                <!-- CONFIGURAÇÕES (RESTAURADA COM ABAS E BACKUP) -->
+                <!-- CONFIGURAÇÕES (RESTAURADA E MELHORADA) -->
                 <div id="view-config" class="view-section hidden pb-20">
                     <div class="glass-panel p-4 mb-6">
                         <!-- Navegação Config -->
@@ -308,42 +318,62 @@
                         
                         <!-- Conteudo Cadastro (Sub-abas) -->
                         <div id="subview-cadastro">
-                             <!-- Menu de Sub-abas -->
-                             <div class="flex gap-3 overflow-x-auto mb-6 pb-2 border-b border-gray-100 py-1">
-                                <button onclick="window.app.switchCadastroSubTab('mentor')" id="subtab-cad-mentor" class="subtab-btn active"><i data-lucide="graduation-cap" class="w-4 h-4"></i> Mentores</button>
-                                <button onclick="window.app.switchCadastroSubTab('modalidade')" id="subtab-cad-modalidade" class="subtab-btn inactive"><i data-lucide="dumbbell" class="w-4 h-4"></i> Modalidades</button>
-                                <button onclick="window.app.switchCadastroSubTab('unidade')" id="subtab-cad-unidade" class="subtab-btn inactive"><i data-lucide="map-pin" class="w-4 h-4"></i> Unidades</button>
+                             <!-- Menu de Sub-abas COLORIDAS E MAIORES (V15) -->
+                             <div class="flex gap-3 overflow-x-auto mb-6 pb-2 py-1 scrollbar-hide">
+                                <button onclick="window.app.switchCadastroSubTab('mentor')" id="subtab-cad-mentor" class="subtab-btn mentor-active">
+                                    <i data-lucide="graduation-cap"></i> 
+                                    <span>Mentores</span>
+                                </button>
+                                <button onclick="window.app.switchCadastroSubTab('modalidade')" id="subtab-cad-modalidade" class="subtab-btn inactive">
+                                    <i data-lucide="dumbbell"></i> 
+                                    <span>Modalidades</span>
+                                </button>
+                                <button onclick="window.app.switchCadastroSubTab('unidade')" id="subtab-cad-unidade" class="subtab-btn inactive">
+                                    <i data-lucide="map-pin"></i> 
+                                    <span>Unidades</span>
+                                </button>
+                                <button onclick="window.app.switchCadastroSubTab('grade')" id="subtab-cad-grade" class="subtab-btn inactive">
+                                    <i data-lucide="calendar"></i> 
+                                    <span>Grade Horária</span>
+                                </button>
+                                <button onclick="window.app.switchCadastroSubTab('feriado')" id="subtab-cad-feriado" class="subtab-btn inactive">
+                                    <i data-lucide="calendar-off"></i> 
+                                    <span>Feriados</span>
+                                </button>
                             </div>
 
                              <!-- Mentor -->
                             <div id="view-cad-mentor" class="max-w-2xl admin-only-block mb-8">
-                                <h3 class="font-bold text-gray-800 mb-3 text-xs uppercase bg-gray-50 p-2 rounded">Cadastrar Novo Mentor</h3>
+                                <h3 class="font-bold text-gray-800 mb-3 text-xs uppercase bg-blue-50 text-blue-700 p-2 rounded border border-blue-100">Gerenciar Mentores</h3>
                                 <div class="flex gap-2 mb-3">
                                     <input id="cad-mentor-nome" placeholder="NOME DO MENTOR" class="w-full p-2 border rounded text-xs uppercase">
                                     <input id="cad-mentor-senha" placeholder="SENHA" class="w-24 p-2 border rounded text-xs text-center bg-yellow-50" value="1234">
-                                    <button onclick="window.app.addMentor()" class="bg-gray-800 text-white px-4 rounded text-xs hover:bg-black h-9 font-bold uppercase" id="btn-add-mentor">Adicionar</button>
+                                    <button onclick="window.app.addMentor()" class="bg-blue-600 text-white px-6 rounded text-xs hover:bg-blue-700 h-9 font-bold uppercase shadow-sm" id="btn-add-mentor">Adicionar</button>
+                                    <button onclick="window.app.cancelarEdicao('mentor')" class="hidden bg-gray-400 text-white px-4 rounded text-xs hover:bg-gray-500 h-9 font-bold uppercase" id="btn-cancel-mentor">X</button>
                                 </div>
                                 <input type="hidden" id="edit-mentor-id">
-                                <ul id="lista-mentores" class="space-y-1 max-h-40 overflow-y-auto text-xs uppercase text-gray-600 border rounded p-2 bg-gray-50"></ul>
+                                <ul id="lista-mentores" class="space-y-1 max-h-60 overflow-y-auto text-xs uppercase border rounded p-2 bg-gray-50"></ul>
                             </div>
 
                              <!-- Modalidade -->
                             <div id="view-cad-modalidade" class="max-w-2xl admin-only-block mb-8 hidden">
-                                <h3 class="font-bold text-gray-800 mb-3 text-xs uppercase bg-pink-50 text-pink-700 p-2 rounded border border-pink-100">Cadastrar Modalidade</h3>
+                                <h3 class="font-bold text-gray-800 mb-3 text-xs uppercase bg-pink-50 text-pink-700 p-2 rounded border border-pink-100">Gerenciar Modalidades</h3>
                                 <div class="flex gap-2 mb-3 items-center">
                                     <input id="cad-mod-nome" placeholder="NOME DA MODALIDADE" class="flex-1 p-2 border rounded text-xs uppercase">
                                     <input type="color" id="cad-mod-cor" class="w-9 h-9 rounded cursor-pointer border p-0" value="#3b82f6">
-                                    <button onclick="window.app.addModalidade()" class="bg-pink-600 text-white px-4 py-2 rounded text-xs hover:bg-pink-700 h-9 uppercase font-bold" id="btn-add-modalidade">Salvar</button>
+                                    <button onclick="window.app.addModalidade()" class="bg-pink-600 text-white px-6 py-2 rounded text-xs hover:bg-pink-700 h-9 uppercase font-bold shadow-sm" id="btn-add-modalidade">Salvar</button>
+                                    <button onclick="window.app.cancelarEdicao('modalidade')" class="hidden bg-gray-400 text-white px-4 rounded text-xs hover:bg-gray-500 h-9 font-bold uppercase" id="btn-cancel-modalidade">X</button>
                                 </div>
                                 <input type="hidden" id="edit-modalidade-id">
-                                <ul id="lista-modalidades" class="space-y-1 max-h-40 overflow-y-auto text-xs uppercase border rounded p-2 bg-gray-50"></ul>
+                                <ul id="lista-modalidades" class="space-y-1 max-h-60 overflow-y-auto text-xs uppercase border rounded p-2 bg-gray-50"></ul>
                             </div>
 
                             <!-- Unidade -->
                             <div id="view-cad-unidade" class="grid grid-cols-1 md:grid-cols-2 gap-6 h-full hidden">
                                 <div>
-                                    <h3 class="font-bold text-gray-800 mb-3 text-xs uppercase bg-blue-50 text-blue-700 p-2 rounded border border-blue-100">Nova Unidade</h3>
-                                    <div class="space-y-3 bg-white p-4 border rounded-lg">
+                                    <h3 class="font-bold text-gray-800 mb-3 text-xs uppercase bg-cyan-50 text-cyan-700 p-2 rounded border border-cyan-100">Nova Unidade</h3>
+                                    <div class="space-y-3 bg-white p-4 border rounded-lg shadow-sm">
+                                        <input type="hidden" id="edit-unidade-id">
                                         <select id="cad-unidade-mentor" class="w-full p-2 border rounded text-xs bg-white uppercase"><option value="">MENTOR...</option></select>
                                         <input id="cad-unidade-nome" placeholder="NOME DA UNIDADE" class="w-full p-2 border rounded text-xs uppercase">
                                         <input id="cad-unidade-senha" placeholder="SENHA DE ACESSO" class="w-full p-2 border rounded text-xs h-9 bg-yellow-50 text-center font-bold" value="1234">
@@ -351,7 +381,10 @@
                                             <select id="cad-unidade-pais" class="w-full p-2 border rounded text-xs bg-white uppercase" onchange="window.app.atualizarEstados()"><option value="">PAÍS...</option></select>
                                             <select id="cad-unidade-estado" class="w-full p-2 border rounded text-xs bg-white uppercase"></select>
                                         </div>
-                                        <button onclick="window.app.addUnidade()" class="w-full bg-blue-600 text-white py-2 rounded text-xs font-bold hover:bg-blue-700 h-9 uppercase">SALVAR UNIDADE</button>
+                                        <div class="flex gap-2">
+                                            <button onclick="window.app.addUnidade()" class="w-full bg-cyan-600 text-white py-2 rounded text-xs font-bold hover:bg-cyan-700 h-9 uppercase shadow-sm" id="btn-add-unidade">SALVAR UNIDADE</button>
+                                            <button onclick="window.app.cancelarEdicao('unidade')" class="hidden w-1/4 bg-gray-400 text-white py-2 rounded text-xs font-bold hover:bg-gray-500 h-9 uppercase" id="btn-cancel-unidade">X</button>
+                                        </div>
                                     </div>
                                 </div>
                                 <div>
@@ -360,29 +393,53 @@
                                     <ul id="lista-unidades" class="space-y-2 max-h-[300px] overflow-y-auto text-xs text-gray-600 uppercase border rounded p-2 bg-gray-50"></ul>
                                 </div>
                             </div>
-                        </div>
 
-                        <!-- Conteudo Ferramentas (Sub-abas) -->
-                        <div id="subview-ferramentas" class="hidden">
-                             <div class="flex gap-3 overflow-x-auto mb-6 pb-2 border-b border-gray-100 py-1">
-                                <button onclick="window.app.switchFerramentasSubTab('feriado')" id="subtab-ferr-feriado" class="subtab-btn active"><i data-lucide="calendar-off" class="w-4 h-4"></i> Feriados</button>
-                                <button onclick="window.app.switchFerramentasSubTab('backup')" id="subtab-ferr-backup" class="subtab-btn inactive"><i data-lucide="database" class="w-4 h-4"></i> Backup</button>
-                                <button onclick="window.app.switchFerramentasSubTab('senhas')" id="subtab-ferr-senhas" class="subtab-btn inactive"><i data-lucide="key" class="w-4 h-4"></i> Senhas</button>
+                            <!-- Grade de Horário (Novo e Melhorado) -->
+                            <div id="view-cad-grade" class="hidden">
+                                <div class="bg-violet-50 border border-violet-100 p-4 rounded-lg mb-4 flex justify-between items-center">
+                                    <div>
+                                        <h3 class="font-bold text-violet-800 mb-1 text-xs uppercase">Gestão da Grade de Horários</h3>
+                                        <p class="text-[10px] text-violet-600">Total de Aulas: <span id="grade-count" class="font-bold">0</span></p>
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <button onclick="window.app.abrirModalAdicao()" class="bg-violet-600 text-white px-4 py-2 rounded text-xs font-bold uppercase hover:bg-violet-700 shadow-sm flex items-center gap-2">
+                                            <i data-lucide="plus"></i> Nova Aula
+                                        </button>
+                                        <button onclick="window.app.nav('cronograma')" class="bg-white border border-violet-200 text-violet-700 px-4 py-2 rounded text-xs font-bold uppercase hover:bg-violet-50 shadow-sm flex items-center gap-2">
+                                            <i data-lucide="calendar"></i> Visualizar Grade
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="border rounded-lg overflow-hidden bg-white">
+                                    <ul id="lista-grade-completa" class="divide-y divide-gray-100 max-h-[400px] overflow-y-auto"></ul>
+                                </div>
                             </div>
 
-                             <!-- Feriados -->
-                             <div id="view-ferr-feriado" class="max-w-2xl admin-only-block mb-8">
+                            <!-- Feriados (Movido e Melhorado) -->
+                            <div id="view-cad-feriado" class="max-w-2xl admin-only-block mb-8 hidden">
                                 <h3 class="font-bold text-gray-800 mb-3 text-xs uppercase bg-yellow-50 text-yellow-700 p-2 rounded border border-yellow-100">Gestão de Feriados</h3>
-                                <div class="space-y-2 mb-3 bg-white p-4 border rounded-lg">
+                                <div class="space-y-2 mb-3 bg-white p-4 border rounded-lg shadow-sm">
+                                    <input type="hidden" id="edit-feriado-id">
                                     <input id="feriado-nome" placeholder="NOME DO FERIADO" class="w-full p-2 border rounded text-xs uppercase">
                                     <input type="date" id="feriado-data" class="w-full p-2 border rounded text-xs">
                                     <div class="grid grid-cols-2 gap-2">
                                         <select id="feriado-tipo" class="w-full p-2 border rounded text-xs bg-white uppercase" onchange="window.app.toggleFeriadoLocal()"><option value="global">GLOBAL</option><option value="nacional">NACIONAL</option><option value="estadual">ESTADUAL</option></select>
                                         <select id="feriado-local" class="w-full p-2 border rounded text-xs bg-white uppercase hidden"></select>
                                     </div>
-                                    <button onclick="window.app.addFeriado()" class="w-full bg-yellow-600 text-white py-2 rounded text-xs font-bold hover:bg-yellow-700 h-9 uppercase mt-2">ADICIONAR FERIADO</button>
+                                    <div class="flex gap-2 mt-2">
+                                        <button onclick="window.app.addFeriado()" class="w-full bg-yellow-600 text-white py-2 rounded text-xs font-bold hover:bg-yellow-700 h-9 uppercase" id="btn-add-feriado">ADICIONAR FERIADO</button>
+                                        <button onclick="window.app.cancelarEdicao('feriado')" class="hidden w-1/4 bg-gray-400 text-white py-2 rounded text-xs font-bold hover:bg-gray-500 h-9 uppercase" id="btn-cancel-feriado">X</button>
+                                    </div>
                                 </div>
                                 <ul id="lista-feriados" class="space-y-1 max-h-60 overflow-y-auto text-xs uppercase border rounded p-2 bg-gray-50"></ul>
+                            </div>
+                        </div>
+
+                        <!-- Conteudo Ferramentas -->
+                        <div id="subview-ferramentas" class="hidden">
+                             <div class="flex gap-3 overflow-x-auto mb-6 pb-2 border-b border-gray-100 py-1">
+                                <button onclick="window.app.switchFerramentasSubTab('backup')" id="subtab-ferr-backup" class="subtab-btn active"><i data-lucide="database"></i> Backup</button>
+                                <button onclick="window.app.switchFerramentasSubTab('senhas')" id="subtab-ferr-senhas" class="subtab-btn inactive"><i data-lucide="key"></i> Senhas</button>
                             </div>
                             
                             <!-- Backup -->
@@ -599,16 +656,165 @@
             toggleMenu() { this.mobileMenuOpen = !this.mobileMenuOpen; const sb = document.getElementById('sidebar'); const ov = document.getElementById('mobile-menu-overlay'); if(this.mobileMenuOpen) { sb.classList.remove('-translate-x-full'); ov.classList.remove('hidden'); } else { sb.classList.add('-translate-x-full'); ov.classList.add('hidden'); } }
             
             atualizarListas() {
+                // Métodos de CRUD simplificados para listagem
+                const renderList = (id, list, type) => { 
+                    const el = document.getElementById(id); 
+                    if(el) el.innerHTML = list.map(i => `
+                        <li class="flex justify-between items-center bg-gray-50 p-2 rounded border border-gray-100 mb-1">
+                            <span class="text-xs font-bold text-gray-700">${i.nome}</span>
+                            <div class="flex gap-2">
+                                <button onclick="window.app.editarItem('${type}', '${i.id}')" class="text-blue-500 hover:text-blue-700"><i data-lucide="edit-2" class="w-3 h-3"></i></button>
+                                <button onclick="window.app.deleteItem('${type}', '${i.id}')" class="text-red-500 hover:text-red-700"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+                            </div>
+                        </li>`).join(''); 
+                };
+                
+                // MENTORES
                 const pop = (id, list) => { const el = document.getElementById(id); if(el) el.innerHTML = '<option value="">SELECIONE...</option>' + list.map(i => `<option value="${i.id}">${i.nome}</option>`).join(''); };
-                let units = this.db.unidades; if(this.currentUser.role === 'mentor') units = units.filter(u => u.mentorId == this.currentUser.id); if(this.currentUser.role === 'unidade') units = units.filter(u => u.id == this.currentUser.id); units.sort((a,b) => a.nome.localeCompare(b.nome));
-                pop('cronograma-unidade-select', units); pop('rel-unidade', units); pop('rel-mentor', this.db.mentores); pop('rel-modalidade', this.db.modalidades); pop('cad-unidade-mentor', this.db.mentores); pop('modal-modalidade', this.db.modalidades);
-                const renderList = (id, list, type) => { const el = document.getElementById(id); if(el) el.innerHTML = list.map(i => `<li class="flex justify-between items-center bg-gray-50 p-2 rounded border border-gray-100 mb-1"><span class="text-xs font-bold text-gray-700">${i.nome}</span><div class="flex gap-2"><button onclick="window.app.deleteItem('${type}', '${i.id}')" class="text-red-500 hover:text-red-700"><i data-lucide="trash-2" class="w-3 h-3"></i></button></div></li>`).join(''); };
+                pop('cronograma-unidade-select', this.db.unidades); pop('rel-unidade', this.db.unidades); pop('rel-mentor', this.db.mentores); pop('rel-modalidade', this.db.modalidades); pop('cad-unidade-mentor', this.db.mentores); pop('modal-modalidade', this.db.modalidades);
+                
                 renderList('lista-mentores', this.db.mentores, 'mentores'); 
+                
+                // MODALIDADES
                 const listaModalidades = document.getElementById('lista-modalidades');
-                if(listaModalidades) listaModalidades.innerHTML = this.db.modalidades.map(m => `<li class="flex justify-between items-center bg-gray-50 p-2 rounded border border-gray-100 mb-1" style="border-left: 4px solid ${m.cor}"><span class="text-xs font-bold text-gray-700">${m.nome}</span><div class="flex gap-2"><button onclick="window.app.deleteItem('modalidades', '${m.id}')" class="text-red-500 hover:text-red-700"><i data-lucide="trash-2" class="w-3 h-3"></i></button></div></li>`).join('');
+                if(listaModalidades) listaModalidades.innerHTML = this.db.modalidades.map(m => `
+                    <li class="flex justify-between items-center bg-gray-50 p-2 rounded border border-gray-100 mb-1" style="border-left: 4px solid ${m.cor}">
+                        <span class="text-xs font-bold text-gray-700">${m.nome}</span>
+                        <div class="flex gap-2">
+                            <button onclick="window.app.editarItem('modalidades', '${m.id}')" class="text-blue-500 hover:text-blue-700"><i data-lucide="edit-2" class="w-3 h-3"></i></button>
+                            <button onclick="window.app.deleteItem('modalidades', '${m.id}')" class="text-red-500 hover:text-red-700"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+                        </div>
+                    </li>`).join('');
+                
+                // UNIDADES
                 const listaUnidades = document.getElementById('lista-unidades');
-                if (listaUnidades) listaUnidades.innerHTML = this.db.unidades.sort((a,b)=>a.nome.localeCompare(b.nome)).map(u => `<li class="flex justify-between items-center bg-gray-50 p-2 rounded border border-gray-100 mb-1"><div><div class="text-xs font-bold text-gray-700">${u.nome}</div><div class="text-[10px] text-gray-500">${u.estado}, ${u.pais}</div></div><div class="flex gap-2"><button onclick="window.app.deleteItem('unidades', '${u.id}')" class="text-red-500 hover:text-red-700"><i data-lucide="trash-2" class="w-3 h-3"></i></button></div></li>`).join('');
+                if (listaUnidades) listaUnidades.innerHTML = this.db.unidades.sort((a,b)=>a.nome.localeCompare(b.nome)).map(u => `
+                    <li class="flex justify-between items-center bg-gray-50 p-2 rounded border border-gray-100 mb-1">
+                        <div>
+                            <div class="text-xs font-bold text-gray-700">${u.nome}</div>
+                            <div class="text-[10px] text-gray-500">${u.estado}, ${u.pais}</div>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="window.app.editarItem('unidades', '${u.id}')" class="text-blue-500 hover:text-blue-700"><i data-lucide="edit-2" class="w-3 h-3"></i></button>
+                            <button onclick="window.app.deleteItem('unidades', '${u.id}')" class="text-red-500 hover:text-red-700"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+                        </div>
+                    </li>`).join('');
+                
+                // FERIADOS (Movido para Cadastro)
                 this.renderListaFeriados(); 
+                
+                // GRADE (Novo)
+                this.renderListaGrade();
+                
+                lucide.createIcons();
+            }
+
+            // --- NOVAS FUNÇÕES DE EDIÇÃO (CRUD) ---
+            editarItem(tipo, id) {
+                // Função genérica para preencher os campos e mudar estado para edição
+                if (tipo === 'mentores') {
+                    const item = this.db.mentores.find(m => m.id == id);
+                    if(!item) return;
+                    document.getElementById('cad-mentor-nome').value = item.nome;
+                    document.getElementById('cad-mentor-senha').value = item.senha;
+                    document.getElementById('edit-mentor-id').value = id;
+                    document.getElementById('btn-add-mentor').innerText = 'ATUALIZAR';
+                    document.getElementById('btn-add-mentor').classList.replace('bg-gray-800', 'bg-blue-800'); // Visual
+                    document.getElementById('btn-cancel-mentor').classList.remove('hidden');
+                }
+                else if (tipo === 'modalidades') {
+                    const item = this.db.modalidades.find(m => m.id == id);
+                    if(!item) return;
+                    document.getElementById('cad-mod-nome').value = item.nome;
+                    document.getElementById('cad-mod-cor').value = item.cor;
+                    document.getElementById('edit-modalidade-id').value = id;
+                    document.getElementById('btn-add-modalidade').innerText = 'ATUALIZAR';
+                    document.getElementById('btn-cancel-modalidade').classList.remove('hidden');
+                }
+                else if (tipo === 'unidades') {
+                    const item = this.db.unidades.find(u => u.id == id);
+                    if(!item) return;
+                    document.getElementById('cad-unidade-nome').value = item.nome;
+                    document.getElementById('cad-unidade-mentor').value = item.mentorId;
+                    document.getElementById('cad-unidade-pais').value = item.pais;
+                    this.atualizarEstados(); // Recarrega estados
+                    document.getElementById('cad-unidade-estado').value = item.estado;
+                    document.getElementById('cad-unidade-senha').value = item.senha;
+                    document.getElementById('edit-unidade-id').value = id;
+                    document.getElementById('btn-add-unidade').innerText = 'ATUALIZAR UNIDADE';
+                    document.getElementById('btn-cancel-unidade').classList.remove('hidden');
+                }
+                else if (tipo === 'feriados') {
+                    const item = this.db.feriados.find(f => f.id == id);
+                    if(!item) return;
+                    document.getElementById('feriado-nome').value = item.nome;
+                    document.getElementById('feriado-data').value = item.data;
+                    document.getElementById('feriado-tipo').value = item.tipo;
+                    this.toggleFeriadoLocal(); // Atualiza select local
+                    if(item.local) document.getElementById('feriado-local').value = item.local;
+                    document.getElementById('edit-feriado-id').value = id;
+                    document.getElementById('btn-add-feriado').innerText = 'ATUALIZAR FERIADO';
+                    document.getElementById('btn-cancel-feriado').classList.remove('hidden');
+                }
+                else if (tipo === 'horarios') {
+                    this.abrirModalEdicao(id); // Usa o modal existente
+                }
+            }
+
+            cancelarEdicao(tipo) {
+                // Limpa campos e volta botão para adicionar
+                if (tipo === 'mentor') {
+                    document.getElementById('cad-mentor-nome').value = '';
+                    document.getElementById('cad-mentor-senha').value = '1234';
+                    document.getElementById('edit-mentor-id').value = '';
+                    document.getElementById('btn-add-mentor').innerText = 'Adicionar';
+                    document.getElementById('btn-cancel-mentor').classList.add('hidden');
+                }
+                else if (tipo === 'modalidade') {
+                    document.getElementById('cad-mod-nome').value = '';
+                    document.getElementById('edit-modalidade-id').value = '';
+                    document.getElementById('btn-add-modalidade').innerText = 'Salvar';
+                    document.getElementById('btn-cancel-modalidade').classList.add('hidden');
+                }
+                else if (tipo === 'unidade') {
+                    document.getElementById('cad-unidade-nome').value = '';
+                    document.getElementById('cad-unidade-mentor').value = '';
+                    document.getElementById('edit-unidade-id').value = '';
+                    document.getElementById('btn-add-unidade').innerText = 'SALVAR UNIDADE';
+                    document.getElementById('btn-cancel-unidade').classList.add('hidden');
+                }
+                else if (tipo === 'feriado') {
+                    document.getElementById('feriado-nome').value = '';
+                    document.getElementById('feriado-data').value = '';
+                    document.getElementById('edit-feriado-id').value = '';
+                    document.getElementById('btn-add-feriado').innerText = 'ADICIONAR FERIADO';
+                    document.getElementById('btn-cancel-feriado').classList.add('hidden');
+                }
+            }
+
+            renderListaGrade() {
+                const ul = document.getElementById('lista-grade-completa');
+                const count = document.getElementById('grade-count');
+                if(!ul) return;
+                
+                const aulas = this.db.horarios;
+                count.innerText = `${aulas.length} aulas`;
+                
+                ul.innerHTML = aulas.sort((a,b) => b.id - a.id).slice(0, 50).map(a => { // Mostra ultimas 50
+                    const unid = this.db.unidades.find(u => u.id == a.unidadeId)?.nome || '???';
+                    const mod = this.db.modalidades.find(m => m.id == a.modalidadeId)?.nome || '???';
+                    return `
+                    <li class="p-3 hover:bg-gray-50 flex justify-between items-center group">
+                        <div>
+                            <div class="text-xs font-bold text-gray-700">${unid} - ${mod}</div>
+                            <div class="text-[10px] text-gray-500">${a.professor} | ${a.hora} | ${a.dias.join(', ')}</div>
+                        </div>
+                        <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onclick="window.app.editarItem('horarios', '${a.id}')" class="text-blue-500 hover:text-blue-700"><i data-lucide="edit-2" class="w-3 h-3"></i></button>
+                            <button onclick="window.app.deleteItem('horarios', '${a.id}')" class="text-red-500 hover:text-red-700"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+                        </div>
+                    </li>`;
+                }).join('') + (aulas.length > 50 ? '<li class="p-2 text-center text-[10px] text-gray-400">Mostrando últimas 50...</li>' : '');
             }
 
             // --- RENDER HISTORICO ---
@@ -909,18 +1115,81 @@
 
             // --- ADMIN E FERIADOS GLOBAIS ---
             toggleFeriadoLocal() { const tipo = document.getElementById('feriado-tipo').value; const localSelect = document.getElementById('feriado-local'); localSelect.innerHTML = ''; if (tipo === 'global') localSelect.classList.add('hidden'); else { localSelect.classList.remove('hidden'); const lista = tipo === 'nacional' ? Object.keys(this.constantes.paisesEstados) : Object.values(this.constantes.paisesEstados).flat(); localSelect.innerHTML = [...new Set(lista)].map(p => `<option value="${p}">${p}</option>`).join(''); } }
-            addFeriado() { const nome = document.getElementById('feriado-nome').value.trim().toUpperCase(); const dataInicio = document.getElementById('feriado-data').value; if(!nome || !dataInicio) return alert('PREENCHA NOME E DATA!'); this.db.feriados.push({ id: Date.now(), nome, data: dataInicio, tipo: document.getElementById('feriado-tipo').value, local: document.getElementById('feriado-local').value }); this.salvarDados(); this.renderListaFeriados(); document.getElementById('feriado-nome').value = ''; }
-            renderListaFeriados() { const lista = document.getElementById('lista-feriados'); if(lista) lista.innerHTML = this.db.feriados.map(f => `<li class="flex justify-between border-b p-1 text-xs"><span>${f.nome} (${f.data})</span><button class="text-red-500" onclick="window.app.remover('feriados', ${f.id})">x</button></li>`).join(''); }
+            
+            // --- UPDATED ADD/UPDATE FUNCTIONS ---
+            addFeriado() { 
+                const id = document.getElementById('edit-feriado-id').value;
+                const nome = document.getElementById('feriado-nome').value.trim().toUpperCase(); 
+                const dataInicio = document.getElementById('feriado-data').value; 
+                if(!nome || !dataInicio) return alert('PREENCHA NOME E DATA!'); 
+                
+                if (id) {
+                    // Update mode
+                    const idx = this.db.feriados.findIndex(f => f.id == id);
+                    if (idx > -1) {
+                        this.db.feriados[idx] = { 
+                            ...this.db.feriados[idx], 
+                            nome, 
+                            data: dataInicio, 
+                            tipo: document.getElementById('feriado-tipo').value, 
+                            local: document.getElementById('feriado-local').value 
+                        };
+                        this.notify('success', 'Feriado atualizado!');
+                        this.cancelarEdicao('feriado');
+                    }
+                } else {
+                    // Add mode
+                    this.db.feriados.push({ 
+                        id: Date.now(), 
+                        nome, 
+                        data: dataInicio, 
+                        tipo: document.getElementById('feriado-tipo').value, 
+                        local: document.getElementById('feriado-local').value 
+                    });
+                    this.notify('success', 'Feriado cadastrado!');
+                    document.getElementById('feriado-nome').value = '';
+                }
+                this.salvarDados(); 
+                this.renderListaFeriados(); 
+            }
+            renderListaFeriados() { 
+                const lista = document.getElementById('lista-feriados'); 
+                if(lista) lista.innerHTML = this.db.feriados.map(f => `
+                    <li class="flex justify-between items-center border-b p-2 text-xs">
+                        <span>${f.nome} (${f.data})</span>
+                        <div class="flex gap-2">
+                            <button onclick="window.app.editarItem('feriados', '${f.id}')" class="text-blue-500 hover:text-blue-700"><i data-lucide="edit-2" class="w-3 h-3"></i></button>
+                            <button class="text-red-500" onclick="window.app.deleteItem('feriados', '${f.id}')"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+                        </div>
+                    </li>`).join(''); 
+                lucide.createIcons();
+            }
 
             // --- OUTRAS FUNÇÕES DO SISTEMA (CRONOGRAMA, CADASTRO, ETC) ---
             switchConfigTab(tab) {
                 const tabCadastro = document.getElementById('tab-cadastro'); const tabFerramentas = document.getElementById('tab-ferramentas');
                 const viewCadastro = document.getElementById('subview-cadastro'); const viewFerramentas = document.getElementById('subview-ferramentas');
                 if (tab === 'cadastro') { tabCadastro?.classList.add('active', 'text-blue-600', 'border-blue-600'); tabCadastro?.classList.remove('text-gray-500'); tabFerramentas?.classList.remove('active', 'text-blue-600', 'border-blue-600'); tabFerramentas?.classList.add('text-gray-500'); viewCadastro?.classList.remove('hidden'); viewFerramentas?.classList.add('hidden'); this.switchCadastroSubTab('mentor'); } 
-                else { tabFerramentas?.classList.add('active', 'text-blue-600', 'border-blue-600'); tabFerramentas?.classList.remove('text-gray-500'); tabCadastro?.classList.remove('active', 'text-blue-600', 'border-blue-600'); tabCadastro?.classList.add('text-gray-500'); viewFerramentas?.classList.remove('hidden'); viewCadastro?.classList.add('hidden'); this.switchFerramentasSubTab('feriado'); }
+                else { tabFerramentas?.classList.add('active', 'text-blue-600', 'border-blue-600'); tabFerramentas?.classList.remove('text-gray-500'); tabCadastro?.classList.remove('active', 'text-blue-600', 'border-blue-600'); tabCadastro?.classList.add('text-gray-500'); viewFerramentas?.classList.remove('hidden'); viewCadastro?.classList.add('hidden'); this.switchFerramentasSubTab('backup'); }
             }
-            switchCadastroSubTab(subTab) { ['mentor', 'modalidade', 'unidade'].forEach(t => { const btn = document.getElementById(`subtab-cad-${t}`); const content = document.getElementById(`view-cad-${t}`); if (t === subTab) { btn.classList.add('active'); btn.classList.remove('inactive'); content.classList.remove('hidden'); } else { btn.classList.remove('active'); btn.classList.add('inactive'); content.classList.add('hidden'); } }); }
-            switchFerramentasSubTab(subTab) { ['feriado', 'backup', 'senhas'].forEach(t => { const btn = document.getElementById(`subtab-ferr-${t}`); const content = document.getElementById(`view-ferr-${t}`); if (t === subTab) { btn.classList.add('active'); btn.classList.remove('inactive'); content.classList.remove('hidden'); } else { btn.classList.remove('active'); btn.classList.add('inactive'); content.classList.add('hidden'); } }); }
+            switchCadastroSubTab(subTab) { 
+                ['mentor', 'modalidade', 'unidade', 'grade', 'feriado'].forEach(t => { 
+                    const btn = document.getElementById(`subtab-cad-${t}`); 
+                    const content = document.getElementById(`view-cad-${t}`); 
+                    if (t === subTab) { 
+                        btn.classList.add(`${t}-active`, 'shadow-md', 'transform', 'scale-105'); 
+                        btn.classList.remove('inactive'); 
+                        content.classList.remove('hidden'); 
+                    } else { 
+                        btn.classList.remove(`${t}-active`, 'shadow-md', 'transform', 'scale-105'); 
+                        btn.classList.add('inactive'); 
+                        content.classList.add('hidden'); 
+                    } 
+                }); 
+                if(subTab === 'grade') this.renderListaGrade();
+                if(subTab === 'feriado') this.renderListaFeriados();
+            }
+            switchFerramentasSubTab(subTab) { ['backup', 'senhas'].forEach(t => { const btn = document.getElementById(`subtab-ferr-${t}`); const content = document.getElementById(`view-ferr-${t}`); if (t === subTab) { btn.classList.add('active'); btn.classList.remove('inactive'); content.classList.remove('hidden'); } else { btn.classList.remove('active'); btn.classList.add('inactive'); content.classList.add('hidden'); } }); }
             
             // --- CRONOGRAMA & MODAL ---
             setupDraggableModal() {
@@ -1069,9 +1338,79 @@
             excluirViaModal() { if(!confirm('Deseja excluir esta aula?')) return; const id = document.getElementById('modal-id').value; this.db.horarios = this.db.horarios.filter(h => h.id != id); this.salvarDados(); this.renderCronograma(); this.fecharModal(); this.notify('success', 'Aula removida!'); }
             fecharModal() { document.getElementById('modal-editor').classList.add('hidden'); }
             deleteItem(type, id) { if (confirm('Tem certeza que deseja excluir?')) { this.db[type] = this.db[type].filter(i => i.id != id); if (type === 'unidades') { this.db.horarios = this.db.horarios.filter(h => h.unidadeId != id); } this.salvarDados(); this.atualizarListas(); this.notify('success', 'Item excluído com sucesso!'); } }
-            addMentor() { const nome = document.getElementById('cad-mentor-nome').value.toUpperCase(); const senha = document.getElementById('cad-mentor-senha').value; if (nome) { this.db.mentores.push({id: Date.now(), nome, senha: String(senha)}); this.notify('success', 'Mentor cadastrado!'); this.salvarDados(); this.atualizarListas(); document.getElementById('cad-mentor-nome').value = ''; } }
-            addUnidade() { const nome = document.getElementById('cad-unidade-nome').value.toUpperCase(); const mentor = document.getElementById('cad-unidade-mentor').value; const senha = document.getElementById('cad-unidade-senha').value; const pais = document.getElementById('cad-unidade-pais').value; const estado = document.getElementById('cad-unidade-estado').value; if(nome && mentor && pais && estado) { this.db.unidades.push({id: Date.now(), nome, mentorId: mentor, senha: String(senha), pais, estado }); this.salvarDados(); this.atualizarListas(); document.getElementById('cad-unidade-nome').value = ''; } else { alert('Preencha todos os campos da unidade'); } }
-            addModalidade() { const nome = document.getElementById('cad-mod-nome').value.toUpperCase(); const cor = document.getElementById('cad-mod-cor').value; if (nome) { this.db.modalidades.push({id: Date.now(), nome, cor}); this.notify('success', 'Modalidade cadastrada!'); this.salvarDados(); this.atualizarListas(); document.getElementById('cad-mod-nome').value = ''; } }
+            
+            // --- ATUALIZADO: FUNÇÕES DE CADASTRO COM SUPORTE A EDIÇÃO ---
+            addMentor() { 
+                const id = document.getElementById('edit-mentor-id').value;
+                const nome = document.getElementById('cad-mentor-nome').value.toUpperCase(); 
+                const senha = document.getElementById('cad-mentor-senha').value; 
+                if (!nome) return;
+
+                if (id) { // Edição
+                    const idx = this.db.mentores.findIndex(m => m.id == id);
+                    if(idx > -1) {
+                        this.db.mentores[idx] = { ...this.db.mentores[idx], nome, senha: String(senha) };
+                        this.notify('success', 'Mentor atualizado!');
+                        this.cancelarEdicao('mentor');
+                    }
+                } else { // Novo
+                    this.db.mentores.push({id: Date.now(), nome, senha: String(senha)}); 
+                    this.notify('success', 'Mentor cadastrado!');
+                    document.getElementById('cad-mentor-nome').value = ''; 
+                }
+                this.salvarDados(); 
+                this.atualizarListas(); 
+            }
+
+            addUnidade() { 
+                const id = document.getElementById('edit-unidade-id').value;
+                const nome = document.getElementById('cad-unidade-nome').value.toUpperCase(); 
+                const mentor = document.getElementById('cad-unidade-mentor').value; 
+                const senha = document.getElementById('cad-unidade-senha').value; 
+                const pais = document.getElementById('cad-unidade-pais').value; 
+                const estado = document.getElementById('cad-unidade-estado').value; 
+                
+                if(nome && mentor && pais && estado) { 
+                    if(id) { // Edição
+                        const idx = this.db.unidades.findIndex(u => u.id == id);
+                        if(idx > -1) {
+                            this.db.unidades[idx] = { ...this.db.unidades[idx], nome, mentorId: mentor, senha: String(senha), pais, estado };
+                            this.notify('success', 'Unidade atualizada!');
+                            this.cancelarEdicao('unidade');
+                        }
+                    } else { // Novo
+                        this.db.unidades.push({id: Date.now(), nome, mentorId: mentor, senha: String(senha), pais, estado }); 
+                        this.notify('success', 'Unidade cadastrada!');
+                        document.getElementById('cad-unidade-nome').value = ''; 
+                    }
+                    this.salvarDados(); 
+                    this.atualizarListas(); 
+                } else { alert('Preencha todos os campos da unidade'); } 
+            }
+
+            addModalidade() { 
+                const id = document.getElementById('edit-modalidade-id').value;
+                const nome = document.getElementById('cad-mod-nome').value.toUpperCase(); 
+                const cor = document.getElementById('cad-mod-cor').value; 
+                
+                if (nome) { 
+                    if (id) { // Edição
+                        const idx = this.db.modalidades.findIndex(m => m.id == id);
+                        if (idx > -1) {
+                            this.db.modalidades[idx] = { ...this.db.modalidades[idx], nome, cor };
+                            this.notify('success', 'Modalidade atualizada!');
+                            this.cancelarEdicao('modalidade');
+                        }
+                    } else { // Novo
+                        this.db.modalidades.push({id: Date.now(), nome, cor}); 
+                        this.notify('success', 'Modalidade cadastrada!');
+                        document.getElementById('cad-mod-nome').value = ''; 
+                    }
+                    this.salvarDados(); 
+                    this.atualizarListas(); 
+                } 
+            }
+
             remover(tipo, id) { if(confirm('Tem certeza?')) { this.db[tipo] = this.db[tipo].filter(i => i.id != id); if(tipo === 'unidades') this.db.horarios = this.db.horarios.filter(h => h.unidadeId != id); this.salvarDados(); this.atualizarListas(); this.renderCronograma(); } }
             salvarBackup() { const data = JSON.stringify(this.db, null, 2); const blob = new Blob([data], {type: 'application/json'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `backup_pratique_${new Date().toISOString().slice(0,10)}.json`; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); this.notify('success', 'BACKUP GERADO!'); }
             resetarBancoDeDados() { if(confirm('ATENÇÃO: ISSO APAGARÁ TUDO! TEM CERTEZA?')) { localStorage.removeItem('pratique_global_db_v5'); location.reload(); } }
