@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -56,40 +55,21 @@
         .status-sync { background-color: #f59e0b; animation: pulse 1s infinite; }
         .login-bg { background-color: #0f172a; background-image: radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%), radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%); }
         
-        /* ESTILOS ESPECÍFICOS PARA O NOVO RELATÓRIO E CONFIG */
-        .tab-btn {
-            padding: 10px 20px;
-            font-weight: 600;
-            font-size: 0.85rem;
-            text-transform: uppercase;
-            border-bottom: 2px solid transparent;
-            color: #64748b;
-            transition: all 0.3s;
-        }
+        .tab-btn { padding: 10px 20px; font-weight: 600; font-size: 0.85rem; text-transform: uppercase; border-bottom: 2px solid transparent; color: #64748b; transition: all 0.3s; }
         .tab-btn:hover { color: #3b82f6; background-color: #f8fafc; }
         .tab-btn.active { border-bottom-color: #3b82f6; color: #3b82f6; background-color: white; }
 
-        /* NOVOS ESTILOS PARA SUB-ABAS COLORIDAS E MAIORES (V15) */
-        .subtab-btn { 
-            @apply flex flex-col items-center justify-center gap-2 px-4 py-4 text-xs font-bold uppercase rounded-xl border-2 transition-all shadow-sm flex-shrink-0 cursor-pointer; 
-            min-width: 110px;
-            height: 90px; /* Mais alto para caber ícone grande */
-        }
-        .subtab-btn i { width: 32px; height: 32px; margin-bottom: 2px; transition: transform 0.2s; } /* Ícone maior */
+        .subtab-btn { @apply flex flex-col items-center justify-center gap-2 px-4 py-4 text-xs font-bold uppercase rounded-xl border-2 transition-all shadow-sm flex-shrink-0 cursor-pointer; min-width: 110px; height: 90px; }
+        .subtab-btn i { width: 32px; height: 32px; margin-bottom: 2px; transition: transform 0.2s; }
         .subtab-btn:hover i { transform: scale(1.1); }
         
-        /* Cores Específicas por Aba Ativa */
         .subtab-btn.mentor-active { background-color: #eff6ff; color: #1d4ed8; border-color: #3b82f6; box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.2); }
         .subtab-btn.modalidade-active { background-color: #fdf2f8; color: #be185d; border-color: #ec4899; box-shadow: 0 4px 6px -1px rgba(236, 72, 153, 0.2); }
         .subtab-btn.unidade-active { background-color: #ecfeff; color: #0e7490; border-color: #06b6d4; box-shadow: 0 4px 6px -1px rgba(6, 182, 212, 0.2); }
         .subtab-btn.grade-active { background-color: #f5f3ff; color: #6d28d9; border-color: #8b5cf6; box-shadow: 0 4px 6px -1px rgba(139, 92, 246, 0.2); }
         .subtab-btn.feriado-active { background-color: #fefce8; color: #a16207; border-color: #eab308; box-shadow: 0 4px 6px -1px rgba(234, 179, 8, 0.2); }
         
-        .subtab-btn.inactive { 
-            @apply bg-white text-gray-400 border-gray-100 hover:bg-gray-50 hover:text-gray-600 hover:border-gray-300; 
-        }
-
-        /* ACESSO MENSAL STYLES */
+        .subtab-btn.inactive { @apply bg-white text-gray-400 border-gray-100 hover:bg-gray-50 hover:text-gray-600 hover:border-gray-300; }
         .acesso-tab-btn { white-space: nowrap; padding: 1rem 0.25rem; border-bottom-width: 2px; font-weight: 500; font-size: 0.875rem; display: flex; align-items: center; gap: 0.5rem; transition: color 0.2s, border-color 0.2s; }
         .acesso-tab-btn.active { border-color: #6366f1; color: #4f46e5; }
         .acesso-tab-btn.inactive { border-color: transparent; color: #64748b; }
@@ -180,8 +160,8 @@
 
                     <!-- KPIS -->
                     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4 mb-6">
-                        <div class="glass-panel p-3 border-l-4 border-blue-500 col-span-2 md:col-span-1"><p class="text-[10px] font-bold text-gray-400 uppercase">Valor Mensal</p><p class="text-lg md:text-xl font-bold text-gray-800 truncate" id="kpi-receita">R$ 0,00</p></div>
-                        <div class="glass-panel p-3 border-l-4 border-green-500"><p class="text-[10px] font-bold text-gray-400 uppercase">Aulas</p><p class="text-lg font-bold text-gray-800" id="kpi-aulas">0</p></div>
+                        <div class="glass-panel p-3 border-l-4 border-blue-500 col-span-2 md:col-span-1"><p class="text-[10px] font-bold text-gray-400 uppercase">Valor Mensal (Real)</p><p class="text-lg md:text-xl font-bold text-gray-800 truncate" id="kpi-receita">R$ 0,00</p></div>
+                        <div class="glass-panel p-3 border-l-4 border-green-500"><p class="text-[10px] font-bold text-gray-400 uppercase">Aulas Realizadas</p><p class="text-lg font-bold text-gray-800" id="kpi-aulas">0</p></div>
                         <div class="glass-panel p-3 border-l-4 border-orange-500"><p class="text-[10px] font-bold text-gray-400 uppercase">Média Alunos</p><p class="text-lg font-bold text-gray-800" id="kpi-media-alunos">0</p></div>
                         <div class="glass-panel p-3 border-l-4 border-cyan-500"><p class="text-[10px] font-bold text-gray-400 uppercase">Valor Médio</p><p class="text-lg font-bold text-gray-800" id="kpi-media-valor">R$ 0,00</p></div>
                         <div class="glass-panel p-3 border-l-4 border-purple-500"><p class="text-[10px] font-bold text-gray-400 uppercase">Canceladas</p><p class="text-lg font-bold text-purple-600" id="kpi-canceladas">0</p></div>
@@ -312,7 +292,7 @@
                                 <i data-lucide="folder-plus" class="w-4 h-4 inline mr-1"></i> Cadastros
                             </button>
                             <button onclick="window.app.switchConfigTab('ferramentas')" id="tab-ferramentas" class="config-tab pb-2 px-4 text-sm font-bold uppercase text-gray-500 hover:text-blue-600">
-                                <i data-lucide="tool" class="w-4 h-4 inline mr-1"></i> Ferramentas
+                                <i data-lucide="shield" class="w-4 h-4 inline mr-1"></i> Segurança do Sistema
                             </button>
                         </div>
                         
@@ -394,7 +374,7 @@
                                 </div>
                             </div>
 
-                            <!-- Grade de Horário (Novo e Melhorado) -->
+                            <!-- Grade de Horário -->
                             <div id="view-cad-grade" class="hidden">
                                 <div class="bg-violet-50 border border-violet-100 p-4 rounded-lg mb-4 flex justify-between items-center">
                                     <div>
@@ -415,19 +395,54 @@
                                 </div>
                             </div>
 
-                            <!-- Feriados (Movido e Melhorado) -->
+                            <!-- Feriados (MODIFICADO PARA PERÍODOS) -->
                             <div id="view-cad-feriado" class="max-w-2xl admin-only-block mb-8 hidden">
                                 <h3 class="font-bold text-gray-800 mb-3 text-xs uppercase bg-yellow-50 text-yellow-700 p-2 rounded border border-yellow-100">Gestão de Feriados</h3>
-                                <div class="space-y-2 mb-3 bg-white p-4 border rounded-lg shadow-sm">
+                                <div class="space-y-3 mb-3 bg-white p-4 border rounded-lg shadow-sm">
                                     <input type="hidden" id="edit-feriado-id">
-                                    <input id="feriado-nome" placeholder="NOME DO FERIADO" class="w-full p-2 border rounded text-xs uppercase">
-                                    <input type="date" id="feriado-data" class="w-full p-2 border rounded text-xs">
-                                    <div class="grid grid-cols-2 gap-2">
-                                        <select id="feriado-tipo" class="w-full p-2 border rounded text-xs bg-white uppercase" onchange="window.app.toggleFeriadoLocal()"><option value="global">GLOBAL</option><option value="nacional">NACIONAL</option><option value="estadual">ESTADUAL</option></select>
-                                        <select id="feriado-local" class="w-full p-2 border rounded text-xs bg-white uppercase hidden"></select>
+                                    
+                                    <div class="grid grid-cols-2 gap-3">
+                                         <div>
+                                            <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Nome do Feriado</label>
+                                            <input id="feriado-nome" placeholder="EX: CARNAVAL" class="w-full p-2 border rounded text-xs uppercase">
+                                         </div>
+                                         <div>
+                                            <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Tipo de Data</label>
+                                            <select id="feriado-modo-data" class="w-full p-2 border rounded text-xs bg-white uppercase" onchange="window.app.toggleFeriadoDataMode()">
+                                                <option value="unica">Data Única</option>
+                                                <option value="periodo">Período (Recesso)</option>
+                                            </select>
+                                         </div>
                                     </div>
-                                    <div class="flex gap-2 mt-2">
-                                        <button onclick="window.app.addFeriado()" class="w-full bg-yellow-600 text-white py-2 rounded text-xs font-bold hover:bg-yellow-700 h-9 uppercase" id="btn-add-feriado">ADICIONAR FERIADO</button>
+
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1" id="label-data-inicio">Data</label>
+                                            <input type="date" id="feriado-data" class="w-full p-2 border rounded text-xs">
+                                        </div>
+                                        <div id="container-data-fim" class="hidden">
+                                            <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Data Final</label>
+                                            <input type="date" id="feriado-data-fim" class="w-full p-2 border rounded text-xs">
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Abrangência</label>
+                                            <select id="feriado-tipo" class="w-full p-2 border rounded text-xs bg-white uppercase" onchange="window.app.toggleFeriadoLocal()">
+                                                <option value="global">Global (Todas Unidades)</option>
+                                                <option value="nacional">Nacional (Brasil)</option>
+                                                <option value="estadual">Estadual</option>
+                                            </select>
+                                        </div>
+                                        <div id="container-local" class="hidden">
+                                            <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Selecione o Local</label>
+                                            <select id="feriado-local" class="w-full p-2 border rounded text-xs bg-white uppercase"></select>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="flex gap-2 mt-4 pt-3 border-t border-gray-100">
+                                        <button onclick="window.app.addFeriado()" class="w-full bg-yellow-600 text-white py-2 rounded text-xs font-bold hover:bg-yellow-700 h-9 uppercase" id="btn-add-feriado">SALVAR FERIADO</button>
                                         <button onclick="window.app.cancelarEdicao('feriado')" class="hidden w-1/4 bg-gray-400 text-white py-2 rounded text-xs font-bold hover:bg-gray-500 h-9 uppercase" id="btn-cancel-feriado">X</button>
                                     </div>
                                 </div>
@@ -435,7 +450,7 @@
                             </div>
                         </div>
 
-                        <!-- Conteudo Ferramentas -->
+                        <!-- Conteudo Ferramentas (RENOMEADO) -->
                         <div id="subview-ferramentas" class="hidden">
                              <div class="flex gap-3 overflow-x-auto mb-6 pb-2 border-b border-gray-100 py-1">
                                 <button onclick="window.app.switchFerramentasSubTab('backup')" id="subtab-ferr-backup" class="subtab-btn active"><i data-lucide="database"></i> Backup</button>
@@ -752,6 +767,14 @@
                     document.getElementById('feriado-tipo').value = item.tipo;
                     this.toggleFeriadoLocal(); // Atualiza select local
                     if(item.local) document.getElementById('feriado-local').value = item.local;
+                    
+                    // NEW: Data Mode & End Date
+                    document.getElementById('feriado-modo-data').value = item.modo || 'unica';
+                    this.toggleFeriadoDataMode();
+                    if(item.modo === 'periodo' && item.dataFim) {
+                        document.getElementById('feriado-data-fim').value = item.dataFim;
+                    }
+
                     document.getElementById('edit-feriado-id').value = id;
                     document.getElementById('btn-add-feriado').innerText = 'ATUALIZAR FERIADO';
                     document.getElementById('btn-cancel-feriado').classList.remove('hidden');
@@ -786,9 +809,12 @@
                 else if (tipo === 'feriado') {
                     document.getElementById('feriado-nome').value = '';
                     document.getElementById('feriado-data').value = '';
+                    document.getElementById('feriado-data-fim').value = '';
                     document.getElementById('edit-feriado-id').value = '';
                     document.getElementById('btn-add-feriado').innerText = 'ADICIONAR FERIADO';
                     document.getElementById('btn-cancel-feriado').classList.add('hidden');
+                    document.getElementById('feriado-modo-data').value = 'unica';
+                    this.toggleFeriadoDataMode();
                 }
             }
 
@@ -847,10 +873,13 @@
             gerarRelatorio() {
                 // Passo 1: Filtrar os dados
                 const dados = this.filtrarDadosRelatorio();
-                this.atualizarKPIs(dados);
+                // Usa o novo motor de cálculo unificado
+                const financeiro = this.calcularFinanceiro(dados);
+                
+                this.atualizarKPIs(dados, financeiro);
                 this.renderizarAbaGeral(dados);
                 this.renderizarAbaRanking(dados);
-                this.renderizarAbaFeriados(dados);
+                this.renderizarAbaFeriados(financeiro); // Passa o resultado financeiro já calculado
                 this.atualizarVisualAbas();
             }
 
@@ -877,16 +906,17 @@
                 });
             }
 
-            atualizarKPIs(dados) {
-                const totalReceita = dados.reduce((acc, h) => acc + (h.valor * 4), 0);
-                const totalAulas = dados.reduce((acc, h) => acc + (h.dias.length * 4), 0);
+            atualizarKPIs(dados, financeiro) {
+                // Usa os dados calculados pelo motor financeiro
                 const mediaAlunos = dados.length > 0 ? Math.round(dados.reduce((acc, h) => acc + (parseInt(h.mediaAlunos)||0), 0) / dados.length) : 0;
                 const mediaValor = dados.length > 0 ? (dados.reduce((acc, h) => acc + (parseFloat(h.valor)||0), 0) / dados.length) : 0;
                 
-                document.getElementById('kpi-receita').innerText = `R$ ${totalReceita.toFixed(2)}`;
-                document.getElementById('kpi-aulas').innerText = totalAulas;
+                document.getElementById('kpi-receita').innerText = `R$ ${financeiro.receitaTotal.toFixed(2)}`;
+                document.getElementById('kpi-aulas').innerText = financeiro.aulasTotal;
                 document.getElementById('kpi-media-alunos').innerText = mediaAlunos;
                 document.getElementById('kpi-media-valor').innerText = `R$ ${mediaValor.toFixed(2)}`;
+                document.getElementById('kpi-canceladas').innerText = financeiro.listaCancelamentos.length;
+                document.getElementById('kpi-unidades-count').innerText = [...new Set(dados.map(h => h.unidadeId))].length;
             }
 
             trocarAbaRelatorio(aba) {
@@ -1038,60 +1068,19 @@
                 }).join('');
             }
 
-            renderizarAbaFeriados(dados) {
-                const mesSelecionado = parseInt(document.getElementById('rel-mes').value);
-                const anoSelecionado = parseInt(document.getElementById('rel-ano').value);
-
-                const feriadosDoMes = [
-                    ...this.constantes.feriadosFixos.filter(f => f.m === mesSelecionado).map(f => ({...f, dataIso: `${anoSelecionado}-${String(f.m+1).padStart(2,'0')}-${String(f.d).padStart(2,'0')}`})),
-                    ...(this.db.feriados || []).filter(f => {
-                        const dMes = parseInt(f.data.split('-')[1]) - 1; 
-                        return dMes === mesSelecionado;
-                    }).map(f => ({nome: f.nome, dataIso: f.data, tipo: f.tipo, local: f.local}))
-                ];
-
-                const listaCancelamentos = [];
-                let totalEconomizado = 0;
-
-                feriadosDoMes.forEach(feriado => {
-                    const [y, m, d] = feriado.dataIso.split('-');
-                    const dateObj = new Date(y, m-1, d);
-                    const diaSemanaNum = dateObj.getDay(); 
-                    const diasMap = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
-                    const nomeDiaSemana = diasMap[diaSemanaNum];
-
-                    dados.forEach(aula => {
-                        if(aula.dias.includes(nomeDiaSemana)) {
-                            const unidade = this.db.unidades.find(u => u.id == aula.unidadeId);
-                            let impacta = true;
-                            if(feriado.tipo === 'nacional' && unidade.pais !== feriado.local) impacta = false;
-                            if(feriado.tipo === 'estadual' && unidade.estado !== feriado.local) impacta = false;
-
-                            if(impacta) {
-                                totalEconomizado += (aula.valor || 0);
-                                listaCancelamentos.push({
-                                    data: `${d}/${m}`,
-                                    feriado: feriado.nome,
-                                    unidade: unidade.nome,
-                                    aula: `${aula.professor} (${nomeDiaSemana})`,
-                                    valor: aula.valor
-                                });
-                            }
-                        }
-                    });
-                });
-
-                document.getElementById('total-economizado').innerText = `R$ ${totalEconomizado.toFixed(2)}`;
-                document.getElementById('kpi-canceladas').innerText = listaCancelamentos.length;
+            renderizarAbaFeriados(financeiro) {
+                // Agora recebe o objeto financeiro já calculado
+                document.getElementById('total-economizado').innerText = `R$ ${financeiro.economiaFeriados.toFixed(2)}`;
                 
                 const tbody = document.getElementById('body-feriados');
                 const empty = document.getElementById('feriado-empty');
-                if(listaCancelamentos.length === 0) {
+                
+                if(financeiro.listaCancelamentos.length === 0) {
                     tbody.innerHTML = '';
                     empty.classList.remove('hidden');
                 } else {
                     empty.classList.add('hidden');
-                    tbody.innerHTML = listaCancelamentos.map(c => `
+                    tbody.innerHTML = financeiro.listaCancelamentos.map(c => `
                         <tr class="border-b hover:bg-white transition-colors">
                             <td class="p-3 font-bold text-red-600">${c.data}</td>
                             <td class="p-3 text-gray-700">${c.feriado}</td>
@@ -1115,37 +1104,49 @@
 
             // --- ADMIN E FERIADOS GLOBAIS ---
             toggleFeriadoLocal() { const tipo = document.getElementById('feriado-tipo').value; const localSelect = document.getElementById('feriado-local'); localSelect.innerHTML = ''; if (tipo === 'global') localSelect.classList.add('hidden'); else { localSelect.classList.remove('hidden'); const lista = tipo === 'nacional' ? Object.keys(this.constantes.paisesEstados) : Object.values(this.constantes.paisesEstados).flat(); localSelect.innerHTML = [...new Set(lista)].map(p => `<option value="${p}">${p}</option>`).join(''); } }
-            
+            toggleFeriadoDataMode() {
+                const modo = document.getElementById('feriado-modo-data').value;
+                const containerFim = document.getElementById('container-data-fim');
+                const labelInicio = document.getElementById('label-data-inicio');
+                if (modo === 'periodo') {
+                    containerFim.classList.remove('hidden');
+                    labelInicio.innerText = 'DATA INICIAL';
+                } else {
+                    containerFim.classList.add('hidden');
+                    labelInicio.innerText = 'DATA';
+                }
+            }
+
             // --- UPDATED ADD/UPDATE FUNCTIONS ---
             addFeriado() { 
                 const id = document.getElementById('edit-feriado-id').value;
                 const nome = document.getElementById('feriado-nome').value.trim().toUpperCase(); 
                 const dataInicio = document.getElementById('feriado-data').value; 
-                if(!nome || !dataInicio) return alert('PREENCHA NOME E DATA!'); 
+                const modo = document.getElementById('feriado-modo-data').value;
+                const dataFim = document.getElementById('feriado-data-fim').value;
+
+                if(!nome || !dataInicio) return alert('PREENCHA NOME E DATA INICIAL!'); 
+                if(modo === 'periodo' && !dataFim) return alert('PREENCHA A DATA FINAL DO PERÍODO!');
+
+                const novoFeriado = { 
+                    id: id ? parseInt(id) : Date.now(),
+                    nome, 
+                    data: dataInicio, 
+                    dataFim: modo === 'periodo' ? dataFim : null,
+                    modo,
+                    tipo: document.getElementById('feriado-tipo').value, 
+                    local: document.getElementById('feriado-local').value 
+                };
                 
                 if (id) {
-                    // Update mode
                     const idx = this.db.feriados.findIndex(f => f.id == id);
                     if (idx > -1) {
-                        this.db.feriados[idx] = { 
-                            ...this.db.feriados[idx], 
-                            nome, 
-                            data: dataInicio, 
-                            tipo: document.getElementById('feriado-tipo').value, 
-                            local: document.getElementById('feriado-local').value 
-                        };
+                        this.db.feriados[idx] = novoFeriado;
                         this.notify('success', 'Feriado atualizado!');
                         this.cancelarEdicao('feriado');
                     }
                 } else {
-                    // Add mode
-                    this.db.feriados.push({ 
-                        id: Date.now(), 
-                        nome, 
-                        data: dataInicio, 
-                        tipo: document.getElementById('feriado-tipo').value, 
-                        local: document.getElementById('feriado-local').value 
-                    });
+                    this.db.feriados.push(novoFeriado);
                     this.notify('success', 'Feriado cadastrado!');
                     document.getElementById('feriado-nome').value = '';
                 }
@@ -1154,14 +1155,23 @@
             }
             renderListaFeriados() { 
                 const lista = document.getElementById('lista-feriados'); 
-                if(lista) lista.innerHTML = this.db.feriados.map(f => `
+                if(lista) lista.innerHTML = this.db.feriados.map(f => {
+                    let dataDisplay = f.data;
+                    if (f.modo === 'periodo') {
+                        dataDisplay = `${f.data} até ${f.dataFim}`;
+                    }
+                    return `
                     <li class="flex justify-between items-center border-b p-2 text-xs">
-                        <span>${f.nome} (${f.data})</span>
+                        <div>
+                            <span class="font-bold text-gray-700">${f.nome}</span>
+                            <br><span class="text-[10px] text-gray-500">${dataDisplay} (${f.tipo.toUpperCase()})</span>
+                        </div>
                         <div class="flex gap-2">
                             <button onclick="window.app.editarItem('feriados', '${f.id}')" class="text-blue-500 hover:text-blue-700"><i data-lucide="edit-2" class="w-3 h-3"></i></button>
-                            <button class="text-red-500" onclick="window.app.deleteItem('feriados', '${f.id}')"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+                            <button class="text-red-500" onclick="window.app.remover('feriados', ${f.id})"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
                         </div>
-                    </li>`).join(''); 
+                    </li>`;
+                }).join(''); 
                 lucide.createIcons();
             }
 
@@ -1189,7 +1199,22 @@
                 if(subTab === 'grade') this.renderListaGrade();
                 if(subTab === 'feriado') this.renderListaFeriados();
             }
-            switchFerramentasSubTab(subTab) { ['backup', 'senhas'].forEach(t => { const btn = document.getElementById(`subtab-ferr-${t}`); const content = document.getElementById(`view-ferr-${t}`); if (t === subTab) { btn.classList.add('active'); btn.classList.remove('inactive'); content.classList.remove('hidden'); } else { btn.classList.remove('active'); btn.classList.add('inactive'); content.classList.add('hidden'); } }); }
+            switchFerramentasSubTab(subTab) { 
+                // CORREÇÃO: Removeu 'feriado' que não existe mais nessa aba
+                ['backup', 'senhas'].forEach(t => { 
+                    const btn = document.getElementById(`subtab-ferr-${t}`); 
+                    const content = document.getElementById(`view-ferr-${t}`); 
+                    if (t === subTab) { 
+                        btn.classList.add('active'); 
+                        btn.classList.remove('inactive'); 
+                        content.classList.remove('hidden'); 
+                    } else { 
+                        btn.classList.remove('active'); 
+                        btn.classList.add('inactive'); 
+                        content.classList.add('hidden'); 
+                    } 
+                }); 
+            }
             
             // --- CRONOGRAMA & MODAL ---
             setupDraggableModal() {
@@ -1200,48 +1225,26 @@
                  window.addEventListener('mouseup', () => { if(isDragging) { isDragging = false; header.classList.remove('cursor-grabbing'); } });
             }
             
-            // ============================================================
-            //   NOVO MÓDULO CRONOGRAMA (MODULARIZADO E COM VALIDAÇÃO)
-            // ============================================================
-
-            // 1. GERENTE (Chama os especialistas)
+            // NOVA FUNÇÃO RENDER CRONOGRAMA COM VALIDAÇÃO
             renderCronograma() {
                 const uid = document.getElementById('cronograma-unidade-select').value; 
-                const containerGrade = document.getElementById('cronograma-container');
-                const containerValidacao = document.getElementById('painel-validacao-cronograma');
-
+                const c = document.getElementById('cronograma-container');
                 if(!uid) { 
-                    containerGrade.innerHTML='<div class="py-10 text-center text-gray-400 uppercase font-bold text-xs border-2 border-dashed border-gray-200 rounded-lg">SELECIONE UMA UNIDADE PARA VISUALIZAR A GRADE</div>'; 
-                    containerValidacao.innerHTML = '';
+                    c.innerHTML='<div class="py-10 text-center text-gray-400 uppercase font-bold text-xs border-2 border-dashed border-gray-200 rounded-lg">SELECIONE UMA UNIDADE PARA VISUALIZAR A GRADE</div>'; 
                     return; 
                 }
 
-                // Chama o Especialista em Validação
-                this.renderPainelValidacao(containerValidacao, uid);
-
-                // Chama o Especialista em Desenhar Grade
-                this.renderGradeHorarios(containerGrade, uid);
-                
-                lucide.createIcons();
-            }
-
-            // 2. ESPECIALISTA EM VALIDAÇÃO (O Box Amarelo/Verde)
-            renderPainelValidacao(container, unidadeId) {
+                // --- LÓGICA DE VALIDAÇÃO (NOVA) ---
                 const hoje = new Date();
                 const mes = hoje.getMonth();
                 const ano = hoje.getFullYear();
+                const validacao = (this.db.acessos || []).find(a => a.unidadeId == uid && a.mes == mes && a.ano == ano);
                 
-                // Busca se já existe validação para esta unidade/mês/ano
-                const validacao = (this.db.acessos || []).find(a => 
-                    (a.unidadeId == unidadeId || a.unidadeId == parseInt(unidadeId)) && 
-                    a.mes == mes && 
-                    a.ano == ano
-                );
-                
+                let htmlValidacao = '';
                 if (validacao) {
-                    // Cenario 1: Já validado (Verde)
-                    container.innerHTML = `
-                        <div class="p-3 bg-green-100 border border-green-300 rounded text-green-800 text-xs font-bold uppercase flex items-center gap-2 animate-fade-in">
+                    // Já validado: Box Verde
+                    htmlValidacao = `
+                        <div class="mb-4 p-3 bg-green-100 border border-green-300 rounded text-green-800 text-xs font-bold uppercase flex items-center gap-2">
                             <i data-lucide="check-circle" class="w-5 h-5"></i>
                             <div>
                                 <p>CRONOGRAMA VALIDADO EM ${new Date(validacao.data).toLocaleDateString()}</p>
@@ -1249,54 +1252,66 @@
                             </div>
                         </div>`;
                 } else {
-                    // Cenario 2: Pendente (Amarelo)
-                    container.innerHTML = `
-                        <div class="p-4 bg-yellow-50 border border-yellow-200 rounded text-yellow-800 flex items-start gap-3 animate-fade-in">
-                            <input type="checkbox" id="check-validacao" class="mt-1 w-4 h-4 text-blue-600 rounded cursor-pointer" onchange="window.app.realizarValidacao('${unidadeId}')">
+                    // Pendente: Box Amarelo com Checkbox
+                    htmlValidacao = `
+                        <div class="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded text-yellow-800 flex items-start gap-3">
+                            <input type="checkbox" id="check-validacao" class="mt-1 w-4 h-4 text-blue-600 rounded cursor-pointer" onchange="window.app.realizarValidacao('${uid}')">
                             <label for="check-validacao" class="text-xs font-bold uppercase cursor-pointer select-none">
                                 DECLARO QUE CONFERI AS AULAS COLETIVAS, ATUALIZEI AS MÉDIAS E VALIDO O QUADRO DE HORÁRIOS DESTE MÊS.
                                 <br><span class="text-[10px] font-normal text-yellow-700">Ao marcar esta opção, você confirma que o cronograma está 100% correto.</span>
                             </label>
                         </div>`;
                 }
-            }
 
-            // 3. ESPECIALISTA EM GRADE (Desenha a Tabela)
-            renderGradeHorarios(container, unidadeId) {
-                const h = this.db.horarios.filter(x => x.unidadeId == unidadeId || parseInt(x.unidadeId) === parseInt(unidadeId));
-                const times = [...new Set(h.map(x => x.hora))].sort();
-                
-                let ht = `<table class="w-full border-collapse min-w-[800px] text-xs"><thead><tr><th class="p-3 border-b-2 border-gray-100 bg-gray-50 text-gray-500 w-20">HORA</th>${this.constantes.dias.map(d=>`<th class="p-3 border-b-2 border-gray-100 bg-gray-50 text-gray-700 uppercase">${d}</th>`).join('')}</tr></thead><tbody>`;
-                
+                const h = this.db.horarios.filter(x=>x.unidadeId==uid || parseInt(x.unidadeId) === parseInt(uid)); const times = [...new Set(h.map(x=>x.hora))].sort();
+                let ht = `${htmlValidacao}<table class="w-full border-collapse min-w-[800px] text-xs"><thead><tr><th class="p-3 border-b-2 border-gray-100 bg-gray-50 text-gray-500 w-20">HORA</th>${this.constantes.dias.map(d=>`<th class="p-3 border-b-2 border-gray-100 bg-gray-50 text-gray-700 uppercase">${d}</th>`).join('')}</tr></thead><tbody>`;
                 const displayTimes = times.length ? times : ["07:00", "08:00", "09:00", "18:00", "19:00", "20:00"];
-                
                 displayTimes.forEach(t => {
                     ht += `<tr><td class="p-3 border-b border-gray-50 text-center font-bold text-gray-400 bg-gray-50/50">${t}</td>`;
                     this.constantes.dias.forEach(d => {
-                        const a = h.find(x => x.hora === t && x.dias.includes(d));
+                        const a = h.find(x=>x.hora===t && x.dias.includes(d));
                         if(a) {
-                            const mod = this.db.modalidades.find(m => m.id == a.modalidadeId); 
-                            const bgColor = mod?.cor || '#64748b';
-                            ht += `<td class="p-1 border-b border-gray-50 h-24 w-[13%] align-top"><div onclick="window.app.abrirModalEdicao('${a.id}')" class="aula-card w-full h-full p-2 rounded-lg text-white shadow-sm relative cursor-pointer hover:shadow-md transition-all group overflow-hidden" style="background: linear-gradient(135deg, ${bgColor}, ${this.adjustColor(bgColor, -20)})"><div class="flex flex-col justify-between h-full"><div><div class="font-bold uppercase text-[10px] leading-tight opacity-70 mb-1">${mod?.nome}</div><div class="font-bold text-xs truncate">${a.professor}</div></div><div class="text-[10px] opacity-0 group-hover:opacity-100 transition-opacity flex justify-end"><i data-lucide="edit-2" class="w-3 h-3"></i></div></div></div></td>`;
-                        } else { 
-                            ht += `<td class="border-b border-gray-50 hover:bg-slate-50 transition-colors"></td>`; 
-                        }
-                    }); 
-                    ht += `</tr>`;
+                            const mod = this.db.modalidades.find(m=>m.id==a.modalidadeId); const bgColor = mod?.cor || '#64748b';
+                            // MODIFICAÇÃO SOLICITADA AQUI: CARD CENTRALIZADO, MAIÚSCULO, DESTAQUE AULA, PROF CINZA, MÉDIA EMBAIXO
+                            ht += `<td class="p-1 border-b border-gray-50 h-24 w-[13%] align-top">
+                                <div onclick="window.app.abrirModalEdicao('${a.id}')" 
+                                     class="aula-card w-full h-full p-1 rounded-lg text-white shadow-sm relative cursor-pointer hover:shadow-md transition-all group overflow-hidden flex flex-col justify-center items-center text-center" 
+                                     style="background: linear-gradient(135deg, ${bgColor}, ${this.adjustColor(bgColor, -20)})">
+                                    
+                                    <!-- Nome da Aula (Modalidade) - Maior destaque -->
+                                    <div class="font-black uppercase text-xs leading-tight mb-1 drop-shadow-sm w-full truncate">
+                                        ${mod?.nome || '???'}
+                                    </div>
+                                    
+                                    <!-- Nome do Professor - Cinza/Menos destaque -->
+                                    <div class="font-medium uppercase text-[10px] text-white/80 w-full truncate mb-1">
+                                        ${a.professor}
+                                    </div>
+                                    
+                                    <!-- Média de Alunos - Apenas o número -->
+                                    <div class="font-bold text-sm bg-black/10 rounded px-2 py-0.5">
+                                        ${a.mediaAlunos || 0}
+                                    </div>
+
+                                    <!-- Ícone de edição (opcional, manter discreto) -->
+                                    <div class="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <i data-lucide="edit-2" class="w-3 h-3"></i>
+                                    </div>
+                                </div>
+                            </td>`;
+                        } else { ht += `<td class="border-b border-gray-50 hover:bg-slate-50 transition-colors"></td>`; }
+                    }); ht += `</tr>`;
                 });
-                container.innerHTML = ht + `</tbody></table>`;
+                c.innerHTML = ht + `</tbody></table>`; lucide.createIcons();
             }
 
-            // AÇÃO DE SALVAR A VALIDAÇÃO
+            // FUNÇÃO AUXILIAR PARA SALVAR VALIDAÇÃO
             realizarValidacao(unidadeId) {
                 if(!confirm('Confirma que todas as aulas e médias estão corretas?')) {
-                    const chk = document.getElementById('check-validacao');
-                    if(chk) chk.checked = false;
+                    document.getElementById('check-validacao').checked = false;
                     return;
                 }
                 const hoje = new Date();
-                
-                // Salva no banco de dados "acessos" (que o Acesso Mensal lê)
                 this.db.acessos.push({
                     id: Date.now(),
                     unidadeId: parseInt(unidadeId),
@@ -1305,12 +1320,9 @@
                     data: hoje.toISOString(),
                     user: this.currentUser.name
                 });
-                
                 this.salvarDados();
                 this.notify('success', 'VALIDAÇÃO REGISTRADA COM SUCESSO!');
-                
-                // Recarrega o cronograma para mostrar o box verde imediatamente
-                this.renderCronograma(); 
+                this.renderCronograma(); // Recarrega para mostrar o box verde
             }
 
             adjustColor(color, amount) { return '#' + color.replace(/^#/, '').replace(/../g, color => ('0'+Math.min(255, Math.max(0, parseInt(color, 16) + amount)).toString(16)).substr(-2)); }
@@ -1338,79 +1350,9 @@
             excluirViaModal() { if(!confirm('Deseja excluir esta aula?')) return; const id = document.getElementById('modal-id').value; this.db.horarios = this.db.horarios.filter(h => h.id != id); this.salvarDados(); this.renderCronograma(); this.fecharModal(); this.notify('success', 'Aula removida!'); }
             fecharModal() { document.getElementById('modal-editor').classList.add('hidden'); }
             deleteItem(type, id) { if (confirm('Tem certeza que deseja excluir?')) { this.db[type] = this.db[type].filter(i => i.id != id); if (type === 'unidades') { this.db.horarios = this.db.horarios.filter(h => h.unidadeId != id); } this.salvarDados(); this.atualizarListas(); this.notify('success', 'Item excluído com sucesso!'); } }
-            
-            // --- ATUALIZADO: FUNÇÕES DE CADASTRO COM SUPORTE A EDIÇÃO ---
-            addMentor() { 
-                const id = document.getElementById('edit-mentor-id').value;
-                const nome = document.getElementById('cad-mentor-nome').value.toUpperCase(); 
-                const senha = document.getElementById('cad-mentor-senha').value; 
-                if (!nome) return;
-
-                if (id) { // Edição
-                    const idx = this.db.mentores.findIndex(m => m.id == id);
-                    if(idx > -1) {
-                        this.db.mentores[idx] = { ...this.db.mentores[idx], nome, senha: String(senha) };
-                        this.notify('success', 'Mentor atualizado!');
-                        this.cancelarEdicao('mentor');
-                    }
-                } else { // Novo
-                    this.db.mentores.push({id: Date.now(), nome, senha: String(senha)}); 
-                    this.notify('success', 'Mentor cadastrado!');
-                    document.getElementById('cad-mentor-nome').value = ''; 
-                }
-                this.salvarDados(); 
-                this.atualizarListas(); 
-            }
-
-            addUnidade() { 
-                const id = document.getElementById('edit-unidade-id').value;
-                const nome = document.getElementById('cad-unidade-nome').value.toUpperCase(); 
-                const mentor = document.getElementById('cad-unidade-mentor').value; 
-                const senha = document.getElementById('cad-unidade-senha').value; 
-                const pais = document.getElementById('cad-unidade-pais').value; 
-                const estado = document.getElementById('cad-unidade-estado').value; 
-                
-                if(nome && mentor && pais && estado) { 
-                    if(id) { // Edição
-                        const idx = this.db.unidades.findIndex(u => u.id == id);
-                        if(idx > -1) {
-                            this.db.unidades[idx] = { ...this.db.unidades[idx], nome, mentorId: mentor, senha: String(senha), pais, estado };
-                            this.notify('success', 'Unidade atualizada!');
-                            this.cancelarEdicao('unidade');
-                        }
-                    } else { // Novo
-                        this.db.unidades.push({id: Date.now(), nome, mentorId: mentor, senha: String(senha), pais, estado }); 
-                        this.notify('success', 'Unidade cadastrada!');
-                        document.getElementById('cad-unidade-nome').value = ''; 
-                    }
-                    this.salvarDados(); 
-                    this.atualizarListas(); 
-                } else { alert('Preencha todos os campos da unidade'); } 
-            }
-
-            addModalidade() { 
-                const id = document.getElementById('edit-modalidade-id').value;
-                const nome = document.getElementById('cad-mod-nome').value.toUpperCase(); 
-                const cor = document.getElementById('cad-mod-cor').value; 
-                
-                if (nome) { 
-                    if (id) { // Edição
-                        const idx = this.db.modalidades.findIndex(m => m.id == id);
-                        if (idx > -1) {
-                            this.db.modalidades[idx] = { ...this.db.modalidades[idx], nome, cor };
-                            this.notify('success', 'Modalidade atualizada!');
-                            this.cancelarEdicao('modalidade');
-                        }
-                    } else { // Novo
-                        this.db.modalidades.push({id: Date.now(), nome, cor}); 
-                        this.notify('success', 'Modalidade cadastrada!');
-                        document.getElementById('cad-mod-nome').value = ''; 
-                    }
-                    this.salvarDados(); 
-                    this.atualizarListas(); 
-                } 
-            }
-
+            addMentor() { const nome = document.getElementById('cad-mentor-nome').value.toUpperCase(); const senha = document.getElementById('cad-mentor-senha').value; if (nome) { this.db.mentores.push({id: Date.now(), nome, senha: String(senha)}); this.notify('success', 'Mentor cadastrado!'); this.salvarDados(); this.atualizarListas(); document.getElementById('cad-mentor-nome').value = ''; } }
+            addUnidade() { const nome = document.getElementById('cad-unidade-nome').value.toUpperCase(); const mentor = document.getElementById('cad-unidade-mentor').value; const senha = document.getElementById('cad-unidade-senha').value; const pais = document.getElementById('cad-unidade-pais').value; const estado = document.getElementById('cad-unidade-estado').value; if(nome && mentor && pais && estado) { this.db.unidades.push({id: Date.now(), nome, mentorId: mentor, senha: String(senha), pais, estado }); this.salvarDados(); this.atualizarListas(); document.getElementById('cad-unidade-nome').value = ''; } else { alert('Preencha todos os campos da unidade'); } }
+            addModalidade() { const nome = document.getElementById('cad-mod-nome').value.toUpperCase(); const cor = document.getElementById('cad-mod-cor').value; if (nome) { this.db.modalidades.push({id: Date.now(), nome, cor}); this.notify('success', 'Modalidade cadastrada!'); this.salvarDados(); this.atualizarListas(); document.getElementById('cad-mod-nome').value = ''; } }
             remover(tipo, id) { if(confirm('Tem certeza?')) { this.db[tipo] = this.db[tipo].filter(i => i.id != id); if(tipo === 'unidades') this.db.horarios = this.db.horarios.filter(h => h.unidadeId != id); this.salvarDados(); this.atualizarListas(); this.renderCronograma(); } }
             salvarBackup() { const data = JSON.stringify(this.db, null, 2); const blob = new Blob([data], {type: 'application/json'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `backup_pratique_${new Date().toISOString().slice(0,10)}.json`; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); this.notify('success', 'BACKUP GERADO!'); }
             resetarBancoDeDados() { if(confirm('ATENÇÃO: ISSO APAGARÁ TUDO! TEM CERTEZA?')) { localStorage.removeItem('pratique_global_db_v5'); location.reload(); } }
@@ -1435,7 +1377,95 @@
                 reader.readAsText(file);
             }
 
-            // --- ACESSO MENSAL RESTAURADO ---
+            // ============================================================
+            //   MÓDULO FINANCEIRO UNIFICADO (V17 - Cálculos Reais)
+            // ============================================================
+
+            calcularFinanceiro(dados) {
+                const mes = parseInt(document.getElementById('rel-mes').value);
+                const ano = parseInt(document.getElementById('rel-ano').value);
+                const diasNoMes = new Date(ano, mes + 1, 0).getDate();
+                const diasSemanaMap = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+
+                let receitaTotal = 0;
+                let aulasTotal = 0;
+                let economiaFeriados = 0;
+                let listaCancelamentos = [];
+
+                // Cache de feriados
+                const feriadosFixos = this.constantes.feriadosFixos.filter(f => f.m === mes);
+                const feriadosCadastrados = this.db.feriados || [];
+
+                // Itera todas as aulas do filtro atual
+                dados.forEach(aula => {
+                    const unidade = this.db.unidades.find(u => u.id == aula.unidadeId);
+                    if (!unidade) return;
+
+                    // Itera dia a dia do mês para calcular com precisão
+                    for (let dia = 1; dia <= diasNoMes; dia++) {
+                        const dataObj = new Date(ano, mes, dia);
+                        const nomeDiaSemana = diasSemanaMap[dataObj.getDay()];
+                        const dataIso = `${ano}-${String(mes+1).padStart(2,'0')}-${String(dia).padStart(2,'0')}`;
+
+                        // Se a aula acontece neste dia da semana
+                        if (aula.dias.includes(nomeDiaSemana)) {
+                            
+                            // Verifica se é feriado (Fixo, Único ou Período)
+                            let feriadoEncontrado = null;
+
+                            // 1. Fixos
+                            const fixo = feriadosFixos.find(f => f.d === dia);
+                            if (fixo) feriadoEncontrado = { nome: fixo.nome, tipo: 'global' };
+
+                            // 2. Cadastrados
+                            if (!feriadoEncontrado) {
+                                feriadoEncontrado = feriadosCadastrados.find(f => {
+                                    // Verifica data
+                                    let bateData = false;
+                                    if (f.modo === 'periodo') {
+                                        bateData = (dataIso >= f.data && dataIso <= f.dataFim);
+                                    } else {
+                                        bateData = (f.data === dataIso);
+                                    }
+                                    
+                                    if (!bateData) return false;
+
+                                    // Verifica abrangência
+                                    if (f.tipo === 'global') return true;
+                                    if (f.tipo === 'nacional' && unidade.pais === 'Brasil') return true;
+                                    if (f.tipo === 'estadual' && unidade.estado === f.local) return true;
+                                    
+                                    return false;
+                                });
+                            }
+
+                            if (feriadoEncontrado) {
+                                // É feriado: Economia (Não paga)
+                                economiaFeriados += (aula.valor || 0);
+                                listaCancelamentos.push({
+                                    data: `${String(dia).padStart(2,'0')}/${String(mes+1).padStart(2,'0')}`,
+                                    feriado: feriadoEncontrado.nome,
+                                    unidade: unidade.nome,
+                                    aula: `${aula.professor} (${nomeDiaSemana})`,
+                                    valor: aula.valor,
+                                    timestamp: dataObj.getTime() // Para ordenação
+                                });
+                            } else {
+                                // Não é feriado: Paga (Custo Real)
+                                receitaTotal += (aula.valor || 0);
+                                aulasTotal++;
+                            }
+                        }
+                    }
+                });
+
+                // Ordena cancelamentos por data
+                listaCancelamentos.sort((a,b) => a.timestamp - b.timestamp);
+
+                return { receitaTotal, aulasTotal, economiaFeriados, listaCancelamentos };
+            }
+
+            // --- ACESSO MENSAL RESTAURADO (COM CORREÇÃO PARA O ERRO DO USUÁRIO) ---
             setAcessoTab(tab) { this.currentAcessoTab = tab; this.renderAcessoMensal(); }
             setAcessoFilter(val) { this.acessoFilterTerm = val; this.renderAcessoMensal(); }
             sortAcessoStatus(field) { if (this.acessoStatusSort.field === field) { this.acessoStatusSort.direction = this.acessoStatusSort.direction === 'asc' ? 'desc' : 'asc'; } else { this.acessoStatusSort = { field, direction: 'asc' }; } this.renderAcessoMensal(); }
@@ -1493,7 +1523,6 @@
                         const m = this.db.mentores.find(m => m.id == u.mentorId);
                         const access = (this.db.acessos || []).find(a => a.unidadeId == u.id && a.mes == mes && a.ano == ano);
                         
-                        // FORMATADOR DE DATA/HORA
                         let dataFormatada = '-';
                         if (access && access.data) {
                             const d = new Date(access.data);
@@ -1510,7 +1539,7 @@
                             mentor: m ? m.nome : 'SEM MENTOR', 
                             unidade: u.nome, 
                             status: access ? 'Validado' : 'Pendente', 
-                            data: dataFormatada // AQUI ESTÁ A MUDANÇA
+                            data: dataFormatada 
                         };
                     }).filter(item => item.mentor.includes(this.acessoFilterTerm.toUpperCase()) || item.unidade.includes(this.acessoFilterTerm.toUpperCase())).sort((a,b) => this.acessoStatusSort.direction === 'asc' ? a[this.acessoStatusSort.field].localeCompare(b[this.acessoStatusSort.field]) : b[this.acessoStatusSort.field].localeCompare(a[this.acessoStatusSort.field]));
                     
