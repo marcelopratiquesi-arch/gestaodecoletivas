@@ -14,6 +14,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Database SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <script>
         tailwind.config = {
@@ -86,21 +89,45 @@
         const { useState, useEffect, useMemo, useRef, useCallback, createContext, useContext } = React;
 
         // ==========================================
+        // 0. CONFIGURAÇÃO DO DATASOURCE
+        // ==========================================
+        
+        /**
+         * IMPORTANTE: Configure aqui qual fonte de dados usar
+         * 
+         * OPTIONS:
+         * - 'localStorage': Armazena dados localmente no navegador (padrão, sem necessidade de configuração)
+         * - 'supabase': Usa banco de dados PostgreSQL na nuvem (requer configuração abaixo)
+         * 
+         * Para usar Supabase:
+         * 1. Altere DATA_SOURCE para 'supabase'
+         * 2. Configure SUPABASE_URL e SUPABASE_KEY abaixo com suas credenciais
+         * 3. Execute o script SQL fornecido no seu projeto Supabase
+         */
+        const DATA_SOURCE = 'localStorage'; // Altere para 'supabase' quando configurado
+        
+        // Configuração do Supabase (necessário apenas se DATA_SOURCE = 'supabase')
+        const SUPABASE_CONFIG = {
+            url: 'https://seu-projeto.supabase.co', // Substitua pela URL do seu projeto
+            key: 'sua-chave-publica-anon', // Substitua pela chave pública (anon key)
+        };
+
+        // ==========================================
         // 1. CONSTANTES E DADOS INICIAIS
         // ==========================================
 
-        const STATUS_COLORS = {
-            success: { bg: 'bg-green-500', text: 'text-green-700', light: 'bg-green-100', border: 'border-green-200' },
-            warning: { bg: 'bg-yellow-500', text: 'text-yellow-700', light: 'bg-yellow-100', border: 'border-yellow-200' },
-            danger:  { bg: 'bg-red-500',   text: 'text-red-700',   light: 'bg-red-100',   border: 'border-red-200' },
-            primary: { bg: 'bg-blue-600',  text: 'text-blue-700',  light: 'bg-blue-50',   border: 'border-blue-200' }
-        };
+        const STATUS_COLORS = Object.freeze({
+            success: Object.freeze({ bg: 'bg-green-500', text: 'text-green-700', light: 'bg-green-100', border: 'border-green-200' }),
+            warning: Object.freeze({ bg: 'bg-yellow-500', text: 'text-yellow-700', light: 'bg-yellow-100', border: 'border-yellow-200' }),
+            danger:  Object.freeze({ bg: 'bg-red-500',   text: 'text-red-700',   light: 'bg-red-100',   border: 'border-red-200' }),
+            primary: Object.freeze({ bg: 'bg-blue-600',  text: 'text-blue-700',  light: 'bg-blue-50',   border: 'border-blue-200' })
+        });
 
-        const LOCATIONS = {
-            "Brasil": ["MG", "SP", "RJ", "ES", "RS", "BA", "SC"],
-            "Argentina": ["Buenos Aires", "Córdoba", "Santa Fé", "Mendoza"],
-            "Estados Unidos": ["California", "Florida", "New York", "Texas"]
-        };
+        const LOCATIONS = Object.freeze({
+            "Brasil": Object.freeze(["MG", "SP", "RJ", "ES", "RS", "BA", "SC"]),
+            "Argentina": Object.freeze(["Buenos Aires", "Córdoba", "Santa Fé", "Mendoza"]),
+            "Estados Unidos": Object.freeze(["California", "Florida", "New York", "Texas"])
+        });
 
         const INITIAL_DB = {
             mentores: [ { id: 1, nome: "Felipe Souza", senha: "1234" }, { id: 2, nome: "Carlos", senha: "1234" } ],
@@ -112,18 +139,269 @@
         };
 
         // ==========================================
+        // 1.5 DATA LAYER (ABSTRAÇÃO DE PERSISTÊNCIA)
+        // ==========================================
+        
+        /**
+         * DataLayer: Camada abstrata que gerencia persistência de dados
+         * Suporta localStorage e Supabase de forma transparente
+         */
+        class DataLayer {
+            constructor(source) {
+                this.source = source;
+                if (source === 'supabase') {
+                    this.supabase = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.key);
+                    this.initializeSupabase();
+                }
+            }
+            
+            async initializeSupabase() {
+                try {
+                    // Verifica conexão
+                    const { data, error } = await this.supabase.from('mentores').select('count');
+                    if (error) throw error;
+                    console.log('✅ Supabase conectado com sucesso!');
+                } catch (error) {
+                    console.error('❌ Erro ao conectar no Supabase:', error.message);
+                    console.warn('💡 Verifique se SUPABASE_CONFIG está correto e se o schema foi criado.');
+                }
+            }
+            
+            // ============= LOAD DATA =============
+            async loadData() {
+                if (this.source === 'localStorage') {
+                    return this._loadFromLocalStorage();
+                } else {
+                    return await this._loadFromSupabase();
+                }
+            }
+            
+            _loadFromLocalStorage() {
+                try {
+                    const stored = localStorage.getItem('db');
+                    return stored ? JSON.parse(stored) : INITIAL_DB;
+                } catch (error) {
+                    console.error('Erro ao carregar do localStorage:', error);
+                    return INITIAL_DB;
+                }
+            }
+            
+            async _loadFromSupabase() {
+                try {
+                    const [mentores, unidades, modalidades, horarios, validacoes, feriados] = await Promise.all([
+                        this.supabase.from('mentores').select('*'),
+                        this.supabase.from('unidades').select('*'),
+                        this.supabase.from('modalidades').select('*'),
+                        this.supabase.from('horarios').select('*'),
+                        this.supabase.from('validacoes').select('*'),
+                        this.supabase.from('feriados').select('*')
+                    ]);
+                    
+                    return {
+                        mentores: mentores.data || [],
+                        unidades: unidades.data || [],
+                        modalidades: modalidades.data || [],
+                        horarios: horarios.data || [],
+                        validacoes: validacoes.data || [],
+                        feriados: feriados.data || [],
+                        acessos: []
+                    };
+                } catch (error) {
+                    console.error('Erro ao carregar do Supabase:', error);
+                    return INITIAL_DB;
+                }
+            }
+            
+            // ============= SAVE DATA =============
+            async saveData(db) {
+                if (this.source === 'localStorage') {
+                    this._saveToLocalStorage(db);
+                } else {
+                    // Supabase usa operações atômicas, não salva tudo de uma vez
+                    console.log('Supabase: dados salvos automaticamente via operações individuais');
+                }
+            }
+            
+            _saveToLocalStorage(db) {
+                try {
+                    localStorage.setItem('db', JSON.stringify(db));
+                } catch (error) {
+                    console.error('Erro ao salvar no localStorage:', error);
+                }
+            }
+            
+            // ============= CRUD OPERATIONS =============
+            async insert(table, data) {
+                if (this.source === 'localStorage') {
+                    return data; // Retorna os dados, persistência via saveData
+                } else {
+                    const { data: result, error } = await this.supabase.from(table).insert(data).select().single();
+                    if (error) throw error;
+                    return result;
+                }
+            }
+            
+            async update(table, id, data) {
+                if (this.source === 'localStorage') {
+                    return data; // Retorna os dados, persistência via saveData
+                } else {
+                    const { data: result, error } = await this.supabase.from(table).update(data).eq('id', id).select().single();
+                    if (error) throw error;
+                    return result;
+                }
+            }
+            
+            async delete(table, id) {
+                if (this.source === 'localStorage') {
+                    return true; // Confirmação, persistência via saveData
+                } else {
+                    const { error } = await this.supabase.from(table).delete().eq('id', id);
+                    if (error) throw error;
+                    return true;
+                }
+            }
+            
+            // ============= EXPORT/IMPORT =============
+            async exportData(db) {
+                const dataStr = JSON.stringify(db, null, 2);
+                const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(dataBlob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `backup-gestao-${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            }
+            
+            async importData(file, callback) {
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    try {
+                        const importedData = JSON.parse(e.target.result);
+                        
+                        if (this.source === 'supabase') {
+                            // Importar para Supabase
+                            await this._importToSupabase(importedData);
+                        }
+                        
+                        callback(importedData, null);
+                    } catch (error) {
+                        callback(null, 'Arquivo inválido. Certifique-se de que é um backup válido.');
+                    }
+                };
+                reader.readAsText(file);
+            }
+            
+            async _importToSupabase(data) {
+                try {
+                    // Limpa tabelas existentes
+                    await Promise.all([
+                        this.supabase.from('validacoes').delete().neq('id', 0),
+                        this.supabase.from('horarios').delete().neq('id', 0),
+                        this.supabase.from('feriados').delete().neq('id', 0),
+                        this.supabase.from('modalidades').delete().neq('id', 0),
+                        this.supabase.from('unidades').delete().neq('id', 0),
+                        this.supabase.from('mentores').delete().neq('id', 0)
+                    ]);
+                    
+                    // Insere novos dados
+                    await this.supabase.from('mentores').insert(data.mentores);
+                    await this.supabase.from('unidades').insert(data.unidades);
+                    await this.supabase.from('modalidades').insert(data.modalidades);
+                    await this.supabase.from('horarios').insert(data.horarios);
+                    await this.supabase.from('validacoes').insert(data.validacoes);
+                    await this.supabase.from('feriados').insert(data.feriados);
+                    
+                    console.log('✅ Dados importados para Supabase com sucesso!');
+                } catch (error) {
+                    console.error('❌ Erro ao importar para Supabase:', error);
+                    throw error;
+                }
+            }
+            
+            // ============= REALTIME SUBSCRIPTIONS =============
+            subscribeToChanges(onDataChange) {
+                if (this.source !== 'supabase') {
+                    console.log('📡 Realtime: Disponível apenas com Supabase');
+                    return null;
+                }
+                
+                console.log('📡 Iniciando subscriptions Realtime...');
+                
+                const channel = this.supabase.channel('db-changes');
+                
+                // Subscribe para todas as tabelas
+                const tables = ['mentores', 'unidades', 'modalidades', 'horarios', 'validacoes', 'feriados'];
+                
+                tables.forEach(table => {
+                    channel.on(
+                        'postgres_changes',
+                        { event: '*', schema: 'public', table },
+                        (payload) => {
+                            console.log(`🔔 Mudança detectada em ${table}:`, payload.eventType);
+                            onDataChange({
+                                table,
+                                event: payload.eventType,
+                                old: payload.old,
+                                new: payload.new
+                            });
+                        }
+                    );
+                });
+                
+                channel.subscribe((status) => {
+                    if (status === 'SUBSCRIBED') {
+                        console.log('✅ Realtime conectado! Sincronização ativa.');
+                    } else if (status === 'CHANNEL_ERROR') {
+                        console.error('❌ Erro na conexão Realtime');
+                    }
+                });
+                
+                return channel;
+            }
+            
+            unsubscribeFromChanges(channel) {
+                if (channel) {
+                    channel.unsubscribe();
+                    console.log('📡 Realtime desconectado');
+                }
+            }
+        }
+        
+        // Instância global do DataLayer
+        const dataLayer = new DataLayer(DATA_SOURCE);
+
+        // ==========================================
         // 2. HOOKS E UTILS
         // ==========================================
+
+        // Sanitização de texto para prevenir XSS
+        const sanitizeText = (text) => {
+            if (typeof text !== 'string') return text;
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        };
 
         const usePersistentState = (key, initialValue) => {
             const [state, setState] = useState(() => {
                 try {
-                    const storedValue = sessionStorage.getItem(key);
+                    // Sempre usa localStorage para preferências de UI (independente do DATA_SOURCE)
+                    const storedValue = localStorage.getItem(key);
                     return storedValue !== null ? JSON.parse(storedValue) : initialValue;
-                } catch (error) { return initialValue; }
+                } catch (error) {
+                    console.warn(`Erro ao carregar ${key} do localStorage:`, error);
+                    return initialValue;
+                }
             });
             useEffect(() => {
-                try { sessionStorage.setItem(key, JSON.stringify(state)); } catch (error) {}
+                try {
+                    localStorage.setItem(key, JSON.stringify(state));
+                } catch (error) {
+                    console.error(`Erro ao salvar ${key} no localStorage:`, error);
+                }
             }, [key, state]);
             return [state, setState];
         };
@@ -159,6 +437,24 @@
             );
         };
         const useToast = () => useContext(ToastContext);
+
+        const useDebounce = (value, delay) => {
+            const [debouncedValue, setDebouncedValue] = useState(value);
+            useEffect(() => {
+                const handler = setTimeout(() => setDebouncedValue(value), delay);
+                return () => clearTimeout(handler);
+            }, [value, delay]);
+            return debouncedValue;
+        };
+
+        const filterByUserPermission = (items, user, idField = 'id', mentorField = 'mentorId') => {
+            if (user.role === 'admin') return items;
+            if (user.role === 'mentor') return items.filter(i => i[mentorField] === user.id);
+            if (user.role === 'unidade') return items.filter(i => i[idField] === user.id);
+            return [];
+        };
+
+        // DataBackup agora está integrado no DataLayer
 
         const DateUtils = {
             toISODate: (date) => { const offset = date.getTimezoneOffset(); const adjustedDate = new Date(date.getTime() - (offset*60*1000)); return adjustedDate.toISOString().split('T')[0]; },
@@ -207,76 +503,205 @@
         };
 
         const BusinessLogic = {
+            // Funções auxiliares internas
+            _calcularDadosAula: (horario, unidade, modalidade, filters, validacoes, feriados) => {
+                const { dates: diasDeAula, possibleDates } = DateUtils.generateClassDates(
+                    horario.dias, filters.mes, filters.ano, feriados, unidade
+                );
+                
+                const numAulasPrevistas = diasDeAula.length;
+                const aulasPerdidasFeriado = possibleDates.length - numAulasPrevistas;
+                
+                const validacoesDoMes = validacoes.filter(v => 
+                    v.aulaId === horario.id && 
+                    parseInt(v.data.split('-')[1]) == filters.mes && 
+                    parseInt(v.data.split('-')[0]) == filters.ano
+                );
+                
+                const totalAlunosReais = validacoesDoMes.reduce((acc, v) => acc + parseInt(v.qtdAlunos || 0), 0);
+                const numAulasRealizadas = validacoesDoMes.length;
+                const mediaAlunos = numAulasRealizadas > 0 ? Math.round(totalAlunosReais / numAulasRealizadas) : 0;
+                
+                return { numAulasPrevistas, aulasPerdidasFeriado, validacoesDoMes, mediaAlunos, numAulasRealizadas };
+            },
+
+            _calcularFinanceiro: (numAulasPrevistas, aulasPerdidasFeriado, valorHora) => {
+                return {
+                    valorMensal: numAulasPrevistas * valorHora,
+                    valorPerdidoFeriado: aulasPerdidasFeriado * valorHora
+                };
+            },
+
+            _aplicarFiltros: (horario, filters, unidadesMap, user) => {
+                const unidade = unidadesMap.get(horario.unidadeId);
+                if (!unidade) return false;
+                
+                if (user.role === 'mentor' && unidade.mentorId !== user.id) return false;
+                if (user.role === 'unidade' && horario.unidadeId !== user.id) return false;
+                if (filters.unidade !== 'TODAS' && horario.unidadeId != filters.unidade) return false;
+                if (filters.mentor !== 'TODOS' && unidade.mentorId != filters.mentor) return false;
+                if (filters.modalidade !== 'TODAS' && horario.modalidadeId != filters.modalidade) return false;
+                if (filters.pais !== 'TODOS' && unidade.pais !== filters.pais) return false;
+                if (filters.estado !== 'TODOS' && unidade.estado !== filters.estado) return false;
+                
+                return true;
+            },
+
             processarAulas: (db, user, filters) => {
                 const todosFeriados = db.feriados || [];
-                let dadosProcessados = (db.horarios || []).map(h => {
-                    const u = db.unidades.find(unit => unit.id == h.unidadeId);
-                    const m = db.modalidades.find(mod => mod.id == h.modalidadeId);
-                    const mentor = db.mentores.find(men => men.id == u?.mentorId);
+                const validacoes = db.validacoes || [];
+                
+                // Criar Maps para performance O(1)
+                const unidadesMap = new Map(db.unidades.map(u => [u.id, u]));
+                const modalidadesMap = new Map(db.modalidades.map(m => [m.id, m]));
+                const mentoresMap = new Map(db.mentores.map(m => [m.id, m]));
+                
+                const dadosProcessados = (db.horarios || []).map(h => {
+                    const u = unidadesMap.get(h.unidadeId);
+                    const m = modalidadesMap.get(h.modalidadeId);
+                    const mentor = u ? mentoresMap.get(u.mentorId) : null;
                     
-                    // Simulação completa dos dias do mês
-                    const { dates: diasDeAula, possibleDates } = DateUtils.generateClassDates(h.dias, filters.mes, filters.ano, todosFeriados, u);
-                    
-                    // Cálculo de aulas efetivas no calendário (descontando feriados)
-                    const numAulasPrevistas = diasDeAula.length; 
-                    const aulasPerdidasFeriado = possibleDates.length - numAulasPrevistas;
-                    
-                    // Histórico de validações (frequência real)
-                    const validacoesDoMes = db.validacoes ? db.validacoes.filter(v => v.aulaId === h.id && parseInt(v.data.split('-')[1]) == filters.mes && parseInt(v.data.split('-')[0]) == filters.ano) : [];
-                    const totalAlunosReais = validacoesDoMes.reduce((acc, v) => acc + parseInt(v.qtdAlunos || 0), 0);
-                    const numAulasRealizadas = validacoesDoMes.length;
-                    const mediaAlunos = numAulasRealizadas > 0 ? Math.round(totalAlunosReais / numAulasRealizadas) : 0;
-                    
-                    // CÁLCULO FINANCEIRO
+                    const dadosAula = BusinessLogic._calcularDadosAula(h, u, m, filters, validacoes, todosFeriados);
                     const valorHora = parseFloat(h.valor) || 0;
-                    // Valor Mensal = Valor da Aula * Qtd Aulas Efetivas (Sem Feriado)
-                    const valorMensalPrevisto = numAulasPrevistas * valorHora;
-                    const valorPerdidoFeriado = aulasPerdidasFeriado * valorHora;
+                    const dadosFinanceiros = BusinessLogic._calcularFinanceiro(
+                        dadosAula.numAulasPrevistas, 
+                        dadosAula.aulasPerdidasFeriado, 
+                        valorHora
+                    );
                     
-                    return { ...h, unidadeNome: u?.nome || 'Desconhecida', pais: u?.pais || '-', estado: u?.estado || '-', mentorNome: mentor?.nome || '-', modalidadeNome: m?.nome || '-', modalidadeCor: m?.cor || '#cbd5e1', valorHora, numAulasPrevistas, numAulasRealizadas, valorMensal: valorMensalPrevisto, valorPerdidoFeriado, mediaAlunos, historicoAulas: validacoesDoMes.map(v => { const d = new Date(v.data + 'T00:00:00'); return { dateStr: v.data, dataFormatada: DateUtils.formatBr(d), qtdAlunos: v.qtdAlunos, valor: valorHora, modalidade: m?.nome, horario: h.hora, diaSemana: DateUtils.getDayOfWeek(v.data) }; }) };
+                    const historicoAulas = dadosAula.validacoesDoMes.map(v => {
+                        const d = new Date(v.data + 'T00:00:00');
+                        return {
+                            dateStr: v.data,
+                            dataFormatada: DateUtils.formatBr(d),
+                            qtdAlunos: v.qtdAlunos,
+                            valor: valorHora,
+                            modalidade: m?.nome,
+                            horario: h.hora,
+                            diaSemana: DateUtils.getDayOfWeek(v.data)
+                        };
+                    });
+                    
+                    return {
+                        ...h,
+                        unidadeNome: u?.nome || 'Desconhecida',
+                        pais: u?.pais || '-',
+                        estado: u?.estado || '-',
+                        mentorNome: mentor?.nome || '-',
+                        modalidadeNome: m?.nome || '-',
+                        modalidadeCor: m?.cor || '#cbd5e1',
+                        valorHora,
+                        numAulasPrevistas: dadosAula.numAulasPrevistas,
+                        numAulasRealizadas: dadosAula.numAulasRealizadas,
+                        valorMensal: dadosFinanceiros.valorMensal,
+                        valorPerdidoFeriado: dadosFinanceiros.valorPerdidoFeriado,
+                        mediaAlunos: dadosAula.mediaAlunos,
+                        historicoAulas
+                    };
                 });
                 
-                // Filtragem final baseada nos filtros ativos e permissões
-                return dadosProcessados.filter(h => { 
-                    if (user.role === 'mentor' && db.unidades.find(u => u.id == h.unidadeId)?.mentorId != user.id) return false; 
-                    if (user.role === 'unidade' && h.unidadeId != user.id) return false; 
-                    if (filters.unidade !== 'TODAS' && h.unidadeId != filters.unidade) return false; 
-                    if (filters.mentor !== 'TODOS' && db.unidades.find(u => u.id == h.unidadeId)?.mentorId != filters.mentor) return false; 
-                    if (filters.modalidade !== 'TODAS' && h.modalidadeId != filters.modalidade) return false; 
-                    if (filters.pais !== 'TODOS' && db.unidades.find(u => u.id == h.unidadeId)?.pais != filters.pais) return false; 
-                    if (filters.estado !== 'TODOS' && db.unidades.find(u => u.id == h.unidadeId)?.estado != filters.estado) return false; 
-                    return true; 
-                });
+                return dadosProcessados.filter(h => BusinessLogic._aplicarFiltros(h, filters, unidadesMap, user));
             },
-            calcularQualidade: (db, filterMode, startDate, endDate, user) => {
+            _obterDatasAlvo: (filterMode, startDate, endDate) => {
                 let targetDates = [];
-                if (filterMode === 'day') { targetDates = [startDate]; } 
-                else if (filterMode === 'range') { targetDates = DateUtils.getRangeDates(startDate, endDate); } 
-                else if (filterMode === 'month') { const [y, m] = startDate.split('-'); const daysInMonth = new Date(y, m, 0).getDate(); const end = `${y}-${m}-${daysInMonth}`; targetDates = DateUtils.getRangeDates(`${y}-${m}-01`, end); }
-                const today = new Date().toISOString().split('T')[0];
-                targetDates = targetDates.filter(d => d <= today);
-                
-                // FILTRAGEM POR PERMISSÃO DE ACESSO
-                let unidadesFiltradas = db.unidades;
-                if (user.role === 'unidade') {
-                    unidadesFiltradas = db.unidades.filter(u => u.id === user.id);
-                } else if (user.role === 'mentor') {
-                    unidadesFiltradas = db.unidades.filter(u => u.mentorId === user.id);
+                if (filterMode === 'day') {
+                    targetDates = [startDate];
+                } else if (filterMode === 'range') {
+                    targetDates = DateUtils.getRangeDates(startDate, endDate);
+                } else if (filterMode === 'month') {
+                    const [y, m] = startDate.split('-');
+                    const daysInMonth = new Date(y, m, 0).getDate();
+                    const end = `${y}-${m}-${daysInMonth}`;
+                    targetDates = DateUtils.getRangeDates(`${y}-${m}-01`, end);
                 }
+                const today = new Date().toISOString().split('T')[0];
+                return targetDates.filter(d => d <= today);
+            },
 
+            _calcularStatusUnidade: (percentual) => {
+                let status = 'Crítico';
+                let statusCor = STATUS_COLORS.danger.bg + ' ' + STATUS_COLORS.danger.text;
+                
+                if (percentual >= 90) {
+                    status = 'Excelente';
+                    statusCor = STATUS_COLORS.success.light + ' ' + STATUS_COLORS.success.text;
+                } else if (percentual >= 60) {
+                    status = 'Atenção';
+                    statusCor = STATUS_COLORS.warning.light + ' ' + STATUS_COLORS.warning.text;
+                }
+                
+                return { status, statusCor };
+            },
+
+            calcularQualidade: (db, filterMode, startDate, endDate, user) => {
+                const targetDates = BusinessLogic._obterDatasAlvo(filterMode, startDate, endDate);
+                const unidadesFiltradas = filterByUserPermission(db.unidades, user);
+                
+                // Criar Maps para performance
+                const validacoesMap = new Map();
+                (db.validacoes || []).forEach(v => {
+                    const key = `${v.aulaId}-${v.data}`;
+                    validacoesMap.set(key, v);
+                });
+                
+                const mentoresMap = new Map(db.mentores.map(m => [m.id, m]));
+                const diasSemanaMap = Object.freeze({ "Domingo": 0, "Segunda": 1, "Terça": 2, "Quarta": 3, "Quinta": 4, "Sexta": 5, "Sábado": 6 });
+                
                 const adesaoPorUnidade = unidadesFiltradas.map(u => {
                     const aulasDaUnidade = db.horarios.filter(h => h.unidadeId === u.id);
-                    let atividadesEsperadas = 0; let atividadesRealizadas = 0; let datasPendentes = []; let lastValidation = null;
-                    aulasDaUnidade.forEach(h => { const diasSemanaMap = { "Domingo": 0, "Segunda": 1, "Terça": 2, "Quarta": 3, "Quinta": 4, "Sexta": 5, "Sábado": 6 }; const diasAulaIndices = h.dias.map(d => diasSemanaMap[d]); targetDates.forEach(date => { const dt = new Date(date + 'T00:00:00'); const dayIdx = dt.getDay(); if (diasAulaIndices.includes(dayIdx)) { if (!DateUtils.isHoliday(date, db.feriados, u)) { atividadesEsperadas++; const val = db.validacoes.find(v => v.aulaId === h.id && v.data === date); if (val) { atividadesRealizadas++; if (!lastValidation || new Date(val.timestamp) > new Date(lastValidation.timestamp)) { lastValidation = val; } } else { const diaMes = date.split('-').slice(1).reverse().join('/'); datasPendentes.push(diaMes); } } } }); });
+                    let atividadesEsperadas = 0;
+                    let atividadesRealizadas = 0;
+                    let datasPendentes = [];
+                    let lastValidation = null;
+                    
+                    aulasDaUnidade.forEach(h => {
+                        const diasAulaIndices = h.dias.map(d => diasSemanaMap[d]);
+                        
+                        targetDates.forEach(date => {
+                            const dt = new Date(date + 'T00:00:00');
+                            const dayIdx = dt.getDay();
+                            
+                            if (diasAulaIndices.includes(dayIdx)) {
+                                if (!DateUtils.isHoliday(date, db.feriados, u)) {
+                                    atividadesEsperadas++;
+                                    const val = validacoesMap.get(`${h.id}-${date}`);
+                                    
+                                    if (val) {
+                                        atividadesRealizadas++;
+                                        if (!lastValidation || new Date(val.timestamp) > new Date(lastValidation.timestamp)) {
+                                            lastValidation = val;
+                                        }
+                                    } else {
+                                        const diaMes = date.split('-').slice(1).reverse().join('/');
+                                        datasPendentes.push(diaMes);
+                                    }
+                                }
+                            }
+                        });
+                    });
+                    
                     const percentual = atividadesEsperadas > 0 ? Math.round((atividadesRealizadas / atividadesEsperadas) * 100) : 100;
-                    const mentor = db.mentores.find(m => m.id === u.mentorId);
-                    let status = 'Crítico'; let statusCor = STATUS_COLORS.danger.bg + ' ' + STATUS_COLORS.danger.text;
-                    if (percentual >= 90) { status = 'Excelente'; statusCor = STATUS_COLORS.success.light + ' ' + STATUS_COLORS.success.text; } 
-                    else if (percentual >= 60) { status = 'Atenção'; statusCor = STATUS_COLORS.warning.light + ' ' + STATUS_COLORS.warning.text; } 
-                    else { statusCor = STATUS_COLORS.danger.light + ' ' + STATUS_COLORS.danger.text; }
-                    return { ...u, mentorName: mentor?.nome || "Sem Mentor", atividadesEsperadas, atividadesRealizadas, pendencias: atividadesEsperadas - atividadesRealizadas, datasPendentes: [...new Set(datasPendentes)], percentual, status, statusCor, lastValidationTime: lastValidation ? lastValidation.timestamp : null };
+                    const mentor = mentoresMap.get(u.mentorId);
+                    const { status, statusCor } = BusinessLogic._calcularStatusUnidade(percentual);
+                    
+                    return {
+                        ...u,
+                        mentorName: mentor?.nome || "Sem Mentor",
+                        atividadesEsperadas,
+                        atividadesRealizadas,
+                        pendencias: atividadesEsperadas - atividadesRealizadas,
+                        datasPendentes: [...new Set(datasPendentes)],
+                        percentual,
+                        status,
+                        statusCor,
+                        lastValidationTime: lastValidation ? lastValidation.timestamp : null
+                    };
                 });
-                return adesaoPorUnidade.sort((a,b) => { if (a.status === b.status) return a.nome.localeCompare(b.nome); return a.status === 'Pendente' ? -1 : 1; });
+                
+                return adesaoPorUnidade.sort((a, b) => {
+                    if (a.status === b.status) return a.nome.localeCompare(b.nome);
+                    return a.status === 'Pendente' ? -1 : 1;
+                });
             }
         };
 
@@ -284,7 +709,42 @@
         // 3. COMPONENTES VISUAIS (ATOMIC UI)
         // ==========================================
 
-        const Icon = ({ name, className }) => {
+        // Error Boundary para capturar erros em componentes
+        class ErrorBoundary extends React.Component {
+            constructor(props) {
+                super(props);
+                this.state = { hasError: false, error: null };
+            }
+            static getDerivedStateFromError(error) {
+                return { hasError: true, error };
+            }
+            componentDidCatch(error, errorInfo) {
+                console.error('Erro capturado pelo ErrorBoundary:', error, errorInfo);
+            }
+            render() {
+                if (this.state.hasError) {
+                    return (
+                        <div className="flex items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-900 p-4">
+                            <div className="glass-panel p-8 max-w-md text-center">
+                                <div className="text-red-500 mb-4">
+                                    <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                    </svg>
+                                </div>
+                                <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">Ops! Algo deu errado</h3>
+                                <p className="text-slate-600 dark:text-slate-400 mb-4">Ocorreu um erro inesperado. Por favor, recarregue a página.</p>
+                                <button onClick={() => window.location.reload()} className="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors">
+                                    Recarregar Página
+                                </button>
+                            </div>
+                        </div>
+                    );
+                }
+                return this.props.children;
+            }
+        }
+
+        const Icon = React.memo(({ name, className }) => {
             const ref = useRef(null);
             useEffect(() => {
                 if (window.lucide) {
@@ -295,9 +755,9 @@
                 }
             }, [name, className]);
             return <span ref={ref} style={{ display: 'contents' }}></span>;
-        };
+        });
 
-        const Button = ({ children, onClick, variant = 'primary', className = '', ...props }) => {
+        const Button = React.memo(({ children, onClick, variant = 'primary', className = '', ...props }) => {
             const baseClass = "px-4 py-2 rounded-lg font-bold text-xs uppercase transition-all duration-200 flex items-center justify-center gap-2 active:scale-95";
             const variants = {
                 primary: "bg-blue-600 text-white hover:bg-blue-700 shadow-md hover:shadow-lg",
@@ -307,70 +767,95 @@
                 ghost: "text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
             };
             return <button onClick={onClick} className={`${baseClass} ${variants[variant]} ${className}`} {...props}>{children}</button>;
-        };
+        });
 
-        const Input = ({ label, error, ...props }) => (
-            <div className="w-full">
-                {label && <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">{label}</label>}
-                <input className={`w-full p-2 border rounded-lg text-sm outline-none transition-colors dark:bg-slate-800 dark:border-slate-700 dark:text-white ${error ? 'input-error' : 'border-slate-200 focus:border-blue-500'}`} {...props} />
-                {error && <span className="text-[10px] text-red-500 mt-1 block">Campo obrigatório</span>}
-            </div>
-        );
+        const Input = React.memo(({ label, error, ...props }) => {
+            const inputId = useRef(`input-${Math.random().toString(36).substr(2, 9)}`);
+            return (
+                <div className="w-full">
+                    {label && <label htmlFor={inputId.current} className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">{label}</label>}
+                    <input 
+                        id={inputId.current}
+                        className={`w-full p-2 border rounded-lg text-sm outline-none transition-colors dark:bg-slate-800 dark:border-slate-700 dark:text-white ${error ? 'input-error' : 'border-slate-200 focus:border-blue-500'}`} 
+                        aria-invalid={error ? 'true' : 'false'}
+                        aria-describedby={error ? `${inputId.current}-error` : undefined}
+                        {...props} 
+                    />
+                    {error && <span id={`${inputId.current}-error`} className="text-[10px] text-red-500 mt-1 block" role="alert">Campo obrigatório</span>}
+                </div>
+            );
+        });
 
-        const Select = ({ label, error, children, ...props }) => (
-            <div className="w-full">
-                {label && <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">{label}</label>}
-                <select className={`w-full p-2 border rounded-lg text-sm outline-none transition-colors dark:bg-slate-800 dark:border-slate-700 dark:text-white ${error ? 'input-error' : 'border-slate-200 focus:border-blue-500'}`} {...props}>{children}</select>
-            </div>
-        );
+        const Select = React.memo(({ label, error, children, ...props }) => {
+            const selectId = useRef(`select-${Math.random().toString(36).substr(2, 9)}`);
+            return (
+                <div className="w-full">
+                    {label && <label htmlFor={selectId.current} className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">{label}</label>}
+                    <select 
+                        id={selectId.current}
+                        className={`w-full p-2 border rounded-lg text-sm outline-none transition-colors dark:bg-slate-800 dark:border-slate-700 dark:text-white ${error ? 'input-error' : 'border-slate-200 focus:border-blue-500'}`} 
+                        aria-invalid={error ? 'true' : 'false'}
+                        {...props}
+                    >{children}</select>
+                </div>
+            );
+        });
 
-        const Skeleton = ({ className }) => <div className={`animate-pulse bg-slate-200 dark:bg-slate-700 rounded ${className}`}></div>;
+        const Skeleton = React.memo(({ className }) => <div className={`animate-pulse bg-slate-200 dark:bg-slate-700 rounded ${className}`} role="status" aria-label="Carregando..."></div>);
 
-        const Avatar = ({ name, size = 'md' }) => {
+        const Avatar = React.memo(({ name, size = 'md' }) => {
             const initials = name ? name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : '??';
             const colors = ['bg-red-500', 'bg-orange-500', 'bg-amber-500', 'bg-yellow-500', 'bg-green-500', 'bg-blue-500', 'bg-indigo-500', 'bg-purple-500', 'bg-pink-500'];
             const colorIndex = name ? name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length : 0;
             const sizeClasses = { sm: 'w-6 h-6 text-[10px]', md: 'w-8 h-8 text-xs', lg: 'w-10 h-10 text-sm' };
-            return <div className={`${sizeClasses[size]} rounded-full ${colors[colorIndex]} text-white flex items-center justify-center font-bold shadow-sm ring-2 ring-white dark:ring-slate-700`}>{initials}</div>;
-        };
+            return <div className={`${sizeClasses[size]} rounded-full ${colors[colorIndex]} text-white flex items-center justify-center font-bold shadow-sm ring-2 ring-white dark:ring-slate-700`} role="img" aria-label={`Avatar de ${name}`}>{initials}</div>;
+        });
 
-        const EmptyState = ({ message, icon = "inbox" }) => (
-            <div className="flex flex-col items-center justify-center p-12 text-slate-400 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50/50 dark:bg-slate-800/50">
+        const EmptyState = React.memo(({ message, icon = "inbox" }) => (
+            <div className="flex flex-col items-center justify-center p-12 text-slate-400 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50/50 dark:bg-slate-800/50" role="status">
                 <div className="bg-white dark:bg-slate-800 p-4 rounded-full mb-3 shadow-sm"><Icon name={icon} className="w-10 h-10 opacity-50" /></div>
                 <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{message}</p>
             </div>
-        );
+        ));
 
-        const ConfirmModal = ({ isOpen, onClose, onConfirm, title, message, type = "danger" }) => {
+        const ConfirmModal = React.memo(({ isOpen, onClose, onConfirm, title, message, type = "danger" }) => {
+            useEffect(() => {
+                if (isOpen) {
+                    const handleEscape = (e) => { if (e.key === 'Escape') onClose(); };
+                    document.addEventListener('keydown', handleEscape);
+                    return () => document.removeEventListener('keydown', handleEscape);
+                }
+            }, [isOpen, onClose]);
+            
             if (!isOpen) return null;
             const color = type === "danger" ? "red" : "blue";
             return (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-fade-in backdrop-blur-sm">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-fade-in backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="modal-description">
                     <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all scale-100 border border-slate-100 dark:border-slate-700">
                         <div className="p-6 text-center">
-                            <div className={`mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-${color}-100 dark:bg-${color}-900/30 mb-4`}><Icon name={type === "danger" ? "alert-triangle" : "info"} className={`h-6 w-6 text-${color}-600 dark:text-${color}-400`} /></div>
-                            <h3 className="text-lg font-bold text-slate-900 dark:text-white">{title}</h3>
-                            <div className="mt-2"><p className="text-sm text-slate-500 dark:text-slate-400">{message}</p></div>
+                            <div className={`mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-${color}-100 dark:bg-${color}-900/30 mb-4`} aria-hidden="true"><Icon name={type === "danger" ? "alert-triangle" : "info"} className={`h-6 w-6 text-${color}-600 dark:text-${color}-400`} /></div>
+                            <h3 id="modal-title" className="text-lg font-bold text-slate-900 dark:text-white">{title}</h3>
+                            <div className="mt-2"><p id="modal-description" className="text-sm text-slate-500 dark:text-slate-400">{message}</p></div>
                         </div>
                         <div className="bg-slate-50 dark:bg-slate-900/50 px-4 py-3 sm:px-6 flex flex-row-reverse gap-2">
-                            <button onClick={onConfirm} className={`w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-${color}-600 text-base font-medium text-white hover:bg-${color}-700 sm:ml-3 sm:w-auto sm:text-sm`}>Confirmar</button>
+                            <button onClick={onConfirm} className={`w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-${color}-600 text-base font-medium text-white hover:bg-${color}-700 sm:ml-3 sm:w-auto sm:text-sm`} autoFocus>Confirmar</button>
                             <button onClick={onClose} className="mt-3 w-full inline-flex justify-center rounded-md border border-slate-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-slate-700 hover:bg-slate-50 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">Cancelar</button>
                         </div>
                     </div>
                 </div>
             );
-        };
+        });
 
-        const CardKPI = ({ title, value, color, icon, subtitle }) => (
-            <div className={`glass-panel p-5 border-l-4 border-${color}-500 flex items-start justify-between hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1`}>
+        const CardKPI = React.memo(({ title, value, color, icon, subtitle }) => (
+            <div className={`glass-panel p-5 border-l-4 border-${color}-500 flex items-start justify-between hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1`} role="region" aria-label={title}>
                 <div className="flex-1">
                     <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">{title}</p>
-                    <p className={`text-2xl font-bold text-slate-800 dark:text-white`}>{value}</p>
+                    <p className={`text-2xl font-bold text-slate-800 dark:text-white`} aria-live="polite">{value}</p>
                     {subtitle && <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">{subtitle}</p>}
                 </div>
-                <div className={`p-3 bg-${color}-50 dark:bg-${color}-900/20 rounded-xl text-${color}-500 dark:text-${color}-400 shadow-sm`}><Icon name={icon} className="w-6 h-6" /></div>
+                <div className={`p-3 bg-${color}-50 dark:bg-${color}-900/20 rounded-xl text-${color}-500 dark:text-${color}-400 shadow-sm`} aria-hidden="true"><Icon name={icon} className="w-6 h-6" /></div>
             </div>
-        );
+        ));
 
         const ChartComponent = ({ type, data, options, title }) => {
             const canvasRef = useRef(null);
@@ -438,27 +923,36 @@
             const filteredData = useMemo(() => BusinessLogic.processarAulas(db, user, filters), [db, user, filters]);
             
             const kpis = useMemo(() => { 
-                const totalValor = filteredData.reduce((acc, h) => acc + h.valorMensal, 0); // Card 1 (Intacto)
-                const totalPerda = filteredData.reduce((acc, h) => acc + h.valorPerdidoFeriado, 0); // Card 5 (Intacto)
-                const totalAlunos = filteredData.reduce((acc, h) => acc + h.mediaAlunos, 0); // Auxiliar Card 3
-                const count = filteredData.filter(h => h.mediaAlunos > 0).length || 1; // Auxiliar Card 3
-                const unidadesAtivas = new Set(filteredData.map(h => h.unidadeId)).size; // Card 6 (Intacto)
+                // Validação para evitar NaN quando não há dados
+                if (!filteredData || filteredData.length === 0) {
+                    return { 
+                        receita: 0, 
+                        aulas: 0, 
+                        mediaAlunos: 0, 
+                        valorMedio: 0, 
+                        unidades: 0, 
+                        perdaFeriados: 0 
+                    };
+                }
                 
-                const totalAulasPrevistas = filteredData.reduce((acc, h) => acc + h.numAulasPrevistas, 0); // Base para Card 4
-                const totalAulasRealizadas = filteredData.reduce((acc, h) => acc + h.numAulasRealizadas, 0); // Card 2 (Intacto)
+                const totalValor = filteredData.reduce((acc, h) => acc + (h.valorMensal || 0), 0);
+                const totalPerda = filteredData.reduce((acc, h) => acc + (h.valorPerdidoFeriado || 0), 0);
+                const totalAlunos = filteredData.reduce((acc, h) => acc + (h.mediaAlunos || 0), 0);
+                const count = filteredData.filter(h => h.mediaAlunos > 0).length || 1;
+                const unidadesAtivas = new Set(filteredData.map(h => h.unidadeId).filter(id => id != null)).size;
                 
-                // CORREÇÃO CARD 4 (ISOLADA):
-                // Divide a Receita Prevista (totalValor) pelo Total de Aulas Previstas.
-                // Isso garante que o valor médio reflita o preço médio da aula agendada, e não sofra distorção pela quantidade de validações.
+                const totalAulasPrevistas = filteredData.reduce((acc, h) => acc + (h.numAulasPrevistas || 0), 0);
+                const totalAulasRealizadas = filteredData.reduce((acc, h) => acc + (h.numAulasRealizadas || 0), 0);
+                
                 const valorMedio = totalAulasPrevistas > 0 ? totalValor / totalAulasPrevistas : 0; 
 
                 return { 
-                    receita: totalValor, 
-                    aulas: totalAulasRealizadas, 
-                    mediaAlunos: Math.round(totalAlunos / count), // Card 3 (Intacto)
-                    valorMedio: valorMedio, // Card 4 (AJUSTADO)
-                    unidades: unidadesAtivas, 
-                    perdaFeriados: totalPerda 
+                    receita: isNaN(totalValor) ? 0 : totalValor, 
+                    aulas: isNaN(totalAulasRealizadas) ? 0 : totalAulasRealizadas, 
+                    mediaAlunos: isNaN(totalAlunos / count) ? 0 : Math.round(totalAlunos / count),
+                    valorMedio: isNaN(valorMedio) ? 0 : valorMedio,
+                    unidades: isNaN(unidadesAtivas) ? 0 : unidadesAtivas, 
+                    perdaFeriados: isNaN(totalPerda) ? 0 : totalPerda 
                 }; 
             }, [filteredData]);
 
@@ -478,6 +972,7 @@
             const [rangeEnd, setRangeEnd] = usePersistentState('cronogramaEnd', DateUtils.toISODate(new Date()));
             const [selectedMonth, setSelectedMonth] = usePersistentState('cronogramaMonth', new Date().toISOString().substring(0, 7));
             const [searchTerm, setSearchTerm] = useState("");
+            const debouncedSearch = useDebounce(searchTerm, 300);
             const [showCreateModal, setShowCreateModal] = useState(false);
             const [editingClass, setEditingClass] = useState(null);
             const [formData, setFormData] = useState({ unidadeId: '', modalidadeId: '', professor: '', valor: 0, hora: '07:00', dias: [], duracao: 60 });
@@ -500,16 +995,23 @@
 
             const filteredClasses = useMemo(() => {
                 if (!selectedUnit) return [];
+                const modalidadesMap = new Map(db.modalidades.map(m => [m.id, m]));
                 let classes = db.horarios.filter(h => h.unidadeId == selectedUnit);
-                if (searchTerm) {
-                    const lowerSearch = searchTerm.toLowerCase();
-                    classes = classes.filter(h => h.professor.toLowerCase().includes(lowerSearch) || db.modalidades.find(m => m.id == h.modalidadeId)?.nome.toLowerCase().includes(lowerSearch));
+                
+                if (debouncedSearch) {
+                    const lowerSearch = debouncedSearch.toLowerCase();
+                    classes = classes.filter(h => {
+                        const modalidade = modalidadesMap.get(h.modalidadeId);
+                        return h.professor.toLowerCase().includes(lowerSearch) || 
+                               modalidade?.nome.toLowerCase().includes(lowerSearch);
+                    });
                 }
+                
                 return classes.map(h => {
-                    const modalidade = db.modalidades.find(m => m.id == h.modalidadeId);
+                    const modalidade = modalidadesMap.get(h.modalidadeId);
                     return { ...h, modalidadeNome: modalidade?.nome, modalidadeCor: modalidade?.cor };
                 });
-            }, [db, selectedUnit, searchTerm]);
+            }, [db, selectedUnit, debouncedSearch]);
 
             const activeTimeSlots = useMemo(() => {
                 const times = new Set(filteredClasses.map(c => c.hora));
@@ -786,8 +1288,7 @@
             const [errors, setErrors] = useState({});
 
             const availableUnits = useMemo(() => {
-                if (user.role === 'mentor') return db.unidades.filter(u => u.mentorId === user.id);
-                return db.unidades;
+                return filterByUserPermission(db.unidades, user);
             }, [db.unidades, user]);
 
             const dayOfWeek = useMemo(() => DateUtils.getDayOfWeek(date), [date]);
@@ -1744,28 +2245,22 @@
             };
             
             const handleBackup = () => { 
-                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db)); 
-                const downloadAnchorNode = document.createElement('a'); 
-                downloadAnchorNode.setAttribute("href", dataStr); 
-                downloadAnchorNode.setAttribute("download", "backup_happy_zone.json"); 
-                document.body.appendChild(downloadAnchorNode); 
-                downloadAnchorNode.click(); 
-                downloadAnchorNode.remove(); 
+                dataLayer.exportData(db);
                 addToast("Backup baixado com sucesso!", "success"); 
             };
             
             const handleRestore = (event) => { 
-                const fileReader = new FileReader(); 
-                fileReader.readAsText(event.target.files[0], "UTF-8"); 
-                fileReader.onload = e => { 
-                    try { 
-                        const restoredDb = JSON.parse(e.target.result); 
-                        setDb(restoredDb); 
-                        addToast("Sistema restaurado com sucesso!", "success"); 
-                    } catch (error) { 
-                        addToast("Erro ao ler arquivo de backup.", "error"); 
-                    } 
-                }; 
+                const file = event.target.files[0];
+                if (!file) return;
+                
+                dataLayer.importData(file, (importedData, error) => {
+                    if (error) {
+                        addToast(error, "error");
+                    } else {
+                        setDb(importedData);
+                        addToast("Sistema restaurado com sucesso!", "success");
+                    }
+                });
             };
             
             const renderCadastroList = (collection, icon) => (
@@ -1936,8 +2431,8 @@
                     <div className="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
                     <div className="relative bg-white/10 border border-white/20 p-8 rounded-2xl shadow-2xl w-full max-w-md animate-slide-in backdrop-blur-md">
                         <div className="text-center mb-8">
-                            <h1 className="text-3xl font-black text-white tracking-tighter mb-1"> PRATIQUE <span className="text-blue-400">COLETIVAS</span></h1>
-                            <p className="text-blue-200 text-xs uppercase tracking-widest font-bold">Gestão Happy Zone</p>
+                            <h1 className="text-3xl font-black text-white tracking-tighter mb-1">HAPPY <span className="text-blue-400">ZONE</span></h1>
+                            <p className="text-blue-200 text-xs uppercase tracking-widest font-bold">Sistema de Gestão 4.0</p>
                         </div>
                         <form onSubmit={handleLogin} className="space-y-4">
                             <div className="relative">
@@ -1964,7 +2459,7 @@
                             </button>
                         </form>
                         {error && <div className="mt-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-200 text-xs text-center font-bold animate-pulse">{error}</div>}
-                        <div className="mt-6 text-center text-[10px] text-slate-500">login: Nome do Mentor ou Unidade / Senha: 1234</div>
+                        <div className="mt-6 text-center text-[10px] text-slate-500">Admin: ADMIN / admin123</div>
                     </div>
                 </div>
             ); 
@@ -1992,7 +2487,69 @@
             return (<> {isMobileOpen && <div className="fixed inset-0 bg-black/50 z-20 md:hidden" onClick={closeMobile}></div>} <aside className={`w-64 bg-sidebar flex flex-col shadow-xl fixed md:relative h-full z-30 transition-transform duration-300 ${isMobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}><div className="p-6 border-b border-slate-800 flex justify-between items-center"><h1 className="text-xl font-bold text-white">PRATIQUE <span className="text-blue-500">COLETIVAS</span></h1><button className="md:hidden text-slate-400" onClick={closeMobile}><Icon name="x" className="w-5 h-5"/></button></div><nav className="flex-1 py-6 space-y-1 overflow-y-auto">{visibleItems.map(item => (<button key={item.id} onClick={() => { setView(item.id); closeMobile(); }} className={`w-full px-6 py-3 flex items-center gap-3 text-sm font-medium transition-colors ${currentView === item.id ? 'bg-blue-600/10 text-blue-400 border-l-4 border-blue-500' : 'text-slate-400 hover:bg-white/5 hover:text-white border-l-4 border-transparent'}`}><Icon name={item.icon} className="w-5 h-5" />{item.label}</button>))}</nav><div className="px-6 py-4"><button onClick={() => setShowFeedback(true)} className="w-full py-2 border border-slate-700 rounded text-slate-400 text-xs uppercase font-bold hover:bg-slate-800 transition-colors flex justify-center items-center gap-2"><Icon name="message-square" className="w-3 h-3"/> Feedback</button></div><div className="p-4 border-t border-slate-800 bg-slate-900/50"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-600 to-blue-400 flex items-center justify-center text-white font-bold text-sm shadow-lg">{user.nome.charAt(0)}</div><div className="overflow-hidden"><p className="text-white text-xs font-bold truncate w-32">{user.nome}</p><p className="text-[10px] text-slate-500 uppercase">{user.role}</p></div><button onClick={onLogout} className="ml-auto text-red-400 hover:text-red-300 p-2 rounded-lg hover:bg-red-500/10 transition-colors"><Icon name="log-out" className="w-4 h-4" /></button></div></div>{showFeedback && <FeedbackModal onClose={() => setShowFeedback(false)} />}</aside> </>); 
         };
 
-        const Header = ({ title, toggleMobile }) => { const [date, setDate] = useState(new Date()); useEffect(() => { const timer = setInterval(() => setDate(new Date()), 60000); return () => clearInterval(timer); }, []); return (<header className="h-16 bg-white border-b border-slate-200 flex justify-between items-center px-4 md:px-8 shadow-sm z-10 sticky top-0"><div className="flex items-center gap-4"><button className="md:hidden text-slate-600" onClick={toggleMobile}><Icon name="menu" className="w-6 h-6"/></button><h2 className="text-lg font-bold text-slate-700">{title}</h2></div><div className="flex items-center gap-4"><div className="hidden md:flex items-center gap-2 text-xs font-mono text-slate-500 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-100"><Icon name="clock" className="w-3 h-3" />{date.toLocaleDateString('pt-BR')}</div><div className="flex items-center gap-2 text-[10px] font-bold uppercase text-green-600 bg-green-50 px-2 py-1 rounded border border-green-100"><span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>Online</div></div></header>); };
+        const Header = ({ title, toggleMobile, hasNewChanges, lastSync }) => { 
+            const [date, setDate] = useState(new Date()); 
+            useEffect(() => { 
+                const timer = setInterval(() => setDate(new Date()), 60000); 
+                return () => clearInterval(timer); 
+            }, []); 
+            
+            const dataSourceColor = DATA_SOURCE === 'supabase' ? 'bg-purple-50 text-purple-600 border-purple-200' : 'bg-blue-50 text-blue-600 border-blue-200';
+            const dataSourceIcon = DATA_SOURCE === 'supabase' ? 'database' : 'hard-drive';
+            const isRealtime = DATA_SOURCE === 'supabase';
+            
+            const formatLastSync = (date) => {
+                if (!date) return '';
+                const now = new Date();
+                const diff = Math.floor((now - date) / 1000);
+                if (diff < 10) return 'agora';
+                if (diff < 60) return `${diff}s atrás`;
+                const minutes = Math.floor(diff / 60);
+                if (minutes < 60) return `${minutes}min atrás`;
+                return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            };
+            
+            return (
+                <header className="h-16 bg-white border-b border-slate-200 flex justify-between items-center px-4 md:px-8 shadow-sm z-10 sticky top-0">
+                    <div className="flex items-center gap-4">
+                        <button className="md:hidden text-slate-600" onClick={toggleMobile}>
+                            <Icon name="menu" className="w-6 h-6"/>
+                        </button>
+                        <h2 className="text-lg font-bold text-slate-700">{title}</h2>
+                        {hasNewChanges && (
+                            <div className="flex items-center gap-1 text-[10px] font-bold uppercase text-orange-600 bg-orange-50 px-2 py-1 rounded border border-orange-200 animate-pulse">
+                                <Icon name="refresh-cw" className="w-3 h-3 animate-spin" />
+                                Sincronizando
+                            </div>
+                        )}
+                    </div>
+                    <div className="flex items-center gap-4">
+                        <div className="hidden md:flex items-center gap-2 text-xs font-mono text-slate-500 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-100">
+                            <Icon name="clock" className="w-3 h-3" />
+                            {date.toLocaleDateString('pt-BR')}
+                        </div>
+                        <div className={`flex items-center gap-2 text-[10px] font-bold uppercase px-2 py-1 rounded border ${dataSourceColor}`} title={`Fonte de dados: ${DATA_SOURCE}`}>
+                            <Icon name={dataSourceIcon} className="w-3 h-3" />
+                            {DATA_SOURCE}
+                        </div>
+                        {isRealtime ? (
+                            <div className="flex items-center gap-2 text-[10px] font-bold uppercase text-green-600 bg-green-50 px-2 py-1 rounded border border-green-100" title={`Sincronização em tempo real ativa. Última sync: ${formatLastSync(lastSync)}`}>
+                                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                                REALTIME
+                                {lastSync && (
+                                    <span className="text-[8px] opacity-75 ml-1">{formatLastSync(lastSync)}</span>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-2 text-[10px] font-bold uppercase text-green-600 bg-green-50 px-2 py-1 rounded border border-green-100">
+                                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                                Online
+                            </div>
+                        )}
+                    </div>
+                </header>
+            ); 
+        };
         
         const DashboardHome = ({ user, setView, db }) => {
             const [now, setNow] = useState(new Date());
@@ -2064,17 +2621,31 @@
                 const currentMonth = now.getMonth() + 1;
                 const currentYear = now.getFullYear();
                 
+                // Validação para evitar NaN
+                if (!myClasses || myClasses.length === 0) return 0;
+                if (!db || !db.feriados || !db.unidades) return 0;
+                
                 // Simplified calculation for performance
                 let total = 0;
                 myClasses.forEach(h => {
-                    // Calculate how many times this class happens this month (ignoring holidays for "potential" revenue or checking them if strict)
-                    // Prompt says: "Soma(AulasPrevistas * ValorHora)"
-                    // Reuse DateUtils logic if possible or simple math
-                    const { dates } = DateUtils.generateClassDates(h.dias, currentMonth, currentYear, db.feriados, db.unidades.find(u => u.id === h.unidadeId));
-                    total += dates.length * parseFloat(h.valor);
+                    // Validação de dados
+                    if (!h.dias || !Array.isArray(h.dias) || h.dias.length === 0) return;
+                    
+                    const valorHora = parseFloat(h.valor);
+                    if (isNaN(valorHora)) return;
+                    
+                    const unidade = db.unidades.find(u => u.id === h.unidadeId);
+                    
+                    try {
+                        const { dates } = DateUtils.generateClassDates(h.dias, currentMonth, currentYear, db.feriados, unidade);
+                        const numAulas = dates.length || 0;
+                        total += numAulas * valorHora;
+                    } catch (error) {
+                        console.warn('Erro ao calcular previsão financeira:', error);
+                    }
                 });
                 
-                return total;
+                return isNaN(total) ? 0 : total;
             }, [myClasses, user.role, now, db.feriados, db.unidades]);
 
             // Greeting
@@ -2213,19 +2784,88 @@
             const [user, setUser] = useState(null); 
             const [view, setView] = useState('home'); 
             const [isMobileOpen, setIsMobileOpen] = useState(false); 
-            const [db, setDb] = useState(() => { 
-                const savedDb = localStorage.getItem('pratique_db_v10_2'); 
-                return savedDb ? { ...INITIAL_DB, ...JSON.parse(savedDb) } : INITIAL_DB; 
-            }); 
+            const [db, setDb] = useState(INITIAL_DB);
+            const [isLoading, setIsLoading] = useState(true);
+            const [realtimeChannel, setRealtimeChannel] = useState(null);
+            const [hasNewChanges, setHasNewChanges] = useState(false);
+            const [lastSync, setLastSync] = useState(new Date());
             
-            useEffect(() => { localStorage.setItem('pratique_db_v10_2', JSON.stringify(db)); }, [db]); 
+            // ========== INICIALIZAÇÃO: Carrega dados do DataLayer ==========
+            useEffect(() => {
+                const loadInitialData = async () => {
+                    try {
+                        const loadedData = await dataLayer.loadData();
+                        setDb(loadedData);
+                        console.log(`📦 Dados carregados do ${DATA_SOURCE}`);
+                    } catch (error) {
+                        console.error('Erro ao carregar dados:', error);
+                    } finally {
+                        setIsLoading(false);
+                    }
+                };
+                loadInitialData();
+            }, []);
+            
+            // ========== PERSISTÊNCIA: Salva dados quando alterados ==========
+            useEffect(() => {
+                if (!isLoading && db !== INITIAL_DB) {
+                    dataLayer.saveData(db);
+                }
+            }, [db, isLoading]);
+            
+            // ========== REALTIME: Sincronização automática (apenas Supabase) ==========
+            useEffect(() => {
+                if (!isLoading && DATA_SOURCE === 'supabase') {
+                    const channel = dataLayer.subscribeToChanges(async (change) => {
+                        console.log('🔄 Sincronizando mudança:', change.table);
+                        setHasNewChanges(true);
+                        
+                        // Auto-refresh após 1 segundo (debounce)
+                        setTimeout(async () => {
+                            try {
+                                const freshData = await dataLayer.loadData();
+                                setDb(freshData);
+                                setLastSync(new Date());
+                                setHasNewChanges(false);
+                                console.log('✅ Dados sincronizados automaticamente!');
+                            } catch (error) {
+                                console.error('❌ Erro ao sincronizar:', error);
+                            }
+                        }, 1000);
+                    });
+                    
+                    setRealtimeChannel(channel);
+                    
+                    // Cleanup: desinscrever ao desmontar
+                    return () => {
+                        if (channel) {
+                            dataLayer.unsubscribeFromChanges(channel);
+                        }
+                    };
+                }
+            }, [isLoading]);
+            
+            // ========== GERENCIAMENTO DE SESSÃO ==========
             useEffect(() => { 
                 const savedUser = sessionStorage.getItem('pratique_v3_user'); 
                 if (savedUser) setUser(JSON.parse(savedUser)); 
             }, []); 
             
             const handleLogin = (userData) => { setUser(userData); sessionStorage.setItem('pratique_v3_user', JSON.stringify(userData)); }; 
-            const handleLogout = () => { setUser(null); sessionStorage.removeItem('pratique_v3_user'); setView('home'); }; 
+            const handleLogout = () => { setUser(null); sessionStorage.removeItem('pratique_v3_user'); setView('home'); };
+            
+            // ========== LOADING STATE ==========
+            if (isLoading) {
+                return (
+                    <div className="flex items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-900">
+                        <div className="text-center">
+                            <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent mb-4"></div>
+                            <p className="text-slate-600 dark:text-slate-400 font-semibold">Carregando dados...</p>
+                            <p className="text-xs text-slate-400 mt-2">Fonte: {DATA_SOURCE}</p>
+                        </div>
+                    </div>
+                );
+            } 
             
             if (!user) return <LoginScreen onLogin={handleLogin} db={db} />; 
             
@@ -2234,7 +2874,12 @@
                     <div className="flex h-screen overflow-hidden bg-slate-50">
                         <Sidebar currentView={view} setView={setView} user={user} onLogout={handleLogout} isMobileOpen={isMobileOpen} closeMobile={() => setIsMobileOpen(false)} />
                         <main className="flex-1 flex flex-col overflow-hidden relative">
-                            <Header title={view === 'home' ? 'Início' : view.charAt(0).toUpperCase() + view.slice(1)} toggleMobile={() => setIsMobileOpen(true)} />
+                            <Header 
+                                title={view === 'home' ? 'Início' : view.charAt(0).toUpperCase() + view.slice(1)} 
+                                toggleMobile={() => setIsMobileOpen(true)}
+                                hasNewChanges={hasNewChanges}
+                                lastSync={lastSync}
+                            />
                             <div className="flex-1 overflow-y-auto scroll-smooth">
                                 {view === 'home' && <DashboardHome user={user} setView={setView} db={db} />}
                                 {view === 'relatorio' && <RelatorioView db={db} user={user} />}
