@@ -130,50 +130,42 @@
         });
 
         const INITIAL_DB = {
-    mentores: [
-        { id: 1, nome: "Felipe Souza", senha: "1234" },
-        { id: 2, nome: "Carlos", senha: "1234" },
-        { id: 3, nome: "Igor", senha: "1234" },
-        { id: 4, nome: "Lukas", senha: "1234" },
-        { id: 5, nome: "Rafael P", senha: "1234" },
-        { id: 6, nome: "Alex", senha: "1234" },
-        { id: 7, nome: "Anderson (Tio Anderson)", senha: "1234" },
-        { id: 8, nome: "Ricardo", senha: "1234" },
-        { id: 9, nome: "Pamela", senha: "1234" },
-        { id: 10, nome: "Vicente", senha: "1234" },
-        { id: 11, nome: "Gustavo", senha: "1234" },
-        { id: 12, nome: "Edgar", senha: "1234" },
-        { id: 13, nome: "Victor", senha: "1234" },
-        { id: 14, nome: "Wanda", senha: "1234" },
-        { id: 15, nome: "Marcel", senha: "1234" },
-        { id: 16, nome: "Anderson Henrique", senha: "1234" },
-        { id: 17, nome: "Wesley", senha: "1234" },
-        { id: 18, nome: "Diego", senha: "1234" },
-        { id: 19, nome: "H. Fontes", senha: "1234" },
-        { id: 20, nome: "Anderson SC", senha: "1234" },
-        { id: 21, nome: "Rafael Augusto", senha: "1234" }
-    ],
-    unidades: [
-        { id: 101, nome: "Unidade Centro", mentorId: 1, estado: "SP", pais: "Brasil", senha: "1234" }
-    ],
-    modalidades: [ 
-                { id: 201, nome: "POWER FIGHT", cor: "#fa7000" }, 
-                { id: 202, nome: "POWER PILATES", cor: "#9a47ff" }, 
+            mentores: [ 
+                { id: 1, nome: "Felipe Souza", senha: "1234" }, 
+                { id: 2, nome: "Carlos", senha: "1234" },
+                { id: 3, nome: "IGOR", senha: "1234" },
+                { id: 4, nome: "LUKAS", senha: "1234" },
+                { id: 5, nome: "RAFAEL P", senha: "1234" },
+                { id: 6, nome: "ANDERSON (TIO ANDERSON)", senha: "1234" },
+                { id: 7, nome: "RICARDO", senha: "1234" },
+                { id: 8, nome: "PAMELA", senha: "1234" },
+                { id: 9, nome: "VICENTE", senha: "1234" },
+                { id: 10, nome: "GUSTAVO", senha: "1234" },
+                { id: 11, nome: "EDGAR", senha: "1234" },
+                { id: 12, nome: "VICTOR", senha: "1234" },
+                { id: 13, nome: "ALEX", senha: "1234" },
+                { id: 14, nome: "WANDA", senha: "1234" },
+                { id: 15, nome: "MARCEL", senha: "1234" },
+                { id: 16, nome: "ANDERSON HENRIQUE", senha: "1234" },
+                { id: 17, nome: "WESLEY", senha: "1234" },
+                { id: 18, nome: "DIEGO", senha: "1234" },
+                { id: 19, nome: "H. FONTES", senha: "1234" },
+                { id: 20, nome: "ANDERSON SC", senha: "1234" },
+                { id: 21, nome: "RAFAEL AUGUSTO", senha: "1234" } ],
+            unidades: [ { id: 101, nome: "Unidade Centro", mentorId: 1, estado: "SP", pais: "Brasil", senha: "1234" } ],
+            modalidades: [
+                { id: 201, nome: "POWER FIGHT", cor: "#fa7000" },
+                { id: 202, nome: "POWER PILATES", cor: "#9a47ff" },
                 { id: 203, nome: "POWER TRAINING", cor: "#06f95f" },
                 { id: 204, nome: "POWER BUMBUM", cor: "#ff14cc" },
                 { id: 205, nome: "POWER CORE", cor: "#00aaff" },
                 { id: 206, nome: "ENERGY JUMP", cor: "#0488fb" },
                 { id: 207, nome: "POWER DANCE", cor: "#ff1a1a" }
-    ],
-    horarios: [
-        { id: 301, unidadeId: 101, modalidadeId: 201, professor: "HELOISA", valor: 20, hora: "07:00", dias: ["Segunda", "Quarta", "Sexta"], duracao: 60 }
-    ],
-    feriados: [
-        { id: 1, nome: "Confraternização Universal", dataInicio: "2025-01-01", dataFim: "2025-01-01", escopo: "Global", local: "" }
-    ],
-    validacoes: [],
-    acessos: []
-};
+            ],
+            horarios: [ { id: 301, unidadeId: 101, modalidadeId: 201, professor: "HELOISA", valor: 20, hora: "07:00", dias: ["Segunda", "Quarta", "Sexta"], duracao: 60 } ],
+            feriados: [ { id: 1, nome: "Confraternização Universal", dataInicio: "2025-01-01", dataFim: "2025-01-01", escopo: "Global", local: "" } ],
+            validacoes: [], acessos: []
+        };
 
         // ==========================================
         // 1.5 DATA LAYER (ABSTRAÇÃO DE PERSISTÊNCIA)
@@ -951,11 +943,21 @@
         };
 
         const RelatorioView = ({ db, user }) => {
-            const [filters, setFilters] = usePersistentState('relatorioFilters', { mes: new Date().getMonth() + 1, ano: 2025, pais: 'TODOS', estado: 'TODOS', unidade: 'TODAS', mentor: 'TODOS', modalidade: 'TODAS' });
+            const [filters, setFilters] = usePersistentState('relatorioFilters', { mes: new Date().getMonth() + 1, ano: new Date().getFullYear(), pais: 'TODOS', estado: 'TODOS', unidade: 'TODAS', mentor: 'TODOS', modalidade: 'TODAS' });
             const [activeTab, setActiveTab] = useState('geral');
             const [sortConfig, setSortConfig] = useState({ key: 'unidadeNome', direction: 'asc' });
+            const [sortConfigMedia, setSortConfigMedia] = useState({ key: 'rankPos', direction: 'asc' });
             const [expandedRowId, setExpandedRowId] = useState(null);
             const [loading, setLoading] = useState(false);
+            const relatorioInitRef = useRef(false);
+            useEffect(() => {
+                if (relatorioInitRef.current) return;
+                relatorioInitRef.current = true;
+                const now = new Date();
+                const mesAtual = now.getMonth() + 1;
+                const anoAtual = now.getFullYear();
+                setFilters(prev => ({ ...prev, mes: mesAtual, ano: anoAtual }));
+            }, []);
             useEffect(() => { setLoading(true); const timer = setTimeout(() => setLoading(false), 500); return () => clearTimeout(timer); }, [filters]);
             const filteredData = useMemo(() => BusinessLogic.processarAulas(db, user, filters), [db, user, filters]);
             
@@ -996,8 +998,30 @@
             const chartData = useMemo(() => { const modStats = {}; const unitStats = {}; filteredData.forEach(h => { if (!modStats[h.modalidadeNome]) modStats[h.modalidadeNome] = { count: 0, color: h.modalidadeCor }; modStats[h.modalidadeNome].count += h.mediaAlunos; if (!unitStats[h.unidadeNome]) unitStats[h.unidadeNome] = 0; unitStats[h.unidadeNome] += h.valorMensal; }); const sortedUnits = Object.entries(unitStats).sort((a,b) => b[1] - a[1]).slice(0, 5); return { modalidades: { labels: Object.keys(modStats), datasets: [{ data: Object.values(modStats).map(v => v.count), backgroundColor: Object.values(modStats).map(v => v.color), borderWidth: 0 }] }, receita: { labels: sortedUnits.map(i => i[0]), datasets: [{ label: 'Receita Prevista (R$)', data: sortedUnits.map(i => i[1]), backgroundColor: '#3b82f6', borderRadius: 4 }] } }; }, [filteredData]);
             const sortedData = useMemo(() => { let items = [...filteredData]; if (sortConfig.key) { items.sort((a, b) => { if (a[sortConfig.key] < b[sortConfig.key]) return sortConfig.direction === 'asc' ? -1 : 1; if (a[sortConfig.key] > b[sortConfig.key]) return sortConfig.direction === 'asc' ? 1 : -1; return 0; }); } return items; }, [filteredData, sortConfig]);
             const rankingData = useMemo(() => { return [...filteredData].sort((a, b) => b.mediaAlunos - a.mediaAlunos).map((item, index) => ({...item, rankPos: index + 1})); }, [filteredData]);
+            const sortedRankingData = useMemo(() => {
+                let items = [...rankingData];
+                const { key, direction } = sortConfigMedia || {};
+                if (!key) return items;
+                const dir = direction === 'desc' ? -1 : 1;
+                items.sort((a, b) => {
+                    const av = a[key];
+                    const bv = b[key];
+                    const an = (typeof av === 'number') ? av : (av != null && av !== '' && !isNaN(av) ? Number(av) : null);
+                    const bn = (typeof bv === 'number') ? bv : (bv != null && bv !== '' && !isNaN(bv) ? Number(bv) : null);
+                    if (an != null && bn != null) return (an - bn) * dir;
+                    const as = (av ?? '').toString();
+                    const bs = (bv ?? '').toString();
+                    return as.localeCompare(bs, 'pt-BR', { sensitivity: 'base' }) * dir;
+                });
+                return items;
+            }, [rankingData, sortConfigMedia]);
             const handleSort = (key) => { let direction = 'asc'; if (sortConfig.key === key && sortConfig.direction === 'asc') direction = 'desc'; setSortConfig({ key, direction }); };
-            return (<div className="p-6 space-y-6 fade-in"><FilterCard filters={filters} setFilters={setFilters} db={db} user={user} /><div className="grid grid-cols-2 lg:grid-cols-6 gap-4"><CardKPI title="VALOR TOTAL MENSAL" value={`R$ ${kpis.receita.toLocaleString('pt-BR')}`} color="blue" icon="dollar-sign" /><CardKPI title="AULAS REALIZADAS" value={kpis.aulas} color="emerald" icon="activity" /><CardKPI title="MÉDIA DE ALUNOS" value={kpis.mediaAlunos} color="orange" icon="users" /><CardKPI title="VALOR MÉDIO" value={`R$ ${kpis.valorMedio.toLocaleString('pt-BR', {maximumFractionDigits: 0})}`} color="cyan" icon="trending-up" /><CardKPI title="FERIADO ECONOMIA" value={`R$ ${kpis.perdaFeriados.toLocaleString('pt-BR')}`} color="red" icon="calendar-off" /><CardKPI title="UNIDADES MENTORADAS" value={kpis.unidades} color="purple" icon="map-pin" /></div><div className="glass-panel overflow-hidden min-h-[500px]"><div className="flex border-b border-slate-200 bg-slate-50/50">{['geral', 'media'].map(tab => (<button key={tab} onClick={() => setActiveTab(tab)} className={`px-6 py-3 text-xs font-bold uppercase flex items-center gap-2 border-b-2 transition-colors ${activeTab === tab ? 'border-blue-500 text-blue-600 bg-white' : 'border-transparent text-slate-500 hover:text-slate-700'}`}><Icon name={tab === 'geral' ? 'bar-chart' : 'list'} className="w-4 h-4" /> {tab === 'geral' ? 'Análise Geral' : 'Detalhamento Médio'}</button>))}</div><div className="p-6">{loading ? (<div className="p-8 space-y-4"><Skeleton className="h-12 w-full"/><Skeleton className="h-12 w-full"/></div>) : activeTab === 'geral' ? (<div className="space-y-6 animate-fade-in"><div className="overflow-x-auto border rounded-lg"><table className="w-full text-left text-xs uppercase"><thead className="bg-slate-50 text-slate-500 font-bold border-b border-slate-200"><tr><th className="p-3 cursor-pointer hover:bg-slate-100" onClick={() => handleSort('unidadeNome')}>Unidade <Icon name="arrow-up-down" className="w-3 h-3 inline opacity-50"/></th><th className="p-3 hidden md:table-cell cursor-pointer hover:bg-slate-100" onClick={() => handleSort('professor')}>Professor</th><th className="p-3 cursor-pointer hover:bg-slate-100" onClick={() => handleSort('modalidadeNome')}>Modalidade</th><th className="p-3 text-center cursor-pointer hover:bg-slate-100" onClick={() => handleSort('numAulasPrevistas')}>Aulas</th><th className="p-3 text-center cursor-pointer hover:bg-slate-100" onClick={() => handleSort('mediaAlunos')}>Média Real</th><th className="p-3 text-right cursor-pointer hover:bg-slate-100" onClick={() => handleSort('valorMensal')}>Total Mensal</th></tr></thead><tbody className="divide-y divide-slate-100">{sortedData.map(h => (<tr key={h.id} className="hover:bg-slate-50 transition-colors"><td className="p-3 font-bold text-slate-700">{h.unidadeNome}</td><td className="p-3 hidden md:table-cell text-slate-600">{h.professor}</td><td className="p-3 text-blue-600 font-semibold">{h.modalidadeNome}</td><td className="p-3 text-center font-bold">{h.numAulasPrevistas}</td><td className="p-3 text-center font-bold">{h.mediaAlunos}</td><td className="p-3 text-right font-mono text-green-600 font-bold">R$ {h.valorMensal.toFixed(2)}</td></tr>))}</tbody></table></div><div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t"><ChartComponent type="bar" title="Top 5 Unidades (Receita)" data={chartData.receita} options={{ indexAxis: 'y', scales: { x: { display: false }, y: { grid: { display: false } } } }} /><ChartComponent type="doughnut" title="Distribuição de Alunos" data={chartData.modalidades} options={{ cutout: '70%' }} /></div></div>) : (<div className="fade-in"><div className="overflow-x-auto border rounded-lg"><table className="w-full text-left text-xs uppercase"><thead className="bg-slate-50 text-slate-500 font-bold border-b border-slate-200"><tr><th className="p-3 text-center w-16 cursor-pointer hover:bg-slate-100" onClick={() => handleSort('rankPos')}>Pos</th><th className="p-3 cursor-pointer hover:bg-slate-100" onClick={() => handleSort('unidadeNome')}>Unidade</th><th className="p-3 hidden md:table-cell cursor-pointer hover:bg-slate-100" onClick={() => handleSort('mentorNome')}>Mentor</th><th className="p-3 cursor-pointer hover:bg-slate-100" onClick={() => handleSort('professor')}>Detalhe</th><th className="p-3 cursor-pointer hover:bg-slate-100" onClick={() => handleSort('modalidadeNome')}>Modalidade</th><th className="p-3 text-right cursor-pointer hover:bg-slate-100" onClick={() => handleSort('hora')}>Horário</th><th className="p-3 text-right cursor-pointer hover:bg-slate-100" onClick={() => handleSort('valorHora')}>Valor Aula</th><th className="p-3 text-right cursor-pointer hover:bg-slate-100" onClick={() => handleSort('mediaAlunos')}>Média Alunos</th></tr></thead><tbody className="divide-y divide-slate-100">{rankingData.map((h) => { const medal = h.rankPos === 1 ? 'text-yellow-500' : h.rankPos === 2 ? 'text-slate-400' : h.rankPos === 3 ? 'text-orange-500' : 'text-slate-400'; const isExpanded = expandedRowId === h.id; return (<React.Fragment key={h.id}><tr className={`hover:bg-slate-50 cursor-pointer ${isExpanded ? 'bg-slate-50 border-b-0' : ''}`} onClick={() => setExpandedRowId(isExpanded ? null : h.id)}><td className={`p-3 text-center font-bold text-lg ${medal}`}>{h.rankPos}</td><td className="p-3 font-bold text-slate-700">{h.unidadeNome}</td><td className="p-3 text-slate-500 hidden md:table-cell">{h.mentorNome}</td><td className="p-3 font-semibold text-slate-700 flex items-center gap-2"><Avatar name={h.professor} size="sm" /> {h.professor}</td><td className="p-3 text-blue-600 font-bold">{h.modalidadeNome}</td><td className="p-3 text-right font-mono text-slate-600">{h.hora}</td><td className="p-3 text-right font-mono text-slate-500">R$ {h.valorHora.toFixed(2)}</td><td className="p-3 text-right font-bold text-blue-600 text-sm">{h.mediaAlunos}</td></tr>{isExpanded && (<tr className="bg-slate-50 expanded-row"><td colSpan="8" className="p-4 pl-12 border-t border-slate-100"><div className="text-xs font-bold text-slate-500 mb-2 uppercase">Histórico de Validações</div>{h.historicoAulas.length > 0 ? (<div className="grid grid-cols-2 md:grid-cols-4 gap-3">{h.historicoAulas.map((item, i) => (<div key={i} className="border p-2 rounded flex justify-between items-center shadow-sm bg-white border-green-200 transition-all hover:scale-105"><div><span className="text-slate-500 font-mono text-[10px] block">{item.diaSemana}</span><span className="text-slate-700 font-bold text-xs">{item.dataFormatada}</span></div><span className="font-bold text-blue-600">{item.qtdAlunos}</span></div>))}</div>) : (<span className="text-slate-400 text-sm">Nenhuma aula validada neste mês.</span>)}</td></tr>)}</React.Fragment>); })}</tbody></table></div></div>)}</div></div></div>); };
+            const handleSortMedia = (key) => {
+                let direction = 'asc';
+                if (sortConfigMedia.key === key && sortConfigMedia.direction === 'asc') direction = 'desc';
+                setSortConfigMedia({ key, direction });
+            };
+            return (<div className="p-6 space-y-6 fade-in"><FilterCard filters={filters} setFilters={setFilters} db={db} user={user} /><div className="grid grid-cols-2 lg:grid-cols-6 gap-4"><CardKPI title="VALOR TOTAL MENSAL" value={`R$ ${kpis.receita.toLocaleString('pt-BR')}`} color="blue" icon="dollar-sign" /><CardKPI title="AULAS REALIZADAS" value={kpis.aulas} color="emerald" icon="activity" /><CardKPI title="MÉDIA DE ALUNOS" value={kpis.mediaAlunos} color="orange" icon="users" /><CardKPI title="VALOR MÉDIO" value={`R$ ${kpis.valorMedio.toLocaleString('pt-BR', {maximumFractionDigits: 0})}`} color="cyan" icon="trending-up" /><CardKPI title="FERIADO ECONOMIA" value={`R$ ${kpis.perdaFeriados.toLocaleString('pt-BR')}`} color="red" icon="calendar-off" /><CardKPI title="UNIDADES MENTORADAS" value={kpis.unidades} color="purple" icon="map-pin" /></div><div className="glass-panel overflow-hidden min-h-[500px]"><div className="flex border-b border-slate-200 bg-slate-50/50">{['geral', 'media'].map(tab => (<button key={tab} onClick={() => setActiveTab(tab)} className={`px-6 py-3 text-xs font-bold uppercase flex items-center gap-2 border-b-2 transition-colors ${activeTab === tab ? 'border-blue-500 text-blue-600 bg-white' : 'border-transparent text-slate-500 hover:text-slate-700'}`}><Icon name={tab === 'geral' ? 'bar-chart' : 'list'} className="w-4 h-4" /> {tab === 'geral' ? 'Análise Geral' : 'Detalhamento Médio'}</button>))}</div><div className="p-6">{loading ? (<div className="p-8 space-y-4"><Skeleton className="h-12 w-full"/><Skeleton className="h-12 w-full"/></div>) : activeTab === 'geral' ? (<div className="space-y-6 animate-fade-in"><div className="overflow-x-auto border rounded-lg"><table className="w-full text-left text-xs uppercase"><thead className="bg-slate-50 text-slate-500 font-bold border-b border-slate-200"><tr><th className="p-3 cursor-pointer hover:bg-slate-100" onClick={() => handleSort('unidadeNome')}>Unidade <Icon name="arrow-up-down" className="w-3 h-3 inline opacity-50"/></th><th className="p-3 hidden md:table-cell cursor-pointer hover:bg-slate-100" onClick={() => handleSort('professor')}>Professor</th><th className="p-3 cursor-pointer hover:bg-slate-100" onClick={() => handleSort('modalidadeNome')}>Modalidade</th><th className="p-3 text-center">Dias de Aula</th><th className="p-3 text-center cursor-pointer hover:bg-slate-100" onClick={() => handleSort('numAulasPrevistas')}>Quantidade de Aulas</th><th className="p-3 text-center cursor-pointer hover:bg-slate-100" onClick={() => handleSort('mediaAlunos')}>Média Real</th><th className="p-3 text-right cursor-pointer hover:bg-slate-100" onClick={() => handleSort('valorMensal')}>Total Mensal</th></tr></thead><tbody className="divide-y divide-slate-100">{sortedData.map(h => (<tr key={h.id} className="hover:bg-slate-50 transition-colors"><td className="p-3 font-bold text-slate-700">{h.unidadeNome}</td><td className="p-3 hidden md:table-cell text-slate-600">{h.professor}</td><td className="p-3 text-blue-600 font-semibold">{h.modalidadeNome}</td><td className="p-3 text-center font-bold text-slate-600">{Array.isArray(h.dias) ? h.dias.join(' / ') : '-'}</td><td className="p-3 text-center font-bold">{h.numAulasPrevistas}</td><td className="p-3 text-center font-bold">{h.mediaAlunos}</td><td className="p-3 text-right font-mono text-green-600 font-bold">R$ {h.valorMensal.toFixed(2)}</td></tr>))}</tbody></table></div><div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t"><ChartComponent type="bar" title="Top 5 Unidades (Receita)" data={chartData.receita} options={{ indexAxis: 'y', scales: { x: { display: false }, y: { grid: { display: false } } } }} /><ChartComponent type="doughnut" title="Distribuição de Alunos" data={chartData.modalidades} options={{ cutout: '70%' }} /></div></div>) : (<div className="fade-in"><div className="overflow-x-auto border rounded-lg"><table className="w-full text-left text-xs uppercase"><thead className="bg-slate-50 text-slate-500 font-bold border-b border-slate-200"><tr><th className="p-3 text-center w-16 cursor-pointer hover:bg-slate-100" onClick={() => handleSortMedia('rankPos')}>Pos</th><th className="p-3 cursor-pointer hover:bg-slate-100" onClick={() => handleSortMedia('unidadeNome')}>Unidade</th><th className="p-3 hidden md:table-cell cursor-pointer hover:bg-slate-100" onClick={() => handleSortMedia('mentorNome')}>Mentor</th><th className="p-3 cursor-pointer hover:bg-slate-100" onClick={() => handleSortMedia('professor')}>Detalhe</th><th className="p-3 cursor-pointer hover:bg-slate-100" onClick={() => handleSortMedia('modalidadeNome')}>Modalidade</th><th className="p-3 text-right cursor-pointer hover:bg-slate-100" onClick={() => handleSortMedia('hora')}>Horário</th><th className="p-3 text-right cursor-pointer hover:bg-slate-100" onClick={() => handleSortMedia('valorHora')}>Valor Aula</th><th className="p-3 text-right cursor-pointer hover:bg-slate-100" onClick={() => handleSortMedia('mediaAlunos')}>Média Alunos</th></tr></thead><tbody className="divide-y divide-slate-100">{sortedRankingData.map((h) => { const medal = h.rankPos === 1 ? 'text-yellow-500' : h.rankPos === 2 ? 'text-slate-400' : h.rankPos === 3 ? 'text-orange-500' : 'text-slate-400'; const isExpanded = expandedRowId === h.id; return (<React.Fragment key={h.id}><tr className={`hover:bg-slate-50 cursor-pointer ${isExpanded ? 'bg-slate-50 border-b-0' : ''}`} onClick={() => setExpandedRowId(isExpanded ? null : h.id)}><td className={`p-3 text-center font-bold text-lg ${medal}`}>{h.rankPos}</td><td className="p-3 font-bold text-slate-700">{h.unidadeNome}</td><td className="p-3 text-slate-500 hidden md:table-cell">{h.mentorNome}</td><td className="p-3 font-semibold text-slate-700 flex items-center gap-2"><Avatar name={h.professor} size="sm" /> {h.professor}</td><td className="p-3 text-blue-600 font-bold">{h.modalidadeNome}</td><td className="p-3 text-right font-mono text-slate-600">{h.hora}</td><td className="p-3 text-right font-mono text-slate-500">R$ {h.valorHora.toFixed(2)}</td><td className="p-3 text-right font-bold text-blue-600 text-sm">{h.mediaAlunos}</td></tr>{isExpanded && (<tr className="bg-slate-50 expanded-row"><td colSpan="8" className="p-4 pl-12 border-t border-slate-100"><div className="text-xs font-bold text-slate-500 mb-2 uppercase">Histórico de Validações</div>{h.historicoAulas.length > 0 ? (<div className="grid grid-cols-2 md:grid-cols-4 gap-3">{h.historicoAulas.map((item, i) => (<div key={i} className="border p-2 rounded flex justify-between items-center shadow-sm bg-white border-green-200 transition-all hover:scale-105"><div><span className="text-slate-500 font-mono text-[10px] block">{item.diaSemana}</span><span className="text-slate-700 font-bold text-xs">{item.dataFormatada}</span></div><span className="font-bold text-blue-600">{item.qtdAlunos}</span></div>))}</div>) : (<span className="text-slate-400 text-sm">Nenhuma aula validada neste mês.</span>)}</td></tr>)}</React.Fragment>); })}</tbody></table></div></div>)}</div></div></div>); };
 
         const CronogramaView = ({ db, setDb, user }) => { 
             const { addToast } = useToast();
@@ -1708,21 +1732,41 @@
         const MentorTab = ({ db, setDb, addToast }) => {
             const [nome, setNome] = useState("");
             const [editingId, setEditingId] = useState(null);
+            const seededRef = useRef(false);
 
             const handleSubmit = (e) => {
                 e.preventDefault();
                 if (!nome.trim()) return addToast("Nome é obrigatório.", "error");
+
+                // Validação de duplicidade (case-insensitive, ignora espaços extras)
+                const normalizeName = (s) => String(s || '')
+                    .trim()
+                    .replace(/\s+/g, ' ')
+                    .toUpperCase();
+
+                const nomeLimpo = String(nome || '')
+                    .trim()
+                    .replace(/\s+/g, ' ');
+
+                const nomeNormalizado = normalizeName(nomeLimpo);
+                const existeDuplicado = (db.mentores || []).some(m =>
+                    normalizeName(m.nome) === nomeNormalizado && m.id !== editingId
+                );
+
+                if (existeDuplicado) {
+                    return addToast("Já existe um mentor com esse nome.", "error");
+                }
 
                 const newMentores = [...db.mentores];
                 
                 if (editingId) {
                     const index = newMentores.findIndex(m => m.id === editingId);
                     if (index > -1) {
-                        newMentores[index] = { ...newMentores[index], nome };
+                        newMentores[index] = { ...newMentores[index], nome: nomeLimpo };
                         addToast("Mentor atualizado com sucesso!", "success");
                     }
                 } else {
-                    newMentores.push({ id: Date.now(), nome, usar: true }); // Default usar: true
+                    newMentores.push({ id: Date.now(), nome: nomeLimpo, usar: true }); // Default usar: true
                     addToast("Mentor adicionado com sucesso!", "success");
                 }
 
@@ -1871,9 +1915,29 @@
                 e.preventDefault();
                 if (!form.nome || !form.pais || !form.estado) return addToast("Preencha os campos obrigatórios.", "error");
 
+                // Validação de duplicidade (case-insensitive, ignora espaços extras)
+                const normalizeName = (s) => String(s || '')
+                    .trim()
+                    .replace(/\s+/g, ' ')
+                    .toUpperCase();
+
+                const nomeLimpo = String(form.nome || '')
+                    .trim()
+                    .replace(/\s+/g, ' ');
+
+                const nomeNormalizado = normalizeName(nomeLimpo);
+                const existeDuplicado = (db.unidades || []).some(u =>
+                    normalizeName(u.nome) === nomeNormalizado && u.id !== editingId
+                );
+
+                if (existeDuplicado) {
+                    return addToast("Já existe uma unidade com esse nome.", "error");
+                }
+
                 const newUnidades = [...db.unidades];
                 const payload = {
                     ...form,
+                    nome: nomeLimpo,
                     mentorId: Number(form.mentorId)
                 };
 
@@ -1904,6 +1968,10 @@
             };
 
             const handleDelete = (id) => {
+                const unidadeEmUso = (db.horarios || []).some(h => h.unidadeId === id);
+                if (unidadeEmUso) {
+                    return addToast("Não é possível excluir: esta unidade está vinculada a horários/validações.", "error");
+                }
                 if (window.confirm("Deseja realmente excluir esta unidade?")) {
                     setDb({ ...db, unidades: db.unidades.filter(u => u.id !== id) });
                     addToast("Unidade excluída.", "success");
@@ -2019,13 +2087,98 @@
             const [nome, setNome] = useState("");
             const [cor, setCor] = useState("#3b82f6"); // Azul default
             const [editingId, setEditingId] = useState(null);
+            const modalidadeSeededRef = useRef(false);
+            // ==================================================
+            // SEED: MODALIDADES PRÉ-DEFINIDAS (APENAS UMA VEZ)
+            // Escopo: exclusivamente a sub-aba Cadastro → Modalidade
+            // ==================================================
+            useEffect(() => {
+                try {
+                    if (modalidadeSeededRef.current) return;
+
+                    const SEED_KEY = 'modalidades_seed_v1';
+                    if (localStorage.getItem(SEED_KEY) === '1') {
+                        modalidadeSeededRef.current = true;
+                        return;
+                    }
+
+                    const PREDEFINED = [
+                        { nome: 'POWER FIGHT', cor: '#fa7000' },
+                        { nome: 'POWER PILATES', cor: '#9a47ff' },
+                        { nome: 'POWER TRAINING', cor: '#06f95f' },
+                        { nome: 'POWER BUMBUM', cor: '#ff14cc' },
+                        { nome: 'POWER CORE', cor: '#00aaff' },
+                        { nome: 'ENERGY JUMP', cor: '#0488fb' },
+                        { nome: 'POWER DANCE', cor: '#ff1a1a' },
+                    ];
+
+                    const current = Array.isArray(db.modalidades) ? db.modalidades : [];
+                    const byName = new Map(current.map(m => [String(m.nome || '').trim().toUpperCase(), m]));
+
+                    let changed = false;
+                    const merged = [...current];
+
+                    PREDEFINED.forEach((p, idx) => {
+                        const key = p.nome.trim().toUpperCase();
+                        const existing = byName.get(key);
+
+                        if (!existing) {
+                            // ID estável para seed (não depende de Date.now())
+                            merged.push({ id: 900001 + idx, nome: p.nome, cor: p.cor });
+                            changed = true;
+                        } else {
+                            // Normaliza nome/cor apenas no seed inicial
+                            const needsName = String(existing.nome || '').trim() !== p.nome;
+                            const needsColor = String(existing.cor || '').toLowerCase() != p.cor.toLowerCase();
+                            if (needsName || needsColor) {
+                                const i = merged.findIndex(m => m.id === existing.id);
+                                if (i > -1) {
+                                    merged[i] = { ...merged[i], nome: p.nome, cor: p.cor };
+                                    changed = true;
+                                }
+                            }
+                        }
+                    });
+
+                    if (changed) {
+                        setDb({ ...db, modalidades: merged });
+                        addToast('Modalidades pré-definidas aplicadas.', 'success');
+                    }
+
+                    localStorage.setItem(SEED_KEY, '1');
+                    modalidadeSeededRef.current = true;
+                } catch (e) {
+                    console.warn('Seed de modalidades falhou:', e);
+                    modalidadeSeededRef.current = true;
+                }
+            }, [db]);
+
 
             const handleSubmit = (e) => {
                 e.preventDefault();
                 if (!nome.trim()) return addToast("O nome da modalidade é obrigatório.", "error");
 
+                // Validação de duplicidade (case-insensitive, ignora espaços extras)
+                const normalizeName = (s) => String(s || '')
+                    .trim()
+                    .replace(/\s+/g, ' ')
+                    .toUpperCase();
+
+                const nomeLimpo = String(nome || '')
+                    .trim()
+                    .replace(/\s+/g, ' ');
+
+                const nomeNormalizado = normalizeName(nomeLimpo);
+                const existeDuplicado = (db.modalidades || []).some(m =>
+                    normalizeName(m.nome) === nomeNormalizado && m.id !== editingId
+                );
+
+                if (existeDuplicado) {
+                    return addToast("Já existe uma modalidade com esse nome.", "error");
+                }
+
                 const newModalidades = [...db.modalidades];
-                const item = { nome, cor };
+                const item = { nome: nomeLimpo, cor };
 
                 if (editingId) {
                     const index = newModalidades.findIndex(m => m.id === editingId);
@@ -2049,6 +2202,10 @@
             };
 
             const handleDelete = (id) => {
+                const modalidadeEmUso = (db.horarios || []).some(h => h.modalidadeId === id);
+                if (modalidadeEmUso) {
+                    return addToast("Não é possível excluir: esta modalidade está vinculada a horários/validações.", "error");
+                }
                 if (window.confirm("Tem certeza que deseja excluir esta modalidade?")) {
                     const newModalidades = db.modalidades.filter(m => m.id !== id);
                     setDb({ ...db, modalidades: newModalidades });
