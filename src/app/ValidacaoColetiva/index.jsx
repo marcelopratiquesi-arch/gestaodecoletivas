@@ -8,24 +8,19 @@ import {
   LayoutDashboard, Download, AlertTriangle, Building2, UserCog, List 
 } from 'lucide-react';
 
-// --- HELPERS ---
 const diasSemanaMap = { 0: 'Domingo', 1: 'Segunda', 2: 'Terça', 3: 'Quarta', 4: 'Quinta', 5: 'Sexta', 6: 'Sábado' };
-
-const getTodayStr = () => new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
+const getTodayStr = () => new Date().toLocaleDateString('en-CA'); 
 
 const getDatesInRange = (startDate, endDate) => {
   const dates = [];
   const curr = new Date(startDate + 'T00:00:00');
   const end = new Date(endDate + 'T00:00:00');
-  
   while (curr <= end) {
     dates.push(new Date(curr).toISOString().split('T')[0]);
     curr.setDate(curr.getDate() + 1);
   }
   return dates;
 };
-
-// --- COMPONENTES VISUAIS ---
 
 const KPICard = ({ title, value, icon: Icon, colorClass, iconBg, subTitle }) => (
   <div className={`bg-white dark:bg-slate-800 p-5 rounded-2xl border shadow-sm flex items-center justify-between transition-all hover:shadow-md ${colorClass}`}>
@@ -40,7 +35,6 @@ const KPICard = ({ title, value, icon: Icon, colorClass, iconBg, subTitle }) => 
   </div>
 );
 
-// Avatar Simples para o Mentor
 const MentorAvatar = ({ name }) => (
   <div className="w-8 h-8 rounded-full bg-slate-800 text-white flex items-center justify-center text-xs font-bold shadow-sm border border-slate-600 flex-shrink-0">
     {name ? name.charAt(0).toUpperCase() : 'M'}
@@ -52,34 +46,29 @@ export default function ValidacaoColetiva() {
   const role = String(userData?.role || "").toLowerCase();
   const userId = userData?.id || userData?.uid;
   
-  // --- ESTADO ---
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState({ 
     unidades: [], mentores: [], aulas: [], validacoes: [], usuarios: [] 
   });
 
-  // Filtros
-  const [modoFiltro, setModoFiltro] = useState('dia'); // 'dia', 'mes', 'periodo'
+  const [modoFiltro, setModoFiltro] = useState('dia'); 
   const [dataInicio, setDataInicio] = useState(getTodayStr());
   const [dataFim, setDataFim] = useState(getTodayStr());
-  
-  // Controle de Abas
   const [activeTab, setActiveTab] = useState('ranking'); 
   const [searchTerm, setSearchTerm] = useState("");
 
-  // --- 1. CARREGAMENTO DE DADOS ---
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
       try {
-        // Query de Validações
         const qValidacoes = query(
             collection(db, 'validacoes'), 
             where('data', '>=', dataInicio),
             where('data', '<=', dataFim)
         );
 
-        // Query de Unidades
+        // === CORREÇÃO FUNDAMENTAL: FILTRO DO MENTOR ===
+        // Se for mentor, busca APENAS as unidades dele.
         let qUnidades = collection(db, 'unidades');
         if (role === 'mentor') {
             qUnidades = query(collection(db, 'unidades'), where('mentorId', '==', userId));
@@ -106,24 +95,18 @@ export default function ValidacaoColetiva() {
         setLoading(false);
       }
     };
-
     loadData();
   }, [dataInicio, dataFim, role, userId]); 
 
-  // --- 2. MOTOR DE CÁLCULO ---
   const dadosProcessados = useMemo(() => {
     if (data.unidades.length === 0) return { mentores: [], unidades: [], kpis: { totalAulas: 0, unidadesValidadas: 0, unidadesPendentes: 0 } };
 
-    // Mapeamentos
     const mentorMap = {};
     data.mentores.forEach(m => mentorMap[m.id] = m.nome);
     const usuariosMap = {};
     data.usuarios.forEach(u => usuariosMap[u.id] = { nome: u.nome, role: u.role });
-
-    // Datas do período
     const datasDoPeriodo = getDatesInRange(dataInicio, dataFim);
 
-    // Processar por UNIDADE
     const statusUnidades = data.unidades.map(unidade => {
         let totalEsperado = 0;
         let totalValidado = 0;
@@ -139,7 +122,6 @@ export default function ValidacaoColetiva() {
             aulasDoDia.forEach(aula => {
                 totalEsperado++;
                 const validacao = data.validacoes.find(v => String(v.aulaId) === String(aula.id) && v.data === dataStr);
-
                 if (validacao) {
                     totalValidado++;
                 } else {
@@ -154,18 +136,15 @@ export default function ValidacaoColetiva() {
 
         const percentual = totalEsperado > 0 ? Math.round((totalValidado / totalEsperado) * 100) : 100; 
 
-        // === CORREÇÃO DE AUDITORIA (BUSCA CAMPO CORRETO) ===
         const validacoesDaUnidade = data.validacoes
             .filter(v => String(v.unidadeId) === String(unidade.id))
             .sort((a,b) => {
-                // Tenta pegar o timestamp de 'validadoEm' (seu padrão) ou 'timestamp' (padrão antigo)
                 const timeA = a.validadoEm?.seconds || a.timestamp?.seconds || 0;
                 const timeB = b.validadoEm?.seconds || b.timestamp?.seconds || 0;
                 return timeB - timeA;
             });
         
         const lastVal = validacoesDaUnidade[0];
-        
         let responsavelInfo = { nome: '-', role: '-' };
         if (lastVal) {
             const userLog = usuariosMap[lastVal.userId || lastVal.validadoPor]; 
@@ -176,26 +155,20 @@ export default function ValidacaoColetiva() {
             }
         }
 
-        // === LÓGICA DE HORA CORRIGIDA (validadoEm) ===
-        const getHoraFormatada = (val) => {
-             if (!val) return '-';
-             const ts = val.validadoEm || val.timestamp; // Procura os dois campos
-             
-             if (!ts) return '-';
-
-             // Se for objeto do Firestore (Timestamp)
-             if (ts.seconds) {
-                 return new Date(ts.seconds * 1000).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
-             }
-             
-             // Se for string ISO ou objeto Date
-             try {
-                 const d = new Date(ts);
-                 if (!isNaN(d.getTime())) return d.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
-             } catch(e) {}
-             
-             return '-';
-        };
+        let horaFormatada = '-';
+        if (lastVal) {
+            const campoData = lastVal.validadoEm || lastVal.timestamp; 
+            if (campoData) {
+                if (campoData.seconds) {
+                    horaFormatada = new Date(campoData.seconds * 1000).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
+                } else {
+                    const d = new Date(campoData);
+                    if (!isNaN(d.getTime())) {
+                        horaFormatada = d.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
+                    }
+                }
+            }
+        }
 
         return {
             id: unidade.id,
@@ -209,17 +182,15 @@ export default function ValidacaoColetiva() {
             status: percentual === 100 ? 'Completo' : 'Pendente',
             lastValidation: lastVal ? {
                 data: new Date(lastVal.data + 'T00:00:00').toLocaleDateString('pt-BR'),
-                hora: getHoraFormatada(lastVal),
+                hora: horaFormatada,
                 responsavelNome: responsavelInfo.nome,
                 responsavelRole: responsavelInfo.role
             } : null
         };
     });
 
-    // Agrupar por MENTOR
     const ranking = Object.values(statusUnidades.reduce((acc, unit) => {
         if (!unit.mentorId) return acc;
-        
         if (!acc[unit.mentorId]) {
             acc[unit.mentorId] = {
                 id: unit.mentorId,
@@ -238,7 +209,6 @@ export default function ValidacaoColetiva() {
         mediaGeral: Math.round(m.somaPercentuais / m.totalUnidades)
     })).sort((a, b) => b.mediaGeral - a.mediaGeral);
 
-    // KPIs
     const kpis = {
         totalAulas: statusUnidades.reduce((acc, u) => acc + u.totalEsperado, 0),
         unidadesValidadas: statusUnidades.filter(u => u.percentual === 100).length,
@@ -246,10 +216,8 @@ export default function ValidacaoColetiva() {
     };
 
     return { mentores: ranking, unidades: statusUnidades, kpis };
-
   }, [data, dataInicio, dataFim]);
 
-  // --- HANDLERS ---
   const handleDateChange = (type) => {
     setModoFiltro(type);
     const hoje = getTodayStr();
@@ -272,13 +240,11 @@ export default function ValidacaoColetiva() {
       setDataFim(new Date(y, m, 0).toISOString().split('T')[0]);
   };
 
-  // Exportar CSV
   const exportarCSV = () => {
     const headers = "Unidade,Mentor,Realizado,Esperado,Status,Progresso,Pendencias,Data Validacao,Hora Validacao,Responsavel,Cargo\n";
     const rows = dadosProcessados.unidades.map(u => 
         `${u.nome},${u.mentorNome},${u.totalValidado},${u.totalEsperado},${u.status},${u.percentual}%,${u.pendencias.length},${u.lastValidation?.data || '-'},${u.lastValidation?.hora || '-'},${u.lastValidation?.responsavelNome || '-'},${u.lastValidation?.responsavelRole || '-'}`
     ).join("\n");
-    
     const blob = new Blob([headers + rows], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -292,8 +258,6 @@ export default function ValidacaoColetiva() {
 
   return (
     <div className="p-6 md:p-8 max-w-[1920px] mx-auto animate-fade-in space-y-8">
-      
-      {/* HEADER E FILTROS */}
       <div className="flex flex-col md:flex-row justify-between items-center border-b border-slate-200 dark:border-slate-700 pb-6 gap-4">
         <div>
           <h1 className="text-3xl font-black text-slate-800 dark:text-white tracking-tight flex items-center gap-3">
@@ -302,23 +266,19 @@ export default function ValidacaoColetiva() {
           </h1>
           <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium text-sm">Monitoramento de adesão e auditoria de validação</p>
         </div>
-
         <div className="flex items-center gap-3 bg-white dark:bg-slate-800 p-2 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
             <div className="flex bg-slate-100 dark:bg-slate-700 rounded-lg p-1">
                 <button onClick={() => handleDateChange('dia')} className={`px-3 py-1.5 text-xs font-bold rounded-md uppercase transition-all ${modoFiltro === 'dia' ? 'bg-white dark:bg-slate-600 shadow text-slate-900 dark:text-white' : 'text-slate-500'}`}>Dia</button>
                 <button onClick={() => setModoFiltro('periodo')} className={`px-3 py-1.5 text-xs font-bold rounded-md uppercase transition-all ${modoFiltro === 'periodo' ? 'bg-white dark:bg-slate-600 shadow text-slate-900 dark:text-white' : 'text-slate-500'}`}>Período</button>
                 <button onClick={() => handleDateChange('mes')} className={`px-3 py-1.5 text-xs font-bold rounded-md uppercase transition-all ${modoFiltro === 'mes' ? 'bg-white dark:bg-slate-600 shadow text-slate-900 dark:text-white' : 'text-slate-500'}`}>Mês</button>
             </div>
-            
             <div className="h-8 w-px bg-slate-200 dark:bg-slate-600 mx-1"></div>
-            
             <div className="flex items-center gap-2">
                 {modoFiltro === 'mes' ? (
                     <input type="month" value={dataInicio.substring(0, 7)} onChange={handleMonthChange} className="bg-transparent text-sm font-bold text-slate-700 dark:text-white outline-none"/>
                 ) : (
                     <input type="date" value={dataInicio} onChange={e => { setDataInicio(e.target.value); setDataFim(e.target.value); }} className="bg-transparent text-sm font-bold text-slate-700 dark:text-white outline-none"/>
                 )}
-                
                 {modoFiltro === 'periodo' && (
                     <>
                         <span className="text-slate-400">-</span>
@@ -326,12 +286,10 @@ export default function ValidacaoColetiva() {
                     </>
                 )}
             </div>
-
             <button onClick={exportarCSV} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 transition-colors"><Download className="w-4 h-4"/></button>
         </div>
       </div>
 
-      {/* CARDS DE RESUMO */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <KPICard 
             title="Aulas Esperadas" 
@@ -357,7 +315,6 @@ export default function ValidacaoColetiva() {
         />
       </div>
 
-      {/* ABAS DE NAVEGAÇÃO */}
       <div className="flex gap-6 border-b border-slate-200 dark:border-slate-700">
         <button onClick={() => setActiveTab('ranking')} className={`pb-3 text-sm font-bold uppercase flex items-center gap-2 transition-colors ${activeTab === 'ranking' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300'}`}>
             <Trophy className="w-4 h-4"/> Ranking de Mentores
@@ -370,9 +327,7 @@ export default function ValidacaoColetiva() {
         </button>
       </div>
 
-      {/* CONTEÚDO */}
       <div className="min-h-[400px]">
-        {/* ABA 1: RANKING */}
         {activeTab === 'ranking' && (
             <div className="grid gap-4">
                 {dadosProcessados.mentores.map((mentor, index) => (
@@ -397,7 +352,6 @@ export default function ValidacaoColetiva() {
                                     style={{ width: `${mentor.mediaGeral}%` }}
                                 ></div>
                             </div>
-                            {/* Tooltip */}
                             {mentor.mediaGeral < 100 && (
                                 <div className="absolute top-8 left-0 w-full z-20 hidden group-hover:block animate-fade-in">
                                     <div className="bg-slate-800 text-white text-xs rounded-lg p-4 shadow-xl max-w-lg border border-slate-700">
@@ -430,7 +384,6 @@ export default function ValidacaoColetiva() {
             </div>
         )}
 
-        {/* ABA 2: STATUS INDIVIDUAL (TABELA) */}
         {activeTab === 'status' && (
             <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden shadow-sm">
                 <div className="p-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50">
@@ -520,7 +473,6 @@ export default function ValidacaoColetiva() {
             </div>
         )}
 
-        {/* ABA 3: DETALHAMENTO POR MENTOR */}
         {activeTab === 'detalhamento' && (
             <div className="animate-fade-in">
                 <div className="mb-6">
@@ -535,12 +487,9 @@ export default function ValidacaoColetiva() {
                         />
                     </div>
                 </div>
-                
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                     {dadosProcessados.mentores.filter(m => m.nome.toLowerCase().includes(searchTerm.toLowerCase())).map(mentor => (
                         <div key={mentor.id} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all duration-300">
-                            
-                            {/* Header do Card */}
                             <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-100 dark:border-slate-700">
                                 <div className="flex items-center gap-3">
                                     <MentorAvatar name={mentor.nome} />
@@ -555,25 +504,18 @@ export default function ValidacaoColetiva() {
                                     {mentor.mediaGeral}%
                                 </div>
                             </div>
-
-                            {/* Lista de Unidades */}
                             <div className="space-y-3 max-h-[350px] overflow-y-auto custom-scrollbar pr-2">
                                 {mentor.unidadesList.map(u => (
                                     <div key={u.id} className="flex justify-between items-center p-3 rounded-xl bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors border border-transparent hover:border-slate-200 dark:hover:border-slate-600">
-                                        
                                         <span className="text-sm font-bold text-slate-600 dark:text-slate-300 truncate max-w-[140px]" title={u.nome}>
                                             {u.nome}
                                         </span>
-
                                         <div className="flex items-center gap-3">
-                                            {/* Contagem X de Y */}
                                             <span className="text-xs font-mono font-medium text-slate-400">
                                                 <strong className={u.percentual < 100 ? 'text-red-500' : 'text-green-600'}>{u.totalValidado}</strong>
                                                 <span className="mx-1">/</span>
                                                 {u.totalEsperado}
                                             </span>
-
-                                            {/* Bolinha de Status */}
                                             {u.percentual === 100 ? (
                                                 <div className="w-2.5 h-2.5 rounded-full bg-green-500 shadow-sm shadow-green-200" title="Validado"></div>
                                             ) : (
@@ -588,7 +530,6 @@ export default function ValidacaoColetiva() {
                 </div>
             </div>
         )}
-
       </div>
     </div>
   );
