@@ -16,7 +16,6 @@ export default function Sidebar({ collapsed }) {
   const role = String(userData.role || "").trim().toLowerCase();
   const path = location.pathname;
   
-  // Função auxiliar para verificar ativo (inclui sub-rotas se necessário)
   const isActive = (route) => path === route || path.startsWith(`${route}/`);
 
   const userInitial = userData.nome ? userData.nome.charAt(0).toUpperCase() : "U";
@@ -43,27 +42,24 @@ export default function Sidebar({ collapsed }) {
         
         <NavItem to="/app" icon={LayoutDashboard} label="Início" collapsed={collapsed} active={path === "/app"} />
 
-        {/* 🟢 CORREÇÃO: Professor agora vê Relatórios */}
         {(["admin", "mentor", "unidade", "professor"].includes(role)) && (
           <NavItem to="/app/relatorio-gerencial" icon={BarChart3} label="Relatórios" collapsed={collapsed} active={isActive("/app/relatorio-gerencial")} />
         )}
 
-        {/* 🟢 CORREÇÃO: Professor agora vê Cronograma */}
         {(["admin", "mentor", "unidade", "professor"].includes(role)) && (
           <NavItem to="/app/cronograma" icon={Calendar} label="Cronograma" collapsed={collapsed} active={isActive("/app/cronograma")} />
         )}
 
-        {/* Validação Diária (Todos veem) */}
         {(["admin", "mentor", "unidade", "professor"].includes(role)) && (
           <NavItem to="/app/validacao-diaria" icon={CheckCircle2} label="Validação Diária" collapsed={collapsed} active={isActive("/app/validacao-diaria")} />
         )}
 
-        {/* 🟢 CORREÇÃO: Unidade agora vê Validação Coletiva */}
-        {(["admin", "mentor", "unidade"].includes(role)) && (
+        {/* 🔴 CORREÇÃO: Apenas Admin e Mentor veem isso no menu */}
+        {(["admin", "mentor"].includes(role)) && (
           <NavItem to="/app/validacao-coletiva" icon={ShieldCheck} label="Validação Coletiva" collapsed={collapsed} active={isActive("/app/validacao-coletiva")} />
         )}
 
-        {/* Configurações (Professor NÃO vê) */}
+        {/* Configurações */}
         {(["admin", "mentor", "unidade"].includes(role)) && (
           <NavItem to="/app/configuracoes" icon={Settings} label="Configurações" collapsed={collapsed} active={isActive("/app/configuracoes")} />
         )}
@@ -71,8 +67,6 @@ export default function Sidebar({ collapsed }) {
 
       {/* === FOOTER === */}
       <div className="p-3 border-t border-slate-800 bg-slate-950/50 space-y-2">
-        
-        {/* Card Usuário */}
         <div className={`flex items-center gap-3 p-2 rounded-lg bg-slate-900 border border-slate-800 ${collapsed ? "justify-center" : ""}`}>
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center text-white font-bold border border-slate-600 flex-shrink-0">
             {userInitial}
@@ -85,7 +79,6 @@ export default function Sidebar({ collapsed }) {
           )}
         </div>
 
-        {/* Toggle Tema */}
         <button 
           onClick={toggleTheme}
           className={`w-full flex items-center gap-3 px-3 py-2 text-xs font-bold text-slate-400 hover:bg-slate-800 hover:text-white rounded-lg transition-all ${collapsed ? "justify-center" : ""}`}
@@ -95,7 +88,6 @@ export default function Sidebar({ collapsed }) {
           {!collapsed && (theme === 'dark' ? "Modo Claro" : "Modo Escuro")}
         </button>
 
-        {/* Logout */}
         <button 
           onClick={logout} 
           className={`w-full flex items-center gap-3 px-3 py-2 text-xs font-bold text-red-500 hover:bg-red-500/10 hover:text-red-400 rounded-lg transition-colors ${collapsed ? "justify-center" : ""}`}
