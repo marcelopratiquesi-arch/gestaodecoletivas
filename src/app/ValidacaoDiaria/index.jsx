@@ -72,7 +72,7 @@ export default function ValidacaoDiariaPage() {
           getDocs(collection(db, 'unidades')),
           getDocs(collection(db, 'modalidades')),
           getDocs(collection(db, 'professores')),
-          getDocs(collection(db, 'vinculos')) // Alterado de 'professorVinculos' para 'vinculos' se for o padrão
+          getDocs(collection(db, 'vinculos')) 
         ]);
 
         let unitsData = unitsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -132,7 +132,6 @@ export default function ValidacaoDiariaPage() {
         let aulasBase = aulasSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
         // C. Validações Existentes
-        // Idealmente filtrar por data no banco, mas para manter compatibilidade com sua lógica atual:
         const validacoesRef = collection(db, 'validacoes');
         const validacoesSnap = await getDocs(validacoesRef); 
         const validacoesExistentes = validacoesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -243,7 +242,7 @@ export default function ValidacaoDiariaPage() {
         data: item.data,
         validadoPor: userId,
         
-        // 🟢 CORREÇÃO CRÍTICA: timestamp do servidor para hora exata
+        // CORREÇÃO CRÍTICA: timestamp do servidor para hora exata
         timestamp: serverTimestamp(), 
         
         status: tipo === 'validar' ? 'realizada' : 'cancelada'
@@ -256,14 +255,32 @@ export default function ValidacaoDiariaPage() {
         payload.motivoCancelamento = inputValor === 'Outros' ? inputObs : inputValor;
       }
 
+      // === CORREÇÃO DE ESPECIALISTA: ATUALIZAÇÃO LOCAL SEM RELOAD ===
+      
+      let validacaoId = item.validacao?.id;
+
       if (item.validacao?.id) {
+        // Atualiza validação existente
         await updateDoc(doc(db, 'validacoes', item.validacao.id), payload);
       } else {
-        await addDoc(collection(db, 'validacoes'), payload);
+        // Cria nova validação
+        const docRef = await addDoc(collection(db, 'validacoes'), payload);
+        validacaoId = docRef.id;
       }
 
-      // Força recarregamento simples (pode ser otimizado depois)
-      window.location.reload(); 
+      // Atualiza o estado 'gradeGerada' localmente para refletir a mudança instantaneamente
+      setGradeGerada(prevGrade => prevGrade.map(gridItem => {
+        if (gridItem.key === item.key) {
+           return {
+             ...gridItem,
+             status: payload.status,
+             validacao: { id: validacaoId, ...payload } // Mescla os dados novos
+           };
+        }
+        return gridItem;
+      }));
+      
+      // Fim da correção. O reload foi removido.
       
     } catch (error) {
       console.error(error);
