@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../services/firebase';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, query, where, documentId } from 'firebase/firestore'; // 🟢 ADICIONADO documentId
 import { 
   BarChart2, Filter, DollarSign, Users, Calendar, 
   CheckCircle2, XCircle, Clock, ChevronRight, ChevronDown, 
@@ -130,10 +130,12 @@ export default function RelatorioPage() {
       setLoading(true);
       try {
         let qUnidades = collection(db, 'unidades');
+        
         if (role === 'mentor') {
             qUnidades = query(collection(db, 'unidades'), where('mentorId', '==', userId));
         } else if (role === 'unidade') {
-            qUnidades = query(collection(db, 'unidades'), where('id', '==', userData.unidadeId));
+            // 🔴 CORREÇÃO DO DETETIVE: Usar documentId() para buscar pela CHAVE do documento
+            qUnidades = query(collection(db, 'unidades'), where(documentId(), '==', userData.unidadeId));
         }
 
         const validacoesQuery = query(
