@@ -6,7 +6,7 @@ import {
   BarChart2, Filter, DollarSign, Users, Calendar, 
   CheckCircle2, XCircle, Clock, ChevronRight, ChevronDown, 
   LayoutDashboard, Map, Globe, UserCheck, AlertTriangle, 
-  Download, FileSpreadsheet, FileText, MoreVertical, X, User, MousePointerClick
+  Download, FileSpreadsheet, FileText, MoreVertical, X, User, MousePointerClick, ArrowRightLeft
 } from 'lucide-react';
 
 // --- HELPERS ---
@@ -74,7 +74,7 @@ const getDatesByWeekdayInPeriod = (startStr, endStr, activeDaysArray) => {
   return datesByDay;
 };
 
-// --- COMPONENTE CARD KPI INTERATIVO (DESIGN 2026) ---
+// --- COMPONENTE CARD KPI ---
 const KPICard = ({ title, value, icon: Icon, colorClass, iconColorClass, subValue, onClick, isActive }) => (
   <div 
     onClick={onClick}
@@ -86,9 +86,7 @@ const KPICard = ({ title, value, icon: Icon, colorClass, iconColorClass, subValu
       ${colorClass}
     `}
   >
-    {/* Efeito de brilho ao passar o mouse (Glassmorphism) */}
     <div className="absolute inset-0 bg-white/50 dark:bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
-
     <div className="flex justify-between items-start mb-2 relative z-10">
       <div className={`p-2 rounded-lg ${iconColorClass}`}>
         <Icon className="w-6 h-6" />
@@ -151,9 +149,7 @@ export default function RelatorioPage() {
   const [professorFiltro, setProfessorFiltro] = useState("");
   const [turnoFiltro, setTurnoFiltro] = useState(""); 
 
-  // 🚀 NOVO: Filtro Rápido via KPI (A Tecnologia 2026)
-  const [filtroKPI, setFiltroKPI] = useState(null); // 'realizadas', 'canceladas', 'pendentes'
-
+  const [filtroKPI, setFiltroKPI] = useState(null); 
   const [sortConfig, setSortConfig] = useState({ field: 'totalReceber', direction: 'desc' });
   const [expandedRowId, setExpandedRowId] = useState(null);
 
@@ -165,16 +161,11 @@ export default function RelatorioPage() {
       setModalidadeFiltro("");
       setProfessorFiltro("");
       setTurnoFiltro("");
-      setFiltroKPI(null); // Limpa também o KPI
+      setFiltroKPI(null);
   };
 
-  // Toggle do Filtro KPI
   const toggleFiltroKPI = (tipo) => {
-      if (filtroKPI === tipo) {
-          setFiltroKPI(null); // Desativa se já estiver ativo
-      } else {
-          setFiltroKPI(tipo); // Ativa o novo filtro
-      }
+      if (filtroKPI === tipo) { setFiltroKPI(null); } else { setFiltroKPI(tipo); }
   };
 
   // 1. CÁLCULO DO PERÍODO
@@ -197,7 +188,6 @@ export default function RelatorioPage() {
       setLoading(true);
       try {
         let qUnidades = collection(db, 'unidades');
-        
         if (role === 'mentor') {
             qUnidades = query(collection(db, 'unidades'), where('mentorId', '==', userId));
         } else if (role === 'unidade') {
@@ -232,11 +222,7 @@ export default function RelatorioPage() {
 
         if (role === 'unidade') setUnidadeFiltro(userData.unidadeId);
 
-      } catch (e) { 
-          console.error("Erro loading:", e);
-      } finally { 
-          setLoading(false); 
-      }
+      } catch (e) { console.error("Erro loading:", e); } finally { setLoading(false); }
     };
     loadData();
   }, [role, userId, userData, period]);
@@ -275,73 +261,123 @@ export default function RelatorioPage() {
     return { paises, estados, mentores, unidadesFiltradas: units, modalidades, professores };
   }, [data, paisFiltro, estadoFiltro, mentorFiltro, unidadeFiltro, modalidadeFiltro, turnoFiltro]);
 
-  // 3. PROCESSAMENTO (CORE)
+  // 3. PROCESSAMENTO (CORE) COM SUPORTE A SUBSTITUIÇÃO
   const relatorio = useMemo(() => {
     if (data.unidades.length === 0) return [];
     
     const validacoesNoPeriodo = data.validacoes;
+    let todasLinhas = [];
 
-    let linhas = data.aulas.map(aula => {
-      const unidade = data.unidades.find(u => String(u.id) === String(aula.unidadeId));
-      if (!unidade) return null;
+    // PASSO A: Processar Titulares (Grade Base)
+    data.aulas.forEach(aula => {
+        // Validações que pertencem ao TITULAR (NÃO são substituições)
+        const valsTitular = validacoesNoPeriodo.filter(v => 
+            String(v.aulaId) === String(aula.id) && 
+            (!v.substituicao || String(v.professorId) === String(aula.professorId))
+        );
 
-      // Filtros Padrão
-      if (paisFiltro && unidade.pais !== paisFiltro) return null;
-      if (estadoFiltro && unidade.estado !== estadoFiltro) return null;
-      if (mentorFiltro && unidade.mentorId !== mentorFiltro) return null;
-      if (unidadeFiltro && String(aula.unidadeId) !== String(unidadeFiltro)) return null;
-      if (modalidadeFiltro && String(aula.modalidadeId) !== String(modalidadeFiltro)) return null;
-      if (turnoFiltro && !checkTurno(aula.hora, turnoFiltro)) return null;
+        // Validações onde o TITULAR FOI SUBSTITUÍDO (para exibir alerta no detalhe)
+        const valsSubstituido = validacoesNoPeriodo.filter(v => 
+            String(v.aulaId) === String(aula.id) && 
+            v.substituicao && String(v.professorId) !== String(aula.professorId)
+        );
 
-      if (role === 'professor') {
-          const me = data.professores.find(p => p.uidLogin === userId);
-          if (!me || String(aula.professorId) !== String(me.id)) return null;
-      } else if (professorFiltro && String(aula.professorId) !== String(professorFiltro)) {
-          return null;
-      }
+        todasLinhas.push({
+            tipo: 'titular',
+            aulaBase: aula,
+            professorId: aula.professorId,
+            validacoes: valsTitular,
+            validacoesSubstituido: valsSubstituido 
+        });
+    });
 
-      const professor = data.professores.find(p => String(p.id) === String(aula.professorId));
-      const modalidade = data.modalidades.find(m => String(m.id) === String(aula.modalidadeId));
+    // PASSO B: Processar Substitutos (Linhas Dinâmicas)
+    const substituicoesMap = {}; // Key: aulaId_profIdSubstituto
+    validacoesNoPeriodo.forEach(v => {
+        if (v.substituicao && v.professorId) {
+            const key = `${v.aulaId}_${v.professorId}`;
+            if (!substituicoesMap[key]) substituicoesMap[key] = [];
+            substituicoesMap[key].push(v);
+        }
+    });
 
-      const valsDestaAula = validacoesNoPeriodo.filter(v => String(v.aulaId) === String(aula.id));
-      const aulasRealizadas = valsDestaAula.filter(v => v.status === 'realizada').length;
-      const aulasCanceladas = valsDestaAula.filter(v => v.status === 'cancelada').length;
-      
-      // 🚀 LOGICA DE FILTRO KPI (Tecnologia 2026)
-      // Se tiver filtro ativo, verifica se a aula atende a condição
-      if (filtroKPI === 'canceladas' && aulasCanceladas === 0) return null; // Só mostra quem tem cancelamento
-      if (filtroKPI === 'realizadas' && aulasRealizadas === 0) return null; // Só mostra quem realizou
-      
-      const totalAlunos = valsDestaAula.filter(v => v.status === 'realizada').reduce((acc, v) => acc + (Number(v.alunos) || 0), 0);
-      const mediaAlunos = aulasRealizadas > 0 ? Math.round(totalAlunos / aulasRealizadas) : 0;
-      
-      const valorHora = parseFloat(aula.valor) || 0;
-      const totalReceber = aulasRealizadas * valorHora; 
+    Object.keys(substituicoesMap).forEach(key => {
+        const [aulaId, profId] = key.split('_');
+        const aulaBase = data.aulas.find(a => String(a.id) === String(aulaId));
+        if (aulaBase) {
+            todasLinhas.push({
+                tipo: 'substituto',
+                aulaBase: aulaBase,
+                professorId: profId,
+                validacoes: substituicoesMap[key],
+                validacoesSubstituido: [] 
+            });
+        }
+    });
 
-      const diasTrabalho = aula.dias || [];
-      const mapaDatas = getDatesByWeekdayInPeriod(period.start, period.end, diasTrabalho);
+    // PASSO C: Filtragem e Mapeamento Final
+    let linhasFinais = todasLinhas.map(item => {
+        const { aulaBase, professorId, validacoes, validacoesSubstituido } = item;
+        const unidade = data.unidades.find(u => String(u.id) === String(aulaBase.unidadeId));
+        if (!unidade) return null;
 
-      return {
-        id: aula.id,
-        unidadeNome: toTitleCase(unidade.nome),
-        unidadeEstado: toTitleCase(unidade.estado),
-        unidadePais: toTitleCase(unidade.pais),
-        professorNome: getFirstLast(professor?.nome || 'Sem Professor'),
-        modalidadeNome: toTitleCase(modalidade?.nome || 'Desconhecida'),
-        modalidadeCor: modalidade?.cor || '#ccc',
-        dias: diasTrabalho,
-        horario: aula.hora,
-        aulasRealizadas,
-        aulasCanceladas,
-        mediaAlunos,
-        valorHora,
-        totalReceber,
-        historico: valsDestaAula,
-        mapaDatas
-      };
-    }).filter(Boolean); 
+        // Filtros
+        if (paisFiltro && unidade.pais !== paisFiltro) return null;
+        if (estadoFiltro && unidade.estado !== estadoFiltro) return null;
+        if (mentorFiltro && unidade.mentorId !== mentorFiltro) return null;
+        if (unidadeFiltro && String(aulaBase.unidadeId) !== String(unidadeFiltro)) return null;
+        if (modalidadeFiltro && String(aulaBase.modalidadeId) !== String(modalidadeFiltro)) return null;
+        if (turnoFiltro && !checkTurno(aulaBase.hora, turnoFiltro)) return null;
 
-    return linhas.sort((a, b) => {
+        if (role === 'professor') {
+            const me = data.professores.find(p => p.uidLogin === userId);
+            if (!me || String(professorId) !== String(me.id)) return null;
+        } else if (professorFiltro && String(professorId) !== String(professorFiltro)) {
+            return null;
+        }
+
+        const professor = data.professores.find(p => String(p.id) === String(professorId));
+        const modalidade = data.modalidades.find(m => String(m.id) === String(aulaBase.modalidadeId));
+
+        const aulasRealizadas = validacoes.filter(v => v.status === 'realizada').length;
+        const aulasCanceladas = validacoes.filter(v => v.status === 'cancelada').length;
+        
+        // Filtro KPI
+        if (filtroKPI === 'canceladas' && aulasCanceladas === 0) return null;
+        if (filtroKPI === 'realizadas' && aulasRealizadas === 0) return null;
+
+        const totalAlunos = validacoes.filter(v => v.status === 'realizada').reduce((acc, v) => acc + (Number(v.alunos) || 0), 0);
+        const mediaAlunos = aulasRealizadas > 0 ? Math.round(totalAlunos / aulasRealizadas) : 0;
+        
+        const valorHora = parseFloat(aulaBase.valor) || 0;
+        const totalReceber = aulasRealizadas * valorHora; 
+
+        const diasTrabalho = aulaBase.dias || [];
+        const mapaDatas = getDatesByWeekdayInPeriod(period.start, period.end, diasTrabalho);
+
+        return {
+            id: item.tipo === 'titular' ? aulaBase.id : `${aulaBase.id}_sub_${professorId}`,
+            unidadeNome: toTitleCase(unidade.nome),
+            unidadeEstado: toTitleCase(unidade.estado),
+            unidadePais: toTitleCase(unidade.pais),
+            professorNome: getFirstLast(professor?.nome || 'Sem Professor'),
+            isSubstituto: item.tipo === 'substituto',
+            modalidadeNome: toTitleCase(modalidade?.nome || 'Desconhecida'),
+            modalidadeCor: modalidade?.cor || '#ccc',
+            dias: diasTrabalho,
+            horario: aulaBase.hora,
+            aulasRealizadas,
+            aulasCanceladas,
+            mediaAlunos,
+            valorHora,
+            totalReceber,
+            historico: validacoes,
+            historicoSubstituido: validacoesSubstituido || [],
+            mapaDatas
+        };
+    }).filter(Boolean);
+
+    return linhasFinais.sort((a, b) => {
       let valA = a[sortConfig.field];
       let valB = b[sortConfig.field];
       if (typeof valA === 'string') valA = valA.toLowerCase();
@@ -354,17 +390,6 @@ export default function RelatorioPage() {
 
   // 4. KPIs
   const kpis = useMemo(() => {
-    // Nota: Calculamos KPIs sobre o dataset TOTAL (sem filtro KPI) para manter os números fixos
-    // Se quiser que os números mudem com o filtro, usaria 'relatorio' aqui.
-    // Mas geralmente o gestor quer ver o TOTAL e clicar para filtrar a tabela.
-    
-    // Vou usar os dados "pré-filtro KPI" para os números não sumirem quando filtrar
-    // Mas preciso recalcular rápido aqui baseado nos filtros de CIMA (Unidade, Pais, etc)
-    // Para simplificar e não duplicar lógica pesada, usarei o 'relatorio' se nenhum KPI estiver ativo, 
-    // ou tentarei manter os números estáveis.
-    // Melhor estratégia UX: Os Cards mostram o resumo do filtro atual (Estado, Unidade).
-    // O clique no card filtra a tabela abaixo.
-    
     const totalRealizadas = relatorio.reduce((acc, r) => acc + r.aulasRealizadas, 0);
     const totalCanceladas = relatorio.reduce((acc, r) => acc + r.aulasCanceladas, 0);
     const totalFinanceiro = relatorio.reduce((acc, r) => acc + r.totalReceber, 0);
@@ -375,18 +400,19 @@ export default function RelatorioPage() {
   }, [relatorio]);
 
   const handleSort = (field) => {
-    setSortConfig(prev => ({
-      field,
-      direction: prev.field === field && prev.direction === 'desc' ? 'asc' : 'desc'
-    }));
+    setSortConfig(prev => ({ field, direction: prev.field === field && prev.direction === 'desc' ? 'asc' : 'desc' }));
   };
 
   const toggleRow = (id) => setExpandedRowId(prev => prev === id ? null : id);
 
   const handleExport = (type) => {
     setShowExportMenu(false);
-    const headers = ["País", "Estado", "Unidade", "Modalidade", "Horário", "Professor", "Aulas Realizadas", "Aulas Canceladas", "Média Alunos", "Valor Hora Aula", "Total a Receber"];
-    const rows = relatorio.map(r => [r.unidadePais||"-", r.unidadeEstado||"-", r.unidadeNome, r.modalidadeNome, r.horario, r.professorNome, r.aulasRealizadas, r.aulasCanceladas, r.mediaAlunos, formatCurrency(r.valorHora), formatCurrency(r.totalReceber)]);
+    const headers = ["País", "Estado", "Unidade", "Modalidade", "Horário", "Professor", "Tipo", "Aulas Realizadas", "Aulas Canceladas", "Média Alunos", "Valor Hora Aula", "Total a Receber"];
+    const rows = relatorio.map(r => [
+        r.unidadePais||"-", r.unidadeEstado||"-", r.unidadeNome, r.modalidadeNome, r.horario, r.professorNome, 
+        r.isSubstituto ? "SUBSTITUTO" : "TITULAR",
+        r.aulasRealizadas, r.aulasCanceladas, r.mediaAlunos, formatCurrency(r.valorHora), formatCurrency(r.totalReceber)
+    ]);
 
     if (type === 'csv' || type === 'excel') {
         const csvContent = [headers.join(";"), ...rows.map(row => row.join(";"))].join("\n");
@@ -406,8 +432,7 @@ export default function RelatorioPage() {
 
   return (
     <div className="p-6 md:p-8 max-w-[1920px] mx-auto animate-fade-in space-y-8">
-      
-      {/* HEADER */}
+      {/* ... HEADER, KPIS, FILTROS (MANTIDOS IGUAIS) ... */}
       <div className="flex flex-col md:flex-row justify-between items-center border-b border-slate-200 dark:border-slate-700 pb-6 gap-4">
         <div>
           <h1 className="text-3xl font-black text-slate-800 dark:text-white tracking-tight flex items-center gap-3">
@@ -416,117 +441,43 @@ export default function RelatorioPage() {
           </h1>
           <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium text-sm">Painel de inteligência financeira e operacional</p>
         </div>
-        
-        {/* CONTROLES */}
         <div className="flex items-center gap-3 bg-white dark:bg-slate-800 p-2 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
           <div className="flex bg-slate-100 dark:bg-slate-700 rounded-lg p-1">
             <button onClick={() => setModoFiltro('dia')} className={`px-4 py-2 text-xs font-bold rounded-md transition-all uppercase ${modoFiltro === 'dia' ? 'bg-white dark:bg-slate-600 shadow text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400'}`}>DIA</button>
             <button onClick={() => setModoFiltro('mes')} className={`px-4 py-2 text-xs font-bold rounded-md transition-all uppercase ${modoFiltro === 'mes' ? 'bg-white dark:bg-slate-600 shadow text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400'}`}>MÊS</button>
           </div>
           <div className="h-8 w-px bg-slate-200 dark:bg-slate-600 mx-1"></div>
-          {modoFiltro === 'dia' ? (
-            <input type="date" value={dataFiltro} onChange={e => setDataFiltro(e.target.value)} className="bg-transparent font-bold text-slate-700 dark:text-white outline-none text-sm p-1"/>
-          ) : (
-            <input type="month" value={mesFiltro} onChange={e => setMesFiltro(e.target.value)} className="bg-transparent font-bold text-slate-700 dark:text-white outline-none text-sm p-1"/>
-          )}
+          {modoFiltro === 'dia' ? <input type="date" value={dataFiltro} onChange={e => setDataFiltro(e.target.value)} className="bg-transparent font-bold text-slate-700 dark:text-white outline-none text-sm p-1"/> : <input type="month" value={mesFiltro} onChange={e => setMesFiltro(e.target.value)} className="bg-transparent font-bold text-slate-700 dark:text-white outline-none text-sm p-1"/>}
           <div className="h-8 w-px bg-slate-200 dark:bg-slate-600 mx-1"></div>
           <div className="relative">
-            <button onClick={() => setShowExportMenu(!showExportMenu)} className="p-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg text-slate-600 dark:text-slate-300 transition-colors flex items-center gap-2 font-bold text-xs">
-                <Download className="w-4 h-4"/> Exportar
-            </button>
-            {showExportMenu && (
-                <div className="absolute right-0 top-12 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl rounded-xl w-40 z-50 overflow-hidden animate-in fade-in zoom-in duration-200">
-                    <button onClick={() => handleExport('excel')} className="w-full text-left px-4 py-3 text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 text-slate-700 dark:text-slate-300"><FileSpreadsheet className="w-4 h-4 text-green-600"/> Excel (XLSX)</button>
-                    <button onClick={() => handleExport('csv')} className="w-full text-left px-4 py-3 text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 text-slate-700 dark:text-slate-300"><FileText className="w-4 h-4 text-blue-600"/> CSV</button>
-                    <button onClick={() => handleExport('pdf')} className="w-full text-left px-4 py-3 text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 text-slate-700 dark:text-slate-300"><Download className="w-4 h-4 text-red-600"/> PDF</button>
-                </div>
-            )}
+            <button onClick={() => setShowExportMenu(!showExportMenu)} className="p-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg text-slate-600 dark:text-slate-300 transition-colors flex items-center gap-2 font-bold text-xs"><Download className="w-4 h-4"/> Exportar</button>
+            {showExportMenu && (<div className="absolute right-0 top-12 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl rounded-xl w-40 z-50 overflow-hidden animate-in fade-in zoom-in duration-200"><button onClick={() => handleExport('excel')} className="w-full text-left px-4 py-3 text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 text-slate-700 dark:text-slate-300"><FileSpreadsheet className="w-4 h-4 text-green-600"/> Excel (XLSX)</button><button onClick={() => handleExport('csv')} className="w-full text-left px-4 py-3 text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 text-slate-700 dark:text-slate-300"><FileText className="w-4 h-4 text-blue-600"/> CSV</button><button onClick={() => handleExport('pdf')} className="w-full text-left px-4 py-3 text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 text-slate-700 dark:text-slate-300"><Download className="w-4 h-4 text-red-600"/> PDF</button></div>)}
           </div>
         </div>
       </div>
 
-      {/* CARDS KPI INTERATIVOS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-        <KPICard 
-            title="Total a Pagar" 
-            value={formatCurrency(kpis.totalFinanceiro)} 
-            icon={DollarSign} 
-            colorClass="border-l-4 border-l-emerald-500" 
-            iconColorClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400" 
-            subValue="Validado" 
-        />
-        
-        {/* BOTÃO KPI: AULAS REALIZADAS */}
-        <KPICard 
-            title="Aulas Realizadas" 
-            value={kpis.totalRealizadas} 
-            icon={CheckCircle2} 
-            colorClass={`border-l-4 border-l-blue-500 ${filtroKPI === 'realizadas' ? 'ring-2 ring-blue-400 bg-blue-50 dark:bg-blue-900/10' : ''}`}
-            iconColorClass="bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" 
-            subValue={filtroKPI === 'realizadas' ? 'Filtrado' : 'Clique para filtrar'}
-            onClick={() => toggleFiltroKPI('realizadas')}
-            isActive={filtroKPI === 'realizadas'}
-        />
-        
-        {/* BOTÃO KPI: AULAS CANCELADAS */}
-        <KPICard 
-            title="Aulas Canceladas" 
-            value={kpis.totalCanceladas} 
-            icon={XCircle} 
-            colorClass={`border-l-4 border-l-red-500 ${filtroKPI === 'canceladas' ? 'ring-2 ring-red-400 bg-red-50 dark:bg-red-900/10' : ''}`} 
-            iconColorClass="bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400" 
-            subValue={filtroKPI === 'canceladas' ? 'Filtrado' : 'Clique para filtrar'}
-            onClick={() => toggleFiltroKPI('canceladas')}
-            isActive={filtroKPI === 'canceladas'}
-        />
-        
+        <KPICard title="Total a Pagar" value={formatCurrency(kpis.totalFinanceiro)} icon={DollarSign} colorClass="border-l-4 border-l-emerald-500" iconColorClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400" subValue="Validado" />
+        <KPICard title="Aulas Realizadas" value={kpis.totalRealizadas} icon={CheckCircle2} colorClass={`border-l-4 border-l-blue-500 ${filtroKPI === 'realizadas' ? 'ring-2 ring-blue-400 bg-blue-50 dark:bg-blue-900/10' : ''}`} iconColorClass="bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" subValue={filtroKPI === 'realizadas' ? 'Filtrado' : 'Clique para filtrar'} onClick={() => toggleFiltroKPI('realizadas')} isActive={filtroKPI === 'realizadas'}/>
+        <KPICard title="Aulas Canceladas" value={kpis.totalCanceladas} icon={XCircle} colorClass={`border-l-4 border-l-red-500 ${filtroKPI === 'canceladas' ? 'ring-2 ring-red-400 bg-red-50 dark:bg-red-900/10' : ''}`} iconColorClass="bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400" subValue={filtroKPI === 'canceladas' ? 'Filtrado' : 'Clique para filtrar'} onClick={() => toggleFiltroKPI('canceladas')} isActive={filtroKPI === 'canceladas'}/>
         <KPICard title="Média de Alunos" value={kpis.mediaAlunos} icon={Users} colorClass="border-l-4 border-l-orange-500" iconColorClass="bg-orange-50 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400" subValue="P/ Aula" />
         <KPICard title="Valor Hora Médio" value={formatCurrency(kpis.custoMedio)} icon={Clock} colorClass="border-l-4 border-l-purple-500" iconColorClass="bg-purple-50 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400" subValue="Média Geral" />
       </div>
 
-      {/* ÁREA DE FILTROS */}
-      {filtroKPI && (
-          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-lg p-3 flex items-center justify-between animate-in fade-in slide-in-from-top-2">
-              <div className="flex items-center gap-2 text-xs text-blue-700 dark:text-blue-300 font-bold">
-                  <MousePointerClick className="w-4 h-4"/>
-                  Visualizando apenas: <span className="uppercase">{filtroKPI}</span>
-              </div>
-              <button onClick={() => setFiltroKPI(null)} className="text-xs text-blue-500 hover:text-blue-700 underline">Remover Filtro Rápido</button>
-          </div>
-      )}
+      {filtroKPI && (<div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-lg p-3 flex items-center justify-between animate-in fade-in slide-in-from-top-2"><div className="flex items-center gap-2 text-xs text-blue-700 dark:text-blue-300 font-bold"><MousePointerClick className="w-4 h-4"/> Visualizando apenas: <span className="uppercase">{filtroKPI}</span></div><button onClick={() => setFiltroKPI(null)} className="text-xs text-blue-500 hover:text-blue-700 underline">Remover Filtro Rápido</button></div>)}
 
-      {/* FILTROS AVANÇADOS */}
       {role !== 'professor' && (
         <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm relative group/filter">
             <div className="flex justify-between items-center mb-4">
                 <h4 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase flex items-center gap-2"><Filter className="w-3 h-3"/> Filtros Avançados</h4>
-                <button onClick={clearFilters} className="text-[10px] font-bold text-red-500 hover:text-red-600 dark:text-red-400 flex items-center gap-1 opacity-0 group-hover/filter:opacity-100 transition-opacity bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded">
-                    <X className="w-3 h-3"/> Limpar Todos
-                </button>
+                <button onClick={clearFilters} className="text-[10px] font-bold text-red-500 hover:text-red-600 dark:text-red-400 flex items-center gap-1 opacity-0 group-hover/filter:opacity-100 transition-opacity bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded"><X className="w-3 h-3"/> Limpar Todos</button>
             </div>
-            
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-4">
-                {role === 'admin' && (
-                    <>
-                        <div><label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">País</label><select value={paisFiltro} onChange={e => setPaisFiltro(e.target.value)} className="w-full p-2.5 border rounded-lg bg-slate-50 dark:bg-slate-900 text-xs font-bold dark:text-white dark:border-slate-600 outline-none"><option value="">Todos</option>{listasFiltros.paises.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
-                        <div><label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Estado</label><select value={estadoFiltro} onChange={e => setEstadoFiltro(e.target.value)} className="w-full p-2.5 border rounded-lg bg-slate-50 dark:bg-slate-900 text-xs font-bold dark:text-white dark:border-slate-600 outline-none"><option value="">Todos</option>{listasFiltros.estados.map(e => <option key={e} value={e}>{e}</option>)}</select></div>
-                        <div><label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Mentor</label><select value={mentorFiltro} onChange={e => setMentorFiltro(e.target.value)} className="w-full p-2.5 border rounded-lg bg-slate-50 dark:bg-slate-900 text-xs font-bold dark:text-white dark:border-slate-600 outline-none"><option value="">Todos</option>{listasFiltros.mentores.map(m => <option key={m.id} value={m.id}>{m.nome}</option>)}</select></div>
-                    </>
-                )}
-                {role !== 'unidade' && (
-                    <div><label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Unidade</label><select value={unidadeFiltro} onChange={e => setUnidadeFiltro(e.target.value)} className="w-full p-2.5 border rounded-lg bg-slate-50 dark:bg-slate-900 text-xs font-bold dark:text-white dark:border-slate-600 outline-none"><option value="">Todas</option>{listasFiltros.unidadesFiltradas.map(u => <option key={u.id} value={u.id}>{u.nome}</option>)}</select></div>
-                )}
+                {role === 'admin' && (<><div><label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">País</label><select value={paisFiltro} onChange={e => setPaisFiltro(e.target.value)} className="w-full p-2.5 border rounded-lg bg-slate-50 dark:bg-slate-900 text-xs font-bold dark:text-white dark:border-slate-600 outline-none"><option value="">Todos</option>{listasFiltros.paises.map(p => <option key={p} value={p}>{p}</option>)}</select></div><div><label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Estado</label><select value={estadoFiltro} onChange={e => setEstadoFiltro(e.target.value)} className="w-full p-2.5 border rounded-lg bg-slate-50 dark:bg-slate-900 text-xs font-bold dark:text-white dark:border-slate-600 outline-none"><option value="">Todos</option>{listasFiltros.estados.map(e => <option key={e} value={e}>{e}</option>)}</select></div><div><label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Mentor</label><select value={mentorFiltro} onChange={e => setMentorFiltro(e.target.value)} className="w-full p-2.5 border rounded-lg bg-slate-50 dark:bg-slate-900 text-xs font-bold dark:text-white dark:border-slate-600 outline-none"><option value="">Todos</option>{listasFiltros.mentores.map(m => <option key={m.id} value={m.id}>{m.nome}</option>)}</select></div></>)}
+                {role !== 'unidade' && (<div><label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Unidade</label><select value={unidadeFiltro} onChange={e => setUnidadeFiltro(e.target.value)} className="w-full p-2.5 border rounded-lg bg-slate-50 dark:bg-slate-900 text-xs font-bold dark:text-white dark:border-slate-600 outline-none"><option value="">Todas</option>{listasFiltros.unidadesFiltradas.map(u => <option key={u.id} value={u.id}>{u.nome}</option>)}</select></div>)}
                 <div><label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Modalidade</label><select value={modalidadeFiltro} onChange={e => setModalidadeFiltro(e.target.value)} className="w-full p-2.5 border rounded-lg bg-slate-50 dark:bg-slate-900 text-xs font-bold dark:text-white dark:border-slate-600 outline-none"><option value="">Todas</option>{listasFiltros.modalidades.map(m => <option key={m.id} value={m.id}>{m.nome}</option>)}</select></div>
                 <div><label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Professor</label><select value={professorFiltro} onChange={e => setProfessorFiltro(e.target.value)} className="w-full p-2.5 border rounded-lg bg-slate-50 dark:bg-slate-900 text-xs font-bold dark:text-white dark:border-slate-600 outline-none"><option value="">Todos</option>{listasFiltros.professores.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}</select></div>
-                <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Turno</label>
-                    <select value={turnoFiltro} onChange={e => setTurnoFiltro(e.target.value)} className="w-full p-2.5 border rounded-lg bg-slate-50 dark:bg-slate-900 text-xs font-bold dark:text-white dark:border-slate-600 outline-none">
-                        <option value="">Todos</option>
-                        <option value="Manhã">Manhã (05:30 - 11:59)</option>
-                        <option value="Tarde">Tarde (12:00 - 17:00)</option>
-                        <option value="Noite">Noite (17:01 - 23:00)</option>
-                    </select>
-                </div>
+                <div><label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Turno</label><select value={turnoFiltro} onChange={e => setTurnoFiltro(e.target.value)} className="w-full p-2.5 border rounded-lg bg-slate-50 dark:bg-slate-900 text-xs font-bold dark:text-white dark:border-slate-600 outline-none"><option value="">Todos</option><option value="Manhã">Manhã (05:30 - 11:59)</option><option value="Tarde">Tarde (12:00 - 17:00)</option><option value="Noite">Noite (17:01 - 23:00)</option></select></div>
             </div>
         </div>
       )}
@@ -566,10 +517,13 @@ export default function RelatorioPage() {
                     <td className="p-3 font-mono text-slate-600 dark:text-slate-400 text-xs">{row.horario}</td>
                     <td className="p-3">
                         <div className="flex items-center gap-2">
-                            <div className="w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center text-[9px] font-black border border-slate-300 dark:border-slate-600">
+                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-black border ${row.isSubstituto ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-slate-200 text-slate-600 border-slate-300 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600'}`}>
                                 {getInitials(row.professorNome)}
                             </div>
-                            <span className="font-bold text-slate-800 dark:text-white">{row.professorNome}</span>
+                            <div>
+                                <span className={`font-bold ${row.isSubstituto ? 'text-blue-600 dark:text-blue-400' : 'text-slate-800 dark:text-white'}`}>{row.professorNome}</span>
+                                {row.isSubstituto && <span className="block text-[8px] uppercase font-black text-blue-400 flex items-center gap-0.5"><ArrowRightLeft className="w-2 h-2"/> Substituto</span>}
+                            </div>
                         </div>
                     </td>
                     <td className="p-3 text-center font-bold text-blue-600 bg-blue-50 dark:bg-blue-900/10 rounded">{row.aulasRealizadas}</td>
@@ -593,18 +547,39 @@ export default function RelatorioPage() {
                               <div className="p-2 space-y-1.5 flex-1 min-h-[50px]">
                                 {row.mapaDatas[dia]?.length === 0 && <span className="text-[10px] text-slate-300 text-center block">-</span>}
                                 {row.mapaDatas[dia]?.map(dataStr => {
+                                  // LÓGICA DE EXIBIÇÃO NO DETALHE
                                   const validacao = row.historico.find(h => h.data === dataStr);
+                                  const foiSubstituido = row.historicoSubstituido?.find(h => h.data === dataStr);
+                                  
                                   const diaMes = new Date(dataStr + 'T00:00:00').toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit'});
+                                  
+                                  // Se tiver validação, mostra. Se não, verifica se foi substituído.
+                                  const itemClass = validacao 
+                                    ? (validacao.status === 'cancelada' 
+                                        ? 'bg-red-50 border-red-100 text-red-700 dark:bg-red-900/20 dark:border-red-900 dark:text-red-300' 
+                                        : 'bg-green-50 border-green-100 text-green-700 dark:bg-green-900/20 dark:border-green-900 dark:text-green-300')
+                                    : (foiSubstituido 
+                                        ? 'bg-blue-50 border-blue-100 text-blue-700 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-300 opacity-70' 
+                                        : 'bg-slate-50 border-slate-100 text-slate-300 dark:bg-slate-900 dark:border-slate-800 opacity-60');
+
                                   return (
-                                    <div key={dataStr} className={`text-[9px] px-2 py-1.5 rounded border flex flex-col gap-1 ${validacao ? (validacao.status === 'cancelada' ? 'bg-red-50 border-red-100 text-red-700 dark:bg-red-900/20 dark:border-red-900 dark:text-red-300' : 'bg-green-50 border-green-100 text-green-700 dark:bg-green-900/20 dark:border-green-900 dark:text-green-300') : 'bg-slate-50 border-slate-100 text-slate-300 dark:bg-slate-900 dark:border-slate-800 opacity-60'}`}>
+                                    <div key={dataStr} className={`text-[9px] px-2 py-1.5 rounded border flex flex-col gap-1 ${itemClass}`}>
                                       <div className="flex justify-between items-center w-full">
                                         <span className="font-bold">{diaMes}</span>
-                                        {validacao ? (validacao.status === 'cancelada' ? <span className="font-bold text-[8px] uppercase">CANCEL</span> : <span className="font-bold flex items-center gap-1"><Users className="w-3 h-3"/> {validacao.alunos}</span>) : <span>--</span>}
+                                        {validacao ? (
+                                            validacao.status === 'cancelada' 
+                                            ? <span className="font-bold text-[8px] uppercase">CANCEL</span> 
+                                            : <span className="font-bold flex items-center gap-1"><Users className="w-3 h-3"/> {validacao.alunos}</span>
+                                        ) : (
+                                            foiSubstituido 
+                                            ? <span className="font-bold text-[8px] uppercase flex items-center gap-1"><ArrowRightLeft className="w-2.5 h-2.5"/> SUBST</span> 
+                                            : <span>--</span>
+                                        )}
                                       </div>
                                       {validacao && validacao.status === 'cancelada' && (
                                         <div className="text-[8px] font-bold border-t border-red-200 dark:border-red-800 pt-1 mt-0.5 flex items-center gap-1">
                                             <AlertTriangle className="w-2.5 h-2.5 flex-shrink-0"/>
-                                            <span className="truncate max-w-[100px]" title={validacao.motivoCancelamento || 'Sem motivo'}>{validacao.motivoCancelamento || 'Motivo n/a'}</span>
+                                            <span className="truncate max-w-[100px]" title={validacao.motivoCancelamento}>{validacao.motivoCancelamento}</span>
                                         </div>
                                       )}
                                     </div>
