@@ -130,7 +130,7 @@ export default function Sidebar({ collapsed }) {
                 <div className="flex items-center gap-1.5 mt-1">
                     <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
                     <p className="text-[9px] text-slate-400 font-bold uppercase tracking-[0.2em] leading-tight">
-                      Happy Zone
+                      Gestão Coletivas
                     </p>
                 </div>
               </div>
