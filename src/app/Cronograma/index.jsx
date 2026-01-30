@@ -3,10 +3,9 @@ import {
   Calendar, Clock, Plus, Filter, 
   Search, Trash2, Edit2, X, Check, 
   MapPin, Loader2, AlertTriangle, Users,
-  DollarSign 
+  DollarSign, Globe, ChevronRight, List, ChevronDown, User // 🟢 ChevronDown GARANTIDO
 } from 'lucide-react';
 
-// Integrações
 import { useAuth } from '../../contexts/AuthContext'; 
 import { db } from '../../services/firebase'; 
 import { 
@@ -34,7 +33,9 @@ const getContrastColor = (hexColor) => {
   return yiq >= 128 ? '#1e293b' : '#ffffff';
 };
 
-// --- COMPONENTE CARD ---
+// --- COMPONENTES VISUAIS ---
+
+// 1. Card para o Calendário (Grade Semanal) - Mantido compacto
 const ClassCard = ({ data, onClick, isReadOnly }) => {
   const textColor = getContrastColor(data.modalidadeCor || '#E6332A');
 
@@ -44,7 +45,7 @@ const ClassCard = ({ data, onClick, isReadOnly }) => {
       style={{ backgroundColor: data.modalidadeCor || '#E6332A' }}
       className={`group relative mb-2 p-2 rounded-lg shadow-sm hover:shadow-lg hover:scale-[1.02] transition-all duration-200 overflow-hidden flex flex-col items-center justify-center min-h-[70px] text-center w-full ${!isReadOnly ? 'cursor-pointer' : 'cursor-default'}`}
     >
-      <h4 style={{ color: textColor }} className="font-black text-[11px] uppercase tracking-wide leading-tight w-full break-words">
+      <h4 style={{ color: textColor }} className="font-black text-[10px] uppercase tracking-wide leading-tight w-full break-words">
         {data.modalidadeNome}
       </h4>
       <div className="flex items-center gap-1 mt-1 opacity-90">
@@ -62,6 +63,78 @@ const ClassCard = ({ data, onClick, isReadOnly }) => {
       )}
     </div>
   );
+};
+
+// 2. NOVO: Bloco de Lista Global (Estilo Tabela Expandida)
+const GlobalUnitBlock = ({ unitName, classes, isReadOnly, onEdit }) => {
+  return (
+    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm hover:shadow-md transition-shadow mb-6">
+      {/* Cabeçalho da Unidade */}
+      <div className="bg-slate-50 dark:bg-slate-900/50 px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+        <h4 className="font-black text-lg text-slate-800 dark:text-white flex items-center gap-2.5">
+          <div className="p-2 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
+             <MapPin className="w-5 h-5 text-red-600"/>
+          </div>
+          {unitName}
+        </h4>
+        <span className="text-xs font-bold bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-3 py-1 rounded-full">
+          {classes.length} horários encontrados
+        </span>
+      </div>
+      
+      {/* Lista de Aulas (Linhas Longas) */}
+      <div className="divide-y divide-slate-100 dark:divide-slate-700">
+        {classes.map(aula => (
+          <div 
+            key={aula.id} 
+            onClick={() => !isReadOnly && onEdit(aula)} 
+            className={`px-6 py-4 flex flex-col md:flex-row md:items-center gap-4 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors group ${!isReadOnly ? 'cursor-pointer' : ''}`}
+          >
+            
+            {/* Horário (Badge) */}
+            <div className="flex-shrink-0 md:w-24">
+               <div className="bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 font-mono font-bold text-sm px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 flex items-center justify-center gap-2 shadow-sm">
+                  <Clock className="w-4 h-4 text-red-500"/>
+                  {aula.hora}
+               </div>
+            </div>
+
+            {/* Modalidade e Dias (Info Principal) */}
+            <div className="flex-1 min-w-0 flex flex-col justify-center">
+               <h5 className="font-black text-slate-800 dark:text-white text-base truncate flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: aula.modalidadeCor || '#ccc' }}></div>
+                  {aula.modalidadeNome}
+               </h5>
+               <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-wide mt-1">
+                  <Calendar className="w-3.5 h-3.5"/>
+                  {aula.dias.join(', ')}
+               </div>
+            </div>
+
+            {/* Professor */}
+            <div className="flex items-center gap-3 md:w-1/4 border-l border-transparent md:border-slate-100 md:dark:border-slate-700 md:pl-4">
+               <div className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-500 border border-slate-200 dark:border-slate-600">
+                  <User className="w-4 h-4"/>
+               </div>
+               <div className="min-w-0">
+                  <p className="text-[10px] uppercase font-bold text-slate-400">Instrutor</p>
+                  <p className="text-sm font-bold text-slate-700 dark:text-slate-300 truncate">{formatFirstLastName(aula.professorNome)}</p>
+               </div>
+            </div>
+
+            {/* Ação (Seta ou Edit) */}
+            {!isReadOnly && (
+               <div className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 pl-2">
+                  <div className="p-2 bg-blue-50 dark:bg-blue-900/30 text-blue-600 rounded-lg">
+                    <Edit2 className="w-4 h-4"/>
+                  </div>
+               </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
 };
 
 export default function CronogramaPage() {
@@ -82,13 +155,17 @@ export default function CronogramaPage() {
   
   const [aulas, setAulas] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false); // Estado para evitar duplo clique
+  const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
-  // --- CONTROLES ---
+  // --- CONTROLES DE FILTRO ---
   const [availableUnits, setAvailableUnits] = useState([]); 
+  const [uniqueStates, setUniqueStates] = useState([]); 
+  const [selectedState, setSelectedState] = useState(""); 
   const [selectedUnit, setSelectedUnit] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  
+  // --- CONTROLES DE MODAL ---
   const [showModal, setShowModal] = useState(false);
   const [editingClass, setEditingClass] = useState(null);
 
@@ -104,52 +181,41 @@ export default function CronogramaPage() {
     const fetchCatalogs = async () => {
       try {
         setLoading(true);
-        setErrorMsg("");
-
-        // Busca simultânea
         const [unitsSnap, modsSnap, profsSnap, vinculosSnap] = await Promise.all([
           getDocs(collection(db, 'unidades')),
           getDocs(collection(db, 'modalidades')),
           getDocs(collection(db, 'professores')),
-          // 🔴 CORREÇÃO CRÍTICA: Lendo da coleção correta 'vinculos' (antes estava 'professorVinculos')
           getDocs(collection(db, 'vinculos')) 
         ]);
 
         let finalUnidades = unitsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        const todosProfessores = profsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         
-        // 🔴 CORREÇÃO CRÍTICA: Normalizando dados dos vínculos
-        const todosVinculos = vinculosSnap.docs.map(d => {
-            const data = d.data();
-            return {
-                id: d.id,
-                ...data,
-                professorId: String(data.professorId), // Garante String
-                unidadeId: String(data.unidadeId),     // Garante String
-                status: data.status || 'ativo'
-            };
-        }).filter(v => v.status === 'ativo');
+        // ORDENAÇÃO ALFABÉTICA
+        finalUnidades.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
 
-        // === FILTRO DE UNIDADES (ACL) ===
+        // Extração de Estados Únicos
+        const states = [...new Set(finalUnidades.map(u => u.estado).filter(Boolean))].sort();
+        setUniqueStates(states);
+
+        const todosProfessores = profsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const todosVinculos = vinculosSnap.docs.map(d => ({
+            id: d.id, ...d.data(),
+            professorId: String(d.data().professorId),
+            unidadeId: String(d.data().unidadeId),
+            status: d.data().status || 'ativo'
+        })).filter(v => v.status === 'ativo');
+
+        // Filtro ACL
         let unitsToShow = [];
-
-        if (role === 'admin') {
-            unitsToShow = finalUnidades;
-        } 
-        else if (role === 'mentor') {
-            unitsToShow = finalUnidades.filter(u => u.mentorId === userId);
-        } 
-        else if (role === 'unidade') {
-            unitsToShow = finalUnidades.filter(u => u.id === userData.unidadeId);
-        } 
+        if (role === 'admin') unitsToShow = finalUnidades;
+        else if (role === 'mentor') unitsToShow = finalUnidades.filter(u => u.mentorId === userId);
+        else if (role === 'unidade') unitsToShow = finalUnidades.filter(u => u.id === userData.unidadeId);
         else if (role === 'professor') {
             const meuPerfil = todosProfessores.find(p => p.uidLogin === userId);
             if (meuPerfil) {
                 const meusLinks = todosVinculos.filter(v => v.professorId === String(meuPerfil.id));
                 const minhasUnidadesIds = meusLinks.map(v => v.unidadeId);
                 unitsToShow = finalUnidades.filter(u => minhasUnidadesIds.includes(String(u.id)));
-            } else {
-                unitsToShow = [];
             }
         }
 
@@ -162,14 +228,13 @@ export default function CronogramaPage() {
 
         setAvailableUnits(unitsToShow);
 
-        // Auto-seleção de unidade
         if (unitsToShow.length > 0 && !selectedUnit) {
-            setSelectedUnit(unitsToShow[0].id);
+            if(unitsToShow.length === 1) setSelectedUnit(unitsToShow[0].id);
         }
 
       } catch (error) {
         console.error("Erro no load inicial:", error);
-        setErrorMsg("Erro de conexão. Verifique sua internet.");
+        setErrorMsg("Erro de conexão.");
       } finally {
         setLoading(false);
       }
@@ -180,52 +245,59 @@ export default function CronogramaPage() {
 
   // --- 2. BUSCA DE AULAS ---
   const fetchAulas = useCallback(async () => {
-    if (!selectedUnit) {
-      setAulas([]);
-      return;
-    }
     try {
-      const qAulas = query(collection(db, 'aulas'), where('unidadeId', '==', selectedUnit));
+      let qAulas;
+      
+      if (selectedUnit) {
+        qAulas = query(collection(db, 'aulas'), where('unidadeId', '==', selectedUnit));
+      } 
+      else if (!selectedUnit && searchTerm.length > 1) {
+        const unitIds = availableUnits.map(u => u.id);
+        if(unitIds.length > 0) {
+            qAulas = query(collection(db, 'aulas')); 
+        } else {
+            setAulas([]);
+            return;
+        }
+      } else {
+        setAulas([]);
+        return;
+      }
+
       const aulasSnap = await getDocs(qAulas);
       const aulasData = aulasSnap.docs.map(d => ({ id: d.id, ...d.data() }));
       setAulas(aulasData);
+
     } catch (err) { console.error(err); }
-  }, [selectedUnit]);
+  }, [selectedUnit, searchTerm, availableUnits]);
 
   useEffect(() => {
-    fetchAulas();
+    const timer = setTimeout(() => {
+        fetchAulas();
+    }, 500);
+    return () => clearTimeout(timer);
   }, [fetchAulas]);
 
-  // --- 3. CÁLCULO INTELIGENTE DE PROFESSORES (CORREÇÃO DO VÍNCULO) ---
-  const professoresDoModal = useMemo(() => {
-    if (!formData.unidadeId) return [];
-    
-    // 1. Pega os vínculos da unidade selecionada no modal
-    // 🔴 Uso de String() para garantir a comparação
-    const linksDaUnidade = catalogs.vinculos.filter(v => String(v.unidadeId) === String(formData.unidadeId));
-    
-    // 2. Extrai os IDs dos professores permitidos
-    const idsPermitidos = linksDaUnidade.map(v => String(v.professorId));
-    
-    // 3. Retorna os objetos completos dos professores
-    return catalogs.professores.filter(p => idsPermitidos.includes(String(p.id)));
-  }, [formData.unidadeId, catalogs.vinculos, catalogs.professores]);
-
-
-  // --- 4. PREPARAÇÃO VISUAL ---
+  // --- LÓGICA DE FILTRAGEM VISUAL ---
   const filteredClasses = useMemo(() => {
-    if (!selectedUnit) return [];
-    
-    let classes = aulas.filter(h => String(h.unidadeId) === String(selectedUnit));
+    let classes = aulas;
+
+    if (!selectedUnit) {
+        const allowedIds = availableUnits.map(u => u.id);
+        classes = classes.filter(c => allowedIds.includes(String(c.unidadeId)));
+    }
 
     return classes.map(c => {
       const mod = catalogs.modalidades.find(m => String(m.id) === String(c.modalidadeId));
       const prof = catalogs.professores.find(p => String(p.id) === String(c.professorId));
+      const uni = catalogs.unidades.find(u => String(u.id) === String(c.unidadeId));
+      
       return {
         ...c,
         modalidadeNome: mod?.nome || 'Desconhecido',
         modalidadeCor: mod?.cor || '#9ca3af',
-        professorNome: prof?.nome || 'Sem Professor'
+        professorNome: prof?.nome || 'Sem Professor',
+        unidadeNome: uni?.nome || 'Unidade Desconhecida'
       };
     }).filter(c => {
       if (!searchTerm) return true;
@@ -235,18 +307,37 @@ export default function CronogramaPage() {
         c.professorNome.toLowerCase().includes(term)
       );
     });
-  }, [selectedUnit, searchTerm, aulas, catalogs]);
+  }, [selectedUnit, searchTerm, aulas, catalogs, availableUnits]);
+
+  const groupedClasses = useMemo(() => {
+      if (selectedUnit) return [];
+      const groups = {};
+      filteredClasses.forEach(cls => {
+          if (!groups[cls.unidadeId]) {
+              groups[cls.unidadeId] = {
+                  unidadeNome: cls.unidadeNome,
+                  aulas: []
+              };
+          }
+          groups[cls.unidadeId].aulas.push(cls);
+      });
+      return Object.values(groups).sort((a,b) => a.unidadeNome.localeCompare(b.unidadeNome));
+  }, [filteredClasses, selectedUnit]);
 
   const activeTimeSlots = useMemo(() => {
     const times = new Set(filteredClasses.map(c => c.hora));
     return Array.from(times).sort();
   }, [filteredClasses]);
 
-  // --- AÇÕES ---
+  const filteredUnitsDropdown = useMemo(() => {
+      if (!selectedState) return availableUnits;
+      return availableUnits.filter(u => u.estado === selectedState);
+  }, [availableUnits, selectedState]);
+
+  // --- AÇÕES DO MODAL ---
   const handleSave = async (e) => {
     e.preventDefault();
     if (isReadOnly || saving) return; 
-
     if (formData.dias.length === 0) return alert("Selecione pelo menos um dia.");
 
     try {
@@ -262,18 +353,10 @@ export default function CronogramaPage() {
 
       if (editingClass) {
         await updateDoc(doc(db, "aulas", editingClass.id), { ...payload, updatedAt: serverTimestamp() });
-        
-        // Atualização Otimista
-        if (selectedUnit === formData.unidadeId) {
-            setAulas(prev => prev.map(a => a.id === editingClass.id ? { ...payload, id: a.id } : a));
-        } else {
-            setAulas(prev => prev.filter(a => a.id !== editingClass.id));
-        }
+        fetchAulas();
       } else {
-        const docRef = await addDoc(collection(db, "aulas"), { ...payload, createdAt: serverTimestamp() });
-        if (selectedUnit === formData.unidadeId) {
-            setAulas(prev => [...prev, { ...payload, id: docRef.id }]);
-        }
+        await addDoc(collection(db, "aulas"), { ...payload, createdAt: serverTimestamp() });
+        fetchAulas();
       }
       setShowModal(false);
     } catch (error) {
@@ -291,29 +374,20 @@ export default function CronogramaPage() {
         await deleteDoc(doc(db, "aulas", editingClass.id));
         setAulas(prev => prev.filter(a => a.id !== editingClass.id));
         setShowModal(false);
-      } catch (error) { 
-        alert("Erro ao excluir"); 
-      } finally {
-        setSaving(false);
-      }
+      } catch (error) { alert("Erro ao excluir"); } finally { setSaving(false); }
     }
   };
 
   const toggleDay = (day) => {
     setFormData(prev => {
       const exists = prev.dias.includes(day);
-      return exists 
-        ? { ...prev, dias: prev.dias.filter(d => d !== day) }
-        : { ...prev, dias: [...prev.dias, day] };
+      return exists ? { ...prev, dias: prev.dias.filter(d => d !== day) } : { ...prev, dias: [...prev.dias, day] };
     });
   };
 
   const openNewModal = () => {
     if (isReadOnly) return;
-    setFormData({ 
-      unidadeId: selectedUnit, modalidadeId: '', professorId: '', 
-      hora: '07:00', valor: '', dias: [] 
-    });
+    setFormData({ unidadeId: selectedUnit, modalidadeId: '', professorId: '', hora: '07:00', valor: '', dias: [] });
     setEditingClass(null);
     setShowModal(true);
   };
@@ -325,13 +399,14 @@ export default function CronogramaPage() {
     setShowModal(true);
   };
 
-  if (loading) {
-    return <div className="flex h-screen items-center justify-center text-slate-400 dark:text-slate-500 gap-2"><Loader2 className="w-6 h-6 animate-spin text-red-600" /> Carregando Cronograma...</div>;
-  }
+  const professoresDoModal = useMemo(() => {
+    if (!formData.unidadeId) return [];
+    const linksDaUnidade = catalogs.vinculos.filter(v => String(v.unidadeId) === String(formData.unidadeId));
+    const idsPermitidos = linksDaUnidade.map(v => String(v.professorId));
+    return catalogs.professores.filter(p => idsPermitidos.includes(String(p.id)));
+  }, [formData.unidadeId, catalogs.vinculos, catalogs.professores]);
 
-  if (errorMsg) {
-    return <div className="flex h-screen items-center justify-center text-red-500 gap-2"><AlertTriangle className="w-6 h-6" /> {errorMsg}</div>;
-  }
+  if (loading) return <div className="flex h-screen items-center justify-center text-slate-400 gap-2"><Loader2 className="w-6 h-6 animate-spin text-red-600" /> Carregando...</div>;
 
   return (
     <div className="p-8 max-w-[1800px] mx-auto animate-fade-in space-y-8">
@@ -343,52 +418,63 @@ export default function CronogramaPage() {
             <span className="bg-red-600 text-white p-2 rounded-lg shadow-red-200 dark:shadow-none shadow-lg">
               <Calendar className="w-6 h-6" />
             </span>
-            Cronograma de Aulas
+            Agenda de Coletivas
           </h1>
           <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium">
-            {isReadOnly ? "Visualização de Grade" : "Gerenciamento de Grade e Horário"}
+            {isReadOnly ? "Consulte os horários de todas as unidades" : "Gerenciamento de Grade e Horário"}
           </p>
-        </div>
-        <div className="bg-slate-100 dark:bg-slate-800 px-4 py-2 rounded-full text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wide flex items-center gap-2 border border-slate-200 dark:border-slate-700">
-          <div className={`w-2 h-2 rounded-full ${role === 'admin' ? 'bg-red-500' : 'bg-blue-500'}`} />
-          {role}
         </div>
       </div>
 
-      {/* FILTROS */}
+      {/* CONTROL BAR */}
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-100 dark:border-slate-700 p-6">
-        <div className="flex flex-col xl:flex-row gap-6 items-end">
+        <div className="flex flex-col xl:flex-row gap-4 items-end">
           
-          <div className="w-full xl:w-1/3 space-y-2">
-            <label className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-1">
+          <div className="w-full md:w-32 space-y-2">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+              <Globe className="w-3 h-3" /> Estado
+            </label>
+            <div className="relative">
+                <select 
+                    className="w-full h-12 px-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl text-sm font-bold focus:border-red-500 outline-none appearance-none cursor-pointer"
+                    value={selectedState}
+                    onChange={(e) => { setSelectedState(e.target.value); setSelectedUnit(""); }}
+                >
+                    <option value="">Todos</option>
+                    {uniqueStates.map(st => <option key={st} value={st}>{st}</option>)}
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+            </div>
+          </div>
+
+          <div className="w-full md:w-64 space-y-2">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
               <MapPin className="w-3 h-3" /> Unidade
             </label>
             <div className="relative group">
               <select 
-                className="w-full h-12 pl-4 pr-10 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl text-sm font-bold text-slate-700 dark:text-white focus:border-red-500 outline-none transition-all appearance-none cursor-pointer disabled:bg-slate-100 dark:disabled:bg-slate-800 dark:disabled:text-slate-500"
+                className="w-full h-12 pl-4 pr-10 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl text-sm font-bold text-slate-700 dark:text-white focus:border-red-500 outline-none appearance-none cursor-pointer"
                 value={selectedUnit}
                 onChange={(e) => setSelectedUnit(e.target.value)}
                 disabled={availableUnits.length <= 1 && (role === 'unidade' || role === 'professor')}
               >
-                <option value="">{availableUnits.length === 0 ? "Nenhuma unidade disponível" : "Selecione..."}</option>
-                {availableUnits.map(u => (
+                <option value="">Selecione...</option>
+                {filteredUnitsDropdown.map(u => (
                   <option key={u.id} value={u.id}>{u.nome}</option>
                 ))}
               </select>
-              <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                <Filter className="w-4 h-4" />
-              </div>
+              <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
             </div>
           </div>
 
           <div className="flex-1 w-full space-y-2">
-            <label className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-1">
-              <Search className="w-3 h-3" /> Pesquisar na Grade
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+              <Search className="w-3 h-3" /> {selectedUnit ? "Filtrar nesta grade" : "Buscar Modalidade em todas as unidades"}
             </label>
             <div className="relative">
               <input 
                 type="text" 
-                placeholder="Busque por modalidade ou professor..."
+                placeholder={selectedUnit ? "Ex: Spinning..." : "Ex: Digite 'Pilates' para ver onde tem..."}
                 className="w-full h-12 pl-11 pr-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl text-sm font-medium text-slate-700 dark:text-white focus:border-red-500 outline-none transition-all shadow-sm"
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
@@ -402,216 +488,143 @@ export default function CronogramaPage() {
                 onClick={openNewModal}
                 disabled={!selectedUnit}
                 className={`
-                h-12 px-8 rounded-xl font-bold text-sm uppercase flex items-center gap-2 shadow-lg transition-all active:scale-95 whitespace-nowrap
+                h-12 px-6 rounded-xl font-bold text-xs uppercase flex items-center gap-2 shadow-lg transition-all active:scale-95 whitespace-nowrap
                 ${selectedUnit 
-                    ? 'bg-gradient-to-r from-red-600 to-red-700 text-white hover:to-red-800 shadow-red-200 dark:shadow-none' 
+                    ? 'bg-red-600 text-white hover:bg-red-700 shadow-red-200 dark:shadow-none' 
                     : 'bg-slate-100 dark:bg-slate-700 text-slate-400 cursor-not-allowed border border-slate-200 dark:border-slate-600'}
                 `}
             >
-                <Plus className="w-5 h-5" /> Criar Aula
+                <Plus className="w-4 h-4" /> Adicionar
             </button>
           )}
         </div>
       </div>
 
-      {/* GRADE VISUAL */}
-      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden min-h-[500px] relative">
-        {!selectedUnit ? (
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 bg-slate-50/50 dark:bg-slate-900/50">
-            <MapPin className="w-12 h-12 mb-3 text-slate-300 dark:text-slate-600" />
-            <h3 className="text-lg font-bold text-slate-600 dark:text-slate-400">Selecione uma Unidade</h3>
+      {/* ÁREA DE CONTEÚDO (DUAL MODE) */}
+      <div className="min-h-[500px] relative">
+        
+        {/* MODO 1: Placeholder Inicial */}
+        {!selectedUnit && !searchTerm && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 bg-slate-50/50 dark:bg-slate-900/50 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-700">
+            <Globe className="w-16 h-16 mb-4 text-slate-300 dark:text-slate-600" />
+            <h3 className="text-xl font-black text-slate-600 dark:text-slate-400">Comece sua busca</h3>
+            <p className="text-sm mt-1">Selecione uma <strong>Unidade</strong> para ver o calendário ou digite uma <strong>Modalidade</strong> para buscar em todas.</p>
           </div>
-        ) : filteredClasses.length === 0 && !searchTerm ? (
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 dark:text-slate-500">
-            <Calendar className="w-12 h-12 mb-3 opacity-20" />
-            <p>Nenhuma aula cadastrada nesta unidade.</p>
-            {!isReadOnly && (
-                <button onClick={openNewModal} className="mt-2 text-red-600 hover:underline font-bold text-sm">
-                Criar primeira aula
-                </button>
-            )}
-          </div>
-        ) : (
-          <div className="overflow-x-auto custom-scrollbar pb-6">
-            <div className="grid grid-cols-[80px_repeat(7,minmax(180px,1fr))] w-full min-w-[1400px]">
-              
-              <div className="bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur border-b border-slate-200 dark:border-slate-700 p-4 text-center text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest sticky top-0 left-0 z-20">
-                Horário
-              </div>
-              
-              {daysOfWeek.map(day => (
-                <div key={day} className="bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur border-b border-slate-200 dark:border-slate-700 border-l border-slate-100 dark:border-slate-800 p-4 text-center text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest sticky top-0 z-10">
-                  {day}
-                </div>
-              ))}
+        )}
 
-              {activeTimeSlots.map(time => (
-                <React.Fragment key={time}>
-                  <div className="bg-slate-50 dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 p-4 text-right text-xs font-bold text-slate-500 dark:text-slate-400 flex items-start justify-end pt-5 sticky left-0 z-10">
-                    {time}
-                  </div>
-                  {daysOfWeek.map(day => {
-                    const classesInSlot = filteredClasses.filter(c => c.dias.includes(day) && c.hora === time);
-                    return (
-                      <div 
-                        key={`${day}-${time}`} 
-                        className="bg-white dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700 border-l border-slate-100 dark:border-slate-700 p-2 min-h-[110px] h-auto hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition-colors flex flex-col gap-1"
-                      >
-                        {classesInSlot.map(cls => (
-                          <ClassCard key={cls.id} data={cls} onClick={() => openEditModal(cls)} isReadOnly={isReadOnly} />
+        {/* MODO 2: Lista Global (Design de Tabela Expandida) */}
+        {!selectedUnit && searchTerm && (
+            <div className="space-y-6">
+                <h3 className="text-lg font-bold text-slate-600 flex items-center gap-2">
+                    <List className="w-5 h-5"/> Resultados em todas as unidades para "{searchTerm}"
+                </h3>
+                {groupedClasses.length === 0 ? (
+                    <div className="text-center py-10 text-slate-400">Nenhuma aula encontrada com este nome.</div>
+                ) : (
+                    <div className="space-y-6">
+                        {groupedClasses.map((group) => (
+                            <GlobalUnitBlock 
+                                key={group.unidadeNome} 
+                                unitName={group.unidadeNome} 
+                                classes={group.aulas} 
+                                isReadOnly={isReadOnly}
+                                onEdit={openEditModal}
+                            />
                         ))}
-                      </div>
-                    );
-                  })}
-                </React.Fragment>
-              ))}
+                    </div>
+                )}
             </div>
-          </div>
+        )}
+
+        {/* MODO 3: Calendário da Unidade */}
+        {selectedUnit && (
+            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+                {filteredClasses.length === 0 && !searchTerm ? (
+                    <div className="py-20 flex flex-col items-center justify-center text-slate-400 dark:text-slate-500">
+                        <Calendar className="w-12 h-12 mb-3 opacity-20" />
+                        <p>Nenhuma aula cadastrada nesta unidade.</p>
+                        {!isReadOnly && <button onClick={openNewModal} className="mt-2 text-red-600 hover:underline font-bold text-sm">Criar primeira aula</button>}
+                    </div>
+                ) : (
+                    <div className="overflow-x-auto custom-scrollbar pb-6">
+                        <div className="grid grid-cols-[80px_repeat(7,minmax(180px,1fr))] w-full min-w-[1400px]">
+                            <div className="bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur border-b border-slate-200 dark:border-slate-700 p-4 text-center text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest sticky top-0 left-0 z-20">Horário</div>
+                            {daysOfWeek.map(day => (
+                                <div key={day} className="bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur border-b border-slate-200 dark:border-slate-700 border-l border-slate-100 dark:border-slate-800 p-4 text-center text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest sticky top-0 z-10">{day}</div>
+                            ))}
+                            {activeTimeSlots.map(time => (
+                                <React.Fragment key={time}>
+                                    <div className="bg-slate-50 dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 p-4 text-right text-xs font-bold text-slate-500 dark:text-slate-400 flex items-start justify-end pt-5 sticky left-0 z-10">{time}</div>
+                                    {daysOfWeek.map(day => {
+                                        const classesInSlot = filteredClasses.filter(c => c.dias.includes(day) && c.hora === time);
+                                        return (
+                                            <div key={`${day}-${time}`} className="bg-white dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700 border-l border-slate-100 dark:border-slate-700 p-2 min-h-[110px] h-auto hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition-colors flex flex-col gap-1">
+                                                {classesInSlot.map(cls => <ClassCard key={cls.id} data={cls} onClick={() => openEditModal(cls)} isReadOnly={isReadOnly} />)}
+                                            </div>
+                                        );
+                                    })}
+                                </React.Fragment>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
         )}
       </div>
 
-      {/* MODAL (FORM) */}
+      {/* MODAL */}
       {showModal && !isReadOnly && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in zoom-in duration-200">
           <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden border border-slate-100 dark:border-slate-700">
             <div className="px-8 py-5 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
-              <h3 className="font-bold text-xl text-slate-800 dark:text-white">
-                {editingClass ? 'Editar Aula' : 'Criar Nova Aula'}
-              </h3>
+              <h3 className="font-bold text-xl text-slate-800 dark:text-white">{editingClass ? 'Editar Aula' : 'Criar Nova Aula'}</h3>
               <button onClick={() => setShowModal(false)}><X className="w-5 h-5 text-slate-400 hover:text-red-500" /></button>
             </div>
-
             <form onSubmit={handleSave} className="p-8 space-y-5">
-              
               <div>
                 <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 block">Unidade</label>
-                <select 
-                  className="w-full p-3 bg-slate-100 dark:bg-slate-900 border-transparent rounded-xl text-sm font-bold text-slate-600 dark:text-slate-300 outline-none"
-                  value={formData.unidadeId}
-                  onChange={e => setFormData({...formData, unidadeId: e.target.value})}
-                  disabled={userData?.role === 'unidade'}
-                >
+                <select className="w-full p-3 bg-slate-100 dark:bg-slate-900 border-transparent rounded-xl text-sm font-bold text-slate-600 dark:text-slate-300 outline-none" value={formData.unidadeId} onChange={e => setFormData({...formData, unidadeId: e.target.value})} disabled={userData?.role === 'unidade'}>
                   {availableUnits.map(u => <option key={u.id} value={u.id}>{u.nome}</option>)}
                 </select>
               </div>
-
               <div className="grid grid-cols-2 gap-5">
                 <div>
                   <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 block">Modalidade</label>
-                  <select 
-                    className="w-full p-3 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-700 dark:text-white rounded-xl text-sm focus:border-red-500 outline-none"
-                    value={formData.modalidadeId}
-                    onChange={e => setFormData({...formData, modalidadeId: e.target.value})}
-                    required
-                  >
+                  <select className="w-full p-3 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-700 dark:text-white rounded-xl text-sm focus:border-red-500 outline-none" value={formData.modalidadeId} onChange={e => setFormData({...formData, modalidadeId: e.target.value})} required>
                     <option value="">Selecione...</option>
                     {catalogs.modalidades.map(m => <option key={m.id} value={m.id}>{m.nome}</option>)}
                   </select>
                 </div>
-                
-                {/* 🔴 VÍNCULO CORRIGIDO AQUI (Lê da coleção 'vinculos' que vem do hook) */}
                 <div>
                   <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 block">Professor</label>
-                  <select 
-                    className="w-full p-3 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-700 dark:text-white rounded-xl text-sm focus:border-red-500 outline-none"
-                    value={formData.professorId}
-                    onChange={e => setFormData({...formData, professorId: e.target.value})}
-                    required
-                    disabled={!formData.unidadeId}
-                  >
-                    <option value="">
-                      {!formData.unidadeId ? "Selecione a unidade" : (professoresDoModal.length === 0 ? "Nenhum vinculado" : "Selecione...")}
-                    </option>
-                    {professoresDoModal.map(p => (
-                      <option key={p.id} value={p.id}>{p.nome}</option>
-                    ))}
+                  <select className="w-full p-3 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-700 dark:text-white rounded-xl text-sm focus:border-red-500 outline-none" value={formData.professorId} onChange={e => setFormData({...formData, professorId: e.target.value})} required disabled={!formData.unidadeId}>
+                    <option value="">{!formData.unidadeId ? "Selecione a unidade" : (professoresDoModal.length === 0 ? "Nenhum vinculado" : "Selecione...")}</option>
+                    {professoresDoModal.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
                   </select>
-                  {formData.unidadeId && professoresDoModal.length === 0 && (
-                    <span className="text-[10px] text-red-500 mt-1 block font-bold">
-                      * Nenhum professor vinculado. Vá em Configurações &rarr; Professores.
-                    </span>
-                  )}
                 </div>
               </div>
-
               <div className="grid grid-cols-2 gap-5">
                 <div>
-                  <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 flex items-center gap-1">
-                    <Clock className="w-3 h-3"/> Horário
-                  </label>
-                  <input 
-                    type="time" 
-                    className="w-full p-3 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-700 dark:text-white rounded-xl text-sm focus:border-red-500 outline-none"
-                    value={formData.hora}
-                    onChange={e => setFormData({...formData, hora: e.target.value})}
-                    required
-                  />
+                  <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 flex items-center gap-1"><Clock className="w-3 h-3"/> Horário</label>
+                  <input type="time" className="w-full p-3 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-700 dark:text-white rounded-xl text-sm focus:border-red-500 outline-none" value={formData.hora} onChange={e => setFormData({...formData, hora: e.target.value})} required />
                 </div>
-                
                 <div>
-                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1.5 flex items-center gap-1">
-                    <DollarSign className="w-3 h-3 text-green-600"/> Valor Hora/Aula
-                  </label>
-                  <input 
-                    type="number" 
-                    step="0.01"
-                    min="0"
-                    className="w-full p-3 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 rounded-xl text-sm focus:border-green-500 outline-none font-bold text-slate-700 dark:text-white"
-                    value={formData.valor}
-                    onChange={e => setFormData({...formData, valor: e.target.value})}
-                    placeholder="0.00"
-                  />
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1.5 flex items-center gap-1"><DollarSign className="w-3 h-3 text-green-600"/> Valor Hora/Aula</label>
+                  <input type="number" step="0.01" min="0" className="w-full p-3 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 rounded-xl text-sm focus:border-green-500 outline-none font-bold text-slate-700 dark:text-white" value={formData.valor} onChange={e => setFormData({...formData, valor: e.target.value})} placeholder="0.00" />
                 </div>
               </div>
-
               <div>
                 <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2 block">Dias da Semana</label>
                 <div className="flex flex-wrap gap-2">
                   {daysOfWeek.map(day => (
-                    <button
-                      key={day}
-                      type="button"
-                      onClick={() => toggleDay(day)}
-                      className={`
-                        flex-1 min-w-[70px] py-2.5 rounded-lg text-[10px] font-black uppercase tracking-wide border transition-all
-                        ${formData.dias.includes(day) 
-                          ? 'bg-red-600 text-white border-red-600 shadow-md shadow-red-200 dark:shadow-none transform scale-105' 
-                          : 'bg-white dark:bg-slate-900 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-slate-700 hover:border-red-300 hover:text-red-500'}
-                      `}
-                    >
-                      {day.substring(0, 3)}
-                    </button>
+                    <button key={day} type="button" onClick={() => toggleDay(day)} className={`flex-1 min-w-[70px] py-2.5 rounded-lg text-[10px] font-black uppercase tracking-wide border transition-all ${formData.dias.includes(day) ? 'bg-red-600 text-white border-red-600 shadow-md shadow-red-200 dark:shadow-none transform scale-105' : 'bg-white dark:bg-slate-900 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-slate-700 hover:border-red-300 hover:text-red-500'}`}>{day.substring(0, 3)}</button>
                   ))}
                 </div>
               </div>
-
               <div className="pt-6 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-3">
-                {editingClass && (
-                  <button 
-                    type="button" 
-                    onClick={handleDelete}
-                    disabled={saving}
-                    className="mr-auto text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 px-4 py-3 rounded-xl text-xs font-bold uppercase flex items-center gap-2 disabled:opacity-50"
-                  >
-                    <Trash2 className="w-4 h-4"/> Excluir
-                  </button>
-                )}
-                <button 
-                  type="button" 
-                  onClick={() => setShowModal(false)}
-                  disabled={saving}
-                  className="px-6 py-3 text-slate-500 dark:text-slate-400 font-bold uppercase text-xs hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl disabled:opacity-50"
-                >
-                  Cancelar
-                </button>
-                <button 
-                  type="submit" 
-                  disabled={saving}
-                  className="px-8 py-3 bg-red-600 text-white rounded-xl font-bold uppercase text-xs hover:bg-red-700 shadow-lg shadow-red-200 dark:shadow-none flex items-center gap-2 disabled:opacity-70"
-                >
-                  {saving ? <Loader2 className="w-4 h-4 animate-spin"/> : <Check className="w-4 h-4" />}
-                  Salvar
-                </button>
+                {editingClass && <button type="button" onClick={handleDelete} disabled={saving} className="mr-auto text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 px-4 py-3 rounded-xl text-xs font-bold uppercase flex items-center gap-2 disabled:opacity-50"><Trash2 className="w-4 h-4"/> Excluir</button>}
+                <button type="button" onClick={() => setShowModal(false)} disabled={saving} className="px-6 py-3 text-slate-500 dark:text-slate-400 font-bold uppercase text-xs hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl disabled:opacity-50">Cancelar</button>
+                <button type="submit" disabled={saving} className="px-8 py-3 bg-red-600 text-white rounded-xl font-bold uppercase text-xs hover:bg-red-700 shadow-lg shadow-red-200 dark:shadow-none flex items-center gap-2 disabled:opacity-70">{saving ? <Loader2 className="w-4 h-4 animate-spin"/> : <Check className="w-4 h-4" />} Salvar</button>
               </div>
             </form>
           </div>
