@@ -7,7 +7,8 @@ import {
 import { 
   Calendar, CheckCircle2, XCircle, Users, MapPin, 
   Filter, Search, Clock, AlertTriangle, Loader2, Lock, 
-  LayoutDashboard, UserCog, ArrowRightLeft, User, ChevronDown
+  LayoutDashboard, UserCog, ArrowRightLeft, User, ChevronDown,
+  List, AlertCircle
 } from 'lucide-react';
 
 // --- HELPERS ---
@@ -31,7 +32,7 @@ const formatDateBr = (dateStr) => {
   return `${d}/${m}/${y}`;
 };
 
-// Componente de Badge de Status (Visual Premium)
+// Componente de Badge de Status
 const StatusBadge = ({ status }) => {
     if (status === 'realizada') {
         return (
@@ -71,8 +72,11 @@ export default function ValidacaoDiariaPage() {
   const [filtroModalidade, setFiltroModalidade] = useState("");
   const [filtroProfessor, setFiltroProfessor] = useState("");
 
+  // 🟢 NOVO CONTROLE: Filtro de Status (Todos, Pendentes, Cancelados)
+  const [filtroStatus, setFiltroStatus] = useState('todos'); // 'todos', 'pendente', 'cancelada'
+
   // --- DADOS ---
-  const [catalogs, setCatalogs] = useState({ unidades: [], modalidades: [], professores: [] });
+  const [catalogs, setCatalogs] = useState({ unidades: [], modalidades: [], professores: [], feriados: [] });
   const [gradeGerada, setGradeGerada] = useState([]);
   const [loading, setLoading] = useState(true);
   const [processando, setProcessando] = useState(false);
@@ -88,22 +92,24 @@ export default function ValidacaoDiariaPage() {
   const [substitutoId, setSubstitutoId] = useState("");
   const [motivoSubstituicao, setMotivoSubstituicao] = useState("");
 
-  // 1. CARREGAMENTO INICIAL E ORDENAÇÃO
+  // 1. CARREGAMENTO INICIAL
   useEffect(() => {
     const loadCatalogs = async () => {
       try {
         setLoading(true);
-        const [unitsSnap, modsSnap, profsSnap, linksSnap] = await Promise.all([
+        const [unitsSnap, modsSnap, profsSnap, linksSnap, feriadosSnap] = await Promise.all([
           getDocs(collection(db, 'unidades')),
           getDocs(collection(db, 'modalidades')),
           getDocs(collection(db, 'professores')),
-          getDocs(collection(db, 'vinculos')) 
+          getDocs(collection(db, 'vinculos')),
+          getDocs(collection(db, 'feriados')) 
         ]);
 
         let unitsData = unitsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         let modsData = modsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         const profsData = profsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         const linksData = linksSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const feriadosData = feriadosSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
         // Filtros de Permissão
         if (role === 'mentor') {
@@ -122,12 +128,12 @@ export default function ValidacaoDiariaPage() {
           }
         }
 
-        // 🟢 ORDENAÇÃO ALFABÉTICA (A-Z)
+        // Ordenação
         unitsData.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
         modsData.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
         profsData.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
 
-        setCatalogs({ unidades: unitsData, modalidades: modsData, professores: profsData });
+        setCatalogs({ unidades: unitsData, modalidades: modsData, professores: profsData, feriados: feriadosData });
       } catch (error) {
         console.error("Erro ao carregar:", error);
       } finally {
@@ -166,11 +172,15 @@ export default function ValidacaoDiariaPage() {
             if (meuPerfil) meuProfessorId = meuPerfil.id;
         }
 
+        // MAPA DE FERIADOS
+        const feriadosSet = new Set(catalogs.feriados.map(f => f.data));
+
         let gradeFinal = [];
 
         datasParaVerificar.forEach(dataObj => {
           const dataString = dataObj.toISOString().split('T')[0];
           const diaSemanaNome = diasSemanaMap[dataObj.getDay()];
+          const isFeriado = feriadosSet.has(dataString);
 
           const aulasDoDia = aulasBase.filter(aula => aula.dias && aula.dias.includes(diaSemanaNome));
 
@@ -194,7 +204,20 @@ export default function ValidacaoDiariaPage() {
             const validacao = validacoesExistentes.find(v => String(v.aulaId) === String(aula.id) && v.data === dataString);
 
             let professorExibicao = prof;
-            let status = validacao ? validacao.status : 'pendente';
+            
+            // LÓGICA DE STATUS
+            let status = 'pendente';
+            let dadosValidacao = validacao;
+
+            if (validacao) {
+                status = validacao.status;
+            } else if (isFeriado) {
+                status = 'cancelada';
+                dadosValidacao = { 
+                    motivoCancelamento: 'Recesso/Feriado',
+                    status: 'cancelada' 
+                };
+            }
             
             if (validacao && validacao.substituicao && validacao.professorId) {
                 const profSub = catalogs.professores.find(p => String(p.id) === String(validacao.professorId));
@@ -210,7 +233,7 @@ export default function ValidacaoDiariaPage() {
               professorTitular: prof,
               unidade: unidadeValida,
               modalidade: catalogs.modalidades.find(m => String(m.id) === String(aula.modalidadeId)),
-              validacao: validacao || null, 
+              validacao: dadosValidacao || null, 
               status: status
             });
           });
@@ -232,6 +255,21 @@ export default function ValidacaoDiariaPage() {
 
     gerarGrade();
   }, [modoFiltro, dataFiltro, mesFiltro, catalogs, filtroUnidade, filtroModalidade, filtroProfessor, role, userId]);
+
+  // 🟢 CONTADORES INTELIGENTES
+  const counts = useMemo(() => {
+      return {
+          total: gradeGerada.length,
+          pendentes: gradeGerada.filter(i => i.status === 'pendente').length,
+          canceladas: gradeGerada.filter(i => i.status === 'cancelada').length
+      };
+  }, [gradeGerada]);
+
+  // 🟢 FILTRAGEM DE EXIBIÇÃO (Baseada nos Botões)
+  const listaExibicao = useMemo(() => {
+      if (filtroStatus === 'todos') return gradeGerada;
+      return gradeGerada.filter(item => item.status === filtroStatus);
+  }, [gradeGerada, filtroStatus]);
 
   const verificarFuturo = (dataString) => {
     const hoje = new Date();
@@ -266,7 +304,6 @@ export default function ValidacaoDiariaPage() {
   };
 
   const confirmarAcao = async (e) => {
-    // 🟢 CORREÇÃO DO BOOT: Previne o comportamento padrão do formulário imediatamente
     e.preventDefault(); 
     e.stopPropagation();
 
@@ -321,7 +358,7 @@ export default function ValidacaoDiariaPage() {
         validacaoId = docRef.id;
       }
 
-      // Atualização Otimista (sem reload)
+      // Atualização Otimista
       setGradeGerada(prevGrade => prevGrade.map(gridItem => {
         if (gridItem.key === item.key) {
            let novoProfessor = item.professorTitular;
@@ -344,7 +381,7 @@ export default function ValidacaoDiariaPage() {
       alert("Erro ao salvar.");
     } finally {
       setProcessando(false);
-      setModalOpen(false); // Fecha o modal suavemente
+      setModalOpen(false);
       setAcaoAtual(null);
     }
   };
@@ -364,49 +401,112 @@ export default function ValidacaoDiariaPage() {
           <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium">Gestão operacional e controle de frequência.</p>
         </div>
         
-        {/* BARRA DE FILTROS FLUTUANTE */}
-        <div className="w-full xl:w-auto bg-white dark:bg-slate-800 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col md:flex-row gap-2">
-            <div className="flex bg-slate-100 dark:bg-slate-700 rounded-xl p-1">
-                <button onClick={() => setModoFiltro('dia')} className={`px-5 py-2 text-xs font-bold uppercase tracking-wide rounded-lg transition-all ${modoFiltro === 'dia' ? 'bg-white dark:bg-slate-600 shadow text-emerald-700 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}>Dia</button>
-                <button onClick={() => setModoFiltro('mes')} className={`px-5 py-2 text-xs font-bold uppercase tracking-wide rounded-lg transition-all ${modoFiltro === 'mes' ? 'bg-white dark:bg-slate-600 shadow text-emerald-700 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}>Mês</button>
+        {/* ÁREA DE CONTROLE (BOTÕES + FILTROS) */}
+        <div className="flex flex-col items-end gap-3 w-full xl:w-auto">
+            
+            {/* 🟢 GRUPO DE BOTÕES DE STATUS (A, B, C) */}
+            <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                
+                {/* Botão A: TODOS */}
+                <button
+                    onClick={() => setFiltroStatus('todos')}
+                    className={`
+                        flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wide transition-all
+                        ${filtroStatus === 'todos' 
+                            ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm' 
+                            : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                        }
+                    `}
+                >
+                    <List className="w-4 h-4"/>
+                    Todos
+                </button>
+
+                {/* Botão B: PENDENTES */}
+                <button
+                    onClick={() => setFiltroStatus('pendente')}
+                    className={`
+                        flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wide transition-all ml-1
+                        ${filtroStatus === 'pendente' 
+                            ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20' 
+                            : 'text-slate-500 dark:text-slate-400 hover:text-orange-600'
+                        }
+                    `}
+                >
+                    <AlertCircle className="w-4 h-4"/>
+                    Pendentes
+                    {counts.pendentes > 0 && (
+                        <span className="ml-1 px-1.5 py-0.5 bg-white/20 text-white rounded-md text-[10px] min-w-[20px] text-center">
+                            {counts.pendentes}
+                        </span>
+                    )}
+                </button>
+
+                {/* Botão C: CANCELADOS */}
+                <button
+                    onClick={() => setFiltroStatus('cancelada')}
+                    className={`
+                        flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wide transition-all ml-1
+                        ${filtroStatus === 'cancelada' 
+                            ? 'bg-rose-600 text-white shadow-md shadow-rose-600/20' 
+                            : 'text-slate-500 dark:text-slate-400 hover:text-rose-600'
+                        }
+                    `}
+                >
+                    <XCircle className="w-4 h-4"/>
+                    Cancelados
+                    {counts.canceladas > 0 && (
+                        <span className="ml-1 px-1.5 py-0.5 bg-white/20 text-white rounded-md text-[10px] min-w-[20px] text-center">
+                            {counts.canceladas}
+                        </span>
+                    )}
+                </button>
             </div>
 
-            <div className="h-px md:h-auto md:w-px bg-slate-200 dark:bg-slate-600 mx-1"></div>
-
-            <div className="flex flex-col md:flex-row gap-2 flex-1">
-                <div className="relative">
-                    <Calendar className="absolute left-3 top-2.5 w-4 h-4 text-emerald-500"/>
-                    {modoFiltro === 'dia' ? (
-                    <input type="date" value={dataFiltro} onChange={e => setDataFiltro(e.target.value)} className="pl-10 p-2 border-0 bg-slate-50 dark:bg-slate-900 rounded-lg text-sm font-bold text-slate-700 dark:text-white focus:ring-2 focus:ring-emerald-500 w-full md:w-auto outline-none h-full" />
-                    ) : (
-                    <input type="month" value={mesFiltro} onChange={e => setMesFiltro(e.target.value)} className="pl-10 p-2 border-0 bg-slate-50 dark:bg-slate-900 rounded-lg text-sm font-bold text-slate-700 dark:text-white focus:ring-2 focus:ring-emerald-500 w-full md:w-auto outline-none h-full" />
-                    )}
+            {/* FILTROS PADRÃO (Data, Unidade, etc) */}
+            <div className="w-full xl:w-auto bg-white dark:bg-slate-800 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col md:flex-row gap-2">
+                <div className="flex bg-slate-100 dark:bg-slate-700 rounded-xl p-1">
+                    <button onClick={() => setModoFiltro('dia')} className={`px-5 py-2 text-xs font-bold uppercase tracking-wide rounded-lg transition-all ${modoFiltro === 'dia' ? 'bg-white dark:bg-slate-600 shadow text-emerald-700 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}>Dia</button>
+                    <button onClick={() => setModoFiltro('mes')} className={`px-5 py-2 text-xs font-bold uppercase tracking-wide rounded-lg transition-all ${modoFiltro === 'mes' ? 'bg-white dark:bg-slate-600 shadow text-emerald-700 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}>Mês</button>
                 </div>
 
-                {role !== 'unidade' && (
+                <div className="h-px md:h-auto md:w-px bg-slate-200 dark:bg-slate-600 mx-1"></div>
+
+                <div className="flex flex-col md:flex-row gap-2 flex-1">
                     <div className="relative">
-                        <MapPin className="absolute left-3 top-2.5 w-4 h-4 text-slate-400"/>
-                        <select value={filtroUnidade} onChange={e => setFiltroUnidade(e.target.value)} className="pl-9 p-2 border-0 bg-slate-50 dark:bg-slate-900 rounded-lg text-sm font-semibold text-slate-600 dark:text-slate-300 focus:ring-2 focus:ring-emerald-500 w-full md:w-48 outline-none h-full appearance-none cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-950 transition-colors">
-                            <option value="">Todas as Unidades</option>
-                            {catalogs.unidades.map(u => <option key={u.id} value={u.id}>{u.nome}</option>)}
+                        <Calendar className="absolute left-3 top-2.5 w-4 h-4 text-emerald-500"/>
+                        {modoFiltro === 'dia' ? (
+                        <input type="date" value={dataFiltro} onChange={e => setDataFiltro(e.target.value)} className="pl-10 p-2 border-0 bg-slate-50 dark:bg-slate-900 rounded-lg text-sm font-bold text-slate-700 dark:text-white focus:ring-2 focus:ring-emerald-500 w-full md:w-auto outline-none h-full" />
+                        ) : (
+                        <input type="month" value={mesFiltro} onChange={e => setMesFiltro(e.target.value)} className="pl-10 p-2 border-0 bg-slate-50 dark:bg-slate-900 rounded-lg text-sm font-bold text-slate-700 dark:text-white focus:ring-2 focus:ring-emerald-500 w-full md:w-auto outline-none h-full" />
+                        )}
+                    </div>
+
+                    {role !== 'unidade' && (
+                        <div className="relative">
+                            <MapPin className="absolute left-3 top-2.5 w-4 h-4 text-slate-400"/>
+                            <select value={filtroUnidade} onChange={e => setFiltroUnidade(e.target.value)} className="pl-9 p-2 border-0 bg-slate-50 dark:bg-slate-900 rounded-lg text-sm font-semibold text-slate-600 dark:text-slate-300 focus:ring-2 focus:ring-emerald-500 w-full md:w-48 outline-none h-full appearance-none cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-950 transition-colors">
+                                <option value="">Todas as Unidades</option>
+                                {catalogs.unidades.map(u => <option key={u.id} value={u.id}>{u.nome}</option>)}
+                            </select>
+                        </div>
+                    )}
+
+                    <div className="relative">
+                        <Filter className="absolute left-3 top-2.5 w-4 h-4 text-slate-400"/>
+                        <select value={filtroModalidade} onChange={e => setFiltroModalidade(e.target.value)} className="pl-9 p-2 border-0 bg-slate-50 dark:bg-slate-900 rounded-lg text-sm font-semibold text-slate-600 dark:text-slate-300 focus:ring-2 focus:ring-emerald-500 w-full md:w-40 outline-none h-full appearance-none cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-950 transition-colors">
+                            <option value="">Modalidade</option>
+                            {catalogs.modalidades.map(m => <option key={m.id} value={m.id}>{m.nome}</option>)}
                         </select>
                     </div>
-                )}
 
-                <div className="relative">
-                    <Filter className="absolute left-3 top-2.5 w-4 h-4 text-slate-400"/>
-                    <select value={filtroModalidade} onChange={e => setFiltroModalidade(e.target.value)} className="pl-9 p-2 border-0 bg-slate-50 dark:bg-slate-900 rounded-lg text-sm font-semibold text-slate-600 dark:text-slate-300 focus:ring-2 focus:ring-emerald-500 w-full md:w-40 outline-none h-full appearance-none cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-950 transition-colors">
-                        <option value="">Modalidade</option>
-                        {catalogs.modalidades.map(m => <option key={m.id} value={m.id}>{m.nome}</option>)}
-                    </select>
+                    {(role === 'admin' || role === 'mentor') && (
+                        <div className="relative">
+                            <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400"/>
+                            <input type="text" placeholder="Buscar Professor..." value={filtroProfessor} onChange={e => setFiltroProfessor(e.target.value)} className="pl-9 p-2 border-0 bg-slate-50 dark:bg-slate-900 rounded-lg text-sm font-semibold text-slate-600 dark:text-slate-300 focus:ring-2 focus:ring-emerald-500 w-full outline-none h-full" />
+                        </div>
+                    )}
                 </div>
-
-                {(role === 'admin' || role === 'mentor') && (
-                    <div className="relative">
-                        <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400"/>
-                        <input type="text" placeholder="Buscar Professor..." value={filtroProfessor} onChange={e => setFiltroProfessor(e.target.value)} className="pl-9 p-2 border-0 bg-slate-50 dark:bg-slate-900 rounded-lg text-sm font-semibold text-slate-600 dark:text-slate-300 focus:ring-2 focus:ring-emerald-500 w-full outline-none h-full" />
-                    </div>
-                )}
             </div>
         </div>
       </div>
@@ -417,24 +517,28 @@ export default function ValidacaoDiariaPage() {
           <Loader2 className="w-8 h-8 animate-spin mb-2 text-emerald-500"/>
           <p className="text-sm font-medium">Carregando grade...</p>
         </div>
-      ) : gradeGerada.length === 0 ? (
+      ) : listaExibicao.length === 0 ? (
         <div className="py-24 text-center bg-white dark:bg-slate-800 rounded-3xl border border-dashed border-slate-300 dark:border-slate-700">
           <div className="bg-slate-50 dark:bg-slate-900 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
             <LayoutDashboard className="w-8 h-8 text-slate-300"/>
           </div>
-          <h3 className="text-lg font-bold text-slate-700 dark:text-white">Nenhuma aula encontrada</h3>
-          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Tente ajustar os filtros ou a data selecionada.</p>
+          <h3 className="text-lg font-bold text-slate-700 dark:text-white">
+              {filtroStatus === 'pendente' ? "Tudo Validado!" : filtroStatus === 'cancelada' ? "Nenhum cancelamento" : "Nenhuma aula encontrada"}
+          </h3>
+          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
+              {filtroStatus === 'pendente' ? "Parabéns, você zerou as pendências." : "Tente ajustar os filtros ou a data selecionada."}
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6">
-          {gradeGerada.map((item) => {
+          {listaExibicao.map((item) => {
             const isFuture = verificarFuturo(item.data);
             const status = item.status; 
             const isSub = item.professor?.isSubstituto;
 
             return (
               <div key={item.key} className="group bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-slate-200 dark:border-slate-700 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
-                {/* Indicador de Status Superior */}
+                {/* Indicador de Status */}
                 <div className={`absolute top-0 left-0 w-full h-1.5 ${status === 'realizada' ? 'bg-emerald-500' : status === 'cancelada' ? 'bg-rose-500' : 'bg-slate-200 dark:bg-slate-700'}`}></div>
 
                 {/* Header */}
@@ -491,12 +595,12 @@ export default function ValidacaoDiariaPage() {
                     
                     {status === 'realizada' && (
                         <div className="text-xs font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
-                            <Users className="w-3.5 h-3.5"/> {item.validacao.alunos} Alunos
+                            <Users className="w-3.5 h-3.5"/> {item.validacao?.alunos} Alunos
                         </div>
                     )}
                     {status === 'cancelada' && (
-                        <div className="text-[10px] font-bold text-rose-600 max-w-[100px] truncate text-right" title={item.validacao.motivoCancelamento}>
-                            {item.validacao.motivoCancelamento}
+                        <div className="text-[10px] font-bold text-rose-600 max-w-[100px] truncate text-right" title={item.validacao?.motivoCancelamento}>
+                            {item.validacao?.motivoCancelamento || "Recesso"}
                         </div>
                     )}
                 </div>
@@ -505,11 +609,11 @@ export default function ValidacaoDiariaPage() {
                 <div className="grid grid-cols-2 gap-3">
                     <button 
                         onClick={() => abrirModal('validar', item)} 
-                        disabled={isFuture} 
+                        disabled={isFuture || status === 'cancelada'} // Bloqueia validação se for feriado/cancelado
                         className={`py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2
                         ${status === 'realizada' 
                             ? 'bg-white border-2 border-emerald-500 text-emerald-600 hover:bg-emerald-50' 
-                            : isFuture 
+                            : (isFuture || status === 'cancelada')
                                 ? 'bg-slate-100 text-slate-300 cursor-not-allowed'
                                 : 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 hover:bg-emerald-600 hover:shadow-emerald-500/40 hover:-translate-y-0.5'}`}
                     >
@@ -518,7 +622,7 @@ export default function ValidacaoDiariaPage() {
 
                     <button 
                         onClick={() => abrirModal('cancelar', item)} 
-                        disabled={isFuture} 
+                        disabled={isFuture || (status === 'cancelada' && item.validacao?.motivoCancelamento === 'Recesso/Feriado')} 
                         className={`py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2
                         ${status === 'cancelada' 
                             ? 'bg-white border-2 border-rose-500 text-rose-600 hover:bg-rose-50' 
@@ -544,7 +648,7 @@ export default function ValidacaoDiariaPage() {
         </div>
       )}
 
-      {/* MODAL REDESENHADO */}
+      {/* MODAL (Mantido igual) */}
       {modalOpen && acaoAtual && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
           <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-100 dark:border-slate-700 animate-in zoom-in-95 duration-200">
