@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-// --- RELÓGIO COM SEGUNDOS (INTOCADO - PERFEITO) ---
+// --- RELÓGIO COM SEGUNDOS (VISUAL MANTIDO) ---
 const CorporateClock = () => {
     const [date, setDate] = useState(new Date());
     useEffect(() => {
@@ -34,7 +34,7 @@ const CorporateClock = () => {
     );
 };
 
-// --- AVATAR DO PROFESSOR ---
+// --- AVATAR PROFESSOR (VISUAL MANTIDO) ---
 const ProfessorAvatar = ({ name }) => {
     const initials = name ? name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : "PF";
     return (
@@ -44,10 +44,8 @@ const ProfessorAvatar = ({ name }) => {
     );
 };
 
-// --- CARD PRINCIPAL (AJUSTADO PARA 230px) ---
+// --- CARD DASHBOARD (VISUAL MANTIDO - 260px) ---
 const DashboardCard = ({ title, subtitle, icon: Icon, theme, onClick, footerText, children, activeEffect, className }) => {
-    
-    // Temas (Mantidos)
     const themes = {
         blue: {
             iconBox: "bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400",
@@ -92,15 +90,14 @@ const DashboardCard = ({ title, subtitle, icon: Icon, theme, onClick, footerText
                 shadow-sm hover:shadow-xl hover:-translate-y-1 
                 transition-all duration-300 cursor-pointer 
                 flex flex-col justify-between relative overflow-hidden 
-                h-[230px] ${className} 
+                h-[260px] ${className} 
+                ${style.hover}
             `}
         >
-            {/* Ícone de Fundo */}
             <div className={`absolute -right-6 -top-6 opacity-[0.04] transform group-hover:scale-110 transition-transform duration-500`}>
                 <Icon className="w-40 h-40 text-current" />
             </div>
 
-            {/* Cabeçalho */}
             <div className="relative z-10 flex justify-between items-start">
                 <div>
                     <h3 className="text-lg font-bold text-slate-800 dark:text-white leading-tight uppercase tracking-wide">
@@ -115,12 +112,10 @@ const DashboardCard = ({ title, subtitle, icon: Icon, theme, onClick, footerText
                 </div>
             </div>
 
-            {/* Conteúdo Central (Flex-1 garante que ocupe o espaço e não empurre o footer) */}
             <div className="relative z-10 flex-1 flex flex-col justify-center py-2">
                 {children}
             </div>
 
-            {/* Rodapé */}
             <div className="relative z-10 pt-3 border-t border-slate-50 dark:border-slate-700/50 flex items-center justify-between">
                 <span className={`text-[10px] font-black uppercase tracking-wider flex items-center gap-1 ${style.accent} group-hover:underline whitespace-nowrap`}>
                     {footerText || "Acessar"} <ArrowRight className="w-3 h-3 transition-transform group-hover:translate-x-1" />
@@ -150,6 +145,7 @@ export default function Home() {
   const role = String(userData?.role || "").toLowerCase();
   const userId = userData?.id || userData?.uid;
 
+  // Permissões Visuais (Quais cards aparecem)
   const permissions = useMemo(() => ({
       relatorio: ['admin', 'mentor', 'unidade', 'professor'].includes(role),
       cronograma: true, 
@@ -158,6 +154,7 @@ export default function Home() {
       configuracoes: ['admin', 'mentor', 'unidade'].includes(role),
   }), [role]);
 
+  // --- LÓGICA DE DADOS REAIS (DATA FETCHING) ---
   useEffect(() => {
     async function fetchDashboardData() {
       if (!userData) return;
@@ -169,6 +166,7 @@ export default function Home() {
         const todayWeekDay = weekDayMap[new Date().getDay()];
         const nowTime = new Date().toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
 
+        // 1. CARREGAR CATÁLOGOS NECESSÁRIOS
         const [uniSnap, modSnap, profSnap] = await Promise.all([
             getDocs(collection(db, "unidades")),
             getDocs(collection(db, "modalidades")),
@@ -176,7 +174,15 @@ export default function Home() {
         ]);
 
         const unidadesMap = {};
-        uniSnap.forEach(d => unidadesMap[d.id] = d.data().nome);
+        const unidadesMentorIds = []; // Lista de IDs de unidades do mentor logado
+
+        uniSnap.forEach(d => {
+            const uData = d.data();
+            unidadesMap[d.id] = uData.nome;
+            if (role === 'mentor' && uData.mentorId === userId) {
+                unidadesMentorIds.push(d.id);
+            }
+        });
 
         const modalidadesMap = {};
         modSnap.forEach(d => modalidadesMap[d.id] = d.data());
@@ -184,92 +190,97 @@ export default function Home() {
         const professoresMap = {};
         profSnap.forEach(d => professoresMap[d.id] = d.data().nome);
 
+        // 2. BUSCAR AULAS (Base de tudo)
         const qAulas = collection(db, "aulas");
         const aulasSnap = await getDocs(qAulas); 
         
+        // Acumuladores
         let totalValorMensal = 0;
-        let totalAulasHoje = 0;
-        let nextClass = null;
-        let totalRedeHoje = 0;
-        let idsAulasRede = [];
-
-        let unidadesMentorIds = [];
-        if (role === 'mentor') {
-            uniSnap.forEach(d => {
-                if (d.data().mentorId === userId) unidadesMentorIds.push(d.id);
-            });
-        }
+        let totalAulasHoje = 0; // Minhas aulas do dia
+        let nextClass = null; // Minha próxima aula
+        
+        let totalAulasEscopo = 0; // Total de aulas do escopo (para Coletiva)
+        let idsAulasEscopo = []; // IDs das aulas do escopo
 
         aulasSnap.forEach(doc => {
             const aula = doc.data();
             const aulaId = doc.id;
 
-            // Lógica Coletiva
-            let pertenceRede = false;
-            if (role === 'admin') pertenceRede = true;
-            if (role === 'mentor' && unidadesMentorIds.includes(String(aula.unidadeId))) pertenceRede = true;
+            // --- 🔒 FILTRO DE PERMISSÃO DE DADOS (REGRA DE OURO) ---
+            // Define se o usuário tem direito de VER/CONTABILIZAR esta aula
+            let hasAccess = false;
 
-            if (pertenceRede && aula.dias && aula.dias.includes(todayWeekDay)) {
-                totalRedeHoje++;
-                idsAulasRede.push(aulaId);
+            if (role === 'admin') {
+                hasAccess = true; // Admin vê tudo
+            } else if (role === 'mentor') {
+                // Mentor vê apenas suas unidades
+                if (unidadesMentorIds.includes(String(aula.unidadeId))) hasAccess = true;
+            } else if (role === 'unidade') {
+                // Unidade vê apenas ela mesma
+                if (String(aula.unidadeId) === String(userData.unidadeId)) hasAccess = true;
+            } else if (role === 'professor') {
+                // Professor vê apenas suas aulas
+                if (String(aula.professorId) === String(userId)) hasAccess = true;
             }
 
-            // Lógica Pessoal
-            let permitted = false;
-            if (role === 'admin' || role === 'mentor') permitted = true;
-            if (role === 'unidade' && String(aula.unidadeId) === String(userData.unidadeId)) permitted = true;
-            if (role === 'professor' && String(aula.professorId) === String(userId)) permitted = true;
+            // Se não tem acesso, PULA para a próxima aula. Não contabiliza nada.
+            if (!hasAccess) return;
 
-            if (permitted) {
-                if (aula.dias && aula.dias.includes(todayWeekDay)) {
-                    totalAulasHoje++; 
+            // Se chegou aqui, a aula pertence ao escopo do usuário.
+            
+            // 1. DADOS FINANCEIROS (Estimativa Mensal das Aulas Ativas do Usuário)
+            // Multiplicamos por 4 semanas como estimativa padrão mensal
+            const nDias = aula.dias ? aula.dias.length : 0;
+            totalValorMensal += (parseFloat(aula.valor) || 0) * nDias * 4;
 
-                    if (aula.hora >= nowTime) {
-                        if (!nextClass || aula.hora < nextClass.hora) {
-                            const modData = modalidadesMap[aula.modalidadeId];
-                            nextClass = { 
-                                ...aula, 
-                                modalidadeNome: modData?.nome || "Coletiva",
-                                modalidadeCor: modData?.cor || "#94a3b8",
-                                professorNome: professoresMap[aula.professorId] || "Instrutor",
-                                unidadeNome: unidadesMap[aula.unidadeId] || "Unidade"
-                            };
-                        }
+            // 2. DADOS DO DIA (HOJE)
+            if (aula.dias && aula.dias.includes(todayWeekDay)) {
+                // Contabiliza para validação
+                totalAulasHoje++;
+                totalAulasEscopo++; // Para admin/mentor é rede/equipe, para outros é igual ao totalHoje
+                idsAulasEscopo.push(aulaId);
+
+                // Lógica de Próxima Aula
+                if (aula.hora >= nowTime) {
+                    if (!nextClass || aula.hora < nextClass.hora) {
+                        const modData = modalidadesMap[aula.modalidadeId];
+                        nextClass = { 
+                            ...aula, 
+                            modalidadeNome: modData?.nome || "Coletiva",
+                            modalidadeCor: modData?.cor || "#94a3b8",
+                            professorNome: professoresMap[aula.professorId] || "Instrutor",
+                            unidadeNome: unidadesMap[aula.unidadeId] || "Unidade"
+                        };
                     }
                 }
-                const nDias = aula.dias ? aula.dias.length : 0;
-                totalValorMensal += (parseFloat(aula.valor) || 0) * nDias * 4; 
             }
         });
 
         setResumoRelatorio({ valor: totalValorMensal });
         setResumoCronograma({ proximaAula: nextClass });
 
+        // 3. BUSCAR VALIDAÇÕES DO DIA (Cruzamento)
         const qVal = query(collection(db, "validacoes"), where("data", "==", todayStr));
         const valSnap = await getDocs(qVal);
         
-        let redeValidacoes = 0;
-        let minhasValidacoes = 0;
+        let validacoesRealizadas = 0;
 
         valSnap.forEach(doc => {
             const val = doc.data();
-            
-            if (idsAulasRede.includes(val.aulaId)) redeValidacoes++;
-
-            let contaParaMim = false;
-            if (role === 'admin') contaParaMim = true; 
-            else if (role === 'unidade' && String(val.unidadeId) === String(userData.unidadeId)) contaParaMim = true;
-            else if (role === 'professor' && String(val.professorId) === String(userId)) contaParaMim = true;
-            else if (role === 'mentor' && unidadesMentorIds.includes(String(val.unidadeId))) contaParaMim = true;
-
-            if (contaParaMim) minhasValidacoes++;
+            // Verifica se a validação pertence a uma das aulas do meu escopo de hoje
+            if (idsAulasEscopo.includes(val.aulaId)) {
+                validacoesRealizadas++;
+            }
         });
 
-        const pendentes = Math.max(0, totalAulasHoje - minhasValidacoes);
+        // Cálculos Finais
+        // Pendentes = Total do dia (meu escopo) - Validadas (meu escopo)
+        const pendentes = Math.max(0, totalAulasHoje - validacoesRealizadas);
         setResumoValidacao({ pendentes });
 
-        const pctColetiva = totalRedeHoje > 0 ? Math.round((redeValidacoes / totalRedeHoje) * 100) : 100;
-        setResumoColetiva({ percentual: pctColetiva, total: totalRedeHoje, validadas: redeValidacoes });
+        // Coletiva (Mesmo cálculo, pois totalAulasEscopo já filtrou se é Rede ou Equipe Mentor)
+        const pctColetiva = totalAulasEscopo > 0 ? Math.round((validacoesRealizadas / totalAulasEscopo) * 100) : 100;
+        setResumoColetiva({ percentual: pctColetiva, total: totalAulasEscopo, validadas: validacoesRealizadas });
 
       } catch (error) {
         console.error("Erro dashboard:", error);
@@ -279,7 +290,7 @@ export default function Home() {
     }
 
     fetchDashboardData();
-  }, [userData]);
+  }, [userData, role, userId]); // Recalcula se o usuário mudar
 
   if (!userData) return null;
 
@@ -318,7 +329,6 @@ export default function Home() {
                 </div>
             </div>
         </div>
-        {/* RELÓGIO COM SEGUNDOS (PERFEITO) */}
         <CorporateClock />
       </div>
 
@@ -346,7 +356,7 @@ export default function Home() {
             </DashboardCard>
         )}
 
-        {/* CRONOGRAMA - (Ajustado Altura para Grade não estourar) */}
+        {/* CRONOGRAMA */}
         {permissions.cronograma && (
             <DashboardCard 
                 title="Cronograma"
@@ -470,7 +480,7 @@ export default function Home() {
             </DashboardCard>
         )}
 
-        {/* CONFIGURAÇÕES (Perfeito com Ícones) */}
+        {/* CONFIGURAÇÕES */}
         {permissions.configuracoes && (
             <DashboardCard 
                 title="Configurações"
