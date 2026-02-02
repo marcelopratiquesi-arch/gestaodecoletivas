@@ -7,8 +7,8 @@ import {
 import { 
   Calendar, CheckCircle2, XCircle, Users, MapPin, 
   Filter, Search, Clock, AlertTriangle, Loader2, Lock, 
-  LayoutDashboard, UserCog, ArrowRightLeft, User, ChevronDown,
-  List, AlertCircle
+  LayoutDashboard, ArrowRightLeft, User, ChevronDown,
+  List, AlertCircle, Eye, EyeOff
 } from 'lucide-react';
 
 // --- HELPERS ---
@@ -32,26 +32,27 @@ const formatDateBr = (dateStr) => {
   return `${d}/${m}/${y}`;
 };
 
-// Componente de Badge de Status
+// Componente de Badge de Status (Estabilizado para evitar erros de DOM)
 const StatusBadge = ({ status }) => {
+    // Usamos uma estrutura fixa para evitar que o React perca a referência do nó
     if (status === 'realizada') {
         return (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wide bg-emerald-100 text-emerald-700 border border-emerald-200 shadow-sm">
-                <CheckCircle2 className="w-3 h-3" /> Realizada
-            </span>
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wide bg-emerald-100 text-emerald-700 border border-emerald-200 shadow-sm">
+                <CheckCircle2 className="w-3 h-3 flex-shrink-0" /> <span>Realizada</span>
+            </div>
         );
     }
     if (status === 'cancelada') {
         return (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wide bg-rose-100 text-rose-700 border border-rose-200 shadow-sm">
-                <XCircle className="w-3 h-3" /> Cancelada
-            </span>
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wide bg-rose-100 text-rose-700 border border-rose-200 shadow-sm">
+                <XCircle className="w-3 h-3 flex-shrink-0" /> <span>Cancelada</span>
+            </div>
         );
     }
     return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wide bg-slate-100 text-slate-500 border border-slate-200">
-            <Clock className="w-3 h-3" /> Pendente
-        </span>
+        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wide bg-slate-100 text-slate-500 border border-slate-200">
+            <Clock className="w-3 h-3 flex-shrink-0" /> <span>Pendente</span>
+        </div>
     );
 };
 
@@ -72,7 +73,7 @@ export default function ValidacaoDiariaPage() {
   const [filtroModalidade, setFiltroModalidade] = useState("");
   const [filtroProfessor, setFiltroProfessor] = useState("");
 
-  // 🟢 NOVO CONTROLE: Filtro de Status (Todos, Pendentes, Cancelados)
+  // Filtro de Status
   const [filtroStatus, setFiltroStatus] = useState('todos'); // 'todos', 'pendente', 'cancelada'
 
   // --- DADOS ---
@@ -143,7 +144,7 @@ export default function ValidacaoDiariaPage() {
     loadCatalogs();
   }, [role, userId, userUnidadeId]);
 
-  // 2. MOTOR DE GERAÇÃO DA GRADE
+  // 2. MOTOR DE GERAÇÃO DA GRADE (COM PREVENÇÃO DE ERROS)
   useEffect(() => {
     if (catalogs.unidades.length === 0 && role !== 'admin') return; 
       
@@ -205,7 +206,7 @@ export default function ValidacaoDiariaPage() {
 
             let professorExibicao = prof;
             
-            // LÓGICA DE STATUS
+            // LÓGICA DE STATUS BLINDADA
             let status = 'pendente';
             let dadosValidacao = validacao;
 
@@ -225,7 +226,7 @@ export default function ValidacaoDiariaPage() {
             }
 
             gradeFinal.push({
-              key: `${aula.id}-${dataString}`,
+              key: `${aula.id}-${dataString}`, // CHAVE ÚNICA ESSENCIAL
               data: dataString,
               diaSemana: diaSemanaNome,
               aulaBase: aula,
@@ -256,7 +257,7 @@ export default function ValidacaoDiariaPage() {
     gerarGrade();
   }, [modoFiltro, dataFiltro, mesFiltro, catalogs, filtroUnidade, filtroModalidade, filtroProfessor, role, userId]);
 
-  // 🟢 CONTADORES INTELIGENTES
+  // CONTADORES
   const counts = useMemo(() => {
       return {
           total: gradeGerada.length,
@@ -265,7 +266,7 @@ export default function ValidacaoDiariaPage() {
       };
   }, [gradeGerada]);
 
-  // 🟢 FILTRAGEM DE EXIBIÇÃO (Baseada nos Botões)
+  // FILTRAGEM
   const listaExibicao = useMemo(() => {
       if (filtroStatus === 'todos') return gradeGerada;
       return gradeGerada.filter(item => item.status === filtroStatus);
@@ -286,7 +287,6 @@ export default function ValidacaoDiariaPage() {
     setAcaoAtual({ tipo, item });
     setInputValor("");
     setInputObs(""); 
-    
     setIsSubstituicao(false);
     setSubstitutoId("");
     setMotivoSubstituicao("");
@@ -308,12 +308,10 @@ export default function ValidacaoDiariaPage() {
     e.stopPropagation();
 
     if (acaoAtual.tipo === 'validar' && !inputValor) return alert("Informe o número de alunos.");
-    
     if (acaoAtual.tipo === 'validar' && isSubstituicao) {
         if (!substitutoId) return alert("Selecione o professor substituto.");
         if (!motivoSubstituicao) return alert("Informe o motivo da troca.");
     }
-
     if (acaoAtual.tipo === 'cancelar' && !inputValor) return alert("Selecione um motivo.");
     if (acaoAtual.tipo === 'cancelar' && inputValor === 'Outros' && !inputObs.trim()) {
         return alert("Descreva o motivo em 'Outros'.");
@@ -358,7 +356,7 @@ export default function ValidacaoDiariaPage() {
         validacaoId = docRef.id;
       }
 
-      // Atualização Otimista
+      // Otimistic UI Update
       setGradeGerada(prevGrade => prevGrade.map(gridItem => {
         if (gridItem.key === item.key) {
            let novoProfessor = item.professorTitular;
@@ -387,56 +385,57 @@ export default function ValidacaoDiariaPage() {
   };
 
   return (
-    <div className="p-6 md:p-10 animate-fade-in max-w-[1920px] mx-auto space-y-8">
+    <div className="p-4 md:p-10 animate-fade-in max-w-[1920px] mx-auto space-y-6 md:space-y-8">
       
       {/* HEADER */}
-      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 border-b border-slate-200 dark:border-slate-700 pb-8">
+      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 border-b border-slate-200 dark:border-slate-700 pb-6 md:pb-8">
         <div>
-          <h1 className="text-3xl font-black text-slate-800 dark:text-white flex items-center gap-3">
+          <h1 className="text-2xl md:text-3xl font-black text-slate-800 dark:text-white flex items-center gap-3">
             <span className="bg-gradient-to-tr from-emerald-500 to-green-600 text-white p-2.5 rounded-xl shadow-lg shadow-emerald-500/20">
-              <CheckCircle2 className="w-7 h-7" />
+              <CheckCircle2 className="w-6 h-6 md:w-7 md:h-7" />
             </span>
             Validação Diária
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium">Gestão operacional e controle de frequência.</p>
+          <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium text-sm md:text-base">Gestão operacional e controle de frequência.</p>
         </div>
         
         {/* ÁREA DE CONTROLE (BOTÕES + FILTROS) */}
         <div className="flex flex-col items-end gap-3 w-full xl:w-auto">
             
-            {/* 🟢 GRUPO DE BOTÕES DE STATUS (A, B, C) */}
-            <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+            {/* 🟢 GRUPO DE BOTÕES DE STATUS - RESPONSIVO (GRID NO MOBILE) */}
+            <div className="w-full xl:w-auto grid grid-cols-3 gap-1 xl:flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
                 
                 {/* Botão A: TODOS */}
                 <button
                     onClick={() => setFiltroStatus('todos')}
                     className={`
-                        flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wide transition-all
+                        flex items-center justify-center gap-1.5 px-2 md:px-4 py-2 rounded-lg text-[10px] md:text-xs font-bold uppercase tracking-wide transition-all
                         ${filtroStatus === 'todos' 
                             ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm' 
                             : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
                         }
                     `}
                 >
-                    <List className="w-4 h-4"/>
-                    Todos
+                    <List className="w-3.5 h-3.5 md:w-4 md:h-4"/>
+                    <span className="hidden md:inline">Todos</span>
+                    <span className="md:hidden">Geral</span>
                 </button>
 
                 {/* Botão B: PENDENTES */}
                 <button
                     onClick={() => setFiltroStatus('pendente')}
                     className={`
-                        flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wide transition-all ml-1
+                        flex items-center justify-center gap-1.5 px-2 md:px-4 py-2 rounded-lg text-[10px] md:text-xs font-bold uppercase tracking-wide transition-all
                         ${filtroStatus === 'pendente' 
                             ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20' 
                             : 'text-slate-500 dark:text-slate-400 hover:text-orange-600'
                         }
                     `}
                 >
-                    <AlertCircle className="w-4 h-4"/>
-                    Pendentes
+                    <AlertCircle className="w-3.5 h-3.5 md:w-4 md:h-4"/>
+                    <span>Pend.</span>
                     {counts.pendentes > 0 && (
-                        <span className="ml-1 px-1.5 py-0.5 bg-white/20 text-white rounded-md text-[10px] min-w-[20px] text-center">
+                        <span className="ml-0.5 px-1.5 py-0.5 bg-white/20 text-white rounded-md text-[9px] min-w-[16px] text-center">
                             {counts.pendentes}
                         </span>
                     )}
@@ -446,33 +445,33 @@ export default function ValidacaoDiariaPage() {
                 <button
                     onClick={() => setFiltroStatus('cancelada')}
                     className={`
-                        flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wide transition-all ml-1
+                        flex items-center justify-center gap-1.5 px-2 md:px-4 py-2 rounded-lg text-[10px] md:text-xs font-bold uppercase tracking-wide transition-all
                         ${filtroStatus === 'cancelada' 
                             ? 'bg-rose-600 text-white shadow-md shadow-rose-600/20' 
                             : 'text-slate-500 dark:text-slate-400 hover:text-rose-600'
                         }
                     `}
                 >
-                    <XCircle className="w-4 h-4"/>
-                    Cancelados
+                    <XCircle className="w-3.5 h-3.5 md:w-4 md:h-4"/>
+                    <span>Canc.</span>
                     {counts.canceladas > 0 && (
-                        <span className="ml-1 px-1.5 py-0.5 bg-white/20 text-white rounded-md text-[10px] min-w-[20px] text-center">
+                        <span className="ml-0.5 px-1.5 py-0.5 bg-white/20 text-white rounded-md text-[9px] min-w-[16px] text-center">
                             {counts.canceladas}
                         </span>
                     )}
                 </button>
             </div>
 
-            {/* FILTROS PADRÃO (Data, Unidade, etc) */}
+            {/* FILTROS PADRÃO (Respeitando responsividade) */}
             <div className="w-full xl:w-auto bg-white dark:bg-slate-800 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col md:flex-row gap-2">
-                <div className="flex bg-slate-100 dark:bg-slate-700 rounded-xl p-1">
-                    <button onClick={() => setModoFiltro('dia')} className={`px-5 py-2 text-xs font-bold uppercase tracking-wide rounded-lg transition-all ${modoFiltro === 'dia' ? 'bg-white dark:bg-slate-600 shadow text-emerald-700 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}>Dia</button>
-                    <button onClick={() => setModoFiltro('mes')} className={`px-5 py-2 text-xs font-bold uppercase tracking-wide rounded-lg transition-all ${modoFiltro === 'mes' ? 'bg-white dark:bg-slate-600 shadow text-emerald-700 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}>Mês</button>
+                <div className="flex bg-slate-100 dark:bg-slate-700 rounded-xl p-1 shrink-0">
+                    <button onClick={() => setModoFiltro('dia')} className={`flex-1 md:flex-none px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-lg transition-all ${modoFiltro === 'dia' ? 'bg-white dark:bg-slate-600 shadow text-emerald-700 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}>Dia</button>
+                    <button onClick={() => setModoFiltro('mes')} className={`flex-1 md:flex-none px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-lg transition-all ${modoFiltro === 'mes' ? 'bg-white dark:bg-slate-600 shadow text-emerald-700 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}>Mês</button>
                 </div>
 
-                <div className="h-px md:h-auto md:w-px bg-slate-200 dark:bg-slate-600 mx-1"></div>
+                <div className="hidden md:block h-auto w-px bg-slate-200 dark:bg-slate-600 mx-1"></div>
 
-                <div className="flex flex-col md:flex-row gap-2 flex-1">
+                <div className="grid grid-cols-1 md:flex md:flex-row gap-2 flex-1">
                     <div className="relative">
                         <Calendar className="absolute left-3 top-2.5 w-4 h-4 text-emerald-500"/>
                         {modoFiltro === 'dia' ? (
@@ -503,7 +502,7 @@ export default function ValidacaoDiariaPage() {
                     {(role === 'admin' || role === 'mentor') && (
                         <div className="relative">
                             <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400"/>
-                            <input type="text" placeholder="Buscar Professor..." value={filtroProfessor} onChange={e => setFiltroProfessor(e.target.value)} className="pl-9 p-2 border-0 bg-slate-50 dark:bg-slate-900 rounded-lg text-sm font-semibold text-slate-600 dark:text-slate-300 focus:ring-2 focus:ring-emerald-500 w-full outline-none h-full" />
+                            <input type="text" placeholder="Buscar..." value={filtroProfessor} onChange={e => setFiltroProfessor(e.target.value)} className="pl-9 p-2 border-0 bg-slate-50 dark:bg-slate-900 rounded-lg text-sm font-semibold text-slate-600 dark:text-slate-300 focus:ring-2 focus:ring-emerald-500 w-full outline-none h-full" />
                         </div>
                     )}
                 </div>
@@ -589,7 +588,7 @@ export default function ValidacaoDiariaPage() {
                     </div>
                 </div>
 
-                {/* Status Bar */}
+                {/* Status Bar (Corrigido para evitar erro DOM) */}
                 <div className="mb-5 p-3 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 flex justify-between items-center">
                     <StatusBadge status={status} />
                     
@@ -605,11 +604,11 @@ export default function ValidacaoDiariaPage() {
                     )}
                 </div>
 
-                {/* Action Buttons */}
+                {/* Action Buttons (Containers Estáveis) */}
                 <div className="grid grid-cols-2 gap-3">
                     <button 
                         onClick={() => abrirModal('validar', item)} 
-                        disabled={isFuture || status === 'cancelada'} // Bloqueia validação se for feriado/cancelado
+                        disabled={isFuture || status === 'cancelada'}
                         className={`py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2
                         ${status === 'realizada' 
                             ? 'bg-white border-2 border-emerald-500 text-emerald-600 hover:bg-emerald-50' 
