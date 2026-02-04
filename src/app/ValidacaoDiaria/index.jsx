@@ -2,13 +2,13 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../services/firebase';
 import { 
-  collection, query, where, getDocs, addDoc, serverTimestamp, doc, updateDoc 
+  collection, query, where, getDocs, addDoc, serverTimestamp, doc, updateDoc, orderBy 
 } from 'firebase/firestore';
 import { 
   Calendar, CheckCircle2, XCircle, Users, MapPin, 
   Filter, Search, Clock, AlertTriangle, Loader2, Lock, 
-  LayoutDashboard, ArrowRightLeft, User, ChevronDown,
-  List, AlertCircle, Eye, EyeOff
+  LayoutDashboard, UserCog, ArrowRightLeft, User, ChevronDown,
+  List, Map, ArrowDown, DownloadCloud
 } from 'lucide-react';
 
 // --- HELPERS ---
@@ -24,17 +24,16 @@ const getMonthDates = (year, month) => {
   return dates;
 };
 
-const diasSemanaMap = { 0: 'Domingo', 1: 'Segunda', 2: 'Terça', 3: 'Quarta', 4: 'Quinta', 5: 'Sexta', 6: 'Sábado' };
-
 const formatDateBr = (dateStr) => {
   if(!dateStr) return "-";
   const [y, m, d] = dateStr.split('-');
   return `${d}/${m}/${y}`;
 };
 
-// Componente de Badge de Status (Estabilizado para evitar erros de DOM)
+const diasSemanaMap = { 0: 'Domingo', 1: 'Segunda', 2: 'Terça', 3: 'Quarta', 4: 'Quinta', 5: 'Sexta', 6: 'Sábado' };
+
+// Componente Visual: Badge de Status
 const StatusBadge = ({ status }) => {
-    // Usamos uma estrutura fixa para evitar que o React perca a referência do nó
     if (status === 'realizada') {
         return (
             <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wide bg-emerald-100 text-emerald-700 border border-emerald-200 shadow-sm">
@@ -49,9 +48,10 @@ const StatusBadge = ({ status }) => {
             </div>
         );
     }
+    // Pendente Amarelo
     return (
-        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wide bg-slate-100 text-slate-500 border border-slate-200">
-            <Clock className="w-3 h-3 flex-shrink-0" /> <span>Pendente</span>
+        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wide bg-amber-100 text-amber-700 border border-amber-200 shadow-sm">
+            <AlertTriangle className="w-3 h-3 flex-shrink-0" /> <span>Pendente</span>
         </div>
     );
 };
@@ -64,46 +64,56 @@ export default function ValidacaoDiariaPage() {
   const userId = useMemo(() => userData?.id || userData?.uid, [userData]);
   const userUnidadeId = useMemo(() => userData?.unidadeId, [userData]);
 
-  // --- FILTROS ---
+  // --- FILTROS DE CONTROLE ---
   const [modoFiltro, setModoFiltro] = useState('dia'); 
   const [dataFiltro, setDataFiltro] = useState(getTodayStr());
   const [mesFiltro, setMesFiltro] = useState(new Date().toISOString().slice(0, 7));
 
+  // Filtros Avançados (Admin)
+  const [filtroEstado, setFiltroEstado] = useState("");
+  const [filtroMentor, setFiltroMentor] = useState("");
+
+  // Filtros Operacionais
   const [filtroUnidade, setFiltroUnidade] = useState("");
   const [filtroModalidade, setFiltroModalidade] = useState("");
   const [filtroProfessor, setFiltroProfessor] = useState("");
+  
+  // Filtro de Status (Todos/Pendente/Cancelado)
+  const [filtroStatus, setFiltroStatus] = useState('todos'); 
 
-  // Filtro de Status
-  const [filtroStatus, setFiltroStatus] = useState('todos'); // 'todos', 'pendente', 'cancelada'
-
-  // --- DADOS ---
-  const [catalogs, setCatalogs] = useState({ unidades: [], modalidades: [], professores: [], feriados: [] });
+  // --- DADOS DO SISTEMA ---
+  const [catalogs, setCatalogs] = useState({ 
+      unidades: [], modalidades: [], professores: [], feriados: [], mentores: [] 
+  });
   const [gradeGerada, setGradeGerada] = useState([]);
   const [loading, setLoading] = useState(true);
   const [processando, setProcessando] = useState(false);
+  
+  // Paginação Visual
+  const [itensVisiveis, setItensVisiveis] = useState(12);
 
-  // --- MODAL ---
+  // --- MODAL STATES ---
   const [modalOpen, setModalOpen] = useState(false);
   const [acaoAtual, setAcaoAtual] = useState(null); 
   const [inputValor, setInputValor] = useState(""); 
   const [inputObs, setInputObs] = useState(""); 
-  
-  // SUBS
   const [isSubstituicao, setIsSubstituicao] = useState(false);
   const [substitutoId, setSubstitutoId] = useState("");
   const [motivoSubstituicao, setMotivoSubstituicao] = useState("");
 
-  // 1. CARREGAMENTO INICIAL
+  // 1. CARREGAMENTO INICIAL DOS DADOS (CATÁLOGOS)
   useEffect(() => {
     const loadCatalogs = async () => {
       try {
         setLoading(true);
-        const [unitsSnap, modsSnap, profsSnap, linksSnap, feriadosSnap] = await Promise.all([
-          getDocs(collection(db, 'unidades')),
-          getDocs(collection(db, 'modalidades')),
-          getDocs(collection(db, 'professores')),
+        // Busca paralela para velocidade
+        const [unitsSnap, modsSnap, profsSnap, linksSnap, feriadosSnap, usersSnap] = await Promise.all([
+          getDocs(query(collection(db, 'unidades'), orderBy('nome'))),
+          getDocs(query(collection(db, 'modalidades'), orderBy('nome'))),
+          getDocs(query(collection(db, 'professores'), orderBy('nome'))),
           getDocs(collection(db, 'vinculos')),
-          getDocs(collection(db, 'feriados')) 
+          getDocs(collection(db, 'feriados')),
+          getDocs(query(collection(db, 'usuarios'), where('role', '==', 'mentor')))
         ]);
 
         let unitsData = unitsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -111,13 +121,15 @@ export default function ValidacaoDiariaPage() {
         const profsData = profsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         const linksData = linksSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         const feriadosData = feriadosSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const mentoresData = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-        // Filtros de Permissão
+        // Aplica restrições de permissão nos catálogos
         if (role === 'mentor') {
           unitsData = unitsData.filter(u => u.mentorId === userId);
         } else if (role === 'unidade') {
-          unitsData = unitsData.filter(u => u.id === userUnidadeId);
-          setFiltroUnidade(userUnidadeId);
+          // Se for unidade, força o filtro e segura o ID
+          unitsData = unitsData.filter(u => String(u.id) === String(userUnidadeId));
+          setFiltroUnidade(userUnidadeId); 
         } else if (role === 'professor') {
           const meuPerfil = profsData.find(p => p.uidLogin === userId);
           if (meuPerfil) {
@@ -129,42 +141,93 @@ export default function ValidacaoDiariaPage() {
           }
         }
 
-        // Ordenação
-        unitsData.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
-        modsData.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
-        profsData.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
-
-        setCatalogs({ unidades: unitsData, modalidades: modsData, professores: profsData, feriados: feriadosData });
+        setCatalogs({ 
+            unidades: unitsData, 
+            modalidades: modsData, 
+            professores: profsData, 
+            feriados: feriadosData, 
+            mentores: mentoresData 
+        });
       } catch (error) {
-        console.error("Erro ao carregar:", error);
-      } finally {
-        setLoading(false);
+        console.error("Erro ao carregar catálogos:", error);
       }
     };
     loadCatalogs();
   }, [role, userId, userUnidadeId]);
 
-  // 2. MOTOR DE GERAÇÃO DA GRADE (COM PREVENÇÃO DE ERROS)
+  // 2. EXTRAÇÃO DINÂMICA DE ESTADOS (CORRIGIDO: LÊ DO BANCO)
+  const estadosDisponiveis = useMemo(() => {
+      // Mapeia todas as unidades carregadas e extrai o estado (UF)
+      const ufs = catalogs.unidades.map(u => u.estado).filter(Boolean);
+      // Remove duplicados e ordena alfabeticamente
+      return [...new Set(ufs)].sort();
+  }, [catalogs.unidades]);
+
+  // 3. FILTRAGEM INTELIGENTE DE UNIDADES (Cascata)
+  const unidadesFiltradasSelect = useMemo(() => {
+      if (role !== 'admin') return catalogs.unidades;
+      
+      // Admin vê tudo, mas obedece aos filtros de Estado e Mentor
+      return catalogs.unidades.filter(u => {
+          const matchEstado = filtroEstado ? u.estado === filtroEstado : true;
+          const matchMentor = filtroMentor ? u.mentorId === filtroMentor : true;
+          return matchEstado && matchMentor;
+      });
+  }, [catalogs.unidades, role, filtroEstado, filtroMentor]);
+
+  // 4. MOTOR DE GERAÇÃO DA GRADE (Busca + Cruzamento)
   useEffect(() => {
+    // Só roda se tiver dados básicos carregados
     if (catalogs.unidades.length === 0 && role !== 'admin') return; 
       
     const gerarGrade = async () => {
       setLoading(true);
       try {
+        let dataInicio, dataFim;
         let datasParaVerificar = [];
+
         if (modoFiltro === 'dia') {
+          dataInicio = dataFiltro;
+          dataFim = dataFiltro;
           datasParaVerificar = [new Date(dataFiltro + 'T12:00:00')]; 
         } else {
           const [ano, mes] = mesFiltro.split('-');
+          const lastDay = new Date(parseInt(ano), parseInt(mes), 0).getDate();
+          dataInicio = `${ano}-${mes}-01`;
+          dataFim = `${ano}-${mes}-${lastDay}`;
           datasParaVerificar = getMonthDates(parseInt(ano), parseInt(mes) - 1);
         }
 
-        const aulasRef = collection(db, 'aulas');
-        const aulasSnap = await getDocs(query(aulasRef));
+        // B. Buscar Aulas
+        let aulasRef = collection(db, 'aulas');
+        let qAulas = query(aulasRef);
+
+        // Otimização: Baixa apenas aulas do escopo
+        if (role === 'unidade') {
+            qAulas = query(aulasRef, where('unidadeId', '==', userUnidadeId));
+        } else if (role === 'professor') {
+            const meuPerfil = catalogs.professores.find(p => p.uidLogin === userId);
+            const meuProfId = meuPerfil ? meuPerfil.id : 'xyz';
+            qAulas = query(aulasRef, where('professorId', '==', meuProfId));
+        }
+
+        const aulasSnap = await getDocs(qAulas);
         let aulasBase = aulasSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-        const validacoesRef = collection(db, 'validacoes');
-        const validacoesSnap = await getDocs(validacoesRef); 
+        // C. Buscar Validações
+        // OBS: AQUI É ONDE O ÍNDICE COMPOSTO É EXIGIDO
+        let validacoesRef = collection(db, 'validacoes');
+        let qValidacoes = query(validacoesRef, where('data', '>=', dataInicio), where('data', '<=', dataFim));
+
+        if (role === 'unidade') {
+            qValidacoes = query(qValidacoes, where('unidadeId', '==', userUnidadeId));
+        } else if (role === 'professor') {
+            const meuPerfil = catalogs.professores.find(p => p.uidLogin === userId);
+            const meuProfId = meuPerfil ? meuPerfil.id : 'xyz';
+            qValidacoes = query(qValidacoes, where('professorId', '==', meuProfId));
+        }
+
+        const validacoesSnap = await getDocs(qValidacoes); 
         const validacoesExistentes = validacoesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
         let meuProfessorId = null;
@@ -173,11 +236,10 @@ export default function ValidacaoDiariaPage() {
             if (meuPerfil) meuProfessorId = meuPerfil.id;
         }
 
-        // MAPA DE FERIADOS
         const feriadosSet = new Set(catalogs.feriados.map(f => f.data));
-
         let gradeFinal = [];
 
+        // E. Loop de Construção
         datasParaVerificar.forEach(dataObj => {
           const dataString = dataObj.toISOString().split('T')[0];
           const diaSemanaNome = diasSemanaMap[dataObj.getDay()];
@@ -186,11 +248,20 @@ export default function ValidacaoDiariaPage() {
           const aulasDoDia = aulasBase.filter(aula => aula.dias && aula.dias.includes(diaSemanaNome));
 
           aulasDoDia.forEach(aula => {
-            if (filtroUnidade && String(aula.unidadeId) !== String(filtroUnidade)) return;
-            if (filtroModalidade && String(aula.modalidadeId) !== String(filtroModalidade)) return;
+            
+            // --- FILTRAGEM ---
             
             const unidadeValida = catalogs.unidades.find(u => String(u.id) === String(aula.unidadeId));
             if (!unidadeValida) return; 
+
+            if (filtroUnidade && String(aula.unidadeId) !== String(filtroUnidade)) return;
+
+            if (role === 'admin') {
+                if (filtroEstado && unidadeValida.estado !== filtroEstado) return;
+                if (filtroMentor && unidadeValida.mentorId !== filtroMentor) return;
+            }
+
+            if (filtroModalidade && String(aula.modalidadeId) !== String(filtroModalidade)) return;
 
             if (role === 'professor') {
                 if (String(aula.professorId) !== String(meuProfessorId)) return;
@@ -205,8 +276,6 @@ export default function ValidacaoDiariaPage() {
             const validacao = validacoesExistentes.find(v => String(v.aulaId) === String(aula.id) && v.data === dataString);
 
             let professorExibicao = prof;
-            
-            // LÓGICA DE STATUS BLINDADA
             let status = 'pendente';
             let dadosValidacao = validacao;
 
@@ -214,10 +283,7 @@ export default function ValidacaoDiariaPage() {
                 status = validacao.status;
             } else if (isFeriado) {
                 status = 'cancelada';
-                dadosValidacao = { 
-                    motivoCancelamento: 'Recesso/Feriado',
-                    status: 'cancelada' 
-                };
+                dadosValidacao = { motivoCancelamento: 'Recesso/Feriado', status: 'cancelada' };
             }
             
             if (validacao && validacao.substituicao && validacao.professorId) {
@@ -226,7 +292,7 @@ export default function ValidacaoDiariaPage() {
             }
 
             gradeFinal.push({
-              key: `${aula.id}-${dataString}`, // CHAVE ÚNICA ESSENCIAL
+              key: `${aula.id}-${dataString}`,
               data: dataString,
               diaSemana: diaSemanaNome,
               aulaBase: aula,
@@ -246,31 +312,43 @@ export default function ValidacaoDiariaPage() {
         });
 
         setGradeGerada(gradeFinal);
+        setItensVisiveis(12); // Reset de paginação ao trocar filtros
 
       } catch (error) {
-        console.error(error);
+        console.error("Erro ao gerar grade:", error);
       } finally {
         setLoading(false);
       }
     };
 
     gerarGrade();
-  }, [modoFiltro, dataFiltro, mesFiltro, catalogs, filtroUnidade, filtroModalidade, filtroProfessor, role, userId]);
+  }, [modoFiltro, dataFiltro, mesFiltro, catalogs, filtroUnidade, filtroModalidade, filtroProfessor, filtroEstado, filtroMentor, role, userId, userUnidadeId]);
 
   // CONTADORES
   const counts = useMemo(() => {
+      const hoje = getTodayStr();
       return {
           total: gradeGerada.length,
-          pendentes: gradeGerada.filter(i => i.status === 'pendente').length,
+          pendentes: gradeGerada.filter(i => i.status === 'pendente' && i.data <= hoje).length,
           canceladas: gradeGerada.filter(i => i.status === 'cancelada').length
       };
   }, [gradeGerada]);
 
-  // FILTRAGEM
-  const listaExibicao = useMemo(() => {
-      if (filtroStatus === 'todos') return gradeGerada;
-      return gradeGerada.filter(item => item.status === filtroStatus);
+  const listaFiltradaTotal = useMemo(() => {
+      const hoje = getTodayStr();
+      if (filtroStatus === 'pendente') return gradeGerada.filter(item => item.status === 'pendente' && item.data <= hoje);
+      if (filtroStatus === 'cancelada') return gradeGerada.filter(item => item.status === 'cancelada');
+      return gradeGerada;
   }, [gradeGerada, filtroStatus]);
+
+  const listaExibicao = useMemo(() => {
+      return listaFiltradaTotal.slice(0, itensVisiveis);
+  }, [listaFiltradaTotal, itensVisiveis]);
+
+  const handleCarregarMais = (qtd) => {
+      if (qtd === 'todos') setItensVisiveis(listaFiltradaTotal.length);
+      else setItensVisiveis(prev => prev + qtd);
+  };
 
   const verificarFuturo = (dataString) => {
     const hoje = new Date();
@@ -280,10 +358,7 @@ export default function ValidacaoDiariaPage() {
   };
 
   const abrirModal = (tipo, item) => {
-    if (verificarFuturo(item.data)) {
-      alert("Aulas futuras não podem ser validadas.");
-      return;
-    }
+    if (verificarFuturo(item.data)) return alert("Aulas futuras não podem ser validadas.");
     setAcaoAtual({ tipo, item });
     setInputValor("");
     setInputObs(""); 
@@ -299,7 +374,6 @@ export default function ValidacaoDiariaPage() {
     } else if (item.validacao?.alunos) {
         setInputValor(item.validacao.alunos);
     }
-
     setModalOpen(true);
   };
 
@@ -313,14 +387,11 @@ export default function ValidacaoDiariaPage() {
         if (!motivoSubstituicao) return alert("Informe o motivo da troca.");
     }
     if (acaoAtual.tipo === 'cancelar' && !inputValor) return alert("Selecione um motivo.");
-    if (acaoAtual.tipo === 'cancelar' && inputValor === 'Outros' && !inputObs.trim()) {
-        return alert("Descreva o motivo em 'Outros'.");
-    }
+    if (acaoAtual.tipo === 'cancelar' && inputValor === 'Outros' && !inputObs.trim()) return alert("Descreva o motivo em 'Outros'.");
     
     setProcessando(true);
     try {
       const { tipo, item } = acaoAtual;
-      
       const payload = {
         aulaId: item.aulaBase.id,
         unidadeId: item.aulaBase.unidadeId,
@@ -348,7 +419,6 @@ export default function ValidacaoDiariaPage() {
       }
 
       let validacaoId = item.validacao?.id;
-
       if (item.validacao?.id) {
         await updateDoc(doc(db, 'validacoes', item.validacao.id), payload);
       } else {
@@ -356,7 +426,6 @@ export default function ValidacaoDiariaPage() {
         validacaoId = docRef.id;
       }
 
-      // Otimistic UI Update
       setGradeGerada(prevGrade => prevGrade.map(gridItem => {
         if (gridItem.key === item.key) {
            let novoProfessor = item.professorTitular;
@@ -364,148 +433,140 @@ export default function ValidacaoDiariaPage() {
                 const sub = catalogs.professores.find(p => String(p.id) === String(payload.professorId));
                 if (sub) novoProfessor = { ...sub, isSubstituto: true };
            }
-           return {
-             ...gridItem,
-             status: payload.status,
-             professor: novoProfessor,
-             validacao: { id: validacaoId, ...payload }
-           };
+           return { ...gridItem, status: payload.status, professor: novoProfessor, validacao: { id: validacaoId, ...payload } };
         }
         return gridItem;
       }));
-      
-    } catch (error) {
-      console.error(error);
-      alert("Erro ao salvar.");
-    } finally {
-      setProcessando(false);
-      setModalOpen(false);
-      setAcaoAtual(null);
-    }
+    } catch (error) { console.error(error); alert("Erro ao salvar."); } 
+    finally { setProcessando(false); setModalOpen(false); setAcaoAtual(null); }
   };
 
   return (
-    <div className="p-4 md:p-10 animate-fade-in max-w-[1920px] mx-auto space-y-6 md:space-y-8">
+    <div className="p-4 md:p-8 animate-fade-in max-w-[1920px] mx-auto space-y-6">
       
-      {/* HEADER */}
-      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 border-b border-slate-200 dark:border-slate-700 pb-6 md:pb-8">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-black text-slate-800 dark:text-white flex items-center gap-3">
-            <span className="bg-gradient-to-tr from-emerald-500 to-green-600 text-white p-2.5 rounded-xl shadow-lg shadow-emerald-500/20">
-              <CheckCircle2 className="w-6 h-6 md:w-7 md:h-7" />
-            </span>
-            Validação Diária
-          </h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium text-sm md:text-base">Gestão operacional e controle de frequência.</p>
-        </div>
-        
-        {/* ÁREA DE CONTROLE (BOTÕES + FILTROS) */}
-        <div className="flex flex-col items-end gap-3 w-full xl:w-auto">
-            
-            {/* 🟢 GRUPO DE BOTÕES DE STATUS - RESPONSIVO (GRID NO MOBILE) */}
-            <div className="w-full xl:w-auto grid grid-cols-3 gap-1 xl:flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-                
-                {/* Botão A: TODOS */}
-                <button
-                    onClick={() => setFiltroStatus('todos')}
-                    className={`
-                        flex items-center justify-center gap-1.5 px-2 md:px-4 py-2 rounded-lg text-[10px] md:text-xs font-bold uppercase tracking-wide transition-all
-                        ${filtroStatus === 'todos' 
-                            ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm' 
-                            : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-                        }
-                    `}
-                >
-                    <List className="w-3.5 h-3.5 md:w-4 md:h-4"/>
-                    <span className="hidden md:inline">Todos</span>
-                    <span className="md:hidden">Geral</span>
-                </button>
-
-                {/* Botão B: PENDENTES */}
-                <button
-                    onClick={() => setFiltroStatus('pendente')}
-                    className={`
-                        flex items-center justify-center gap-1.5 px-2 md:px-4 py-2 rounded-lg text-[10px] md:text-xs font-bold uppercase tracking-wide transition-all
-                        ${filtroStatus === 'pendente' 
-                            ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20' 
-                            : 'text-slate-500 dark:text-slate-400 hover:text-orange-600'
-                        }
-                    `}
-                >
-                    <AlertCircle className="w-3.5 h-3.5 md:w-4 md:h-4"/>
-                    <span>Pend.</span>
-                    {counts.pendentes > 0 && (
-                        <span className="ml-0.5 px-1.5 py-0.5 bg-white/20 text-white rounded-md text-[9px] min-w-[16px] text-center">
-                            {counts.pendentes}
-                        </span>
-                    )}
-                </button>
-
-                {/* Botão C: CANCELADOS */}
-                <button
-                    onClick={() => setFiltroStatus('cancelada')}
-                    className={`
-                        flex items-center justify-center gap-1.5 px-2 md:px-4 py-2 rounded-lg text-[10px] md:text-xs font-bold uppercase tracking-wide transition-all
-                        ${filtroStatus === 'cancelada' 
-                            ? 'bg-rose-600 text-white shadow-md shadow-rose-600/20' 
-                            : 'text-slate-500 dark:text-slate-400 hover:text-rose-600'
-                        }
-                    `}
-                >
-                    <XCircle className="w-3.5 h-3.5 md:w-4 md:h-4"/>
-                    <span>Canc.</span>
-                    {counts.canceladas > 0 && (
-                        <span className="ml-0.5 px-1.5 py-0.5 bg-white/20 text-white rounded-md text-[9px] min-w-[16px] text-center">
-                            {counts.canceladas}
-                        </span>
-                    )}
-                </button>
+      {/* HEADER & CONTROLES */}
+      <div className="flex flex-col gap-6 border-b border-slate-200 dark:border-slate-700 pb-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+                <h1 className="text-2xl md:text-3xl font-black text-slate-800 dark:text-white flex items-center gap-3">
+                    <span className="bg-gradient-to-tr from-emerald-500 to-green-600 text-white p-2.5 rounded-xl shadow-lg shadow-emerald-500/20">
+                    <CheckCircle2 className="w-6 h-6 md:w-7 md:h-7" />
+                    </span>
+                    Validação Diária
+                </h1>
+                <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium text-sm md:text-base">Gestão operacional e controle de frequência.</p>
             </div>
 
-            {/* FILTROS PADRÃO (Respeitando responsividade) */}
-            <div className="w-full xl:w-auto bg-white dark:bg-slate-800 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col md:flex-row gap-2">
-                <div className="flex bg-slate-100 dark:bg-slate-700 rounded-xl p-1 shrink-0">
-                    <button onClick={() => setModoFiltro('dia')} className={`flex-1 md:flex-none px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-lg transition-all ${modoFiltro === 'dia' ? 'bg-white dark:bg-slate-600 shadow text-emerald-700 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}>Dia</button>
-                    <button onClick={() => setModoFiltro('mes')} className={`flex-1 md:flex-none px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-lg transition-all ${modoFiltro === 'mes' ? 'bg-white dark:bg-slate-600 shadow text-emerald-700 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}>Mês</button>
+            {/* BOTÕES DE STATUS - GRANDES E BONITOS */}
+            <div className="w-full md:w-auto grid grid-cols-3 gap-3">
+                <button 
+                    onClick={() => { setFiltroStatus('todos'); setItensVisiveis(12); }} 
+                    className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all duration-300 shadow-sm hover:shadow-md
+                    ${filtroStatus === 'todos' 
+                        ? 'bg-slate-800 text-white border-slate-900 ring-2 ring-slate-800 ring-offset-2' 
+                        : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'}`}
+                >
+                    <span className="text-2xl font-black">{counts.total}</span>
+                    <span className="text-[10px] uppercase font-bold tracking-wider flex items-center gap-1">
+                        <List className="w-3 h-3"/> Todos
+                    </span>
+                </button>
+
+                <button 
+                    onClick={() => { setFiltroStatus('pendente'); setItensVisiveis(12); }} 
+                    className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all duration-300 shadow-sm hover:shadow-md
+                    ${filtroStatus === 'pendente' 
+                        ? 'bg-amber-500 text-white border-amber-600 ring-2 ring-amber-500 ring-offset-2' 
+                        : 'bg-white border-amber-100 text-amber-500 hover:bg-amber-50'}`}
+                >
+                    <span className="text-2xl font-black">{counts.pendentes}</span>
+                    <span className="text-[10px] uppercase font-bold tracking-wider flex items-center gap-1">
+                        <AlertTriangle className="w-3 h-3"/> Pendentes
+                    </span>
+                </button>
+
+                <button 
+                    onClick={() => { setFiltroStatus('cancelada'); setItensVisiveis(12); }} 
+                    className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all duration-300 shadow-sm hover:shadow-md
+                    ${filtroStatus === 'cancelada' 
+                        ? 'bg-rose-600 text-white border-rose-700 ring-2 ring-rose-600 ring-offset-2' 
+                        : 'bg-white border-rose-100 text-rose-500 hover:bg-rose-50'}`}
+                >
+                    <span className="text-2xl font-black">{counts.canceladas}</span>
+                    <span className="text-[10px] uppercase font-bold tracking-wider flex items-center gap-1">
+                        <XCircle className="w-3 h-3"/> Canceladas
+                    </span>
+                </button>
+            </div>
+        </div>
+        
+        {/* BARRA ÚNICA DE FILTROS - LARGURA TOTAL E FLUIDA */}
+        <div className="bg-white dark:bg-slate-800 p-3 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm w-full">
+            <div className="flex flex-wrap gap-2 items-center">
+                
+                {/* 1. Dia/Mês (Fixo) */}
+                <div className="flex bg-slate-100 dark:bg-slate-700 rounded-xl p-1 h-10 shrink-0">
+                    <button onClick={() => setModoFiltro('dia')} className={`px-3 text-xs font-bold uppercase tracking-wide rounded-lg transition-all ${modoFiltro === 'dia' ? 'bg-white dark:bg-slate-600 shadow text-emerald-700 dark:text-white' : 'text-slate-500 hover:text-slate-700'}`}>Dia</button>
+                    <button onClick={() => setModoFiltro('mes')} className={`px-3 text-xs font-bold uppercase tracking-wide rounded-lg transition-all ${modoFiltro === 'mes' ? 'bg-white dark:bg-slate-600 shadow text-emerald-700 dark:text-white' : 'text-slate-500 hover:text-slate-700'}`}>Mês</button>
                 </div>
 
-                <div className="hidden md:block h-auto w-px bg-slate-200 dark:bg-slate-600 mx-1"></div>
+                {/* 2. Data */}
+                <div className="relative h-10 w-[140px] shrink-0">
+                    <Calendar className="absolute left-3 top-2.5 w-4 h-4 text-emerald-500"/>
+                    {modoFiltro === 'dia' ? (
+                    <input type="date" value={dataFiltro} onChange={e => setDataFiltro(e.target.value)} className="w-full h-full pl-9 pr-2 border-0 bg-slate-50 dark:bg-slate-900 rounded-xl text-xs font-bold text-slate-700 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none uppercase" />
+                    ) : (
+                    <input type="month" value={mesFiltro} onChange={e => setMesFiltro(e.target.value)} className="w-full h-full pl-9 pr-2 border-0 bg-slate-50 dark:bg-slate-900 rounded-xl text-xs font-bold text-slate-700 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none uppercase" />
+                    )}
+                </div>
 
-                <div className="grid grid-cols-1 md:flex md:flex-row gap-2 flex-1">
-                    <div className="relative">
-                        <Calendar className="absolute left-3 top-2.5 w-4 h-4 text-emerald-500"/>
-                        {modoFiltro === 'dia' ? (
-                        <input type="date" value={dataFiltro} onChange={e => setDataFiltro(e.target.value)} className="pl-10 p-2 border-0 bg-slate-50 dark:bg-slate-900 rounded-lg text-sm font-bold text-slate-700 dark:text-white focus:ring-2 focus:ring-emerald-500 w-full md:w-auto outline-none h-full" />
-                        ) : (
-                        <input type="month" value={mesFiltro} onChange={e => setMesFiltro(e.target.value)} className="pl-10 p-2 border-0 bg-slate-50 dark:bg-slate-900 rounded-lg text-sm font-bold text-slate-700 dark:text-white focus:ring-2 focus:ring-emerald-500 w-full md:w-auto outline-none h-full" />
-                        )}
-                    </div>
-
-                    {role !== 'unidade' && (
-                        <div className="relative">
-                            <MapPin className="absolute left-3 top-2.5 w-4 h-4 text-slate-400"/>
-                            <select value={filtroUnidade} onChange={e => setFiltroUnidade(e.target.value)} className="pl-9 p-2 border-0 bg-slate-50 dark:bg-slate-900 rounded-lg text-sm font-semibold text-slate-600 dark:text-slate-300 focus:ring-2 focus:ring-emerald-500 w-full md:w-48 outline-none h-full appearance-none cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-950 transition-colors">
-                                <option value="">Todas as Unidades</option>
-                                {catalogs.unidades.map(u => <option key={u.id} value={u.id}>{u.nome}</option>)}
+                {/* 3. Filtros Admin (UF e Mentor) - DINÂMICOS */}
+                {role === 'admin' && (
+                    <>
+                        <div className="relative h-10 w-[90px] shrink-0">
+                            <Map className="absolute left-3 top-2.5 w-4 h-4 text-blue-500"/>
+                            <select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)} className="w-full h-full pl-9 pr-1 border-0 bg-slate-50 dark:bg-slate-900 rounded-xl text-xs font-bold uppercase text-slate-600 dark:text-slate-300 focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer">
+                                <option value="">UF</option>
+                                {estadosDisponiveis.map(uf => <option key={uf} value={uf}>{uf}</option>)}
                             </select>
                         </div>
-                    )}
+                        <div className="relative h-10 w-[160px] shrink-0">
+                            <UserCog className="absolute left-3 top-2.5 w-4 h-4 text-purple-500"/>
+                            <select value={filtroMentor} onChange={e => setFiltroMentor(e.target.value)} className="w-full h-full pl-9 pr-2 border-0 bg-slate-50 dark:bg-slate-900 rounded-xl text-xs font-bold uppercase text-slate-600 dark:text-slate-300 focus:ring-2 focus:ring-purple-500 outline-none cursor-pointer">
+                                <option value="">MENTOR</option>
+                                {catalogs.mentores.map(m => <option key={m.id} value={m.id}>{m.nome?.toUpperCase().split(' ')[0]}</option>)}
+                            </select>
+                        </div>
+                    </>
+                )}
 
-                    <div className="relative">
-                        <Filter className="absolute left-3 top-2.5 w-4 h-4 text-slate-400"/>
-                        <select value={filtroModalidade} onChange={e => setFiltroModalidade(e.target.value)} className="pl-9 p-2 border-0 bg-slate-50 dark:bg-slate-900 rounded-lg text-sm font-semibold text-slate-600 dark:text-slate-300 focus:ring-2 focus:ring-emerald-500 w-full md:w-40 outline-none h-full appearance-none cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-950 transition-colors">
-                            <option value="">Modalidade</option>
-                            {catalogs.modalidades.map(m => <option key={m.id} value={m.id}>{m.nome}</option>)}
+                {/* 4. Unidade (Filtrada pelos anteriores) */}
+                {role !== 'unidade' && (
+                    <div className="relative h-10 flex-1 min-w-[200px]">
+                        <MapPin className="absolute left-3 top-2.5 w-4 h-4 text-slate-400"/>
+                        <select value={filtroUnidade} onChange={e => setFiltroUnidade(e.target.value)} className="w-full h-full pl-9 pr-2 border-0 bg-slate-50 dark:bg-slate-900 rounded-xl text-xs font-bold uppercase text-slate-600 dark:text-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none cursor-pointer">
+                            <option value="">TODAS AS UNIDADES</option>
+                            {unidadesFiltradasSelect.map(u => <option key={u.id} value={u.id}>{u.nome?.toUpperCase()}</option>)}
                         </select>
                     </div>
+                )}
 
-                    {(role === 'admin' || role === 'mentor') && (
-                        <div className="relative">
-                            <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400"/>
-                            <input type="text" placeholder="Buscar..." value={filtroProfessor} onChange={e => setFiltroProfessor(e.target.value)} className="pl-9 p-2 border-0 bg-slate-50 dark:bg-slate-900 rounded-lg text-sm font-semibold text-slate-600 dark:text-slate-300 focus:ring-2 focus:ring-emerald-500 w-full outline-none h-full" />
-                        </div>
-                    )}
+                {/* 5. Modalidade */}
+                <div className="relative h-10 w-[180px] shrink-0">
+                    <Filter className="absolute left-3 top-2.5 w-4 h-4 text-slate-400"/>
+                    <select value={filtroModalidade} onChange={e => setFiltroModalidade(e.target.value)} className="w-full h-full pl-9 pr-2 border-0 bg-slate-50 dark:bg-slate-900 rounded-xl text-xs font-bold uppercase text-slate-600 dark:text-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none cursor-pointer">
+                        <option value="">MODALIDADE</option>
+                        {catalogs.modalidades.map(m => <option key={m.id} value={m.id}>{m.nome?.toUpperCase()}</option>)}
+                    </select>
                 </div>
+
+                {/* 6. Busca Professor (Flexível) */}
+                {(role === 'admin' || role === 'mentor') && (
+                    <div className="relative h-10 flex-1 min-w-[200px]">
+                        <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400"/>
+                        <input type="text" placeholder="BUSCAR PROFESSOR..." value={filtroProfessor} onChange={e => setFiltroProfessor(e.target.value)} className="w-full h-full pl-9 pr-2 border-0 bg-slate-50 dark:bg-slate-900 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none uppercase placeholder:normal-case" />
+                    </div>
+                )}
             </div>
         </div>
       </div>
@@ -516,7 +577,7 @@ export default function ValidacaoDiariaPage() {
           <Loader2 className="w-8 h-8 animate-spin mb-2 text-emerald-500"/>
           <p className="text-sm font-medium">Carregando grade...</p>
         </div>
-      ) : listaExibicao.length === 0 ? (
+      ) : listaFiltradaTotal.length === 0 ? (
         <div className="py-24 text-center bg-white dark:bg-slate-800 rounded-3xl border border-dashed border-slate-300 dark:border-slate-700">
           <div className="bg-slate-50 dark:bg-slate-900 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
             <LayoutDashboard className="w-8 h-8 text-slate-300"/>
@@ -529,148 +590,155 @@ export default function ValidacaoDiariaPage() {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6">
-          {listaExibicao.map((item) => {
-            const isFuture = verificarFuturo(item.data);
-            const status = item.status; 
-            const isSub = item.professor?.isSubstituto;
+        <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6">
+            {listaExibicao.map((item) => {
+                const isFuture = verificarFuturo(item.data);
+                const status = item.status; 
+                const isSub = item.professor?.isSubstituto;
 
-            return (
-              <div key={item.key} className="group bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-slate-200 dark:border-slate-700 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
-                {/* Indicador de Status */}
-                <div className={`absolute top-0 left-0 w-full h-1.5 ${status === 'realizada' ? 'bg-emerald-500' : status === 'cancelada' ? 'bg-rose-500' : 'bg-slate-200 dark:bg-slate-700'}`}></div>
+                return (
+                <div key={item.key} className="group bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-slate-200 dark:border-slate-700 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
+                    {/* Indicador de Status (AMARELO para Pendente) */}
+                    <div className={`absolute top-0 left-0 w-full h-1.5 ${status === 'realizada' ? 'bg-emerald-500' : status === 'cancelada' ? 'bg-rose-500' : 'bg-amber-400'}`}></div>
 
-                {/* Header */}
-                <div className="flex justify-between items-start mb-4 pt-2">
-                    <div className="flex flex-col">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 flex items-center gap-1 mb-1">
-                            <Calendar className="w-3 h-3"/> {item.diaSemana}, {formatDateBr(item.data)}
-                        </span>
-                        <h3 className="font-black text-lg text-slate-800 dark:text-white leading-tight">{item.modalidade?.nome}</h3>
-                    </div>
-                    <div className="bg-slate-100 dark:bg-slate-900 px-2 py-1 rounded-lg text-sm font-mono font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1.5 border border-slate-200 dark:border-slate-700">
-                        <Clock className="w-3.5 h-3.5 text-emerald-500"/> {item.aulaBase.hora}
-                    </div>
-                </div>
-
-                {/* Detalhes */}
-                <div className="space-y-3 mb-5">
-                    <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-slate-50 dark:bg-slate-700 flex items-center justify-center text-slate-400 border border-slate-100 dark:border-slate-600">
-                            <MapPin className="w-4 h-4"/>
+                    {/* Header */}
+                    <div className="flex justify-between items-start mb-4 pt-2">
+                        <div className="flex flex-col">
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 flex items-center gap-1 mb-1">
+                                <Calendar className="w-3 h-3"/> {item.diaSemana}, {formatDateBr(item.data)}
+                            </span>
+                            <h3 className="font-black text-lg text-slate-800 dark:text-white leading-tight">{item.modalidade?.nome}</h3>
                         </div>
-                        <div>
-                            <p className="text-[10px] text-slate-400 font-bold uppercase">Unidade</p>
-                            <p className="text-sm font-bold text-slate-700 dark:text-slate-200 truncate max-w-[200px]">{item.unidade?.nome}</p>
+                        <div className="bg-slate-100 dark:bg-slate-900 px-2 py-1 rounded-lg text-sm font-mono font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1.5 border border-slate-200 dark:border-slate-700">
+                            <Clock className="w-3.5 h-3.5 text-emerald-500"/> {item.aulaBase.hora}
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center border ${isSub ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-slate-50 dark:bg-slate-700 text-slate-400 border-slate-100 dark:border-slate-600'}`}>
-                            {isSub ? <ArrowRightLeft className="w-4 h-4"/> : <User className="w-4 h-4"/>}
+                    {/* Detalhes */}
+                    <div className="space-y-3 mb-5">
+                        <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-slate-50 dark:bg-slate-700 flex items-center justify-center text-slate-400 border border-slate-100 dark:border-slate-600">
+                                <MapPin className="w-4 h-4"/>
+                            </div>
+                            <div>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase">Unidade</p>
+                                <p className="text-sm font-bold text-slate-700 dark:text-slate-200 truncate max-w-[200px]">{item.unidade?.nome}</p>
+                            </div>
                         </div>
-                        <div className="flex-1">
-                            <p className="text-[10px] text-slate-400 font-bold uppercase flex justify-between items-center">
-                                Professor 
-                                {isSub && <span className="text-[9px] bg-blue-100 text-blue-700 px-1.5 rounded font-black tracking-wide">SUBSTITUTO</span>}
-                            </p>
-                            <div className="flex flex-col">
-                                {isSub && (
-                                    <span className="text-[10px] text-slate-400 line-through decoration-red-400 decoration-2">
-                                        {item.professorTitular?.nome}
-                                    </span>
-                                )}
-                                <p className={`text-sm font-bold truncate max-w-[200px] ${isSub ? 'text-blue-600 dark:text-blue-400' : 'text-slate-700 dark:text-slate-200'}`}>
-                                    {item.professor?.nome || "Sem Professor"}
+
+                        <div className="flex items-center gap-3">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center border ${isSub ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-slate-50 dark:bg-slate-700 text-slate-400 border-slate-100 dark:border-slate-600'}`}>
+                                {isSub ? <ArrowRightLeft className="w-4 h-4"/> : <User className="w-4 h-4"/>}
+                            </div>
+                            <div className="flex-1">
+                                <p className="text-[10px] text-slate-400 font-bold uppercase flex justify-between items-center">
+                                    Professor 
+                                    {isSub && <span className="text-[9px] bg-blue-100 text-blue-700 px-1.5 rounded font-black tracking-wide">SUBSTITUTO</span>}
                                 </p>
+                                <div className="flex flex-col">
+                                    {isSub && (
+                                        <span className="text-[10px] text-slate-400 line-through decoration-red-400 decoration-2">
+                                            {item.professorTitular?.nome}
+                                        </span>
+                                    )}
+                                    <p className={`text-sm font-bold truncate max-w-[200px] ${isSub ? 'text-blue-600 dark:text-blue-400' : 'text-slate-700 dark:text-slate-200'}`}>
+                                        {item.professor?.nome || "Sem Professor"}
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                {/* Status Bar (Corrigido para evitar erro DOM) */}
-                <div className="mb-5 p-3 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 flex justify-between items-center">
-                    <StatusBadge status={status} />
-                    
-                    {status === 'realizada' && (
-                        <div className="text-xs font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
-                            <Users className="w-3.5 h-3.5"/> {item.validacao?.alunos} Alunos
-                        </div>
-                    )}
-                    {status === 'cancelada' && (
-                        <div className="text-[10px] font-bold text-rose-600 max-w-[100px] truncate text-right" title={item.validacao?.motivoCancelamento}>
-                            {item.validacao?.motivoCancelamento || "Recesso"}
-                        </div>
-                    )}
-                </div>
-
-                {/* Action Buttons (Containers Estáveis) */}
-                <div className="grid grid-cols-2 gap-3">
-                    <button 
-                        onClick={() => abrirModal('validar', item)} 
-                        disabled={isFuture || status === 'cancelada'}
-                        className={`py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2
-                        ${status === 'realizada' 
-                            ? 'bg-white border-2 border-emerald-500 text-emerald-600 hover:bg-emerald-50' 
-                            : (isFuture || status === 'cancelada')
-                                ? 'bg-slate-100 text-slate-300 cursor-not-allowed'
-                                : 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 hover:bg-emerald-600 hover:shadow-emerald-500/40 hover:-translate-y-0.5'}`}
-                    >
-                        {status === 'realizada' ? 'Editar' : 'Validar'}
-                    </button>
-
-                    <button 
-                        onClick={() => abrirModal('cancelar', item)} 
-                        disabled={isFuture || (status === 'cancelada' && item.validacao?.motivoCancelamento === 'Recesso/Feriado')} 
-                        className={`py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2
-                        ${status === 'cancelada' 
-                            ? 'bg-white border-2 border-rose-500 text-rose-600 hover:bg-rose-50' 
-                            : isFuture 
-                                ? 'bg-slate-100 text-slate-300 cursor-not-allowed'
-                                : 'bg-white text-rose-500 border border-rose-200 hover:bg-rose-50 hover:border-rose-300 hover:text-rose-600'}`}
-                    >
-                        {status === 'cancelada' ? 'Detalhes' : 'Cancelar'}
-                    </button>
-                </div>
-
-                {isFuture && (
-                    <div className="absolute inset-0 bg-white/60 dark:bg-slate-900/60 backdrop-blur-[1px] flex items-center justify-center z-10 rounded-2xl">
-                        <div className="bg-white dark:bg-slate-800 px-4 py-2 rounded-full shadow-xl border border-slate-200 dark:border-slate-600 flex items-center gap-2">
-                            <Lock className="w-3 h-3 text-slate-400"/>
-                            <span className="text-xs font-bold text-slate-500">Aguarde a data</span>
-                        </div>
+                    {/* Status Bar */}
+                    <div className="mb-5 p-3 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 flex justify-between items-center">
+                        <StatusBadge status={status} />
+                        
+                        {status === 'realizada' && (
+                            <div className="text-xs font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
+                                <Users className="w-3.5 h-3.5"/> {item.validacao?.alunos} Alunos
+                            </div>
+                        )}
+                        {status === 'cancelada' && (
+                            <div className="text-[10px] font-bold text-rose-600 max-w-[100px] truncate text-right" title={item.validacao?.motivoCancelamento}>
+                                {item.validacao?.motivoCancelamento || "Recesso"}
+                            </div>
+                        )}
                     </div>
-                )}
-              </div>
-            );
-          })}
+
+                    {/* Action Buttons */}
+                    <div className="grid grid-cols-2 gap-3">
+                        <button 
+                            onClick={() => abrirModal('validar', item)} 
+                            disabled={isFuture || status === 'cancelada'}
+                            className={`py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2
+                            ${status === 'realizada' 
+                                ? 'bg-white border-2 border-emerald-500 text-emerald-600 hover:bg-emerald-50' 
+                                : (isFuture || status === 'cancelada')
+                                    ? 'bg-slate-100 text-slate-300 cursor-not-allowed'
+                                    : 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 hover:bg-emerald-600 hover:shadow-emerald-500/40 hover:-translate-y-0.5'}`}
+                        >
+                            {status === 'realizada' ? 'Editar' : 'Validar'}
+                        </button>
+
+                        <button 
+                            onClick={() => abrirModal('cancelar', item)} 
+                            disabled={isFuture || (status === 'cancelada' && item.validacao?.motivoCancelamento === 'Recesso/Feriado')} 
+                            className={`py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2
+                            ${status === 'cancelada' 
+                                ? 'bg-white border-2 border-rose-500 text-rose-600 hover:bg-rose-50' 
+                                : isFuture 
+                                    ? 'bg-slate-100 text-slate-300 cursor-not-allowed'
+                                    : 'bg-white text-rose-500 border border-rose-200 hover:bg-rose-50 hover:border-rose-300 hover:text-rose-600'}`}
+                        >
+                            {status === 'cancelada' ? 'Detalhes' : 'Cancelar'}
+                        </button>
+                    </div>
+
+                    {isFuture && (
+                        <div className="absolute inset-0 bg-white/60 dark:bg-slate-900/60 backdrop-blur-[1px] flex items-center justify-center z-10 rounded-2xl">
+                            <div className="bg-white dark:bg-slate-800 px-4 py-2 rounded-full shadow-xl border border-slate-200 dark:border-slate-600 flex items-center gap-2">
+                                <Lock className="w-3 h-3 text-slate-400"/>
+                                <span className="text-xs font-bold text-slate-500">Aguarde a data</span>
+                            </div>
+                        </div>
+                    )}
+                </div>
+                );
+            })}
+            </div>
+
+            {/* BOTÕES DE CARREGAMENTO */}
+            {itensVisiveis < listaFiltradaTotal.length && (
+                <div className="flex flex-wrap justify-center gap-3 pt-6 pb-4 animate-fade-in">
+                    <button onClick={() => handleCarregarMais(12)} className="px-5 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-sm flex items-center gap-2 transition-all">
+                        <ArrowDown className="w-4 h-4"/> Carregar +12
+                    </button>
+                    <button onClick={() => handleCarregarMais(50)} className="px-5 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-sm flex items-center gap-2 transition-all">
+                        Carregar +50
+                    </button>
+                    <button onClick={() => handleCarregarMais('todos')} className="px-5 py-2.5 bg-slate-100 dark:bg-slate-700 border border-transparent rounded-xl text-sm font-bold text-slate-700 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-600 shadow-sm flex items-center gap-2 transition-all">
+                        <DownloadCloud className="w-4 h-4"/> Ver Todos ({listaFiltradaTotal.length})
+                    </button>
+                </div>
+            )}
         </div>
       )}
 
-      {/* MODAL (Mantido igual) */}
+      {/* MODAL MANTIDO IGUAL */}
       {modalOpen && acaoAtual && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
           <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-100 dark:border-slate-700 animate-in zoom-in-95 duration-200">
-            
             <div className={`p-6 text-center relative overflow-hidden ${acaoAtual.tipo === 'validar' ? 'bg-emerald-50 dark:bg-emerald-900/20' : 'bg-rose-50 dark:bg-rose-900/20'}`}>
                 <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-transparent via-current to-transparent opacity-20"></div>
-                
                 <div className={`w-16 h-16 rounded-full mx-auto flex items-center justify-center mb-3 shadow-sm ${acaoAtual.tipo === 'validar' ? 'bg-white text-emerald-500' : 'bg-white text-rose-500'}`}>
                     {acaoAtual.tipo === 'validar' ? <CheckCircle2 className="w-8 h-8"/> : <XCircle className="w-8 h-8"/>}
                 </div>
-                
-                <h3 className="font-black text-xl text-slate-800 dark:text-white">
-                    {acaoAtual.tipo === 'validar' ? 'Validar Aula' : 'Cancelar Aula'}
-                </h3>
+                <h3 className="font-black text-xl text-slate-800 dark:text-white">{acaoAtual.tipo === 'validar' ? 'Validar Aula' : 'Cancelar Aula'}</h3>
                 <p className="text-xs font-bold text-slate-400 uppercase mt-1 tracking-wide">{acaoAtual.item.modalidade?.nome} • {acaoAtual.item.professorTitular?.nome}</p>
-
-                <button onClick={() => setModalOpen(false)} className="absolute top-4 right-4 p-2 rounded-full hover:bg-black/5 transition-colors">
-                    <XCircle className="w-5 h-5 text-slate-400"/>
-                </button>
+                <button onClick={() => setModalOpen(false)} className="absolute top-4 right-4 p-2 rounded-full hover:bg-black/5 transition-colors"><XCircle className="w-5 h-5 text-slate-400"/></button>
             </div>
-
             <form onSubmit={confirmarAcao} className="p-6 space-y-5">
-              
               {acaoAtual.tipo === 'validar' ? (
                 <>
                     <div className={`rounded-2xl border-2 transition-all duration-300 overflow-hidden ${isSubstituicao ? 'border-blue-500 bg-blue-50/50' : 'border-slate-100 hover:border-blue-200'}`}>
@@ -685,22 +753,15 @@ export default function ValidacaoDiariaPage() {
                             </div>
                             <ArrowRightLeft className={`w-5 h-5 ${isSubstituicao ? 'text-blue-500' : 'text-slate-300'}`}/>
                         </label>
-
                         {isSubstituicao && (
                             <div className="px-4 pb-4 space-y-3 animate-in slide-in-from-top-2">
                                 <div className="h-px w-full bg-blue-200 mb-3"></div>
                                 <div>
                                     <label className="block text-[10px] font-bold text-blue-600 uppercase mb-1">Quem deu a aula?</label>
                                     <div className="relative">
-                                        <select 
-                                            className="w-full p-2.5 bg-white border border-blue-200 rounded-xl text-sm font-semibold text-slate-700 focus:ring-2 focus:ring-blue-500 outline-none appearance-none"
-                                            value={substitutoId}
-                                            onChange={(e) => setSubstitutoId(e.target.value)}
-                                        >
+                                        <select className="w-full p-2.5 bg-white border border-blue-200 rounded-xl text-sm font-semibold text-slate-700 focus:ring-2 focus:ring-blue-500 outline-none appearance-none" value={substitutoId} onChange={(e) => setSubstitutoId(e.target.value)}>
                                             <option value="">Selecione o professor...</option>
-                                            {catalogs.professores
-                                                .filter(p => String(p.id) !== String(acaoAtual.item.professorTitular?.id))
-                                                .map(p => (<option key={p.id} value={p.id}>{p.nome}</option>))}
+                                            {catalogs.professores.filter(p => String(p.id) !== String(acaoAtual.item.professorTitular?.id)).map(p => (<option key={p.id} value={p.id}>{p.nome}</option>))}
                                         </select>
                                         <ChevronDown className="absolute right-3 top-3 w-4 h-4 text-blue-400 pointer-events-none"/>
                                     </div>
@@ -708,11 +769,7 @@ export default function ValidacaoDiariaPage() {
                                 <div>
                                     <label className="block text-[10px] font-bold text-blue-600 uppercase mb-1">Motivo da Troca</label>
                                     <div className="relative">
-                                        <select 
-                                            className="w-full p-2.5 bg-white border border-blue-200 rounded-xl text-sm font-semibold text-slate-700 focus:ring-2 focus:ring-blue-500 outline-none appearance-none"
-                                            value={motivoSubstituicao}
-                                            onChange={(e) => setMotivoSubstituicao(e.target.value)}
-                                        >
+                                        <select className="w-full p-2.5 bg-white border border-blue-200 rounded-xl text-sm font-semibold text-slate-700 focus:ring-2 focus:ring-blue-500 outline-none appearance-none" value={motivoSubstituicao} onChange={(e) => setMotivoSubstituicao(e.target.value)}>
                                             <option value="">Selecione...</option>
                                             <option value="Atestado do Titular">Atestado do Titular</option>
                                             <option value="Férias">Férias</option>
@@ -726,20 +783,11 @@ export default function ValidacaoDiariaPage() {
                             </div>
                         )}
                     </div>
-
                     <div>
                         <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2 ml-1">Quantidade de Alunos</label>
                         <div className="relative group">
                             <Users className="absolute left-4 top-3.5 w-5 h-5 text-slate-300 group-focus-within:text-emerald-500 transition-colors"/>
-                            <input 
-                                type="number" 
-                                min="0" 
-                                className="w-full pl-12 p-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-emerald-500 rounded-xl text-xl font-bold text-slate-800 dark:text-white outline-none transition-all placeholder:text-slate-300" 
-                                value={inputValor} 
-                                onChange={e => setInputValor(e.target.value)} 
-                                placeholder="00"
-                                autoFocus
-                            />
+                            <input type="number" min="0" className="w-full pl-12 p-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-emerald-500 rounded-xl text-xl font-bold text-slate-800 dark:text-white outline-none transition-all placeholder:text-slate-300" value={inputValor} onChange={e => setInputValor(e.target.value)} placeholder="00" autoFocus />
                         </div>
                     </div>
                 </>
@@ -761,22 +809,14 @@ export default function ValidacaoDiariaPage() {
                         <ChevronDown className="absolute right-4 top-4 w-4 h-4 text-slate-400 pointer-events-none"/>
                     </div>
                   </div>
-                  
                   {inputValor === 'Outros' && (
                     <div className="animate-fade-in">
                         <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2 ml-1">Descreva o motivo</label>
-                        <textarea 
-                            className="w-full p-3 bg-slate-50 border-2 border-transparent focus:border-rose-500 rounded-xl text-sm font-medium text-slate-700 outline-none resize-none"
-                            rows="3"
-                            value={inputObs}
-                            onChange={e => setInputObs(e.target.value)}
-                            placeholder="Digite aqui..."
-                        />
+                        <textarea className="w-full p-3 bg-slate-50 border-2 border-transparent focus:border-rose-500 rounded-xl text-sm font-medium text-slate-700 outline-none resize-none" rows="3" value={inputObs} onChange={e => setInputObs(e.target.value)} placeholder="Digite aqui..."/>
                     </div>
                   )}
                 </div>
               )}
-
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setModalOpen(false)} className="flex-1 py-3.5 text-slate-500 font-bold hover:bg-slate-50 rounded-xl transition-colors">Cancelar</button>
                 <button type="submit" disabled={processando} className={`flex-[2] py-3.5 text-white font-bold rounded-xl shadow-lg flex items-center justify-center gap-2 transform active:scale-95 transition-all ${acaoAtual.tipo === 'validar' ? 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/30' : 'bg-rose-500 hover:bg-rose-600 shadow-rose-500/30'}`}>
