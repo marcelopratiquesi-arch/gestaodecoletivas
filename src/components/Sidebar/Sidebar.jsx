@@ -7,7 +7,7 @@ import { collection, query, where, getDocs } from "firebase/firestore";
 import { 
   LayoutDashboard, BarChart3, Calendar, CheckCircle2, 
   Users, Settings, LogOut, Moon, Sun, ShieldCheck, 
-  ChevronRight 
+  ChevronRight, TrendingUp // <--- NOVO ÍCONE ADICIONADO AQUI
 } from "lucide-react";
 
 export default function Sidebar({ collapsed }) { 
@@ -96,7 +96,7 @@ export default function Sidebar({ collapsed }) {
 
     fetchPendencias();
     
-    // Configura um intervalo para atualizar a cada 60s (opcional, mas bom para manter vivo)
+    // Configura um intervalo para atualizar a cada 60s
     const interval = setInterval(fetchPendencias, 60000);
     return () => clearInterval(interval);
 
@@ -162,7 +162,7 @@ export default function Sidebar({ collapsed }) {
                 label="Validação Diária" 
                 collapsed={collapsed} 
                 active={isActive("/app/validacao-diaria")}
-                badge={pendencias > 0 ? pendencias : null} // SÓ MOSTRA SE > 0
+                badge={pendencias > 0 ? pendencias : null}
                 badgeColor="bg-rose-500 text-white shadow-rose-500/40"
               />
             )}
@@ -177,6 +177,19 @@ export default function Sidebar({ collapsed }) {
             <div className="space-y-1.5">
                 {!collapsed && <SectionTitle label="Gestão" />}
                 
+                {/* --- NOVO ITEM: PERFORMANCE FINANCEIRA --- */}
+                {/* Apenas Admin e Mentor podem ver */}
+                {(["admin", "mentor"].includes(role)) && (
+                    <NavItem 
+                        to="/app/performance-financeira" 
+                        icon={TrendingUp} 
+                        label="Performance Financeira" 
+                        collapsed={collapsed} 
+                        active={isActive("/app/performance-financeira")} 
+                    />
+                )}
+                {/* ----------------------------------------- */}
+
                 <NavItem to="/app/relatorio-gerencial" icon={BarChart3} label="Relatórios" collapsed={collapsed} active={isActive("/app/relatorio-gerencial")} />
                 
                 <NavItem to="/app/configuracoes" icon={Settings} label="Configurações" collapsed={collapsed} active={isActive("/app/configuracoes")} />
