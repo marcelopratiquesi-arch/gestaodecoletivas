@@ -1,21 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../services/firebase';
-<<<<<<< HEAD
 import { collection, getDocs, query, where, documentId, orderBy } from 'firebase/firestore'; 
-=======
-import { collection, getDocs, query, where, documentId } from 'firebase/firestore'; 
->>>>>>> 1bc9f3a116290a3ca37d4d1618d2c8d4a37459b0
 import { 
   BarChart2, Filter, DollarSign, Users, Calendar, 
   CheckCircle2, XCircle, Clock, ChevronRight, ChevronDown, 
   LayoutDashboard, Map, Globe, UserCheck, AlertTriangle, 
-<<<<<<< HEAD
   Download, FileSpreadsheet, FileText, MoreVertical, X, User, MousePointerClick, ArrowRightLeft,
   ArrowDown, DownloadCloud
-=======
-  Download, FileSpreadsheet, FileText, MoreVertical, X, User, MousePointerClick, ArrowRightLeft
->>>>>>> 1bc9f3a116290a3ca37d4d1618d2c8d4a37459b0
 } from 'lucide-react';
 
 // --- HELPERS ---
@@ -162,12 +154,9 @@ export default function RelatorioPage() {
   const [sortConfig, setSortConfig] = useState({ field: 'totalReceber', direction: 'desc' });
   const [expandedRowId, setExpandedRowId] = useState(null);
 
-<<<<<<< HEAD
   // --- PAGINAÇÃO VISUAL ---
   const [itensVisiveis, setItensVisiveis] = useState(20);
 
-=======
->>>>>>> 1bc9f3a116290a3ca37d4d1618d2c8d4a37459b0
   const clearFilters = () => {
       setPaisFiltro("");
       setEstadoFiltro("");
@@ -208,15 +197,12 @@ export default function RelatorioPage() {
             qUnidades = query(collection(db, 'unidades'), where('mentorId', '==', userId));
         } else if (role === 'unidade') {
             qUnidades = query(collection(db, 'unidades'), where(documentId(), '==', userData.unidadeId));
-<<<<<<< HEAD
         }
 
         // Query de Aulas (Otimizada para Unidade)
         let qAulas = collection(db, 'aulas');
         if (role === 'unidade') {
             qAulas = query(collection(db, 'aulas'), where('unidadeId', '==', userData.unidadeId));
-=======
->>>>>>> 1bc9f3a116290a3ca37d4d1618d2c8d4a37459b0
         }
 
         const validacoesQuery = query(
@@ -293,11 +279,7 @@ export default function RelatorioPage() {
   }, [data, paisFiltro, estadoFiltro, mentorFiltro, unidadeFiltro, modalidadeFiltro, turnoFiltro]);
 
   // 3. PROCESSAMENTO (CORE) COM SUPORTE A SUBSTITUIÇÃO
-<<<<<<< HEAD
   const relatorioTotal = useMemo(() => {
-=======
-  const relatorio = useMemo(() => {
->>>>>>> 1bc9f3a116290a3ca37d4d1618d2c8d4a37459b0
     if (data.unidades.length === 0) return [];
     
     const validacoesNoPeriodo = data.validacoes;
@@ -305,15 +287,10 @@ export default function RelatorioPage() {
 
     // PASSO A: Processar Titulares (Grade Base)
     data.aulas.forEach(aula => {
-<<<<<<< HEAD
-=======
-        // Validações que pertencem ao TITULAR (NÃO são substituições)
->>>>>>> 1bc9f3a116290a3ca37d4d1618d2c8d4a37459b0
         const valsTitular = validacoesNoPeriodo.filter(v => 
             String(v.aulaId) === String(aula.id) && 
             (!v.substituicao || String(v.professorId) === String(aula.professorId))
         );
-<<<<<<< HEAD
         const valsSubstituido = validacoesNoPeriodo.filter(v => 
             String(v.aulaId) === String(aula.id) && 
             v.substituicao && String(v.professorId) !== String(aula.professorId)
@@ -372,79 +349,12 @@ export default function RelatorioPage() {
             return null;
         }
 
-=======
-
-        // Validações onde o TITULAR FOI SUBSTITUÍDO (para exibir alerta no detalhe)
-        const valsSubstituido = validacoesNoPeriodo.filter(v => 
-            String(v.aulaId) === String(aula.id) && 
-            v.substituicao && String(v.professorId) !== String(aula.professorId)
-        );
-
-        todasLinhas.push({
-            tipo: 'titular',
-            aulaBase: aula,
-            professorId: aula.professorId,
-            validacoes: valsTitular,
-            validacoesSubstituido: valsSubstituido 
-        });
-    });
-
-    // PASSO B: Processar Substitutos (Linhas Dinâmicas)
-    const substituicoesMap = {}; // Key: aulaId_profIdSubstituto
-    validacoesNoPeriodo.forEach(v => {
-        if (v.substituicao && v.professorId) {
-            const key = `${v.aulaId}_${v.professorId}`;
-            if (!substituicoesMap[key]) substituicoesMap[key] = [];
-            substituicoesMap[key].push(v);
-        }
-    });
-
-    Object.keys(substituicoesMap).forEach(key => {
-        const [aulaId, profId] = key.split('_');
-        const aulaBase = data.aulas.find(a => String(a.id) === String(aulaId));
-        if (aulaBase) {
-            todasLinhas.push({
-                tipo: 'substituto',
-                aulaBase: aulaBase,
-                professorId: profId,
-                validacoes: substituicoesMap[key],
-                validacoesSubstituido: [] 
-            });
-        }
-    });
-
-    // PASSO C: Filtragem e Mapeamento Final
-    let linhasFinais = todasLinhas.map(item => {
-        const { aulaBase, professorId, validacoes, validacoesSubstituido } = item;
-        const unidade = data.unidades.find(u => String(u.id) === String(aulaBase.unidadeId));
-        if (!unidade) return null;
-
-        // Filtros
-        if (paisFiltro && unidade.pais !== paisFiltro) return null;
-        if (estadoFiltro && unidade.estado !== estadoFiltro) return null;
-        if (mentorFiltro && unidade.mentorId !== mentorFiltro) return null;
-        if (unidadeFiltro && String(aulaBase.unidadeId) !== String(unidadeFiltro)) return null;
-        if (modalidadeFiltro && String(aulaBase.modalidadeId) !== String(modalidadeFiltro)) return null;
-        if (turnoFiltro && !checkTurno(aulaBase.hora, turnoFiltro)) return null;
-
-        if (role === 'professor') {
-            const me = data.professores.find(p => p.uidLogin === userId);
-            if (!me || String(professorId) !== String(me.id)) return null;
-        } else if (professorFiltro && String(professorId) !== String(professorFiltro)) {
-            return null;
-        }
-
->>>>>>> 1bc9f3a116290a3ca37d4d1618d2c8d4a37459b0
         const professor = data.professores.find(p => String(p.id) === String(professorId));
         const modalidade = data.modalidades.find(m => String(m.id) === String(aulaBase.modalidadeId));
 
         const aulasRealizadas = validacoes.filter(v => v.status === 'realizada').length;
         const aulasCanceladas = validacoes.filter(v => v.status === 'cancelada').length;
         
-<<<<<<< HEAD
-=======
-        // Filtro KPI
->>>>>>> 1bc9f3a116290a3ca37d4d1618d2c8d4a37459b0
         if (filtroKPI === 'canceladas' && aulasCanceladas === 0) return null;
         if (filtroKPI === 'realizadas' && aulasRealizadas === 0) return null;
 
@@ -523,11 +433,7 @@ export default function RelatorioPage() {
   const handleExport = (type) => {
     setShowExportMenu(false);
     const headers = ["País", "Estado", "Unidade", "Modalidade", "Horário", "Professor", "Tipo", "Aulas Realizadas", "Aulas Canceladas", "Média Alunos", "Valor Hora Aula", "Total a Receber"];
-<<<<<<< HEAD
     const rows = relatorioTotal.map(r => [
-=======
-    const rows = relatorio.map(r => [
->>>>>>> 1bc9f3a116290a3ca37d4d1618d2c8d4a37459b0
         r.unidadePais||"-", r.unidadeEstado||"-", r.unidadeNome, r.modalidadeNome, r.horario, r.professorNome, 
         r.isSubstituto ? "SUBSTITUTO" : "TITULAR",
         r.aulasRealizadas, r.aulasCanceladas, r.mediaAlunos, formatCurrency(r.valorHora), formatCurrency(r.totalReceber)
@@ -551,7 +457,7 @@ export default function RelatorioPage() {
 
   return (
     <div className="p-6 md:p-8 max-w-[1920px] mx-auto animate-fade-in space-y-8">
-      {/* ... HEADER, KPIS, FILTROS (MANTIDOS IGUAIS) ... */}
+      {/* ... HEADER, KPIS, FILTROS ... */}
       <div className="flex flex-col md:flex-row justify-between items-center border-b border-slate-200 dark:border-slate-700 pb-6 gap-4">
         <div>
           <h1 className="text-3xl font-black text-slate-800 dark:text-white tracking-tight flex items-center gap-3">
