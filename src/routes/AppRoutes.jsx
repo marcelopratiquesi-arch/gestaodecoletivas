@@ -10,9 +10,10 @@ import ConfiguracoesPage from "../app/Configuracoes";
 import ValidacaoDiaria from "../app/ValidacaoDiaria"; 
 import CronogramaPage from "../app/Cronograma/index"; 
 import RelatorioPage from "../app/Relatorios"; 
-
-// 🟢 NOVA IMPORTAÇÃO: Validação Coletiva Real
 import ValidacaoColetivaPage from "../app/ValidacaoColetiva"; 
+
+// 🟢 NOVA IMPORTAÇÃO OBRIGATÓRIA
+import PerformanceFinanceiraPage from "../app/PerformanceFinanceira"; // Certifique-se que a pasta está criada aqui
 
 export default function AppRoutes() {
   return (
@@ -44,6 +45,17 @@ export default function AppRoutes() {
             } 
           />
           
+          {/* 🟢 NOVA ROTA: Performance Financeira */}
+          {/* Importante: Adicionei pageKey="performance_financeira" caso seu RoleRoute precise disso */}
+          <Route 
+            path="performance-financeira" 
+            element={
+              <RoleRoute pageKey="performance_financeira">
+                <PerformanceFinanceiraPage />
+              </RoleRoute>
+            } 
+          />
+
           {/* Cronograma */}
           <Route 
             path="cronograma" 
@@ -57,7 +69,7 @@ export default function AppRoutes() {
           {/* Validação Diária */}
           <Route path="validacao-diaria" element={<RoleRoute pageKey="validacao_diaria"><ValidacaoDiaria /></RoleRoute>} />
           
-          {/* 🟢 ROTA ATUALIZADA: Validação Coletiva */}
+          {/* Validação Coletiva */}
           <Route 
             path="validacao-coletiva" 
             element={
