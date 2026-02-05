@@ -12,8 +12,8 @@ import CronogramaPage from "../app/Cronograma/index";
 import RelatorioPage from "../app/Relatorios"; 
 import ValidacaoColetivaPage from "../app/ValidacaoColetiva"; 
 
-// 🟢 NOVA IMPORTAÇÃO OBRIGATÓRIA
-import PerformanceFinanceiraPage from "../app/PerformanceFinanceira"; // Certifique-se que a pasta está criada aqui
+// 🟢 NOVA IMPORTAÇÃO CORRIGIDA (Pasta Financeiro)
+import PerformanceFinanceiraPage from "../app/Financeiro"; 
 
 export default function AppRoutes() {
   return (
@@ -45,12 +45,11 @@ export default function AppRoutes() {
             } 
           />
           
-          {/* 🟢 NOVA ROTA: Performance Financeira */}
-          {/* Importante: Adicionei pageKey="performance_financeira" caso seu RoleRoute precise disso */}
+          {/* 🟢 ROTA ATUALIZADA: Financeiro */}
           <Route 
-            path="performance-financeira" 
+            path="financeiro" 
             element={
-              <RoleRoute pageKey="performance_financeira">
+              <RoleRoute pageKey="financeiro">
                 <PerformanceFinanceiraPage />
               </RoleRoute>
             } 

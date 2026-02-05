@@ -13,8 +13,8 @@ const PAGE_RULES = {
   // Apenas Admin e Mentor acessam.
   validacao_coletiva: ["admin", "mentor"], 
   
-  // 🟢 NOVA REGRA: Performance Financeira (Essencial para a nova aba funcionar)
-  performance_financeira: ["admin", "mentor"],
+  // 🟢 REGRA ATUALIZADA: Financeiro (Mudamos o nome para corrigir o erro)
+  financeiro: ["admin", "mentor"],
   
   configuracoes: ["admin", "mentor", "unidade"], 
 };

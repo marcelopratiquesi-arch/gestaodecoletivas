@@ -7,7 +7,7 @@ import { collection, query, where, getDocs } from "firebase/firestore";
 import { 
   LayoutDashboard, BarChart3, Calendar, CheckCircle2, 
   Users, Settings, LogOut, Moon, Sun, ShieldCheck, 
-  ChevronRight, TrendingUp // <--- NOVO ÍCONE ADICIONADO AQUI
+  ChevronRight, TrendingUp 
 } from "lucide-react";
 
 export default function Sidebar({ collapsed }) { 
@@ -177,18 +177,17 @@ export default function Sidebar({ collapsed }) {
             <div className="space-y-1.5">
                 {!collapsed && <SectionTitle label="Gestão" />}
                 
-                {/* --- NOVO ITEM: PERFORMANCE FINANCEIRA --- */}
-                {/* Apenas Admin e Mentor podem ver */}
+                {/* --- ITEM ATUALIZADO: FINANCEIRO --- */}
                 {(["admin", "mentor"].includes(role)) && (
                     <NavItem 
-                        to="/app/performance-financeira" 
+                        to="/app/financeiro"  // <--- ROTA CORRIGIDA
                         icon={TrendingUp} 
                         label="Performance Financeira" 
                         collapsed={collapsed} 
-                        active={isActive("/app/performance-financeira")} 
+                        active={isActive("/app/financeiro")} 
                     />
                 )}
-                {/* ----------------------------------------- */}
+                {/* ----------------------------------- */}
 
                 <NavItem to="/app/relatorio-gerencial" icon={BarChart3} label="Relatórios" collapsed={collapsed} active={isActive("/app/relatorio-gerencial")} />
                 
