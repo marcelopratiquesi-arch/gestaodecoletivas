@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
 import { db } from '../../../services/firebase';
 import { collection, getDocs, writeBatch, doc } from 'firebase/firestore';
-import * as XLSX from 'xlsx'; // Biblioteca para Excel
+import * as XLSX from 'xlsx'; 
 import { 
   Database, Download, Upload, FileJson, FileSpreadsheet, 
-  AlertTriangle, CheckCircle2, Loader2, ShieldAlert 
+  TriangleAlert, CircleCheck, Loader2, ShieldAlert 
 } from 'lucide-react';
 
 // LISTA DE TODAS AS COLEÇÕES DO SEU SISTEMA
-// Se criar novas tabelas no futuro, adicione o nome aqui.
 const COLLECTIONS_TO_BACKUP = [
   'unidades',
   'mentores',
@@ -36,7 +35,6 @@ export default function BackupTab() {
     try {
       const fullBackupData = {};
 
-      // 1. Busca dados de todas as coleções
       for (let i = 0; i < COLLECTIONS_TO_BACKUP.length; i++) {
         const colName = COLLECTIONS_TO_BACKUP[i];
         setStatusMsg(`Baixando coleção: ${colName}...`);
@@ -48,18 +46,15 @@ export default function BackupTab() {
         }));
 
         fullBackupData[colName] = data;
-        
-        // Atualiza barra de progresso
         setProgress(Math.round(((i + 1) / COLLECTIONS_TO_BACKUP.length) * 100));
       }
 
       setStatusMsg("Gerando arquivo...");
 
-      const dateStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+      const dateStr = new Date().toISOString().split('T')[0];
       const fileName = `BACKUP_SISTEMA_PRATIQUE_${dateStr}`;
 
       if (format === 'json') {
-        // --- EXPORTAR JSON (Ideal para Restore) ---
         const jsonString = JSON.stringify(fullBackupData, null, 2);
         const blob = new Blob([jsonString], { type: "application/json" });
         const link = document.createElement("a");
@@ -70,17 +65,13 @@ export default function BackupTab() {
         document.body.removeChild(link);
 
       } else if (format === 'excel') {
-        // --- EXPORTAR EXCEL (Ideal para Leitura) ---
         const wb = XLSX.utils.book_new();
 
         Object.keys(fullBackupData).forEach(colName => {
           const data = fullBackupData[colName];
           if (data.length > 0) {
-            // Converte JSON para Aba do Excel
-            // Trata objetos complexos (como timestamps) para string para não quebrar o Excel
             const cleanData = data.map(row => {
                 const newRow = { ...row };
-                // Simplificação rápida de objetos para texto
                 Object.keys(newRow).forEach(k => {
                     if (typeof newRow[k] === 'object' && newRow[k] !== null) {
                         newRow[k] = JSON.stringify(newRow[k]);
@@ -90,7 +81,6 @@ export default function BackupTab() {
             });
 
             const ws = XLSX.utils.json_to_sheet(cleanData);
-            // Nome da aba (máximo 31 chars no Excel)
             XLSX.utils.book_append_sheet(wb, ws, colName.substring(0, 31));
           }
         });
@@ -129,13 +119,10 @@ export default function BackupTab() {
         let totalDocs = 0;
         let processedDocs = 0;
 
-        // Contar total para progresso
         collections.forEach(col => totalDocs += backupData[col].length);
 
         setStatusMsg(`Restaurando ${collections.length} coleções...`);
 
-        // O Firebase tem limite de 500 escritas por lote (Batch). 
-        // Vamos quebrar em lotes seguros.
         let batch = writeBatch(db);
         let batchCount = 0;
 
@@ -143,16 +130,15 @@ export default function BackupTab() {
             const docs = backupData[colName];
             
             for (const docData of docs) {
-                const docId = docData.id; // ID original
-                const { id, ...dataToSave } = docData; // Remove ID dos dados
+                const docId = docData.id;
+                const { id, ...dataToSave } = docData;
 
                 const ref = doc(db, colName, docId);
-                batch.set(ref, dataToSave); // .set substitui o documento se existir
+                batch.set(ref, dataToSave);
                 
                 batchCount++;
                 processedDocs++;
 
-                // Se atingir 450 (margem de segurança), commita e abre novo lote
                 if (batchCount >= 450) {
                     await batch.commit();
                     batch = writeBatch(db);
@@ -162,7 +148,6 @@ export default function BackupTab() {
             }
         }
 
-        // Comita o restante
         if (batchCount > 0) {
             await batch.commit();
         }
@@ -211,7 +196,7 @@ export default function BackupTab() {
 
       {statusMsg && (
           <div className={`p-4 rounded-lg font-bold text-sm flex items-center gap-2 ${statusMsg.includes("Erro") ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"}`}>
-            {statusMsg.includes("Erro") ? <AlertTriangle className="w-4 h-4"/> : <CheckCircle2 className="w-4 h-4"/>}
+            {statusMsg.includes("Erro") ? <TriangleAlert className="w-4 h-4"/> : <CircleCheck className="w-4 h-4"/>}
             {statusMsg}
           </div>
       )}
