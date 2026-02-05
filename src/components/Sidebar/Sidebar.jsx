@@ -5,7 +5,7 @@ import { useTheme } from "../../contexts/ThemeContext";
 import { db } from "../../services/firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { 
-  LayoutDashboard, BarChart3, Calendar, CheckCircle2, 
+  LayoutDashboard, BarChart3, Calendar, CircleCheck, // 🟢 CORRIGIDO: CheckCircle2 virou CircleCheck
   Users, Settings, LogOut, Moon, Sun, ShieldCheck, 
   ChevronRight, TrendingUp 
 } from "lucide-react";
@@ -32,7 +32,7 @@ export default function Sidebar({ collapsed }) {
   
   const userInitials = (primeiroNome[0] + (ultimoNome ? ultimoNome[0] : "")).toUpperCase();
 
-  // --- CÁLCULO REAL DE PENDÊNCIAS ---
+  // --- CÁLCULO REAL DE PENDÊNCIAS (MANTIDO 100% IGUAL) ---
   useEffect(() => {
     const fetchPendencias = async () => {
         try {
@@ -158,7 +158,7 @@ export default function Sidebar({ collapsed }) {
             {(["admin", "mentor", "unidade", "professor"].includes(role)) && (
               <NavItem 
                 to="/app/validacao-diaria" 
-                icon={CheckCircle2} 
+                icon={CircleCheck} // 🟢 CORRIGIDO: Ícone novo sendo usado aqui
                 label="Validação Diária" 
                 collapsed={collapsed} 
                 active={isActive("/app/validacao-diaria")}
@@ -177,17 +177,15 @@ export default function Sidebar({ collapsed }) {
             <div className="space-y-1.5">
                 {!collapsed && <SectionTitle label="Gestão" />}
                 
-                {/* --- ITEM ATUALIZADO: FINANCEIRO --- */}
                 {(["admin", "mentor"].includes(role)) && (
                     <NavItem 
-                        to="/app/financeiro"  // <--- ROTA CORRIGIDA
+                        to="/app/financeiro" 
                         icon={TrendingUp} 
                         label="Performance Financeira" 
                         collapsed={collapsed} 
                         active={isActive("/app/financeiro")} 
                     />
                 )}
-                {/* ----------------------------------- */}
 
                 <NavItem to="/app/relatorio-gerencial" icon={BarChart3} label="Relatórios" collapsed={collapsed} active={isActive("/app/relatorio-gerencial")} />
                 
@@ -206,11 +204,9 @@ export default function Sidebar({ collapsed }) {
             ${collapsed ? "justify-center" : "justify-start"}
         `}>
           <div className="relative group">
-              {/* Avatar Maior (w-12 h-12) com Iniciais */}
               <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-slate-200 to-white dark:from-slate-700 dark:to-slate-600 flex items-center justify-center text-slate-700 dark:text-white font-black text-sm border-2 border-white dark:border-slate-700 shadow-md group-hover:scale-105 transition-transform duration-300">
                 {userInitials}
               </div>
-              {/* Status Indicator */}
               <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 border-[3px] border-white dark:border-slate-900 rounded-full"></div>
           </div>
           
@@ -287,7 +283,6 @@ function NavItem({ to, icon: Icon, label, collapsed, active, badge, badgeColor }
         ${collapsed ? "justify-center" : ""}
       `}
     >
-      {/* Tooltip Lateral (Só aparece colapsado) */}
       {collapsed && (
           <div className="absolute left-full ml-4 px-3 py-1.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-bold rounded-lg shadow-xl opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all duration-200 pointer-events-none z-50 whitespace-nowrap">
               {label}
