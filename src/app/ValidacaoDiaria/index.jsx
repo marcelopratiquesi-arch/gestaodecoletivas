@@ -2,14 +2,18 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../services/firebase';
 import { 
-  collection, query, where, getDocs, addDoc, serverTimestamp, doc, updateDoc, orderBy 
+  collection, query, where, getDocs, addDoc, serverTimestamp, doc, updateDoc, deleteDoc, orderBy 
 } from 'firebase/firestore';
 import { 
-  Calendar, CheckCircle2, XCircle, Users, MapPin, 
-  Filter, Search, Clock, AlertTriangle, Loader2, Lock, 
-  LayoutDashboard, UserCog, ArrowRightLeft, User, ChevronDown,
-  List, Map, ArrowDown, DownloadCloud
+  Calendar, CircleCheck, CircleX, TriangleAlert, 
+  MapPin, Filter, Search, List, ArrowDown, DownloadCloud, Loader2, LayoutDashboard, UserCog,
+  Map as MapIcon, 
+  Undo2
 } from 'lucide-react';
+
+// Importa os componentes filhos (que criamos no passo anterior)
+import { AulaCard } from './AulaCard';
+import { ValidationModal } from './ValidationModal';
 
 // --- HELPERS ---
 const getTodayStr = () => new Date().toLocaleDateString('en-CA'); 
@@ -24,37 +28,7 @@ const getMonthDates = (year, month) => {
   return dates;
 };
 
-const formatDateBr = (dateStr) => {
-  if(!dateStr) return "-";
-  const [y, m, d] = dateStr.split('-');
-  return `${d}/${m}/${y}`;
-};
-
 const diasSemanaMap = { 0: 'Domingo', 1: 'Segunda', 2: 'Terça', 3: 'Quarta', 4: 'Quinta', 5: 'Sexta', 6: 'Sábado' };
-
-// Componente Visual: Badge de Status
-const StatusBadge = ({ status }) => {
-    if (status === 'realizada') {
-        return (
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wide bg-emerald-100 text-emerald-700 border border-emerald-200 shadow-sm">
-                <CheckCircle2 className="w-3 h-3 flex-shrink-0" /> <span>Realizada</span>
-            </div>
-        );
-    }
-    if (status === 'cancelada') {
-        return (
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wide bg-rose-100 text-rose-700 border border-rose-200 shadow-sm">
-                <XCircle className="w-3 h-3 flex-shrink-0" /> <span>Cancelada</span>
-            </div>
-        );
-    }
-    // Pendente Amarelo
-    return (
-        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wide bg-amber-100 text-amber-700 border border-amber-200 shadow-sm">
-            <AlertTriangle className="w-3 h-3 flex-shrink-0" /> <span>Pendente</span>
-        </div>
-    );
-};
 
 export default function ValidacaoDiariaPage() {
   const { userData } = useAuth();
@@ -63,56 +37,44 @@ export default function ValidacaoDiariaPage() {
   const role = useMemo(() => String(userData?.role || "").trim().toLowerCase(), [userData?.role]);
   const userId = useMemo(() => userData?.id || userData?.uid, [userData]);
   const userUnidadeId = useMemo(() => userData?.unidadeId, [userData]);
+  
+  const isMaster = useMemo(() => ['admin', 'mentor'].includes(role), [role]);
 
-  // --- FILTROS DE CONTROLE ---
+  // --- FILTROS ---
   const [modoFiltro, setModoFiltro] = useState('dia'); 
   const [dataFiltro, setDataFiltro] = useState(getTodayStr());
   const [mesFiltro, setMesFiltro] = useState(new Date().toISOString().slice(0, 7));
-
-  // Filtros Avançados (Admin)
   const [filtroEstado, setFiltroEstado] = useState("");
   const [filtroMentor, setFiltroMentor] = useState("");
-
-  // Filtros Operacionais
   const [filtroUnidade, setFiltroUnidade] = useState("");
   const [filtroModalidade, setFiltroModalidade] = useState("");
   const [filtroProfessor, setFiltroProfessor] = useState("");
-  
-  // Filtro de Status (Todos/Pendente/Cancelado)
   const [filtroStatus, setFiltroStatus] = useState('todos'); 
 
-  // --- DADOS DO SISTEMA ---
+  // --- DADOS ---
   const [catalogs, setCatalogs] = useState({ 
       unidades: [], modalidades: [], professores: [], feriados: [], mentores: [] 
   });
   const [gradeGerada, setGradeGerada] = useState([]);
   const [loading, setLoading] = useState(true);
   const [processando, setProcessando] = useState(false);
-  
-  // Paginação Visual
   const [itensVisiveis, setItensVisiveis] = useState(12);
 
   // --- MODAL STATES ---
   const [modalOpen, setModalOpen] = useState(false);
   const [acaoAtual, setAcaoAtual] = useState(null); 
-  const [inputValor, setInputValor] = useState(""); 
-  const [inputObs, setInputObs] = useState(""); 
-  const [isSubstituicao, setIsSubstituicao] = useState(false);
-  const [substitutoId, setSubstitutoId] = useState("");
-  const [motivoSubstituicao, setMotivoSubstituicao] = useState("");
 
-  // 1. CARREGAMENTO INICIAL DOS DADOS (CATÁLOGOS)
+  // 1. CARREGAMENTO INICIAL DOS DADOS
   useEffect(() => {
     const loadCatalogs = async () => {
       try {
         setLoading(true);
-        // Busca paralela para velocidade
         const [unitsSnap, modsSnap, profsSnap, linksSnap, feriadosSnap, usersSnap] = await Promise.all([
           getDocs(query(collection(db, 'unidades'), orderBy('nome'))),
           getDocs(query(collection(db, 'modalidades'), orderBy('nome'))),
           getDocs(query(collection(db, 'professores'), orderBy('nome'))),
           getDocs(collection(db, 'vinculos')),
-          getDocs(collection(db, 'feriados')),
+          getDocs(collection(db, 'feriados')), // Baixa todos os feriados (datas e intervalos)
           getDocs(query(collection(db, 'usuarios'), where('role', '==', 'mentor')))
         ]);
 
@@ -123,11 +85,10 @@ export default function ValidacaoDiariaPage() {
         const feriadosData = feriadosSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         const mentoresData = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-        // Aplica restrições de permissão nos catálogos
+        // Filtros de Permissão nos Catálogos
         if (role === 'mentor') {
           unitsData = unitsData.filter(u => u.mentorId === userId);
         } else if (role === 'unidade') {
-          // Se for unidade, força o filtro e segura o ID
           unitsData = unitsData.filter(u => String(u.id) === String(userUnidadeId));
           setFiltroUnidade(userUnidadeId); 
         } else if (role === 'professor') {
@@ -155,19 +116,14 @@ export default function ValidacaoDiariaPage() {
     loadCatalogs();
   }, [role, userId, userUnidadeId]);
 
-  // 2. EXTRAÇÃO DINÂMICA DE ESTADOS (CORRIGIDO: LÊ DO BANCO)
+  // Filtros dinâmicos para os selects
   const estadosDisponiveis = useMemo(() => {
-      // Mapeia todas as unidades carregadas e extrai o estado (UF)
       const ufs = catalogs.unidades.map(u => u.estado).filter(Boolean);
-      // Remove duplicados e ordena alfabeticamente
       return [...new Set(ufs)].sort();
   }, [catalogs.unidades]);
 
-  // 3. FILTRAGEM INTELIGENTE DE UNIDADES (Cascata)
   const unidadesFiltradasSelect = useMemo(() => {
       if (role !== 'admin') return catalogs.unidades;
-      
-      // Admin vê tudo, mas obedece aos filtros de Estado e Mentor
       return catalogs.unidades.filter(u => {
           const matchEstado = filtroEstado ? u.estado === filtroEstado : true;
           const matchMentor = filtroMentor ? u.mentorId === filtroMentor : true;
@@ -175,9 +131,8 @@ export default function ValidacaoDiariaPage() {
       });
   }, [catalogs.unidades, role, filtroEstado, filtroMentor]);
 
-  // 4. MOTOR DE GERAÇÃO DA GRADE (Busca + Cruzamento)
+  // 4. MOTOR DE GERAÇÃO DA GRADE (AQUI ESTÁ A MÁGICA DO FERIADO)
   useEffect(() => {
-    // Só roda se tiver dados básicos carregados
     if (catalogs.unidades.length === 0 && role !== 'admin') return; 
       
     const gerarGrade = async () => {
@@ -198,11 +153,10 @@ export default function ValidacaoDiariaPage() {
           datasParaVerificar = getMonthDates(parseInt(ano), parseInt(mes) - 1);
         }
 
-        // B. Buscar Aulas
+        // Buscando Aulas (Grade Padrão)
         let aulasRef = collection(db, 'aulas');
         let qAulas = query(aulasRef);
 
-        // Otimização: Baixa apenas aulas do escopo
         if (role === 'unidade') {
             qAulas = query(aulasRef, where('unidadeId', '==', userUnidadeId));
         } else if (role === 'professor') {
@@ -214,8 +168,7 @@ export default function ValidacaoDiariaPage() {
         const aulasSnap = await getDocs(qAulas);
         let aulasBase = aulasSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-        // C. Buscar Validações
-        // OBS: AQUI É ONDE O ÍNDICE COMPOSTO É EXIGIDO
+        // Buscando Validações Existentes (O que já foi feito manualmente)
         let validacoesRef = collection(db, 'validacoes');
         let qValidacoes = query(validacoesRef, where('data', '>=', dataInicio), where('data', '<=', dataFim));
 
@@ -236,21 +189,40 @@ export default function ValidacaoDiariaPage() {
             if (meuPerfil) meuProfessorId = meuPerfil.id;
         }
 
-        const feriadosSet = new Set(catalogs.feriados.map(f => f.data));
+        // 🧠 FUNÇÃO INTELIGENTE DE FERIADO
+        // Verifica se a data é feriado (exato) OU se cai dentro de um recesso (intervalo)
+        const checkIsFeriado = (dateString) => {
+            const targetDate = new Date(dateString + 'T00:00:00');
+            return catalogs.feriados.some(f => {
+                // Caso 1: Data exata (ex: 25/12/2025)
+                if (f.data === dateString) return true;
+                
+                // Caso 2: Intervalo/Recesso (ex: de 20/12 a 04/01)
+                if (f.dataInicio && f.dataFim) {
+                    const inicio = new Date(f.dataInicio + 'T00:00:00');
+                    const fim = new Date(f.dataFim + 'T00:00:00');
+                    // Verifica se a data alvo está entre inicio e fim
+                    return targetDate >= inicio && targetDate <= fim;
+                }
+                return false;
+            });
+        };
+
         let gradeFinal = [];
 
-        // E. Loop de Construção
+        // Loop principal: Percorre cada dia do calendário
         datasParaVerificar.forEach(dataObj => {
           const dataString = dataObj.toISOString().split('T')[0];
           const diaSemanaNome = diasSemanaMap[dataObj.getDay()];
-          const isFeriado = feriadosSet.has(dataString);
+          
+          // 🟢 AQUI: Verifica se é feriado (seja dia único ou recesso)
+          const isFeriadoGlobal = checkIsFeriado(dataString);
 
+          // Filtra quais aulas acontecem nesse dia da semana
           const aulasDoDia = aulasBase.filter(aula => aula.dias && aula.dias.includes(diaSemanaNome));
 
           aulasDoDia.forEach(aula => {
-            
-            // --- FILTRAGEM ---
-            
+            // Filtros de visualização...
             const unidadeValida = catalogs.unidades.find(u => String(u.id) === String(aula.unidadeId));
             if (!unidadeValida) return; 
 
@@ -273,16 +245,22 @@ export default function ValidacaoDiariaPage() {
                 if (!prof.nome.toLowerCase().includes(termo)) return;
             }
 
+            // Tenta achar se já existe validação no banco
             const validacao = validacoesExistentes.find(v => String(v.aulaId) === String(aula.id) && v.data === dataString);
 
             let professorExibicao = prof;
             let status = 'pendente';
             let dadosValidacao = validacao;
 
+            // 🟢 LÓGICA DE PRIORIDADE:
+            // 1. Se tem validação manual (Alguém foi lá e clicou), ela manda (pode ter aula no feriado se quiserem).
+            // 2. Se NÃO tem validação E é feriado/recesso, o sistema cancela AUTOMATICAMENTE.
+            // 3. Se não, fica Pendente.
             if (validacao) {
                 status = validacao.status;
-            } else if (isFeriado) {
+            } else if (isFeriadoGlobal) {
                 status = 'cancelada';
+                // Cria um objeto visual de validação (sem salvar no banco ainda) para mostrar o motivo
                 dadosValidacao = { motivoCancelamento: 'Recesso/Feriado', status: 'cancelada' };
             }
             
@@ -312,7 +290,7 @@ export default function ValidacaoDiariaPage() {
         });
 
         setGradeGerada(gradeFinal);
-        setItensVisiveis(12); // Reset de paginação ao trocar filtros
+        setItensVisiveis(12);
 
       } catch (error) {
         console.error("Erro ao gerar grade:", error);
@@ -324,7 +302,7 @@ export default function ValidacaoDiariaPage() {
     gerarGrade();
   }, [modoFiltro, dataFiltro, mesFiltro, catalogs, filtroUnidade, filtroModalidade, filtroProfessor, filtroEstado, filtroMentor, role, userId, userUnidadeId]);
 
-  // CONTADORES
+  // CONTADORES E PAGINAÇÃO
   const counts = useMemo(() => {
       const hoje = getTodayStr();
       return {
@@ -341,9 +319,7 @@ export default function ValidacaoDiariaPage() {
       return gradeGerada;
   }, [gradeGerada, filtroStatus]);
 
-  const listaExibicao = useMemo(() => {
-      return listaFiltradaTotal.slice(0, itensVisiveis);
-  }, [listaFiltradaTotal, itensVisiveis]);
+  const listaExibicao = useMemo(() => listaFiltradaTotal.slice(0, itensVisiveis), [listaFiltradaTotal, itensVisiveis]);
 
   const handleCarregarMais = (qtd) => {
       if (qtd === 'todos') setItensVisiveis(listaFiltradaTotal.length);
@@ -353,42 +329,73 @@ export default function ValidacaoDiariaPage() {
   const verificarFuturo = (dataString) => {
     const hoje = new Date();
     hoje.setHours(0,0,0,0);
-    const dataAula = new Date(dataString + 'T00:00:00'); 
-    return dataAula > hoje;
+    return new Date(dataString + 'T00:00:00') > hoje;
   };
 
+  // --- LÓGICA DE ABRIR MODAL ---
   const abrirModal = (tipo, item) => {
     if (verificarFuturo(item.data)) return alert("Aulas futuras não podem ser validadas.");
-    setAcaoAtual({ tipo, item });
-    setInputValor("");
-    setInputObs(""); 
-    setIsSubstituicao(false);
-    setSubstitutoId("");
-    setMotivoSubstituicao("");
 
-    if (item.validacao?.substituicao) {
-        setIsSubstituicao(true);
-        setSubstitutoId(item.validacao.professorId);
-        setMotivoSubstituicao(item.validacao.motivoSubstituicao || "");
-        setInputValor(item.validacao.alunos || "");
-    } else if (item.validacao?.alunos) {
-        setInputValor(item.validacao.alunos);
+    // Trava de Segurança: Apenas Master pode reverter
+    if (item.status === 'cancelada' && !isMaster) {
+        // Permitir ver detalhes se for feriado automatico, mas avisar que é automatico
+        if (item.validacao?.motivoCancelamento === 'Recesso/Feriado') {
+             return alert("ℹ️ INFORMAÇÃO\n\nEsta aula foi cancelada automaticamente devido ao Recesso/Feriado cadastrado no sistema.");
+        }
+        return alert("⛔ AÇÃO BLOQUEADA\n\nEsta aula foi cancelada. Apenas a Mentoria ou a Administração podem reverter este status.");
     }
+
+    setAcaoAtual({ tipo, item });
     setModalOpen(true);
   };
 
-  const confirmarAcao = async (e) => {
-    e.preventDefault(); 
-    e.stopPropagation();
+  // --- REVERTER CANCELAMENTO ---
+  const handleReverterCancelamento = async () => {
+      // Se for feriado automático (sem ID de validação), não tem o que deletar do banco.
+      // O usuário teria que criar uma validação "Realizada" para sobrescrever.
+      if (!acaoAtual.item.validacao?.id && acaoAtual.item.validacao?.motivoCancelamento === 'Recesso/Feriado') {
+          return alert("Esta aula é um Feriado Automático. Para que ela aconteça, basta clicar em 'Voltar' e depois em 'Validar' (botão verde) para confirmar a presença.");
+      }
 
+      if (!acaoAtual || !acaoAtual.item.validacao?.id) return;
+      if (!window.confirm("Tem certeza que deseja reverter este cancelamento manual?")) return;
+
+      setProcessando(true);
+      try {
+          await deleteDoc(doc(db, 'validacoes', acaoAtual.item.validacao.id));
+          setGradeGerada(prevGrade => prevGrade.map(gridItem => {
+              if (gridItem.key === acaoAtual.item.key) {
+                  return { 
+                      ...gridItem, 
+                      status: 'pendente', 
+                      validacao: null,
+                      professor: gridItem.professorTitular 
+                  };
+              }
+              return gridItem;
+          }));
+          setModalOpen(false);
+          setAcaoAtual(null);
+      } catch (error) {
+          console.error("Erro ao reverter:", error);
+          alert("Erro ao reverter cancelamento.");
+      } finally {
+          setProcessando(false);
+      }
+  };
+
+  // --- SALVAR AÇÃO DO MODAL ---
+  const confirmarAcao = async (dadosFormulario) => {
+    const { inputValor, inputObs, isSubstituicao, substitutoId, motivoSubstituicao } = dadosFormulario;
+    
+    // Validações
     if (acaoAtual.tipo === 'validar' && !inputValor) return alert("Informe o número de alunos.");
     if (acaoAtual.tipo === 'validar' && isSubstituicao) {
-        if (!substitutoId) return alert("Selecione o professor substituto.");
-        if (!motivoSubstituicao) return alert("Informe o motivo da troca.");
+        if (!substitutoId || !motivoSubstituicao) return alert("Preencha os dados da substituição.");
     }
     if (acaoAtual.tipo === 'cancelar' && !inputValor) return alert("Selecione um motivo.");
-    if (acaoAtual.tipo === 'cancelar' && inputValor === 'Outros' && !inputObs.trim()) return alert("Descreva o motivo em 'Outros'.");
-    
+    if (acaoAtual.tipo === 'cancelar' && inputValor === 'Outros' && !inputObs.trim()) return alert("Descreva o motivo.");
+
     setProcessando(true);
     try {
       const { tipo, item } = acaoAtual;
@@ -419,6 +426,8 @@ export default function ValidacaoDiariaPage() {
       }
 
       let validacaoId = item.validacao?.id;
+      // Se já existe ID (mesmo que seja cancelada), atualiza.
+      // Se NÃO existe ID (era pendente ou feriado automático), cria novo.
       if (item.validacao?.id) {
         await updateDoc(doc(db, 'validacoes', item.validacao.id), payload);
       } else {
@@ -433,6 +442,7 @@ export default function ValidacaoDiariaPage() {
                 const sub = catalogs.professores.find(p => String(p.id) === String(payload.professorId));
                 if (sub) novoProfessor = { ...sub, isSubstituto: true };
            }
+           // Atualiza localmente com o novo status
            return { ...gridItem, status: payload.status, professor: novoProfessor, validacao: { id: validacaoId, ...payload } };
         }
         return gridItem;
@@ -443,74 +453,43 @@ export default function ValidacaoDiariaPage() {
 
   return (
     <div className="p-4 md:p-8 animate-fade-in max-w-[1920px] mx-auto space-y-6">
-      
-      {/* HEADER & CONTROLES */}
+      {/* HEADER & FILTROS (MANTIDO) */}
       <div className="flex flex-col gap-6 border-b border-slate-200 dark:border-slate-700 pb-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
                 <h1 className="text-2xl md:text-3xl font-black text-slate-800 dark:text-white flex items-center gap-3">
                     <span className="bg-gradient-to-tr from-emerald-500 to-green-600 text-white p-2.5 rounded-xl shadow-lg shadow-emerald-500/20">
-                    <CheckCircle2 className="w-6 h-6 md:w-7 md:h-7" />
+                    <CircleCheck className="w-6 h-6 md:w-7 md:h-7" />
                     </span>
                     Validação Diária
                 </h1>
                 <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium text-sm md:text-base">Gestão operacional e controle de frequência.</p>
             </div>
 
-            {/* BOTÕES DE STATUS - GRANDES E BONITOS */}
+            {/* BOTÕES DE STATUS */}
             <div className="w-full md:w-auto grid grid-cols-3 gap-3">
-                <button 
-                    onClick={() => { setFiltroStatus('todos'); setItensVisiveis(12); }} 
-                    className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all duration-300 shadow-sm hover:shadow-md
-                    ${filtroStatus === 'todos' 
-                        ? 'bg-slate-800 text-white border-slate-900 ring-2 ring-slate-800 ring-offset-2' 
-                        : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'}`}
-                >
+                <button onClick={() => { setFiltroStatus('todos'); setItensVisiveis(12); }} className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all duration-300 shadow-sm hover:shadow-md ${filtroStatus === 'todos' ? 'bg-slate-800 text-white border-slate-900 ring-2 ring-slate-800 ring-offset-2' : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'}`}>
                     <span className="text-2xl font-black">{counts.total}</span>
-                    <span className="text-[10px] uppercase font-bold tracking-wider flex items-center gap-1">
-                        <List className="w-3 h-3"/> Todos
-                    </span>
+                    <span className="text-[10px] uppercase font-bold tracking-wider flex items-center gap-1"><List className="w-3 h-3"/> Todos</span>
                 </button>
-
-                <button 
-                    onClick={() => { setFiltroStatus('pendente'); setItensVisiveis(12); }} 
-                    className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all duration-300 shadow-sm hover:shadow-md
-                    ${filtroStatus === 'pendente' 
-                        ? 'bg-amber-500 text-white border-amber-600 ring-2 ring-amber-500 ring-offset-2' 
-                        : 'bg-white border-amber-100 text-amber-500 hover:bg-amber-50'}`}
-                >
+                <button onClick={() => { setFiltroStatus('pendente'); setItensVisiveis(12); }} className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all duration-300 shadow-sm hover:shadow-md ${filtroStatus === 'pendente' ? 'bg-amber-500 text-white border-amber-600 ring-2 ring-amber-500 ring-offset-2' : 'bg-white border-amber-100 text-amber-500 hover:bg-amber-50'}`}>
                     <span className="text-2xl font-black">{counts.pendentes}</span>
-                    <span className="text-[10px] uppercase font-bold tracking-wider flex items-center gap-1">
-                        <AlertTriangle className="w-3 h-3"/> Pendentes
-                    </span>
+                    <span className="text-[10px] uppercase font-bold tracking-wider flex items-center gap-1"><TriangleAlert className="w-3 h-3"/> Pendentes</span>
                 </button>
-
-                <button 
-                    onClick={() => { setFiltroStatus('cancelada'); setItensVisiveis(12); }} 
-                    className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all duration-300 shadow-sm hover:shadow-md
-                    ${filtroStatus === 'cancelada' 
-                        ? 'bg-rose-600 text-white border-rose-700 ring-2 ring-rose-600 ring-offset-2' 
-                        : 'bg-white border-rose-100 text-rose-500 hover:bg-rose-50'}`}
-                >
+                <button onClick={() => { setFiltroStatus('cancelada'); setItensVisiveis(12); }} className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all duration-300 shadow-sm hover:shadow-md ${filtroStatus === 'cancelada' ? 'bg-rose-600 text-white border-rose-700 ring-2 ring-rose-600 ring-offset-2' : 'bg-white border-rose-100 text-rose-500 hover:bg-rose-50'}`}>
                     <span className="text-2xl font-black">{counts.canceladas}</span>
-                    <span className="text-[10px] uppercase font-bold tracking-wider flex items-center gap-1">
-                        <XCircle className="w-3 h-3"/> Canceladas
-                    </span>
+                    <span className="text-[10px] uppercase font-bold tracking-wider flex items-center gap-1"><CircleX className="w-3 h-3"/> Canceladas</span>
                 </button>
             </div>
         </div>
         
-        {/* BARRA ÚNICA DE FILTROS - LARGURA TOTAL E FLUIDA */}
+        {/* BARRA DE FILTROS */}
         <div className="bg-white dark:bg-slate-800 p-3 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm w-full">
             <div className="flex flex-wrap gap-2 items-center">
-                
-                {/* 1. Dia/Mês (Fixo) */}
                 <div className="flex bg-slate-100 dark:bg-slate-700 rounded-xl p-1 h-10 shrink-0">
                     <button onClick={() => setModoFiltro('dia')} className={`px-3 text-xs font-bold uppercase tracking-wide rounded-lg transition-all ${modoFiltro === 'dia' ? 'bg-white dark:bg-slate-600 shadow text-emerald-700 dark:text-white' : 'text-slate-500 hover:text-slate-700'}`}>Dia</button>
                     <button onClick={() => setModoFiltro('mes')} className={`px-3 text-xs font-bold uppercase tracking-wide rounded-lg transition-all ${modoFiltro === 'mes' ? 'bg-white dark:bg-slate-600 shadow text-emerald-700 dark:text-white' : 'text-slate-500 hover:text-slate-700'}`}>Mês</button>
                 </div>
-
-                {/* 2. Data */}
                 <div className="relative h-10 w-[140px] shrink-0">
                     <Calendar className="absolute left-3 top-2.5 w-4 h-4 text-emerald-500"/>
                     {modoFiltro === 'dia' ? (
@@ -519,48 +498,28 @@ export default function ValidacaoDiariaPage() {
                     <input type="month" value={mesFiltro} onChange={e => setMesFiltro(e.target.value)} className="w-full h-full pl-9 pr-2 border-0 bg-slate-50 dark:bg-slate-900 rounded-xl text-xs font-bold text-slate-700 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none uppercase" />
                     )}
                 </div>
-
-                {/* 3. Filtros Admin (UF e Mentor) - DINÂMICOS */}
                 {role === 'admin' && (
                     <>
                         <div className="relative h-10 w-[90px] shrink-0">
-                            <Map className="absolute left-3 top-2.5 w-4 h-4 text-blue-500"/>
-                            <select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)} className="w-full h-full pl-9 pr-1 border-0 bg-slate-50 dark:bg-slate-900 rounded-xl text-xs font-bold uppercase text-slate-600 dark:text-slate-300 focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer">
-                                <option value="">UF</option>
-                                {estadosDisponiveis.map(uf => <option key={uf} value={uf}>{uf}</option>)}
-                            </select>
+                            <MapIcon className="absolute left-3 top-2.5 w-4 h-4 text-blue-500"/>
+                            <select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)} className="w-full h-full pl-9 pr-1 border-0 bg-slate-50 dark:bg-slate-900 rounded-xl text-xs font-bold uppercase text-slate-600 dark:text-slate-300 focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer"><option value="">UF</option>{estadosDisponiveis.map(uf => <option key={uf} value={uf}>{uf}</option>)}</select>
                         </div>
                         <div className="relative h-10 w-[160px] shrink-0">
                             <UserCog className="absolute left-3 top-2.5 w-4 h-4 text-purple-500"/>
-                            <select value={filtroMentor} onChange={e => setFiltroMentor(e.target.value)} className="w-full h-full pl-9 pr-2 border-0 bg-slate-50 dark:bg-slate-900 rounded-xl text-xs font-bold uppercase text-slate-600 dark:text-slate-300 focus:ring-2 focus:ring-purple-500 outline-none cursor-pointer">
-                                <option value="">MENTOR</option>
-                                {catalogs.mentores.map(m => <option key={m.id} value={m.id}>{m.nome?.toUpperCase().split(' ')[0]}</option>)}
-                            </select>
+                            <select value={filtroMentor} onChange={e => setFiltroMentor(e.target.value)} className="w-full h-full pl-9 pr-2 border-0 bg-slate-50 dark:bg-slate-900 rounded-xl text-xs font-bold uppercase text-slate-600 dark:text-slate-300 focus:ring-2 focus:ring-purple-500 outline-none cursor-pointer"><option value="">MENTOR</option>{catalogs.mentores.map(m => <option key={m.id} value={m.id}>{m.nome?.toUpperCase().split(' ')[0]}</option>)}</select>
                         </div>
                     </>
                 )}
-
-                {/* 4. Unidade (Filtrada pelos anteriores) */}
                 {role !== 'unidade' && (
                     <div className="relative h-10 flex-1 min-w-[200px]">
                         <MapPin className="absolute left-3 top-2.5 w-4 h-4 text-slate-400"/>
-                        <select value={filtroUnidade} onChange={e => setFiltroUnidade(e.target.value)} className="w-full h-full pl-9 pr-2 border-0 bg-slate-50 dark:bg-slate-900 rounded-xl text-xs font-bold uppercase text-slate-600 dark:text-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none cursor-pointer">
-                            <option value="">TODAS AS UNIDADES</option>
-                            {unidadesFiltradasSelect.map(u => <option key={u.id} value={u.id}>{u.nome?.toUpperCase()}</option>)}
-                        </select>
+                        <select value={filtroUnidade} onChange={e => setFiltroUnidade(e.target.value)} className="w-full h-full pl-9 pr-2 border-0 bg-slate-50 dark:bg-slate-900 rounded-xl text-xs font-bold uppercase text-slate-600 dark:text-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none cursor-pointer"><option value="">TODAS AS UNIDADES</option>{unidadesFiltradasSelect.map(u => <option key={u.id} value={u.id}>{u.nome?.toUpperCase()}</option>)}</select>
                     </div>
                 )}
-
-                {/* 5. Modalidade */}
                 <div className="relative h-10 w-[180px] shrink-0">
                     <Filter className="absolute left-3 top-2.5 w-4 h-4 text-slate-400"/>
-                    <select value={filtroModalidade} onChange={e => setFiltroModalidade(e.target.value)} className="w-full h-full pl-9 pr-2 border-0 bg-slate-50 dark:bg-slate-900 rounded-xl text-xs font-bold uppercase text-slate-600 dark:text-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none cursor-pointer">
-                        <option value="">MODALIDADE</option>
-                        {catalogs.modalidades.map(m => <option key={m.id} value={m.id}>{m.nome?.toUpperCase()}</option>)}
-                    </select>
+                    <select value={filtroModalidade} onChange={e => setFiltroModalidade(e.target.value)} className="w-full h-full pl-9 pr-2 border-0 bg-slate-50 dark:bg-slate-900 rounded-xl text-xs font-bold uppercase text-slate-600 dark:text-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none cursor-pointer"><option value="">MODALIDADE</option>{catalogs.modalidades.map(m => <option key={m.id} value={m.id}>{m.nome?.toUpperCase()}</option>)}</select>
                 </div>
-
-                {/* 6. Busca Professor (Flexível) */}
                 {(role === 'admin' || role === 'mentor') && (
                     <div className="relative h-10 flex-1 min-w-[200px]">
                         <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400"/>
@@ -592,241 +551,37 @@ export default function ValidacaoDiariaPage() {
       ) : (
         <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6">
-            {listaExibicao.map((item) => {
-                const isFuture = verificarFuturo(item.data);
-                const status = item.status; 
-                const isSub = item.professor?.isSubstituto;
-
-                return (
-                <div key={item.key} className="group bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-slate-200 dark:border-slate-700 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
-                    {/* Indicador de Status (AMARELO para Pendente) */}
-                    <div className={`absolute top-0 left-0 w-full h-1.5 ${status === 'realizada' ? 'bg-emerald-500' : status === 'cancelada' ? 'bg-rose-500' : 'bg-amber-400'}`}></div>
-
-                    {/* Header */}
-                    <div className="flex justify-between items-start mb-4 pt-2">
-                        <div className="flex flex-col">
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 flex items-center gap-1 mb-1">
-                                <Calendar className="w-3 h-3"/> {item.diaSemana}, {formatDateBr(item.data)}
-                            </span>
-                            <h3 className="font-black text-lg text-slate-800 dark:text-white leading-tight">{item.modalidade?.nome}</h3>
-                        </div>
-                        <div className="bg-slate-100 dark:bg-slate-900 px-2 py-1 rounded-lg text-sm font-mono font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1.5 border border-slate-200 dark:border-slate-700">
-                            <Clock className="w-3.5 h-3.5 text-emerald-500"/> {item.aulaBase.hora}
-                        </div>
-                    </div>
-
-                    {/* Detalhes */}
-                    <div className="space-y-3 mb-5">
-                        <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-slate-50 dark:bg-slate-700 flex items-center justify-center text-slate-400 border border-slate-100 dark:border-slate-600">
-                                <MapPin className="w-4 h-4"/>
-                            </div>
-                            <div>
-                                <p className="text-[10px] text-slate-400 font-bold uppercase">Unidade</p>
-                                <p className="text-sm font-bold text-slate-700 dark:text-slate-200 truncate max-w-[200px]">{item.unidade?.nome}</p>
-                            </div>
-                        </div>
-
-                        <div className="flex items-center gap-3">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center border ${isSub ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-slate-50 dark:bg-slate-700 text-slate-400 border-slate-100 dark:border-slate-600'}`}>
-                                {isSub ? <ArrowRightLeft className="w-4 h-4"/> : <User className="w-4 h-4"/>}
-                            </div>
-                            <div className="flex-1">
-                                <p className="text-[10px] text-slate-400 font-bold uppercase flex justify-between items-center">
-                                    Professor 
-                                    {isSub && <span className="text-[9px] bg-blue-100 text-blue-700 px-1.5 rounded font-black tracking-wide">SUBSTITUTO</span>}
-                                </p>
-                                <div className="flex flex-col">
-                                    {isSub && (
-                                        <span className="text-[10px] text-slate-400 line-through decoration-red-400 decoration-2">
-                                            {item.professorTitular?.nome}
-                                        </span>
-                                    )}
-                                    <p className={`text-sm font-bold truncate max-w-[200px] ${isSub ? 'text-blue-600 dark:text-blue-400' : 'text-slate-700 dark:text-slate-200'}`}>
-                                        {item.professor?.nome || "Sem Professor"}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Status Bar */}
-                    <div className="mb-5 p-3 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 flex justify-between items-center">
-                        <StatusBadge status={status} />
-                        
-                        {status === 'realizada' && (
-                            <div className="text-xs font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
-                                <Users className="w-3.5 h-3.5"/> {item.validacao?.alunos} Alunos
-                            </div>
-                        )}
-                        {status === 'cancelada' && (
-                            <div className="text-[10px] font-bold text-rose-600 max-w-[100px] truncate text-right" title={item.validacao?.motivoCancelamento}>
-                                {item.validacao?.motivoCancelamento || "Recesso"}
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="grid grid-cols-2 gap-3">
-                        <button 
-                            onClick={() => abrirModal('validar', item)} 
-                            disabled={isFuture || status === 'cancelada'}
-                            className={`py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2
-                            ${status === 'realizada' 
-                                ? 'bg-white border-2 border-emerald-500 text-emerald-600 hover:bg-emerald-50' 
-                                : (isFuture || status === 'cancelada')
-                                    ? 'bg-slate-100 text-slate-300 cursor-not-allowed'
-                                    : 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 hover:bg-emerald-600 hover:shadow-emerald-500/40 hover:-translate-y-0.5'}`}
-                        >
-                            {status === 'realizada' ? 'Editar' : 'Validar'}
-                        </button>
-
-                        <button 
-                            onClick={() => abrirModal('cancelar', item)} 
-                            disabled={isFuture || (status === 'cancelada' && item.validacao?.motivoCancelamento === 'Recesso/Feriado')} 
-                            className={`py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2
-                            ${status === 'cancelada' 
-                                ? 'bg-white border-2 border-rose-500 text-rose-600 hover:bg-rose-50' 
-                                : isFuture 
-                                    ? 'bg-slate-100 text-slate-300 cursor-not-allowed'
-                                    : 'bg-white text-rose-500 border border-rose-200 hover:bg-rose-50 hover:border-rose-300 hover:text-rose-600'}`}
-                        >
-                            {status === 'cancelada' ? 'Detalhes' : 'Cancelar'}
-                        </button>
-                    </div>
-
-                    {isFuture && (
-                        <div className="absolute inset-0 bg-white/60 dark:bg-slate-900/60 backdrop-blur-[1px] flex items-center justify-center z-10 rounded-2xl">
-                            <div className="bg-white dark:bg-slate-800 px-4 py-2 rounded-full shadow-xl border border-slate-200 dark:border-slate-600 flex items-center gap-2">
-                                <Lock className="w-3 h-3 text-slate-400"/>
-                                <span className="text-xs font-bold text-slate-500">Aguarde a data</span>
-                            </div>
-                        </div>
-                    )}
-                </div>
-                );
-            })}
+            {listaExibicao.map((item) => (
+                <AulaCard 
+                    key={item.key} 
+                    item={item} 
+                    onValidar={(i) => abrirModal('validar', i)}
+                    onCancelar={(i) => abrirModal('cancelar', i)}
+                    verificarFuturo={verificarFuturo}
+                />
+            ))}
             </div>
 
-            {/* BOTÕES DE CARREGAMENTO */}
             {itensVisiveis < listaFiltradaTotal.length && (
                 <div className="flex flex-wrap justify-center gap-3 pt-6 pb-4 animate-fade-in">
-                    <button onClick={() => handleCarregarMais(12)} className="px-5 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-sm flex items-center gap-2 transition-all">
-                        <ArrowDown className="w-4 h-4"/> Carregar +12
-                    </button>
-                    <button onClick={() => handleCarregarMais(50)} className="px-5 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-sm flex items-center gap-2 transition-all">
-                        Carregar +50
-                    </button>
-                    <button onClick={() => handleCarregarMais('todos')} className="px-5 py-2.5 bg-slate-100 dark:bg-slate-700 border border-transparent rounded-xl text-sm font-bold text-slate-700 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-600 shadow-sm flex items-center gap-2 transition-all">
-                        <DownloadCloud className="w-4 h-4"/> Ver Todos ({listaFiltradaTotal.length})
-                    </button>
+                    <button onClick={() => handleCarregarMais(12)} className="px-5 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-sm flex items-center gap-2 transition-all"><ArrowDown className="w-4 h-4"/> Carregar +12</button>
+                    <button onClick={() => handleCarregarMais('todos')} className="px-5 py-2.5 bg-slate-100 dark:bg-slate-700 border border-transparent rounded-xl text-sm font-bold text-slate-700 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-600 shadow-sm flex items-center gap-2 transition-all"><DownloadCloud className="w-4 h-4"/> Ver Todos</button>
                 </div>
             )}
         </div>
       )}
 
-      {/* MODAL MANTIDO IGUAL */}
-      {modalOpen && acaoAtual && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-100 dark:border-slate-700 animate-in zoom-in-95 duration-200">
-            <div className={`p-6 text-center relative overflow-hidden ${acaoAtual.tipo === 'validar' ? 'bg-emerald-50 dark:bg-emerald-900/20' : 'bg-rose-50 dark:bg-rose-900/20'}`}>
-                <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-transparent via-current to-transparent opacity-20"></div>
-                <div className={`w-16 h-16 rounded-full mx-auto flex items-center justify-center mb-3 shadow-sm ${acaoAtual.tipo === 'validar' ? 'bg-white text-emerald-500' : 'bg-white text-rose-500'}`}>
-                    {acaoAtual.tipo === 'validar' ? <CheckCircle2 className="w-8 h-8"/> : <XCircle className="w-8 h-8"/>}
-                </div>
-                <h3 className="font-black text-xl text-slate-800 dark:text-white">{acaoAtual.tipo === 'validar' ? 'Validar Aula' : 'Cancelar Aula'}</h3>
-                <p className="text-xs font-bold text-slate-400 uppercase mt-1 tracking-wide">{acaoAtual.item.modalidade?.nome} • {acaoAtual.item.professorTitular?.nome}</p>
-                <button onClick={() => setModalOpen(false)} className="absolute top-4 right-4 p-2 rounded-full hover:bg-black/5 transition-colors"><XCircle className="w-5 h-5 text-slate-400"/></button>
-            </div>
-            <form onSubmit={confirmarAcao} className="p-6 space-y-5">
-              {acaoAtual.tipo === 'validar' ? (
-                <>
-                    <div className={`rounded-2xl border-2 transition-all duration-300 overflow-hidden ${isSubstituicao ? 'border-blue-500 bg-blue-50/50' : 'border-slate-100 hover:border-blue-200'}`}>
-                        <label className="flex items-center gap-4 p-4 cursor-pointer select-none">
-                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${isSubstituicao ? 'border-blue-500 bg-blue-500' : 'border-slate-300'}`}>
-                                {isSubstituicao && <CheckCircle2 className="w-3 h-3 text-white"/>}
-                            </div>
-                            <input type="checkbox" className="hidden" checked={isSubstituicao} onChange={(e) => setIsSubstituicao(e.target.checked)}/>
-                            <div className="flex-1">
-                                <span className={`block font-bold text-sm ${isSubstituicao ? 'text-blue-700' : 'text-slate-600'}`}>Substituição de Professor</span>
-                                <span className="text-[10px] text-slate-400">Marque se outro professor deu esta aula</span>
-                            </div>
-                            <ArrowRightLeft className={`w-5 h-5 ${isSubstituicao ? 'text-blue-500' : 'text-slate-300'}`}/>
-                        </label>
-                        {isSubstituicao && (
-                            <div className="px-4 pb-4 space-y-3 animate-in slide-in-from-top-2">
-                                <div className="h-px w-full bg-blue-200 mb-3"></div>
-                                <div>
-                                    <label className="block text-[10px] font-bold text-blue-600 uppercase mb-1">Quem deu a aula?</label>
-                                    <div className="relative">
-                                        <select className="w-full p-2.5 bg-white border border-blue-200 rounded-xl text-sm font-semibold text-slate-700 focus:ring-2 focus:ring-blue-500 outline-none appearance-none" value={substitutoId} onChange={(e) => setSubstitutoId(e.target.value)}>
-                                            <option value="">Selecione o professor...</option>
-                                            {catalogs.professores.filter(p => String(p.id) !== String(acaoAtual.item.professorTitular?.id)).map(p => (<option key={p.id} value={p.id}>{p.nome}</option>))}
-                                        </select>
-                                        <ChevronDown className="absolute right-3 top-3 w-4 h-4 text-blue-400 pointer-events-none"/>
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className="block text-[10px] font-bold text-blue-600 uppercase mb-1">Motivo da Troca</label>
-                                    <div className="relative">
-                                        <select className="w-full p-2.5 bg-white border border-blue-200 rounded-xl text-sm font-semibold text-slate-700 focus:ring-2 focus:ring-blue-500 outline-none appearance-none" value={motivoSubstituicao} onChange={(e) => setMotivoSubstituicao(e.target.value)}>
-                                            <option value="">Selecione...</option>
-                                            <option value="Atestado do Titular">Atestado do Titular</option>
-                                            <option value="Férias">Férias</option>
-                                            <option value="Folga Programada">Folga Programada</option>
-                                            <option value="Emergência">Emergência</option>
-                                            <option value="Outros">Outros</option>
-                                        </select>
-                                        <ChevronDown className="absolute right-3 top-3 w-4 h-4 text-blue-400 pointer-events-none"/>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                    <div>
-                        <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2 ml-1">Quantidade de Alunos</label>
-                        <div className="relative group">
-                            <Users className="absolute left-4 top-3.5 w-5 h-5 text-slate-300 group-focus-within:text-emerald-500 transition-colors"/>
-                            <input type="number" min="0" className="w-full pl-12 p-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-emerald-500 rounded-xl text-xl font-bold text-slate-800 dark:text-white outline-none transition-all placeholder:text-slate-300" value={inputValor} onChange={e => setInputValor(e.target.value)} placeholder="00" autoFocus />
-                        </div>
-                    </div>
-                </>
-              ) : (
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2 ml-1">Motivo do Cancelamento</label>
-                    <div className="relative">
-                        <select className="w-full p-3 bg-slate-50 border-2 border-transparent focus:border-rose-500 rounded-xl text-sm font-bold text-slate-700 outline-none appearance-none" value={inputValor} onChange={e => setInputValor(e.target.value)}>
-                        <option value="">Selecione o motivo...</option>
-                        <option value="Feriado">Feriado</option>
-                        <option value="Férias Professor">Férias Professor</option>
-                        <option value="Atestado Médico">Atestado Médico</option>
-                        <option value="Manutenção Unidade">Manutenção Unidade</option>
-                        <option value="Falta sem Justificativa">Falta sem Justificativa</option>
-                        <option value="Chuva/Clima">Chuva/Clima</option>
-                        <option value="Outros">Outros (Descrever)</option>
-                        </select>
-                        <ChevronDown className="absolute right-4 top-4 w-4 h-4 text-slate-400 pointer-events-none"/>
-                    </div>
-                  </div>
-                  {inputValor === 'Outros' && (
-                    <div className="animate-fade-in">
-                        <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2 ml-1">Descreva o motivo</label>
-                        <textarea className="w-full p-3 bg-slate-50 border-2 border-transparent focus:border-rose-500 rounded-xl text-sm font-medium text-slate-700 outline-none resize-none" rows="3" value={inputObs} onChange={e => setInputObs(e.target.value)} placeholder="Digite aqui..."/>
-                    </div>
-                  )}
-                </div>
-              )}
-              <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setModalOpen(false)} className="flex-1 py-3.5 text-slate-500 font-bold hover:bg-slate-50 rounded-xl transition-colors">Cancelar</button>
-                <button type="submit" disabled={processando} className={`flex-[2] py-3.5 text-white font-bold rounded-xl shadow-lg flex items-center justify-center gap-2 transform active:scale-95 transition-all ${acaoAtual.tipo === 'validar' ? 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/30' : 'bg-rose-500 hover:bg-rose-600 shadow-rose-500/30'}`}>
-                    {processando ? <Loader2 className="w-5 h-5 animate-spin"/> : 'Confirmar'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* MODAL */}
+      <ValidationModal 
+        isOpen={modalOpen} 
+        onClose={() => setModalOpen(false)}
+        onConfirm={confirmarAcao}
+        onRevert={handleReverterCancelamento}
+        acaoAtual={acaoAtual}
+        catalogs={catalogs}
+        processando={processando}
+        isMaster={isMaster}
+      />
     </div>
   );
 }
