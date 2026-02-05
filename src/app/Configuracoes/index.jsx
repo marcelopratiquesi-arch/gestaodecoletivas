@@ -5,16 +5,20 @@ import {
   ShieldCheck, Database, LayoutDashboard, Loader2 
 } from "lucide-react";
 
-// --- LAZY LOADING (Carregamento sob demanda para economizar dados) ---
-// O navegador só baixa o código dessas abas se elas forem realmente exibidas.
+// --- LAZY LOADING ---
+// Ajustamos os imports para garantir compatibilidade
+
+// Para abas que usam "export function NomeDaAba" (Named Exports):
 const UnidadesTab = lazy(() => import('./Unidades/UnidadesTab').then(module => ({ default: module.UnidadesTab })));
 const MentoresTab = lazy(() => import('../../components/MentoresTab').then(module => ({ default: module.MentoresTab })));
 const ModalidadesTab = lazy(() => import('./Modalidades/ModalidadesTab').then(module => ({ default: module.ModalidadesTab })));
 const ProfessoresTab = lazy(() => import('./Professores/ProfessoresTab').then(module => ({ default: module.ProfessoresTab })));
 const FeriadosTab = lazy(() => import('./Feriados/FeriadosTab').then(module => ({ default: module.FeriadosTab })));
-const BackupTab = lazy(() => import('./Backup/BackupTab').then(module => ({ default: module.BackupTab })));
 
-// Componente de Loading Simples para as Abas
+// 🟢 CORREÇÃO AQUI: O BackupTab agora é "export default", então a importação é direta:
+const BackupTab = lazy(() => import('./Backup/BackupTab'));
+
+// Componente de Loading
 const TabLoading = () => (
   <div className="flex h-64 items-center justify-center text-slate-400 animate-pulse">
     <Loader2 className="w-8 h-8 animate-spin mr-2" />
@@ -43,12 +47,10 @@ export default function ConfiguracoesPage() {
   // Define a aba ativa inicial com base na role
   const [activeTab, setActiveTab] = useState(() => {
     if (role === 'unidade') return 'professores';
-    // Se por acaso a role não tiver acesso a 'unidades' (futuro), pega a primeira permitida
     const firstAllowed = tabs.find(t => t.roles.includes(role));
     return firstAllowed ? firstAllowed.id : 'unidades';
   });
 
-  // Proteção: Se for Professor, bloqueia tela inteira
   if (role === 'professor') {
     return (
       <div className="flex h-[80vh] items-center justify-center flex-col gap-4 text-slate-400 animate-fade-in">
@@ -82,7 +84,7 @@ export default function ConfiguracoesPage() {
         </p>
       </div>
 
-      {/* MENU DE ABAS (Estilo Moderno e Responsivo) */}
+      {/* MENU DE ABAS */}
       <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 mb-0 sticky top-0 z-20 flex overflow-x-auto no-scrollbar rounded-t-2xl shadow-sm">
         {allowedTabs.map((tab) => {
           const Icon = tab.icon;
@@ -105,7 +107,7 @@ export default function ConfiguracoesPage() {
         })}
       </div>
 
-      {/* ÁREA DE CONTEÚDO (Com Suspense para Lazy Loading) */}
+      {/* ÁREA DE CONTEÚDO */}
       <div className="bg-white dark:bg-slate-800 rounded-b-2xl rounded-tr-2xl shadow-sm border-x border-b border-slate-200 dark:border-slate-700 min-h-[600px] relative">
         <Suspense fallback={<TabLoading />}>
             <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
