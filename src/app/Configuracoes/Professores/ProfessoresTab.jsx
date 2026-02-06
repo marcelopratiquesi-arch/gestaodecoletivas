@@ -32,11 +32,11 @@ export function ProfessoresTab() {
   const [unidades, setUnidades] = useState([]);
   const [vinculos, setVinculos] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [loadingMais, setLoadingMais] = useState(false); // Estado para o botão "Carregar Mais"
+  const [loadingMais, setLoadingMais] = useState(false); 
   
   // PAGINAÇÃO
-  const [ultimoDoc, setUltimoDoc] = useState(null); // Cursor para Admin
-  const [todosIdsMentor, setTodosIdsMentor] = useState([]); // Lista total de IDs para Mentor/Unidade
+  const [ultimoDoc, setUltimoDoc] = useState(null); 
+  const [todosIdsMentor, setTodosIdsMentor] = useState([]); 
   const [indicePaginacao, setIndicePaginacao] = useState(0); 
   const [temMais, setTemMais] = useState(true);
 
@@ -70,17 +70,20 @@ export function ProfessoresTab() {
   const [erro, setErro] = useState("");
   const [sucesso, setSucesso] = useState("");
 
+  // CORREÇÃO DE BASE (Botão Temporário)
+  const [corrigindoBase, setCorrigindoBase] = useState(false);
+
   const senhaPadrao = "123456";
 
   // --- INICIALIZAÇÃO OTIMIZADA ---
   useEffect(() => { 
       if (podeVer) {
-          carregarUnidadesBase(); // Carrega unidades (leve)
-          iniciarCarregamentoGrade(10); // Carrega primeiros 10 professores
+          carregarUnidadesBase(); 
+          iniciarCarregamentoGrade(10); 
       }
   }, [podeVer, role, userId, userUnidadeId]);
 
-  // 1. Carrega apenas a lista de Unidades (necessário para os selects e tags)
+  // 1. Carrega apenas a lista de Unidades
   async function carregarUnidadesBase() {
       try {
           let listaUnidades = [];
@@ -102,7 +105,7 @@ export function ProfessoresTab() {
       } catch (e) { console.error(e); }
   }
 
-  // 2. Inicia o carregamento da tabela (Reset)
+  // 2. Inicia o carregamento da tabela
   async function iniciarCarregamentoGrade(qtdInicial = 10) {
       setLoading(true);
       setProfessores([]);
@@ -125,10 +128,9 @@ export function ProfessoresTab() {
       }
   }
 
-  // --- LÓGICA DE PAGINAÇÃO: ADMIN ---
+  // --- PAGINAÇÃO: ADMIN ---
   async function carregarLoteAdmin(qtd, ultimo) {
       const refProfs = collection(db, "professores");
-      // Se qtd for muito grande (ex: 1000 - botão Todos), fazemos sem limite ou com limite alto
       let q = qtd > 500 ? query(refProfs, orderBy("nome")) : query(refProfs, orderBy("nome"), limit(qtd));
       
       if (ultimo && qtd <= 500) {
@@ -141,20 +143,17 @@ export function ProfessoresTab() {
       if (novosProfs.length < qtd) setTemMais(false);
       if (snap.docs.length > 0) setUltimoDoc(snap.docs[snap.docs.length - 1]);
 
-      // Carregar vínculos apenas destes professores
       await carregarVinculosLote(novosProfs);
 
       setProfessores(prev => {
-          // Previne duplicidade usando Set
           const idsExistentes = new Set(prev.map(p => p.id));
           const filtrados = novosProfs.filter(p => !idsExistentes.has(p.id));
           return [...prev, ...filtrados];
       });
   }
 
-  // --- LÓGICA DE PAGINAÇÃO: MENTOR/UNIDADE ---
+  // --- PAGINAÇÃO: MENTOR/UNIDADE ---
   async function prepararListaMentor(qtdInicial) {
-      // 1. Identificar unidades do escopo
       let minhasUnidadesIds = [];
       if (role === "unidade") minhasUnidadesIds = [userUnidadeId];
       else if (role === "mentor") {
@@ -164,7 +163,6 @@ export function ProfessoresTab() {
 
       if (minhasUnidadesIds.length === 0) { setTemMais(false); return; }
 
-      // 2. Buscar TODOS os vínculos dessas unidades para saber QUAIS professores listar
       let todosLinks = [];
       for (let i = 0; i < minhasUnidadesIds.length; i += 10) {
           const chunk = minhasUnidadesIds.slice(i, i + 10);
@@ -172,11 +170,9 @@ export function ProfessoresTab() {
           todosLinks = [...todosLinks, ...s.docs.map(d => ({id:d.id, ...d.data()}))];
       }
 
-      // Extrai IDs únicos de professores
       const idsProfsUnicos = [...new Set(todosLinks.map(v => v.professorId))];
       setTodosIdsMentor(idsProfsUnicos);
       
-      // Carrega o primeiro lote
       await carregarLoteMentor(idsProfsUnicos, 0, qtdInicial);
   }
 
@@ -184,10 +180,8 @@ export function ProfessoresTab() {
       const idsParaCarregar = todosIds.slice(indice, indice + qtd);
       if (idsParaCarregar.length === 0) { setTemMais(false); return; }
 
-      // Se o usuário pediu "Todos" (qtd > 500), carrega o restante da lista
       const idsFinais = qtd > 500 ? todosIds.slice(indice) : idsParaCarregar;
 
-      // Buscar detalhes dos professores
       const novosProfs = [];
       for (let i = 0; i < idsFinais.length; i += 10) {
           const chunk = idsFinais.slice(i, i + 10);
@@ -196,7 +190,6 @@ export function ProfessoresTab() {
           novosProfs.push(...s.docs.map(d => ({id:d.id, ...d.data()})));
       }
 
-      // Ordenar localmente por nome (já que buscamos por ID)
       novosProfs.sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
 
       await carregarVinculosLote(novosProfs);
@@ -212,7 +205,6 @@ export function ProfessoresTab() {
       if (novoIndice >= todosIds.length) setTemMais(false);
   }
 
-  // --- CARREGAR VÍNCULOS DOS PROFESSORES VISÍVEIS ---
   async function carregarVinculosLote(profs) {
       if (profs.length === 0) return;
       const ids = profs.map(p => p.id);
@@ -231,7 +223,6 @@ export function ProfessoresTab() {
       });
   }
 
-  // --- FUNÇÃO DO BOTÃO "CARREGAR MAIS" ---
   const carregarMais = async (qtd) => {
       setLoadingMais(true);
       try {
@@ -240,7 +231,6 @@ export function ProfessoresTab() {
       } catch (e) { console.error(e); } finally { setLoadingMais(false); }
   };
 
-  // --- LÓGICA DE ORDENAÇÃO E FILTRO VISUAL ---
   const handleOrdenar = (campo) => {
       setOrdenacao(prev => ({
           campo,
@@ -255,22 +245,18 @@ export function ProfessoresTab() {
           : <ArrowDown className="w-3 h-3 text-red-600 ml-1" />;
   };
 
-  // Helper ORIGINAL para exibir as tags corretamente
   const getUnidadesVinculadas = (profId) => {
       const links = vinculos.filter(v => v.professorId === profId);
       return links.map(v => {
           const u = unidades.find(uni => String(uni.id) === String(v.unidadeId));
-          return u ? { id: v.id, nome: u.nome, vinculoId: v.id } : null; // Importante: vinculoId
+          return u ? { id: v.id, nome: u.nome, vinculoId: v.id } : null;
       }).filter(Boolean);
   };
 
   const professoresProcessados = useMemo(() => {
     const termo = busca.toLowerCase();
-    
-    // Filtra apenas o que já foi carregado
     let lista = professores.filter(p => (p.nome || "").toLowerCase().includes(termo) || (p.email || "").toLowerCase().includes(termo));
 
-    // Ordenação no cliente
     return lista.sort((a, b) => {
         let valA, valB;
         if (ordenacao.campo === 'unidades') {
@@ -287,7 +273,57 @@ export function ProfessoresTab() {
     });
   }, [professores, vinculos, busca, ordenacao]);
 
-  // --- AÇÕES DO FORMULÁRIO (MANTIDAS DO ORIGINAL) ---
+  // --- FUNÇÃO PARA CORRIGIR E-MAILS ANTIGOS (NOVO!) ---
+  const corrigirEmailsAntigos = async () => {
+    if (!confirm("⚠️ ATENÇÃO: Isso vai varrer todo o banco de dados e converter os e-mails dos professores para minúsculo.\n\nDeseja continuar?")) return;
+    
+    setCorrigindoBase(true);
+    let contador = 0;
+
+    try {
+        const snap = await getDocs(collection(db, "professores"));
+        
+        const updates = snap.docs.map(async (docSnapshot) => {
+            const data = docSnapshot.data();
+            const emailAtual = data.email || "";
+            const emailNovo = emailAtual.toLowerCase().trim();
+
+            // Só gasta processamento se for diferente
+            if (emailAtual !== emailNovo) {
+                contador++;
+                // Atualiza coleção 'professores'
+                await updateDoc(doc(db, "professores", docSnapshot.id), { 
+                    email: emailNovo 
+                });
+                
+                // Se tiver usuário vinculado, atualiza lá também
+                if (data.uidLogin) {
+                    try {
+                        await updateDoc(doc(db, "usuarios", data.uidLogin), { 
+                            email: emailNovo 
+                        });
+                    } catch (e) {
+                        console.log(`Usuário vinculado não encontrado para ${emailAtual}`);
+                    }
+                }
+            }
+        });
+
+        await Promise.all(updates);
+        alert(`SUCESSO! ${contador} professores foram corrigidos para minúsculo.`);
+        
+        // Recarrega a lista para ver a mudança
+        iniciarCarregamentoGrade(50);
+
+    } catch (error) {
+        console.error("Erro na correção:", error);
+        alert("Erro ao corrigir base. Verifique o console.");
+    } finally {
+        setCorrigindoBase(false);
+    }
+  };
+
+  // --- AÇÕES DO FORMULÁRIO ---
   function abrirFluxoNovo() {
       setEmailVerificacao("");
       setProfessorEncontrado(null);
@@ -296,6 +332,7 @@ export function ProfessoresTab() {
       setModalVerificacaoAberto(true);
   }
 
+  // 🔴 CORREÇÃO 1: Busca de Email "Case Insensitive" (Tudo minúsculo)
   async function verificarEmail(e) {
       e.preventDefault();
       if (!emailVerificacao.includes("@")) return setErro("E-mail inválido.");
@@ -304,15 +341,19 @@ export function ProfessoresTab() {
       setErro("");
       setProfessorEncontrado(null);
 
+      const emailBusca = emailVerificacao.trim().toLowerCase(); // Força minúsculo na busca
+
       try {
-          const q = query(collection(db, "professores"), where("email", "==", emailVerificacao.trim().toLowerCase()));
+          // Busca exata pelo email minúsculo
+          const q = query(collection(db, "professores"), where("email", "==", emailBusca));
           const snap = await getDocs(q);
 
           if (!snap.empty) {
               const prof = { id: snap.docs[0].id, ...snap.docs[0].data() };
               setProfessorEncontrado(prof);
           } else {
-              abrirCadastroCompleto(emailVerificacao);
+              // Se não achar, abre cadastro já com o email padronizado
+              abrirCadastroCompleto(emailBusca);
           }
       } catch (err) {
           setErro("Erro na verificação.");
@@ -343,10 +384,8 @@ export function ProfessoresTab() {
               createdAt: serverTimestamp()
           });
 
-          // Atualiza localmente
           setVinculos(prev => [...prev, { id: docRef.id, professorId: professorEncontrado.id, unidadeId: String(unidadeSelecionadaId) }]);
           
-          // Se o professor ainda não estava na lista (estava em outra página), adiciona ele
           setProfessores(prev => {
               if (prev.some(p => p.id === professorEncontrado.id)) return prev;
               return [professorEncontrado, ...prev];
@@ -386,48 +425,71 @@ export function ProfessoresTab() {
       setModalFormAberto(true);
   }
 
+  // 🔴 CORREÇÃO 2: Salvar com trava de nomes duplicados e E-mail minúsculo
   async function salvarProfessor(e) {
     e.preventDefault(); 
     setSalvando(true);
     setErro("");
     
-    if (!nome.trim()) { setSalvando(false); return setErro("Nome obrigatório"); }
+    const nomeLimpo = nome.trim();
+    const emailLimpo = email.trim().toLowerCase(); // Força minúsculo no cadastro
+
+    if (!nomeLimpo) { setSalvando(false); return setErro("Nome obrigatório"); }
 
     let secondaryApp = null;
 
     try {
+      // --- VERIFICAÇÃO DE NOME DUPLICADO ---
+      // Busca se existe alguém com esse nome exato
+      const qNome = query(collection(db, "professores"), where("nome", "==", nomeLimpo));
+      const snapNome = await getDocs(qNome);
+      
+      // Filtra para não alertar se for o próprio usuário que estamos editando
+      const duplicados = snapNome.docs.filter(d => d.id !== (profEditando?.id || 'new'));
+
+      if (duplicados.length > 0) {
+          const listaEmails = duplicados.map(d => d.data().email).join(", ");
+          const msg = `⚠️ ATENÇÃO: Já existe professor cadastrado com o nome "${nomeLimpo}".\n\nE-mail(s) cadastrado(s): ${listaEmails}\n\nTem certeza que é outra pessoa?`;
+          
+          if (!window.confirm(msg)) {
+              setSalvando(false);
+              return; 
+          }
+      }
+      // --------------------------------------
+
       if (profEditando) { 
           await updateDoc(doc(db, "professores", profEditando.id), { 
-            nome, telefone, status, updatedAt: serverTimestamp() 
+            nome: nomeLimpo, telefone, status, updatedAt: serverTimestamp() 
           });
           
           if (profEditando.uidLogin) {
-             try { await updateDoc(doc(db, "usuarios", profEditando.uidLogin), { nome }); } catch(err) {}
+             try { await updateDoc(doc(db, "usuarios", profEditando.uidLogin), { nome: nomeLimpo }); } catch(err) {}
           }
 
-          // Atualiza lista local
-          setProfessores(prev => prev.map(p => p.id === profEditando.id ? { ...p, nome, telefone, status } : p));
+          setProfessores(prev => prev.map(p => p.id === profEditando.id ? { ...p, nome: nomeLimpo, telefone, status } : p));
           setModalFormAberto(false);
 
       } else { 
+        // Criação de Novo Usuário
         secondaryApp = initializeApp(getApp().options, "SecondaryAppProfCreate");
         const secondaryAuth = getAuth(secondaryApp);
-        const userCred = await createUserWithEmailAndPassword(secondaryAuth, email, senhaPadrao);
+        const userCred = await createUserWithEmailAndPassword(secondaryAuth, emailLimpo, senhaPadrao);
         const newUid = userCred.user.uid;
 
         const docRef = await addDoc(collection(db, "professores"), { 
-            nome, email, telefone, status, uidLogin: newUid, 
+            nome: nomeLimpo, email: emailLimpo, telefone, status, uidLogin: newUid, 
             createdAt: serverTimestamp(), createdBy: userId, roleCreator: role 
         });
 
         await setDoc(doc(db, "usuarios", newUid), {
-          nome: nome, email: email, role: "professor", professorId: docRef.id,
+          nome: nomeLimpo, email: emailLimpo, role: "professor", professorId: docRef.id,
           status: "ativo", criadoPor: userId
         });
 
         await signOut(secondaryAuth);
 
-        const novoProf = { id: docRef.id, nome, email, telefone, status };
+        const novoProf = { id: docRef.id, nome: nomeLimpo, email: emailLimpo, telefone, status };
         setProfessores(prev => [novoProf, ...prev]);
 
         if (unidadeSelecionadaId) {
@@ -495,6 +557,19 @@ export function ProfessoresTab() {
                 <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
                 <input type="text" placeholder="Buscar nos carregados..." className="w-full pl-9 p-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-red-600 outline-none shadow-sm" value={busca} onChange={e => setBusca(e.target.value)} />
             </div>
+            
+            {/* BOTÃO DE CORREÇÃO (Só Admin Vê) */}
+            {role === "admin" && (
+                <button 
+                    onClick={corrigirEmailsAntigos} 
+                    disabled={corrigindoBase}
+                    className="px-4 py-2.5 bg-purple-600 text-white rounded-lg font-bold shadow hover:bg-purple-700 text-sm whitespace-nowrap transition-colors flex items-center gap-2"
+                >
+                    {corrigindoBase ? <Loader2 className="w-4 h-4 animate-spin"/> : <Layers className="w-4 h-4" />} 
+                    CORRIGIR E-MAILS
+                </button>
+            )}
+
             {podeEditar && (
                 <button onClick={abrirFluxoNovo} className="px-4 py-2.5 bg-red-600 text-white rounded-lg font-bold shadow hover:bg-red-700 text-sm whitespace-nowrap transition-colors flex items-center gap-2">
                     <PlusCircle className="w-4 h-4" /> Novo / Vincular
@@ -503,7 +578,7 @@ export function ProfessoresTab() {
         </div>
       </div>
 
-      {/* TABELA - VISUAL ORIGINAL RESTAURADO */}
+      {/* TABELA */}
       <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden shadow-sm relative">
         {loading && <div className="absolute inset-0 bg-white/80 z-10 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-red-600"/></div>}
         
@@ -586,7 +661,6 @@ export function ProfessoresTab() {
         </table>
       </div>
 
-      {/* RODAPÉ DE PAGINAÇÃO (Economia de Leitura) */}
       {temMais && !busca && (
           <div className="mt-4 flex flex-col items-center gap-2">
               <p className="text-xs text-slate-400 mb-1">Carregando dados consome leituras. Use com sabedoria.</p>
