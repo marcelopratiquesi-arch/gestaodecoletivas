@@ -47,20 +47,7 @@ const formatProfessorName = (name) => {
     return `${parts[0]} ${parts[parts.length - 1]}`;
 };
 
-// Cache
-const CACHE_KEY = 'pratique_schedule_v12_';
-const getCache = (key) => {
-    try {
-        const item = localStorage.getItem(CACHE_KEY + key);
-        if(!item) return null;
-        const { data, ts } = JSON.parse(item);
-        if (Date.now() - ts > 86400000) return null; 
-        return data;
-    } catch { return null; }
-};
-const setCache = (key, data) => localStorage.setItem(CACHE_KEY + key, JSON.stringify({ data, ts: Date.now() }));
-
-// --- COMPONENTE SKELETON (LOADING CHIQUE) ---
+// --- COMPONENTE SKELETON ---
 const SkeletonItem = ({ isDark }) => (
     <div className={`p-4 rounded-xl border flex justify-between items-center ${isDark ? 'bg-[#1a1a1a] border-white/5' : 'bg-white border-slate-100'}`}>
         <div className="space-y-2 w-full">
@@ -83,50 +70,48 @@ export default function PublicSchedule() {
   const [isDarkMode, setIsDarkMode] = useState(false);
   
   const [busca, setBusca] = useState("");
-  const [termoDebounce, setTermoDebounce] = useState(""); // Novo estado para debounce
+  const [termoDebounce, setTermoDebounce] = useState(""); 
   
   const [resultadosUnidade, setResultadosUnidade] = useState([]);
   const [resultadosModalidade, setResultadosModalidade] = useState(null);
 
-  // 1. Inicialização
+  // 1. Inicialização (SEM CACHE - SEMPRE ATUALIZADO)
   useEffect(() => {
     const init = async () => {
-        const cachedU = getCache('unidades');
-        if (cachedU) {
-            setUnidades(cachedU.list);
-            setModalidadesMap(cachedU.mods);
-            setProfessoresMap(cachedU.profs);
-            setLoading(false);
-            return;
-        }
+        setLoading(true);
         try {
+            // Busca dados frescos do Firebase sempre
             const [uSnap, mSnap, pSnap] = await Promise.all([
                 getDocs(query(collection(db, 'unidades'), orderBy('nome'))),
                 getDocs(collection(db, 'modalidades')),
                 getDocs(collection(db, 'professores'))
             ]);
+            
             const uList = uSnap.docs.map(d => ({ id: d.id, ...d.data() }));
             const mAbs = {}; mSnap.docs.forEach(d => mAbs[d.id] = d.data());
             const pAbs = {}; pSnap.docs.forEach(d => pAbs[d.id] = d.data().nome);
+            
             setUnidades(uList);
             setModalidadesMap(mAbs);
             setProfessoresMap(pAbs);
-            setCache('unidades', { list: uList, mods: mAbs, profs: pAbs });
-        } catch (e) { console.error(e); } 
-        finally { setLoading(false); }
+        } catch (e) { 
+            console.error("Erro ao carregar dados iniciais:", e); 
+        } finally { 
+            setLoading(false); 
+        }
     };
     init();
   }, []);
 
-  // 2. Debounce na Busca (Performance)
+  // 2. Debounce na Busca
   useEffect(() => {
       const timer = setTimeout(() => {
           setTermoDebounce(busca);
-      }, 300); // Espera 300ms antes de buscar
+      }, 300); 
       return () => clearTimeout(timer);
   }, [busca]);
 
-  // 3. Lógica de Busca (Usa o termoDebounce)
+  // 3. Busca Inteligente
   useEffect(() => {
       if (!termoDebounce.trim()) {
           setResultadosUnidade([]);
@@ -134,7 +119,6 @@ export default function PublicSchedule() {
           return;
       }
       const termo = termoDebounce.toLowerCase();
-      
       const unitsFound = unidades.filter(u => u.nome.toLowerCase().includes(termo) || u.cidade?.toLowerCase().includes(termo));
       setResultadosUnidade(unitsFound);
 
@@ -148,6 +132,7 @@ export default function PublicSchedule() {
 
   const buscarOndeTemModalidade = async (modIds) => {
       try {
+          // Busca direto do banco para garantir precisão
           const q = query(collection(db, 'aulas'), where('modalidadeId', 'in', modIds.slice(0, 10)));
           const snap = await getDocs(q);
           const agrupado = {};
@@ -169,32 +154,30 @@ export default function PublicSchedule() {
       } catch (e) { console.error(e); }
   };
 
-  // 4. Carregar Grade
+  // 4. Carregar Grade da Unidade (SEM CACHE)
   useEffect(() => {
       if (!unidadeSelecionada) return;
       const loadGrade = async () => {
           setLoadingGrade(true);
-          const cacheKey = `grade_vfinal_${unidadeSelecionada.id}`;
-          const cached = getCache(cacheKey);
-          if(cached) {
-              setGradeUnidade(cached);
+          try {
+              // Busca direta no banco de dados
+              const q = query(collection(db, 'aulas'), where('unidadeId', '==', unidadeSelecionada.id));
+              const snap = await getDocs(q);
+              const data = snap.docs.map(d => {
+                  const a = d.data();
+                  return {
+                      ...a,
+                      modalidadeNome: modalidadesMap[a.modalidadeId]?.nome || 'Coletiva',
+                      modalidadeCor: modalidadesMap[a.modalidadeId]?.cor || '#333',
+                      professorNome: formatProfessorName(professoresMap[a.professorId])
+                  };
+              });
+              setGradeUnidade(data);
+          } catch (e) {
+              console.error("Erro ao carregar grade:", e);
+          } finally {
               setLoadingGrade(false);
-              return;
           }
-          const q = query(collection(db, 'aulas'), where('unidadeId', '==', unidadeSelecionada.id));
-          const snap = await getDocs(q);
-          const data = snap.docs.map(d => {
-              const a = d.data();
-              return {
-                  ...a,
-                  modalidadeNome: modalidadesMap[a.modalidadeId]?.nome || 'Coletiva',
-                  modalidadeCor: modalidadesMap[a.modalidadeId]?.cor || '#333',
-                  professorNome: formatProfessorName(professoresMap[a.professorId])
-              };
-          });
-          setGradeUnidade(data);
-          setCache(cacheKey, data);
-          setLoadingGrade(false);
       };
       loadGrade();
   }, [unidadeSelecionada, modalidadesMap, professoresMap]);
@@ -224,7 +207,7 @@ export default function PublicSchedule() {
   // TELA 1: BUSCA
   if (!unidadeSelecionada) {
       return (
-        <div className={`min-h-screen ${themeClasses} transition-colors duration-300 p-4 flex flex-col items-center justify-center relative`}>
+        <div className={`min-h-screen ${themeClasses} transition-colors duration-300 p-4 flex flex-col items-center justify-start pt-12 md:pt-24 relative`}>
             
             <button 
                 onClick={() => setIsDarkMode(!isDarkMode)}
@@ -233,13 +216,13 @@ export default function PublicSchedule() {
                 {isDarkMode ? <Sun className="w-5 h-5"/> : <Moon className="w-5 h-5"/>}
             </button>
 
-            <div className={`w-full max-w-lg md:max-w-2xl ${isDarkMode ? 'bg-[#1a1a1a]' : 'bg-white'} rounded-3xl shadow-xl p-8 md:p-12 space-y-8 animate-in fade-in zoom-in duration-300 border ${isDarkMode ? 'border-white/5' : 'border-gray-100'}`}>
+            <div className={`w-full max-w-lg md:max-w-3xl ${isDarkMode ? 'bg-[#1a1a1a]' : 'bg-white'} rounded-3xl shadow-xl p-8 md:p-12 space-y-10 animate-in fade-in zoom-in duration-300 border ${isDarkMode ? 'border-white/5' : 'border-gray-100'}`}>
                 
-                <div className="flex flex-col items-center gap-4 md:gap-6">
+                <div className="flex flex-col items-center gap-6">
                     <img 
                         src={LOGOS['pratique']} 
                         alt="Pratique" 
-                        className={`h-24 md:h-48 object-contain transition-all duration-500 ${isDarkMode ? 'brightness-0 invert' : ''}`} 
+                        className={`h-24 md:h-72 object-contain transition-all duration-500 ${isDarkMode ? 'brightness-0 invert' : ''}`} 
                     />
                     
                     <div className="text-center">
@@ -247,7 +230,7 @@ export default function PublicSchedule() {
                             <span className="text-[#ed1c24]">HAPPY</span>
                             <span className="text-[#00adef]">ZONE</span>
                         </h2>
-                        <p className={`text-xs md:text-sm font-bold uppercase tracking-[0.3em] md:tracking-[0.5em] mt-2 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                        <p className={`text-xs md:text-sm font-bold uppercase tracking-[0.3em] md:tracking-[0.5em] mt-3 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
                             Quadro de Horários Oficial
                         </p>
                     </div>
@@ -257,8 +240,8 @@ export default function PublicSchedule() {
                     <div className="relative">
                         <input 
                             type="text" 
-                            placeholder="BUSCAR UNIDADE OU AULA..." 
-                            className={`w-full h-12 md:h-16 pl-12 md:pl-14 pr-4 rounded-xl border-2 outline-none font-black text-sm md:text-xl transition-all uppercase tracking-wide shadow-sm hover:shadow-md focus:shadow-lg ${inputClasses}`}
+                            placeholder="DIGITE A UNIDADE OU AULA..." 
+                            className={`w-full h-12 md:h-16 pl-12 md:pl-14 pr-4 rounded-xl border-2 outline-none font-bold text-[15px] transition-all uppercase tracking-wide shadow-sm hover:shadow-md focus:shadow-lg ${inputClasses}`}
                             value={busca}
                             onChange={e => setBusca(e.target.value)}
                             autoFocus
@@ -319,7 +302,6 @@ export default function PublicSchedule() {
                                 )}
                             </div>
                         ) : (
-                            // SKELETON LOADING ENQUANTO DIGITA (Visual de espera)
                             busca.length > 0 && <div className="space-y-2">
                                 <SkeletonItem isDark={isDarkMode} />
                                 <SkeletonItem isDark={isDarkMode} />
