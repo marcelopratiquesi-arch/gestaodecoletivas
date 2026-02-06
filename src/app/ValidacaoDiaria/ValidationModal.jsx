@@ -1,39 +1,56 @@
 import React, { useState, useEffect } from 'react';
 import { 
   CircleCheck, CircleX, Users, ArrowRightLeft, 
-  ChevronDown, Loader2, Undo2 
+  ChevronDown, Loader2, Undo2, Search, Mail, User, Check
 } from 'lucide-react';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../../services/firebase'; // Verifique se o caminho está correto para o seu projeto
 
 export function ValidationModal({ 
     isOpen, onClose, onConfirm, onRevert, 
     acaoAtual, catalogs, processando, isMaster 
 }) {
-    // Estados locais do formulário
+    // --- ESTADOS GERAIS ---
     const [inputValor, setInputValor] = useState(""); 
     const [inputObs, setInputObs] = useState(""); 
+    
+    // --- ESTADOS DE SUBSTITUIÇÃO (NOVO MÓDULO) ---
     const [isSubstituicao, setIsSubstituicao] = useState(false);
-    const [substitutoId, setSubstitutoId] = useState("");
+    const [emailBusca, setEmailBusca] = useState("");
+    const [professorEncontrado, setProfessorEncontrado] = useState(null); // Guarda o prof buscado
+    const [buscandoProf, setBuscandoProf] = useState(false);
+    const [erroBusca, setErroBusca] = useState("");
     const [motivoSubstituicao, setMotivoSubstituicao] = useState("");
 
-    // Carregar dados quando o modal abrir
+    // --- CARREGAR DADOS AO ABRIR ---
     useEffect(() => {
         if (isOpen && acaoAtual) {
-            const { item, tipo } = acaoAtual;
+            const { item } = acaoAtual;
             
-            // Resetar
+            // Resetar tudo
             setInputValor("");
             setInputObs("");
             setIsSubstituicao(false);
-            setSubstitutoId("");
+            setEmailBusca("");
+            setProfessorEncontrado(null);
+            setErroBusca("");
             setMotivoSubstituicao("");
 
-            // Preencher se já houver dados
+            // Preencher se for edição
             if (item.validacao) {
                 if (item.validacao.substituicao) {
                     setIsSubstituicao(true);
-                    setSubstitutoId(item.validacao.professorId);
                     setMotivoSubstituicao(item.validacao.motivoSubstituicao || "");
                     setInputValor(item.validacao.alunos || "");
+                    
+                    // Se estiver editando, tentamos mostrar quem é o substituto atual
+                    // (Se a lista catalogs.professores tiver ele, mostramos o nome, senão mostramos que tem um ID)
+                    if (catalogs && catalogs.professores) {
+                        const profJaSalvo = catalogs.professores.find(p => p.id === item.validacao.professorId);
+                        if (profJaSalvo) {
+                            setProfessorEncontrado(profJaSalvo);
+                        }
+                    }
                 } else {
                     if(item.status === 'cancelada') {
                         const motivo = item.validacao.motivoCancelamento || "";
@@ -50,18 +67,58 @@ export function ValidationModal({
                 }
             }
         }
-    }, [isOpen, acaoAtual]);
+    }, [isOpen, acaoAtual, catalogs]);
+
+    // --- FUNÇÃO DE BUSCA NO BANCO DE DADOS ---
+    const handleBuscarProfessor = async () => {
+        if (!emailBusca.trim()) {
+            setErroBusca("Digite o e-mail do professor.");
+            return;
+        }
+
+        setBuscandoProf(true);
+        setErroBusca("");
+        setProfessorEncontrado(null);
+
+        try {
+            // Busca exata pelo email na coleção de professores
+            const q = query(collection(db, "professores"), where("email", "==", emailBusca.trim()));
+            const querySnapshot = await getDocs(q);
+
+            if (querySnapshot.empty) {
+                setErroBusca("Professor não encontrado com este e-mail.");
+            } else {
+                // Pega o primeiro (e deve ser único) resultado
+                const docData = querySnapshot.docs[0].data();
+                setProfessorEncontrado({
+                    id: querySnapshot.docs[0].id,
+                    ...docData
+                });
+            }
+        } catch (error) {
+            console.error("Erro ao buscar professor:", error);
+            setErroBusca("Erro ao conectar com o banco de dados.");
+        } finally {
+            setBuscandoProf(false);
+        }
+    };
 
     if (!isOpen || !acaoAtual) return null;
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        // Prepara os dados para mandar para o pai
+        
+        // Validação extra para substituição
+        if (acaoAtual.tipo === 'validar' && isSubstituicao && !professorEncontrado) {
+            alert("Por favor, busque e confirme o professor substituto pelo e-mail.");
+            return;
+        }
+
         const dadosFormulario = {
             inputValor,
             inputObs,
             isSubstituicao,
-            substitutoId,
+            substitutoId: professorEncontrado?.id || "", // Envia o ID do professor encontrado
             motivoSubstituicao
         };
         onConfirm(dadosFormulario);
@@ -69,10 +126,10 @@ export function ValidationModal({
 
     return (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-100 dark:border-slate-700 animate-in zoom-in-95 duration-200">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-100 dark:border-slate-700 animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
             
             {/* Header do Modal */}
-            <div className={`p-6 text-center relative overflow-hidden ${acaoAtual.tipo === 'validar' ? 'bg-emerald-50 dark:bg-emerald-900/20' : 'bg-rose-50 dark:bg-rose-900/20'}`}>
+            <div className={`p-6 text-center relative overflow-hidden shrink-0 ${acaoAtual.tipo === 'validar' ? 'bg-emerald-50 dark:bg-emerald-900/20' : 'bg-rose-50 dark:bg-rose-900/20'}`}>
                 <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-transparent via-current to-transparent opacity-20"></div>
                 <div className={`w-16 h-16 rounded-full mx-auto flex items-center justify-center mb-3 shadow-sm ${acaoAtual.tipo === 'validar' ? 'bg-white text-emerald-500' : 'bg-white text-rose-500'}`}>
                     {acaoAtual.tipo === 'validar' ? <CircleCheck className="w-8 h-8"/> : <CircleX className="w-8 h-8"/>}
@@ -84,14 +141,14 @@ export function ValidationModal({
                 <button onClick={onClose} className="absolute top-4 right-4 p-2 rounded-full hover:bg-black/5 transition-colors"><CircleX className="w-5 h-5 text-slate-400"/></button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-5">
+            <form onSubmit={handleSubmit} className="p-6 space-y-5 overflow-y-auto custom-scrollbar">
               {acaoAtual.tipo === 'validar' ? (
                 <>
                     {/* Switch de Substituição */}
                     <div className={`rounded-2xl border-2 transition-all duration-300 overflow-hidden ${isSubstituicao ? 'border-blue-500 bg-blue-50/50' : 'border-slate-100 hover:border-blue-200'}`}>
                         <label className="flex items-center gap-4 p-4 cursor-pointer select-none">
                             <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${isSubstituicao ? 'border-blue-500 bg-blue-500' : 'border-slate-300'}`}>
-                                {isSubstituicao && <CircleCheck className="w-3 h-3 text-white"/>}
+                                {isSubstituicao && <Check className="w-3 h-3 text-white"/>}
                             </div>
                             <input type="checkbox" className="hidden" checked={isSubstituicao} onChange={(e) => setIsSubstituicao(e.target.checked)}/>
                             <div className="flex-1">
@@ -101,20 +158,58 @@ export function ValidationModal({
                             <ArrowRightLeft className={`w-5 h-5 ${isSubstituicao ? 'text-blue-500' : 'text-slate-300'}`}/>
                         </label>
                         
-                        {/* Campos de Substituição */}
+                        {/* --- NOVA LÓGICA DE BUSCA POR E-MAIL --- */}
                         {isSubstituicao && (
                             <div className="px-4 pb-4 space-y-3 animate-in slide-in-from-top-2">
                                 <div className="h-px w-full bg-blue-200 mb-3"></div>
+                                
+                                {/* Campo de Busca */}
                                 <div>
-                                    <label className="block text-[10px] font-bold text-blue-600 uppercase mb-1">Quem deu a aula?</label>
-                                    <div className="relative">
-                                        <select className="w-full p-2.5 bg-white border border-blue-200 rounded-xl text-sm font-semibold text-slate-700 focus:ring-2 focus:ring-blue-500 outline-none appearance-none" value={substitutoId} onChange={(e) => setSubstitutoId(e.target.value)}>
-                                            <option value="">Selecione o professor...</option>
-                                            {catalogs.professores.filter(p => String(p.id) !== String(acaoAtual.item.professorTitular?.id)).map(p => (<option key={p.id} value={p.id}>{p.nome}</option>))}
-                                        </select>
-                                        <ChevronDown className="absolute right-3 top-3 w-4 h-4 text-blue-400 pointer-events-none"/>
+                                    <label className="block text-[10px] font-bold text-blue-600 uppercase mb-1">E-mail do Substituto</label>
+                                    <div className="flex gap-2">
+                                        <div className="relative flex-1">
+                                            <Mail className="absolute left-3 top-2.5 w-4 h-4 text-blue-400"/>
+                                            <input 
+                                                type="email" 
+                                                placeholder="ex: professor@pratique.com"
+                                                className="w-full pl-9 p-2 bg-white border border-blue-200 rounded-lg text-sm outline-none focus:border-blue-500"
+                                                value={emailBusca}
+                                                onChange={(e) => setEmailBusca(e.target.value)}
+                                                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleBuscarProfessor())}
+                                            />
+                                        </div>
+                                        <button 
+                                            type="button" 
+                                            onClick={handleBuscarProfessor}
+                                            disabled={buscandoProf || !emailBusca}
+                                            className="bg-blue-600 text-white px-3 rounded-lg font-bold text-xs hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1"
+                                        >
+                                            {buscandoProf ? <Loader2 className="w-3 h-3 animate-spin"/> : <Search className="w-3 h-3"/>}
+                                            Buscar
+                                        </button>
                                     </div>
+                                    {erroBusca && <p className="text-[10px] text-red-500 font-bold mt-1 ml-1">{erroBusca}</p>}
                                 </div>
+
+                                {/* Resultado da Busca */}
+                                {professorEncontrado && (
+                                    <div className="flex items-center gap-3 p-3 bg-white rounded-xl border border-blue-200 shadow-sm animate-in fade-in">
+                                        <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center overflow-hidden border border-slate-300">
+                                            {professorEncontrado.fotoUrl ? (
+                                                <img src={professorEncontrado.fotoUrl} alt="Foto" className="w-full h-full object-cover"/>
+                                            ) : (
+                                                <User className="w-5 h-5 text-slate-400"/>
+                                            )}
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="text-[10px] font-bold text-blue-600 uppercase">Substituto Confirmado</p>
+                                            <p className="text-sm font-black text-slate-800 truncate">{professorEncontrado.nome}</p>
+                                        </div>
+                                        <Check className="w-5 h-5 text-emerald-500 ml-auto"/>
+                                    </div>
+                                )}
+
+                                {/* Motivo da Troca */}
                                 <div>
                                     <label className="block text-[10px] font-bold text-blue-600 uppercase mb-1">Motivo da Troca</label>
                                     <div className="relative">
@@ -179,6 +274,11 @@ export function ValidationModal({
                         />
                     </div>
                   )}
+                  {/* Aviso Financeiro */}
+                  <div className="p-3 bg-rose-50 border border-rose-100 rounded-lg text-rose-600 text-xs flex gap-2">
+                     <AlertTriangle className="w-4 h-4 shrink-0" />
+                     <p>Atenção: Aulas canceladas não geram pagamento para o professor titular.</p>
+                  </div>
                 </div>
               )}
 
