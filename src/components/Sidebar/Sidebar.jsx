@@ -7,7 +7,7 @@ import { collection, query, where, getDocs } from "firebase/firestore";
 import { 
   LayoutDashboard, BarChart3, Calendar, CircleCheck, 
   Users, Settings, LogOut, Moon, Sun, ShieldCheck, 
-  ChevronRight, TrendingUp 
+  ChevronRight, TrendingUp, Globe // 🟢 ADICIONADO GLOBE
 } from "lucide-react";
 
 export default function Sidebar({ collapsed }) { 
@@ -93,8 +93,22 @@ export default function Sidebar({ collapsed }) {
       <nav className="flex-1 overflow-y-auto px-4 space-y-6 custom-scrollbar py-4">
         <div className="space-y-1.5">
             {!collapsed && <p className="px-4 text-[9px] font-black text-slate-400/60 uppercase tracking-widest mb-2">Principal</p>}
+            
             <NavItem to="/app" icon={LayoutDashboard} label="Início" collapsed={collapsed} active={path === "/app"} />
-            {["admin", "mentor", "unidade", "professor"].includes(role) && <NavItem to="/app/cronograma" icon={Calendar} label="Cronograma" collapsed={collapsed} active={isActive("/app/cronograma")} />}
+            
+            {["admin", "mentor", "unidade", "professor"].includes(role) && 
+                <NavItem to="/app/cronograma" icon={Calendar} label="Cronograma" collapsed={collapsed} active={isActive("/app/cronograma")} />
+            }
+
+            {/* 🟢 NOVO LINK PÚBLICO (Abre em nova aba) */}
+            <NavItem 
+                to="/horarios" 
+                icon={Globe} 
+                label="Link do Aluno" 
+                collapsed={collapsed} 
+                active={false} 
+                target="_blank" // Importante para não fechar o sistema
+            />
         </div>
 
         <div className="space-y-1.5">
@@ -136,8 +150,12 @@ export default function Sidebar({ collapsed }) {
   );
 }
 
-const NavItem = ({ to, icon: Icon, label, collapsed, active, badge }) => (
-  <Link to={to} className={`relative flex items-center gap-3 px-3 py-2.5 mx-1 rounded-xl transition-all duration-300 group ${active ? "bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-lg shadow-red-500/20" : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white"} ${collapsed ? "justify-center" : ""}`}>
+const NavItem = ({ to, icon: Icon, label, collapsed, active, badge, target }) => (
+  <Link 
+    to={to} 
+    target={target} // 🟢 Suporte a nova aba
+    className={`relative flex items-center gap-3 px-3 py-2.5 mx-1 rounded-xl transition-all duration-300 group ${active ? "bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-lg shadow-red-500/20" : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white"} ${collapsed ? "justify-center" : ""}`}
+  >
     {collapsed && <div className="absolute left-14 px-2 py-1 bg-slate-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">{label}</div>}
     <Icon className={`w-5 h-5 ${active ? "text-white" : "text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300"}`} />
     {!collapsed && <span className="text-sm font-medium flex-1">{label}</span>}

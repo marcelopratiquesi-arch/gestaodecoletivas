@@ -7,14 +7,98 @@ import {
 import { 
   TrendingUp, TrendingDown, DollarSign, AlertTriangle, Building2, 
   BarChart3, Calendar, Loader2, Lock, PieChart, Users, Wallet, 
-  Banknote, ChevronDown, Edit2, Check, X, ArrowUpDown, Trophy, AlertCircle, ArrowDown, DownloadCloud
+  ChevronDown, Edit2, Check, X, Trophy, AlertCircle, ArrowDown, DownloadCloud, Search, FileSpreadsheet
 } from 'lucide-react';
+
+// Bibliotecas Externas (Instale: npm install recharts xlsx)
+import { PieChart as RechartsPie, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from 'recharts';
+import * as XLSX from 'xlsx';
 
 // --- HELPERS ---
 const formatCurrency = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
 const formatPercent = (val) => new Intl.NumberFormat('pt-BR', { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(val / 100);
 
-// --- COMPONENTE: RANKING CARD ---
+// --- SUB-COMPONENTES ---
+
+const GraficoDistribuicao = ({ dados }) => {
+    const data = useMemo(() => {
+        const saudavel = dados.filter(d => d.diagnostico === 'Saudável').length;
+        const atencao = dados.filter(d => d.diagnostico === 'Atenção').length;
+        const critico = dados.filter(d => d.diagnostico === 'Crítico').length;
+        const pendente = dados.filter(d => d.diagnostico === 'Pendente').length;
+        
+        return [
+            { name: 'Saudável', value: saudavel, color: '#10b981' }, // Emerald
+            { name: 'Atenção', value: atencao, color: '#f59e0b' },   // Amber
+            { name: 'Crítico', value: critico, color: '#f43f5e' },   // Rose
+            { name: 'Pendente', value: pendente, color: '#94a3b8' }  // Slate
+        ].filter(d => d.value > 0);
+    }, [dados]);
+
+    return (
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-4 flex flex-col h-full">
+            <h3 className="text-xs font-bold uppercase text-slate-500 mb-4 flex items-center gap-2">
+                <PieChart className="w-4 h-4"/> Distribuição da Rede
+            </h3>
+            <div className="flex-1 min-h-[200px]">
+                <ResponsiveContainer width="100%" height="100%">
+                    <RechartsPie>
+                        <Pie
+                            data={data}
+                            cx="50%" cy="50%"
+                            innerRadius={60} outerRadius={80}
+                            paddingAngle={5}
+                            dataKey="value"
+                        >
+                            {data.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                        </Pie>
+                        <RechartsTooltip 
+                            formatter={(value) => [value, 'Unidades']}
+                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                        />
+                        <Legend verticalAlign="bottom" height={36} iconType="circle"/>
+                    </RechartsPie>
+                </ResponsiveContainer>
+            </div>
+        </div>
+    );
+};
+
+const AlertasInteligentes = ({ dados }) => {
+    const criticos = dados.filter(d => d.diagnostico === 'Crítico');
+    const semFolha = dados.filter(d => d.folha === 0);
+
+    if (criticos.length === 0 && semFolha.length === 0) return null;
+
+    return (
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-4 flex flex-col h-full overflow-y-auto custom-scrollbar">
+            <h3 className="text-xs font-bold uppercase text-slate-500 mb-4 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-500"/> Alertas & Ações
+            </h3>
+            <div className="space-y-3">
+                {criticos.length > 0 && (
+                    <div className="p-3 bg-rose-50 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-800 rounded-lg">
+                        <div className="flex items-center gap-2 text-rose-700 dark:text-rose-400 font-bold text-sm mb-1">
+                            <AlertCircle className="w-4 h-4"/> {criticos.length} Unidades Críticas
+                        </div>
+                        <p className="text-xs text-rose-600/80">Custo acima de 25% da folha. Verifique: {criticos.slice(0, 2).map(u => u.unidade.nome).join(', ')}{criticos.length > 2 && '...'}</p>
+                    </div>
+                )}
+                {semFolha.length > 0 && (
+                    <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800 rounded-lg">
+                        <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 font-bold text-sm mb-1">
+                            <Wallet className="w-4 h-4"/> {semFolha.length} Pendentes de Folha
+                        </div>
+                        <p className="text-xs text-amber-600/80">Cadastre o valor da folha para calcular o indicador.</p>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
 const RankingCard = ({ title, items, icon: Icon, colorClass, type }) => (
     <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden flex-1">
         <div className={`p-3 border-b border-slate-100 dark:border-slate-700 flex items-center gap-2 ${colorClass.bgHeader}`}>
@@ -48,7 +132,6 @@ const RankingCard = ({ title, items, icon: Icon, colorClass, type }) => (
     </div>
 );
 
-// --- COMPONENTE: HEADER ORDENÁVEL ---
 const SortableHeader = ({ label, field, currentSort, onSort, align = "left" }) => (
     <th 
         className={`p-4 text-xs font-bold text-slate-500 uppercase tracking-wider cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors select-none text-${align}`}
@@ -64,7 +147,6 @@ const SortableHeader = ({ label, field, currentSort, onSort, align = "left" }) =
     </th>
 );
 
-// --- COMPONENTE: LINHA DA TABELA ---
 const PerformanceRow = ({ unidade, mentorNome, custoAuto, folhaManualInicial, onSave }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [tempValue, setTempValue] = useState(folhaManualInicial || 0);
@@ -154,6 +236,7 @@ export default function PerformanceFinanceiraPage() {
   const [loading, setLoading] = useState(true);
   const [mesFiltro, setMesFiltro] = useState(new Date().toISOString().slice(0, 7)); 
   const [filtroMentor, setFiltroMentor] = useState("todos");
+  const [busca, setBusca] = useState("");
   
   // Ordenação e Paginação
   const [sortConfig, setSortConfig] = useState({ field: 'percent', direction: 'desc' });
@@ -166,7 +249,6 @@ export default function PerformanceFinanceiraPage() {
   const [custosColetiva, setCustosColetiva] = useState({});
   const [comparativoAnoAnterior, setComparativoAnoAnterior] = useState({});
 
-  // TRAVA DE SEGURANÇA
   if (role !== 'admin' && role !== 'mentor') {
       return (
           <div className="flex h-screen items-center justify-center flex-col gap-4 text-slate-400">
@@ -257,6 +339,15 @@ export default function PerformanceFinanceiraPage() {
   const tabelaDados = useMemo(() => {
       let lista = unidades;
       if (role === 'admin' && filtroMentor !== 'todos') lista = lista.filter(u => u.mentorId === filtroMentor);
+      
+      // Busca
+      if (busca) {
+          const termo = busca.toLowerCase();
+          lista = lista.filter(u => 
+              u.nome.toLowerCase().includes(termo) || 
+              u.cidade?.toLowerCase().includes(termo)
+          );
+      }
 
       const linhas = lista.map(u => {
           const custo = custosColetiva[u.id] || 0;
@@ -264,7 +355,6 @@ export default function PerformanceFinanceiraPage() {
           const percent = folha > 0 ? (custo / folha) * 100 : 0;
           const mentor = mentores.find(m => m.id === u.mentorId)?.nome || '-';
           
-          // Diagnostico string para sort
           let diagnostico = 'Pendente';
           if (folha > 0) {
               if (percent <= 15) diagnostico = 'Saudável';
@@ -275,29 +365,28 @@ export default function PerformanceFinanceiraPage() {
           return { unidade: u, mentor, custo, folha, percent, diagnostico };
       });
 
-      // Ordenação Dinâmica
       return linhas.sort((a, b) => {
           let valA = a[sortConfig.field];
           let valB = b[sortConfig.field];
           
           if (sortConfig.field === 'unidade') { valA = a.unidade.nome; valB = b.unidade.nome; }
+          if (sortConfig.field === 'mentor') { valA = a.mentor; valB = b.mentor; }
           
           if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
           if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
           return 0;
       });
-  }, [unidades, filtroMentor, role, custosColetiva, dadosFinanceiros, mentores, sortConfig]);
+  }, [unidades, filtroMentor, busca, role, custosColetiva, dadosFinanceiros, mentores, sortConfig]);
 
-  // --- RANKINGS (TOP 3) ---
+  // --- RANKINGS ---
   const rankings = useMemo(() => {
-      // Filtra apenas quem tem folha preenchida para o ranking
       const ativos = tabelaDados.filter(i => i.folha > 0);
-      const topSaudaveis = [...ativos].sort((a, b) => a.percent - b.percent).slice(0, 3); // Menor % primeiro
-      const topCriticos = [...ativos].sort((a, b) => b.percent - a.percent).slice(0, 3); // Maior % primeiro
+      const topSaudaveis = [...ativos].sort((a, b) => a.percent - b.percent).slice(0, 3);
+      const topCriticos = [...ativos].sort((a, b) => b.percent - a.percent).slice(0, 3);
       return { topSaudaveis, topCriticos };
   }, [tabelaDados]);
 
-  // --- PAGINAÇÃO VISUAL ---
+  // --- PAGINAÇÃO ---
   const dadosVisiveis = useMemo(() => tabelaDados.slice(0, itensVisiveis), [tabelaDados, itensVisiveis]);
 
   const handleSort = (field) => {
@@ -307,6 +396,29 @@ export default function PerformanceFinanceiraPage() {
   const handleCarregarMais = (qtd) => {
       if (qtd === 'todos') setItensVisiveis(tabelaDados.length);
       else setItensVisiveis(prev => prev + qtd);
+  };
+
+  // --- EXPORTAR EXCEL ---
+  const exportarRelatorio = () => {
+      const dadosExport = tabelaDados.map(row => ({
+          'Unidade': row.unidade.nome,
+          'Cidade': row.unidade.cidade,
+          'Mentor': row.mentor,
+          'Custo Coletiva': row.custo,
+          'Folha Pagamento': row.folha,
+          'Impacto %': (row.percent / 100).toFixed(4), // Formato 0.15 para Excel entender %
+          'Diagnóstico': row.diagnostico
+      }));
+
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(dadosExport);
+      
+      // Ajuste de colunas
+      const wscols = [{wch:30}, {wch:15}, {wch:20}, {wch:15}, {wch:15}, {wch:10}, {wch:15}];
+      ws['!cols'] = wscols;
+
+      XLSX.utils.book_append_sheet(wb, ws, "Financeiro");
+      XLSX.writeFile(wb, `Performance_Financeira_${mesFiltro}.xlsx`);
   };
 
   // --- TOTAIS ---
@@ -338,6 +450,18 @@ export default function PerformanceFinanceiraPage() {
         </div>
         
         <div className="flex flex-wrap gap-3">
+            {/* BUSCA */}
+            <div className="relative group">
+                <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400 group-focus-within:text-purple-500"/>
+                <input 
+                    type="text" 
+                    placeholder="Buscar Unidade..." 
+                    value={busca}
+                    onChange={(e) => setBusca(e.target.value)}
+                    className="pl-9 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-white shadow-sm outline-none focus:ring-2 focus:ring-purple-500 w-48 transition-all focus:w-64"
+                />
+            </div>
+
             {role === 'admin' && (
                 <div className="relative group">
                     <Users className="absolute left-3 top-2.5 w-4 h-4 text-slate-400 group-focus-within:text-purple-500"/>
@@ -352,10 +476,14 @@ export default function PerformanceFinanceiraPage() {
                 <div className="bg-slate-100 dark:bg-slate-700 p-1.5 rounded-lg"><Calendar className="w-4 h-4 text-slate-500 dark:text-slate-300"/></div>
                 <input type="month" value={mesFiltro} onChange={(e) => setMesFiltro(e.target.value)} className="bg-transparent border-none outline-none text-sm font-bold text-slate-700 dark:text-white uppercase cursor-pointer"/>
             </div>
+            
+            <button onClick={exportarRelatorio} className="p-2 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 transition-colors shadow-lg shadow-emerald-500/30" title="Exportar Excel">
+                <FileSpreadsheet className="w-5 h-5"/>
+            </button>
         </div>
       </div>
 
-      {/* 2. KPI CARDS (RESUMO REDE) */}
+      {/* 2. KPI CARDS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-start justify-between">
             <div>
@@ -388,10 +516,18 @@ export default function PerformanceFinanceiraPage() {
         </div>
       </div>
 
-      {/* 3. RANKINGS (DESTAQUES E ALERTAS) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <RankingCard title="Top Eficiência (Menor Impacto) 🏆" items={rankings.topSaudaveis} icon={Trophy} colorClass={{bgHeader: 'bg-emerald-50 dark:bg-emerald-900/20', textTitle: 'text-emerald-700 dark:text-emerald-400', icon: 'text-emerald-600'}} type="good"/>
-          <RankingCard title="Pontos de Atenção (Maior Impacto) ⚠️" items={rankings.topCriticos} icon={AlertCircle} colorClass={{bgHeader: 'bg-rose-50 dark:bg-rose-900/20', textTitle: 'text-rose-700 dark:text-rose-400', icon: 'text-rose-600'}} type="bad"/>
+      {/* 3. DASHBOARD VISUAL (GRÁFICO + ALERTAS) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[300px]">
+          <div className="lg:col-span-1 h-full">
+              <GraficoDistribuicao dados={tabelaDados} />
+          </div>
+          <div className="lg:col-span-1 h-full">
+              <AlertasInteligentes dados={tabelaDados} />
+          </div>
+          <div className="lg:col-span-1 h-full flex flex-col gap-4">
+               {/* Espaço para futuro gráfico de linha ou rankings */}
+               <RankingCard title="Top Eficiência 🏆" items={rankings.topSaudaveis} icon={Trophy} colorClass={{bgHeader: 'bg-emerald-50 dark:bg-emerald-900/20', textTitle: 'text-emerald-700 dark:text-emerald-400', icon: 'text-emerald-600'}} type="good"/>
+          </div>
       </div>
 
       {/* 4. TABELA PLANILHADA */}
@@ -440,5 +576,4 @@ export default function PerformanceFinanceiraPage() {
       )}
     </div>
   );
-}  
-
+}

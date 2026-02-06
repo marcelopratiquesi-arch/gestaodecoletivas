@@ -11,19 +11,25 @@ import ValidacaoDiaria from "../app/ValidacaoDiaria";
 import CronogramaPage from "../app/Cronograma/index"; 
 import RelatorioPage from "../app/Relatorios"; 
 import ValidacaoColetivaPage from "../app/ValidacaoColetiva"; 
-
-// 🟢 NOVA IMPORTAÇÃO CORRIGIDA (Pasta Financeiro)
 import PerformanceFinanceiraPage from "../app/Financeiro"; 
+
+// 🟢 NOVA IMPORTAÇÃO: Cronograma Público
+import PublicSchedule from "../pages/Publico/PublicSchedule"; 
 
 export default function AppRoutes() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Rota Pública (Login) */}
+        {/* --- ROTAS PÚBLICAS (Sem Login) --- */}
         <Route path="/login" element={<Login />} />
+        
+        {/* Rota do Cronograma Público (Happy Zone) */}
+        <Route path="/horarios" element={<PublicSchedule />} />
+
+        {/* Redirecionamento da raiz */}
         <Route path="/" element={<Navigate to="/login" replace />} />
 
-        {/* Rotas Privadas (Dentro do AppLayout) */}
+        {/* --- ROTAS PRIVADAS (Dentro do AppLayout) --- */}
         <Route
           path="/app"
           element={
@@ -45,7 +51,7 @@ export default function AppRoutes() {
             } 
           />
           
-          {/* 🟢 ROTA ATUALIZADA: Financeiro */}
+          {/* Financeiro */}
           <Route 
             path="financeiro" 
             element={
@@ -55,7 +61,7 @@ export default function AppRoutes() {
             } 
           />
 
-          {/* Cronograma */}
+          {/* Cronograma (Gestão) */}
           <Route 
             path="cronograma" 
             element={
@@ -78,7 +84,7 @@ export default function AppRoutes() {
             } 
           />
           
-          {/* Configurações (Acesso protegido por Roles) */}
+          {/* Configurações */}
           <Route 
             path="configuracoes" 
             element={
