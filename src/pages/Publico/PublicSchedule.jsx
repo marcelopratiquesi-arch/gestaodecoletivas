@@ -75,12 +75,11 @@ export default function PublicSchedule() {
   const [resultadosUnidade, setResultadosUnidade] = useState([]);
   const [resultadosModalidade, setResultadosModalidade] = useState(null);
 
-  // 1. Inicialização (SEM CACHE - SEMPRE ATUALIZADO)
+  // 1. Inicialização (SEM CACHE)
   useEffect(() => {
     const init = async () => {
         setLoading(true);
         try {
-            // Busca dados frescos do Firebase sempre
             const [uSnap, mSnap, pSnap] = await Promise.all([
                 getDocs(query(collection(db, 'unidades'), orderBy('nome'))),
                 getDocs(collection(db, 'modalidades')),
@@ -95,7 +94,7 @@ export default function PublicSchedule() {
             setModalidadesMap(mAbs);
             setProfessoresMap(pAbs);
         } catch (e) { 
-            console.error("Erro ao carregar dados iniciais:", e); 
+            console.error("Erro ao carregar dados:", e); 
         } finally { 
             setLoading(false); 
         }
@@ -103,7 +102,7 @@ export default function PublicSchedule() {
     init();
   }, []);
 
-  // 2. Debounce na Busca
+  // 2. Debounce
   useEffect(() => {
       const timer = setTimeout(() => {
           setTermoDebounce(busca);
@@ -111,7 +110,7 @@ export default function PublicSchedule() {
       return () => clearTimeout(timer);
   }, [busca]);
 
-  // 3. Busca Inteligente
+  // 3. Busca
   useEffect(() => {
       if (!termoDebounce.trim()) {
           setResultadosUnidade([]);
@@ -132,7 +131,6 @@ export default function PublicSchedule() {
 
   const buscarOndeTemModalidade = async (modIds) => {
       try {
-          // Busca direto do banco para garantir precisão
           const q = query(collection(db, 'aulas'), where('modalidadeId', 'in', modIds.slice(0, 10)));
           const snap = await getDocs(q);
           const agrupado = {};
@@ -154,13 +152,12 @@ export default function PublicSchedule() {
       } catch (e) { console.error(e); }
   };
 
-  // 4. Carregar Grade da Unidade (SEM CACHE)
+  // 4. Carregar Grade
   useEffect(() => {
       if (!unidadeSelecionada) return;
       const loadGrade = async () => {
           setLoadingGrade(true);
           try {
-              // Busca direta no banco de dados
               const q = query(collection(db, 'aulas'), where('unidadeId', '==', unidadeSelecionada.id));
               const snap = await getDocs(q);
               const data = snap.docs.map(d => {
@@ -174,7 +171,7 @@ export default function PublicSchedule() {
               });
               setGradeUnidade(data);
           } catch (e) {
-              console.error("Erro ao carregar grade:", e);
+              console.error("Erro grade:", e);
           } finally {
               setLoadingGrade(false);
           }
@@ -222,7 +219,7 @@ export default function PublicSchedule() {
                     <img 
                         src={LOGOS['pratique']} 
                         alt="Pratique" 
-                        className={`h-24 md:h-72 object-contain transition-all duration-500 ${isDarkMode ? 'brightness-0 invert' : ''}`} 
+                        className={`h-24 md:h-64 object-contain transition-all duration-500 ${isDarkMode ? 'brightness-0 invert' : ''}`} 
                     />
                     
                     <div className="text-center">
@@ -319,7 +316,7 @@ export default function PublicSchedule() {
       );
   }
 
-  // TELA 2: GRADE
+  // TELA 2: GRADE (VISUALIZADOR LIMPO)
   return (
     <div className={`min-h-screen ${themeClasses} pb-10 print:bg-black print:text-white print:p-0 print:h-screen print:overflow-hidden`}>
         
@@ -377,7 +374,7 @@ export default function PublicSchedule() {
                     <p className="text-sm font-bold uppercase text-gray-400 tracking-widest">Quadro Happy Zone</p>
                 </div>
             </div>
-            {/* QR CODE GERADO AUTOMATICAMENTE */}
+            {/* QR CODE */}
             <div className="flex flex-col items-center bg-white p-2 rounded">
                 <img 
                     src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${window.location.href}?unidade=${unidadeSelecionada.id}`} 
@@ -412,7 +409,7 @@ export default function PublicSchedule() {
                                         </div>
                                     ))}
                                 </div>
-                                {/* Linhas Horários */}
+                                {/* Linhas Horários - SEM BORDAS CONDICIONAIS */}
                                 {gradeOrganizada.horarios.map((hora, idx) => (
                                     <div key={hora} className={`grid grid-cols-8 border-b transition-colors print:border-white/20 ${idx % 2 === 0 ? (isDarkMode ? 'bg-transparent' : 'bg-white') : (isDarkMode ? 'bg-white/5' : 'bg-slate-50')} print:bg-black`}>
                                         <div className={`p-6 flex items-center justify-center border-r font-mono font-bold text-xl print:border-white/20 print:text-[#00adef] ${isDarkMode ? 'border-white/10 text-[#00adef]' : 'border-gray-200 text-blue-600'}`}>{hora}</div>
@@ -430,12 +427,11 @@ export default function PublicSchedule() {
                                                         className="h-full w-full rounded-xl p-3 flex flex-col justify-center items-center text-center gap-2 shadow-sm hover:scale-105 transition-transform cursor-default print:shadow-none print:border print:border-black"
                                                         style={{ backgroundColor: cor }}
                                                     >
-                                                        {/* NOME DA AULA (SÓ TEXTO, GRANDE) */}
+                                                        {/* NOME DA AULA */}
                                                         <p className="font-black text-[13px] md:text-[15px] uppercase leading-tight line-clamp-2 print:text-[14px]" style={{ color: textColor }}>
                                                             {aula.modalidadeNome}
                                                         </p>
-                                                        
-                                                        {/* NOME DO PROFESSOR (PEQUENO) */}
+                                                        {/* NOME DO PROFESSOR */}
                                                         <p className="text-[10px] md:text-[11px] font-bold uppercase opacity-90 truncate w-full print:text-[10px]" style={{ color: textColor }}>
                                                             {aula.professorNome}
                                                         </p>
