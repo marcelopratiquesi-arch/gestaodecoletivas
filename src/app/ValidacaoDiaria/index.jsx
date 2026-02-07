@@ -8,10 +8,11 @@ import {
   Calendar, CircleCheck, CircleX, TriangleAlert, 
   MapPin, Filter, Search, List, ArrowDown, DownloadCloud, Loader2, LayoutDashboard, UserCog,
   Map as MapIcon, 
-  Undo2
+  Undo2,
+  Star // Ícone para o Aulão
 } from 'lucide-react';
 
-// Importa os componentes filhos (que criamos no passo anterior)
+// Importa os componentes filhos
 import { AulaCard } from './AulaCard';
 import { ValidationModal } from './ValidationModal';
 
@@ -74,7 +75,7 @@ export default function ValidacaoDiariaPage() {
           getDocs(query(collection(db, 'modalidades'), orderBy('nome'))),
           getDocs(query(collection(db, 'professores'), orderBy('nome'))),
           getDocs(collection(db, 'vinculos')),
-          getDocs(collection(db, 'feriados')), // Baixa todos os feriados (datas e intervalos)
+          getDocs(collection(db, 'feriados')),
           getDocs(query(collection(db, 'usuarios'), where('role', '==', 'mentor')))
         ]);
 
@@ -85,7 +86,7 @@ export default function ValidacaoDiariaPage() {
         const feriadosData = feriadosSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         const mentoresData = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-        // Filtros de Permissão nos Catálogos
+        // Filtros de Permissão
         if (role === 'mentor') {
           unitsData = unitsData.filter(u => u.mentorId === userId);
         } else if (role === 'unidade') {
@@ -116,7 +117,7 @@ export default function ValidacaoDiariaPage() {
     loadCatalogs();
   }, [role, userId, userUnidadeId]);
 
-  // Filtros dinâmicos para os selects
+  // Filtros dinâmicos
   const estadosDisponiveis = useMemo(() => {
       const ufs = catalogs.unidades.map(u => u.estado).filter(Boolean);
       return [...new Set(ufs)].sort();
@@ -131,7 +132,7 @@ export default function ValidacaoDiariaPage() {
       });
   }, [catalogs.unidades, role, filtroEstado, filtroMentor]);
 
-  // 4. MOTOR DE GERAÇÃO DA GRADE (AQUI ESTÁ A MÁGICA DO FERIADO)
+  // 4. MOTOR DE GERAÇÃO DA GRADE
   useEffect(() => {
     if (catalogs.unidades.length === 0 && role !== 'admin') return; 
       
@@ -153,7 +154,7 @@ export default function ValidacaoDiariaPage() {
           datasParaVerificar = getMonthDates(parseInt(ano), parseInt(mes) - 1);
         }
 
-        // Buscando Aulas (Grade Padrão)
+        // --- 1. AULAS REGULARES DO CRONOGRAMA ---
         let aulasRef = collection(db, 'aulas');
         let qAulas = query(aulasRef);
 
@@ -168,7 +169,7 @@ export default function ValidacaoDiariaPage() {
         const aulasSnap = await getDocs(qAulas);
         let aulasBase = aulasSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-        // Buscando Validações Existentes (O que já foi feito manualmente)
+        // --- 2. VALIDAÇÕES EXISTENTES (Incluindo Aulões Extras) ---
         let validacoesRef = collection(db, 'validacoes');
         let qValidacoes = query(validacoesRef, where('data', '>=', dataInicio), where('data', '<=', dataFim));
 
@@ -189,19 +190,14 @@ export default function ValidacaoDiariaPage() {
             if (meuPerfil) meuProfessorId = meuPerfil.id;
         }
 
-        // 🧠 FUNÇÃO INTELIGENTE DE FERIADO
-        // Verifica se a data é feriado (exato) OU se cai dentro de um recesso (intervalo)
+        // Função Feriado
         const checkIsFeriado = (dateString) => {
             const targetDate = new Date(dateString + 'T00:00:00');
             return catalogs.feriados.some(f => {
-                // Caso 1: Data exata (ex: 25/12/2025)
                 if (f.data === dateString) return true;
-                
-                // Caso 2: Intervalo/Recesso (ex: de 20/12 a 04/01)
                 if (f.dataInicio && f.dataFim) {
                     const inicio = new Date(f.dataInicio + 'T00:00:00');
                     const fim = new Date(f.dataFim + 'T00:00:00');
-                    // Verifica se a data alvo está entre inicio e fim
                     return targetDate >= inicio && targetDate <= fim;
                 }
                 return false;
@@ -210,31 +206,25 @@ export default function ValidacaoDiariaPage() {
 
         let gradeFinal = [];
 
-        // Loop principal: Percorre cada dia do calendário
+        // Loop principal
         datasParaVerificar.forEach(dataObj => {
           const dataString = dataObj.toISOString().split('T')[0];
           const diaSemanaNome = diasSemanaMap[dataObj.getDay()];
-          
-          // 🟢 AQUI: Verifica se é feriado (seja dia único ou recesso)
           const isFeriadoGlobal = checkIsFeriado(dataString);
 
-          // Filtra quais aulas acontecem nesse dia da semana
+          // A. Processar Aulas da Grade
           const aulasDoDia = aulasBase.filter(aula => aula.dias && aula.dias.includes(diaSemanaNome));
 
           aulasDoDia.forEach(aula => {
-            // Filtros de visualização...
             const unidadeValida = catalogs.unidades.find(u => String(u.id) === String(aula.unidadeId));
             if (!unidadeValida) return; 
 
             if (filtroUnidade && String(aula.unidadeId) !== String(filtroUnidade)) return;
-
             if (role === 'admin') {
                 if (filtroEstado && unidadeValida.estado !== filtroEstado) return;
                 if (filtroMentor && unidadeValida.mentorId !== filtroMentor) return;
             }
-
             if (filtroModalidade && String(aula.modalidadeId) !== String(filtroModalidade)) return;
-
             if (role === 'professor') {
                 if (String(aula.professorId) !== String(meuProfessorId)) return;
             }
@@ -245,22 +235,16 @@ export default function ValidacaoDiariaPage() {
                 if (!prof.nome.toLowerCase().includes(termo)) return;
             }
 
-            // Tenta achar se já existe validação no banco
             const validacao = validacoesExistentes.find(v => String(v.aulaId) === String(aula.id) && v.data === dataString);
 
             let professorExibicao = prof;
             let status = 'pendente';
             let dadosValidacao = validacao;
 
-            // 🟢 LÓGICA DE PRIORIDADE:
-            // 1. Se tem validação manual (Alguém foi lá e clicou), ela manda (pode ter aula no feriado se quiserem).
-            // 2. Se NÃO tem validação E é feriado/recesso, o sistema cancela AUTOMATICAMENTE.
-            // 3. Se não, fica Pendente.
             if (validacao) {
                 status = validacao.status;
             } else if (isFeriadoGlobal) {
                 status = 'cancelada';
-                // Cria um objeto visual de validação (sem salvar no banco ainda) para mostrar o motivo
                 dadosValidacao = { motivoCancelamento: 'Recesso/Feriado', status: 'cancelada' };
             }
             
@@ -282,6 +266,48 @@ export default function ValidacaoDiariaPage() {
               status: status
             });
           });
+
+          // B. Processar Aulões Especiais (Sem Aula Base na Grade)
+          const auloesDoDia = validacoesExistentes.filter(v => v.isAulao && v.data === dataString);
+          
+          auloesDoDia.forEach(v => {
+             const unidadeValida = catalogs.unidades.find(u => String(u.id) === String(v.unidadeId));
+             if (!unidadeValida) return;
+             if (filtroUnidade && String(v.unidadeId) !== String(filtroUnidade)) return;
+             if (role === 'admin') {
+                if (filtroEstado && unidadeValida.estado !== filtroEstado) return;
+                if (filtroMentor && unidadeValida.mentorId !== filtroMentor) return;
+             }
+
+             const prof = catalogs.professores.find(p => String(p.id) === String(v.professorId));
+             if (filtroProfessor && prof) {
+                const termo = filtroProfessor.toLowerCase();
+                if (!prof.nome.toLowerCase().includes(termo)) return;
+             }
+
+             const aulaSimulada = {
+                 id: v.id, 
+                 hora: v.hora || "00:00",
+                 unidadeId: v.unidadeId,
+                 modalidadeId: v.modalidadeId,
+                 professorId: v.professorId
+             };
+
+             gradeFinal.push({
+                 key: `aulao-${v.id}`,
+                 data: dataString,
+                 diaSemana: diaSemanaNome,
+                 aulaBase: aulaSimulada,
+                 professor: prof,
+                 professorTitular: prof,
+                 unidade: unidadeValida,
+                 modalidade: catalogs.modalidades.find(m => String(m.id) === String(v.modalidadeId)),
+                 validacao: v,
+                 status: v.status,
+                 isAulao: true
+             });
+          });
+
         });
 
         gradeFinal.sort((a, b) => {
@@ -332,13 +358,10 @@ export default function ValidacaoDiariaPage() {
     return new Date(dataString + 'T00:00:00') > hoje;
   };
 
-  // --- LÓGICA DE ABRIR MODAL ---
   const abrirModal = (tipo, item) => {
-    if (verificarFuturo(item.data)) return alert("Aulas futuras não podem ser validadas.");
+    if (tipo !== 'aulao' && verificarFuturo(item.data)) return alert("Aulas futuras não podem ser validadas.");
 
-    // Trava de Segurança: Apenas Master pode reverter
-    if (item.status === 'cancelada' && !isMaster) {
-        // Permitir ver detalhes se for feriado automatico, mas avisar que é automatico
+    if (item && item.status === 'cancelada' && !isMaster) {
         if (item.validacao?.motivoCancelamento === 'Recesso/Feriado') {
              return alert("ℹ️ INFORMAÇÃO\n\nEsta aula foi cancelada automaticamente devido ao Recesso/Feriado cadastrado no sistema.");
         }
@@ -349,10 +372,7 @@ export default function ValidacaoDiariaPage() {
     setModalOpen(true);
   };
 
-  // --- REVERTER CANCELAMENTO ---
   const handleReverterCancelamento = async () => {
-      // Se for feriado automático (sem ID de validação), não tem o que deletar do banco.
-      // O usuário teria que criar uma validação "Realizada" para sobrescrever.
       if (!acaoAtual.item.validacao?.id && acaoAtual.item.validacao?.motivoCancelamento === 'Recesso/Feriado') {
           return alert("Esta aula é um Feriado Automático. Para que ela aconteça, basta clicar em 'Voltar' e depois em 'Validar' (botão verde) para confirmar a presença.");
       }
@@ -363,19 +383,7 @@ export default function ValidacaoDiariaPage() {
       setProcessando(true);
       try {
           await deleteDoc(doc(db, 'validacoes', acaoAtual.item.validacao.id));
-          setGradeGerada(prevGrade => prevGrade.map(gridItem => {
-              if (gridItem.key === acaoAtual.item.key) {
-                  return { 
-                      ...gridItem, 
-                      status: 'pendente', 
-                      validacao: null,
-                      professor: gridItem.professorTitular 
-                  };
-              }
-              return gridItem;
-          }));
-          setModalOpen(false);
-          setAcaoAtual(null);
+          window.location.reload(); 
       } catch (error) {
           console.error("Erro ao reverter:", error);
           alert("Erro ao reverter cancelamento.");
@@ -384,76 +392,99 @@ export default function ValidacaoDiariaPage() {
       }
   };
 
-  // --- SALVAR AÇÃO DO MODAL ---
+  // --- NOVO: LÓGICA DE AULÃO ESPECIAL ---
+  const handleNovoAulao = () => {
+      if (!filtroUnidade) return alert("Selecione uma Unidade específica no filtro para adicionar um Aulão.");
+      
+      const unidadeObj = catalogs.unidades.find(u => String(u.id) === String(filtroUnidade));
+      
+      const itemAulao = {
+          unidade: unidadeObj,
+          data: dataFiltro,
+      };
+
+      abrirModal('aulao', itemAulao);
+  };
+
   const confirmarAcao = async (dadosFormulario) => {
-    const { inputValor, inputObs, isSubstituicao, substitutoId, motivoSubstituicao } = dadosFormulario;
+    const { inputValor, inputObs, isSubstituicao, substitutoId, motivoSubstituicao, aulaoModalidadeId, aulaoHora, aulaoValor, aulaoData } = dadosFormulario;
     
-    // Validações
     if (acaoAtual.tipo === 'validar' && !inputValor) return alert("Informe o número de alunos.");
-    if (acaoAtual.tipo === 'validar' && isSubstituicao) {
-        if (!substitutoId || !motivoSubstituicao) return alert("Preencha os dados da substituição.");
-    }
-    if (acaoAtual.tipo === 'cancelar' && !inputValor) return alert("Selecione um motivo.");
-    if (acaoAtual.tipo === 'cancelar' && inputValor === 'Outros' && !inputObs.trim()) return alert("Descreva o motivo.");
+    if (acaoAtual.tipo === 'aulao' && (!aulaoModalidadeId || !inputValor || !substitutoId || !aulaoData)) return alert("Preencha todos os campos do Aulão.");
 
     setProcessando(true);
     try {
       const { tipo, item } = acaoAtual;
+      
       const payload = {
-        aulaId: item.aulaBase.id,
-        unidadeId: item.aulaBase.unidadeId,
-        professorId: (tipo === 'validar' && isSubstituicao) ? substitutoId : item.aulaBase.professorId,
-        data: item.data,
+        data: tipo === 'aulao' ? aulaoData : item.data, // Usa a data do formulário se for Aulão
         validadoPor: userId,
         timestamp: serverTimestamp(), 
-        status: tipo === 'validar' ? 'realizada' : 'cancelada'
       };
 
-      if (tipo === 'validar') {
-        payload.alunos = parseInt(inputValor);
-        if (isSubstituicao) {
-            payload.substituicao = true;
-            payload.professorOriginalId = item.aulaBase.professorId;
-            payload.motivoSubstituicao = motivoSubstituicao;
-        } else {
+      if (tipo === 'aulao') {
+          payload.status = 'realizada';
+          payload.isAulao = true;
+          payload.unidadeId = item.unidade.id;
+          payload.professorId = substitutoId;
+          payload.modalidadeId = aulaoModalidadeId;
+          payload.hora = aulaoHora;
+          payload.alunos = parseInt(inputValor);
+          payload.valorPago = aulaoValor ? parseFloat(aulaoValor) : 0;
+          payload.substituicao = false; 
+          
+          await addDoc(collection(db, 'validacoes'), payload);
+          window.location.reload();
+
+      } else {
+          payload.aulaId = item.aulaBase.id;
+          payload.unidadeId = item.aulaBase.unidadeId;
+          payload.professorId = (tipo === 'validar' && isSubstituicao) ? substitutoId : item.aulaBase.professorId;
+          payload.status = tipo === 'validar' ? 'realizada' : 'cancelada';
+
+          if (tipo === 'validar') {
+            payload.alunos = parseInt(inputValor);
+            if (isSubstituicao) {
+                payload.substituicao = true;
+                payload.professorOriginalId = item.aulaBase.professorId;
+                payload.motivoSubstituicao = motivoSubstituicao;
+            } else {
+                payload.substituicao = false;
+                payload.professorOriginalId = null;
+                payload.motivoSubstituicao = null;
+            }
+          } else {
+            payload.motivoCancelamento = inputValor === 'Outros' ? inputObs : inputValor;
             payload.substituicao = false;
-            payload.professorOriginalId = null;
-            payload.motivoSubstituicao = null;
-        }
-      } else {
-        payload.motivoCancelamento = inputValor === 'Outros' ? inputObs : inputValor;
-        payload.substituicao = false;
+          }
+
+          let validacaoId = item.validacao?.id;
+          if (item.validacao?.id) {
+            await updateDoc(doc(db, 'validacoes', item.validacao.id), payload);
+          } else {
+            const docRef = await addDoc(collection(db, 'validacoes'), payload);
+            validacaoId = docRef.id;
+          }
+
+          setGradeGerada(prevGrade => prevGrade.map(gridItem => {
+            if (gridItem.key === item.key) {
+               let novoProfessor = item.professorTitular;
+               if (payload.substituicao && payload.professorId) {
+                    const sub = catalogs.professores.find(p => String(p.id) === String(payload.professorId));
+                    if (sub) novoProfessor = { ...sub, isSubstituto: true };
+               }
+               return { ...gridItem, status: payload.status, professor: novoProfessor, validacao: { id: validacaoId, ...payload } };
+            }
+            return gridItem;
+          }));
       }
 
-      let validacaoId = item.validacao?.id;
-      // Se já existe ID (mesmo que seja cancelada), atualiza.
-      // Se NÃO existe ID (era pendente ou feriado automático), cria novo.
-      if (item.validacao?.id) {
-        await updateDoc(doc(db, 'validacoes', item.validacao.id), payload);
-      } else {
-        const docRef = await addDoc(collection(db, 'validacoes'), payload);
-        validacaoId = docRef.id;
-      }
-
-      setGradeGerada(prevGrade => prevGrade.map(gridItem => {
-        if (gridItem.key === item.key) {
-           let novoProfessor = item.professorTitular;
-           if (payload.substituicao && payload.professorId) {
-                const sub = catalogs.professores.find(p => String(p.id) === String(payload.professorId));
-                if (sub) novoProfessor = { ...sub, isSubstituto: true };
-           }
-           // Atualiza localmente com o novo status
-           return { ...gridItem, status: payload.status, professor: novoProfessor, validacao: { id: validacaoId, ...payload } };
-        }
-        return gridItem;
-      }));
     } catch (error) { console.error(error); alert("Erro ao salvar."); } 
     finally { setProcessando(false); setModalOpen(false); setAcaoAtual(null); }
   };
 
   return (
     <div className="p-4 md:p-8 animate-fade-in max-w-[1920px] mx-auto space-y-6">
-      {/* HEADER & FILTROS (MANTIDO) */}
       <div className="flex flex-col gap-6 border-b border-slate-200 dark:border-slate-700 pb-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
@@ -466,20 +497,32 @@ export default function ValidacaoDiariaPage() {
                 <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium text-sm md:text-base">Gestão operacional e controle de frequência.</p>
             </div>
 
-            {/* BOTÕES DE STATUS */}
-            <div className="w-full md:w-auto grid grid-cols-3 gap-3">
-                <button onClick={() => { setFiltroStatus('todos'); setItensVisiveis(12); }} className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all duration-300 shadow-sm hover:shadow-md ${filtroStatus === 'todos' ? 'bg-slate-800 text-white border-slate-900 ring-2 ring-slate-800 ring-offset-2' : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'}`}>
-                    <span className="text-2xl font-black">{counts.total}</span>
-                    <span className="text-[10px] uppercase font-bold tracking-wider flex items-center gap-1"><List className="w-3 h-3"/> Todos</span>
-                </button>
-                <button onClick={() => { setFiltroStatus('pendente'); setItensVisiveis(12); }} className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all duration-300 shadow-sm hover:shadow-md ${filtroStatus === 'pendente' ? 'bg-amber-500 text-white border-amber-600 ring-2 ring-amber-500 ring-offset-2' : 'bg-white border-amber-100 text-amber-500 hover:bg-amber-50'}`}>
-                    <span className="text-2xl font-black">{counts.pendentes}</span>
-                    <span className="text-[10px] uppercase font-bold tracking-wider flex items-center gap-1"><TriangleAlert className="w-3 h-3"/> Pendentes</span>
-                </button>
-                <button onClick={() => { setFiltroStatus('cancelada'); setItensVisiveis(12); }} className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all duration-300 shadow-sm hover:shadow-md ${filtroStatus === 'cancelada' ? 'bg-rose-600 text-white border-rose-700 ring-2 ring-rose-600 ring-offset-2' : 'bg-white border-rose-100 text-rose-500 hover:bg-rose-50'}`}>
-                    <span className="text-2xl font-black">{counts.canceladas}</span>
-                    <span className="text-[10px] uppercase font-bold tracking-wider flex items-center gap-1"><CircleX className="w-3 h-3"/> Canceladas</span>
-                </button>
+            <div className="flex gap-4">
+                <div className="w-full md:w-auto grid grid-cols-3 gap-3">
+                    <button onClick={() => { setFiltroStatus('todos'); setItensVisiveis(12); }} className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all duration-300 shadow-sm hover:shadow-md ${filtroStatus === 'todos' ? 'bg-slate-800 text-white border-slate-900 ring-2 ring-slate-800 ring-offset-2' : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'}`}>
+                        <span className="text-2xl font-black">{counts.total}</span>
+                        <span className="text-[10px] uppercase font-bold tracking-wider flex items-center gap-1"><List className="w-3 h-3"/> Todos</span>
+                    </button>
+                    <button onClick={() => { setFiltroStatus('pendente'); setItensVisiveis(12); }} className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all duration-300 shadow-sm hover:shadow-md ${filtroStatus === 'pendente' ? 'bg-amber-500 text-white border-amber-600 ring-2 ring-amber-500 ring-offset-2' : 'bg-white border-amber-100 text-amber-500 hover:bg-amber-50'}`}>
+                        <span className="text-2xl font-black">{counts.pendentes}</span>
+                        <span className="text-[10px] uppercase font-bold tracking-wider flex items-center gap-1"><TriangleAlert className="w-3 h-3"/> Pendentes</span>
+                    </button>
+                    <button onClick={() => { setFiltroStatus('cancelada'); setItensVisiveis(12); }} className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all duration-300 shadow-sm hover:shadow-md ${filtroStatus === 'cancelada' ? 'bg-rose-600 text-white border-rose-700 ring-2 ring-rose-600 ring-offset-2' : 'bg-white border-rose-100 text-rose-500 hover:bg-rose-50'}`}>
+                        <span className="text-2xl font-black">{counts.canceladas}</span>
+                        <span className="text-[10px] uppercase font-bold tracking-wider flex items-center gap-1"><CircleX className="w-3 h-3"/> Canceladas</span>
+                    </button>
+                </div>
+
+                {/* BOTÃO AULÃO ESPECIAL - POSICIONADO AO LADO DOS CARDS */}
+                {role !== 'professor' && (
+                    <button 
+                        onClick={handleNovoAulao}
+                        className="hidden md:flex flex-col items-center justify-center p-3 rounded-2xl border border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100 hover:border-purple-300 transition-all shadow-sm hover:shadow-md min-w-[100px]"
+                    >
+                        <Star className="w-6 h-6 mb-1" />
+                        <span className="text-[10px] uppercase font-bold tracking-wider text-center leading-tight">Adicionar<br/>Aulão</span>
+                    </button>
+                )}
             </div>
         </div>
         
@@ -525,6 +568,16 @@ export default function ValidacaoDiariaPage() {
                         <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400"/>
                         <input type="text" placeholder="BUSCAR PROFESSOR..." value={filtroProfessor} onChange={e => setFiltroProfessor(e.target.value)} className="w-full h-full pl-9 pr-2 border-0 bg-slate-50 dark:bg-slate-900 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none uppercase placeholder:normal-case" />
                     </div>
+                )}
+
+                {/* BOTÃO MOBILE AULÃO (Para aparecer em telas pequenas) */}
+                {role !== 'professor' && (
+                    <button 
+                        onClick={handleNovoAulao}
+                        className="md:hidden w-full h-10 px-4 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold uppercase shadow-md flex justify-center items-center gap-2 transition-all mt-2"
+                    >
+                        <Star className="w-4 h-4" /> Adicionar Aulão Especial
+                    </button>
                 )}
             </div>
         </div>
