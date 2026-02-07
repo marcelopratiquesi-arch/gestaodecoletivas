@@ -7,7 +7,7 @@ import {
   CheckCircle2, XCircle, Clock, ChevronRight, ChevronDown, 
   LayoutDashboard, Map, Globe, UserCheck, AlertTriangle, 
   Download, FileSpreadsheet, FileText, MoreVertical, X, User, MousePointerClick, ArrowRightLeft,
-  ArrowDown, DownloadCloud
+  ArrowDown, DownloadCloud, Star // Adicionei a Estrela para o Aulão
 } from 'lucide-react';
 
 // --- HELPERS ---
@@ -186,12 +186,11 @@ export default function RelatorioPage() {
     return { start, end };
   }, [modoFiltro, dataFiltro, mesFiltro]);
 
-  // 2. CARREGAMENTO (Server-Side Filtering)
+  // 2. CARREGAMENTO
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
       try {
-        // Query de Unidades (Permissões)
         let qUnidades = query(collection(db, 'unidades'), orderBy('nome'));
         if (role === 'mentor') {
             qUnidades = query(collection(db, 'unidades'), where('mentorId', '==', userId));
@@ -199,7 +198,6 @@ export default function RelatorioPage() {
             qUnidades = query(collection(db, 'unidades'), where(documentId(), '==', userData.unidadeId));
         }
 
-        // Query de Aulas (Otimizada para Unidade)
         let qAulas = collection(db, 'aulas');
         if (role === 'unidade') {
             qAulas = query(collection(db, 'aulas'), where('unidadeId', '==', userData.unidadeId));
@@ -211,7 +209,6 @@ export default function RelatorioPage() {
             where('data', '<=', period.end)
         );
 
-        // Otimização: Buscar apenas MENTORES nos usuários
         const usersQuery = query(collection(db, 'usuarios'), where('role', '==', 'mentor'));
 
         const [aulasSnap, valSnap, uniSnap, profSnap, modSnap, usersSnap] = await Promise.all([
@@ -235,8 +232,6 @@ export default function RelatorioPage() {
         });
 
         if (role === 'unidade') setUnidadeFiltro(userData.unidadeId);
-        
-        // Reset paginação ao recarregar dados
         setItensVisiveis(20);
 
       } catch (e) { console.error("Erro loading:", e); } finally { setLoading(false); }
@@ -278,7 +273,7 @@ export default function RelatorioPage() {
     return { paises, estados, mentores, unidadesFiltradas: units, modalidades, professores };
   }, [data, paisFiltro, estadoFiltro, mentorFiltro, unidadeFiltro, modalidadeFiltro, turnoFiltro]);
 
-  // 3. PROCESSAMENTO (CORE) COM SUPORTE A SUBSTITUIÇÃO
+  // 3. PROCESSAMENTO (CORE) COM SUPORTE A AULÃO
   const relatorioTotal = useMemo(() => {
     if (data.unidades.length === 0) return [];
     
@@ -307,7 +302,7 @@ export default function RelatorioPage() {
     // PASSO B: Processar Substitutos (Linhas Dinâmicas)
     const substituicoesMap = {}; 
     validacoesNoPeriodo.forEach(v => {
-        if (v.substituicao && v.professorId) {
+        if (v.substituicao && v.professorId && !v.isAulao) {
             const key = `${v.aulaId}_${v.professorId}`;
             if (!substituicoesMap[key]) substituicoesMap[key] = [];
             substituicoesMap[key].push(v);
@@ -328,7 +323,32 @@ export default function RelatorioPage() {
         }
     });
 
-    // PASSO C: Filtragem e Mapeamento Final
+    // 🔴 PASSO C: PROCESSAR AULÕES ESPECIAIS (AD-HOC)
+    const auloes = validacoesNoPeriodo.filter(v => v.isAulao === true);
+    auloes.forEach(v => {
+        const diaSemana = diasSemanaMap[new Date(v.data + 'T00:00:00').getDay()];
+        
+        // Cria uma "Aula Virtual" para o relatório entender
+        const aulaVirtual = {
+            id: `aulao_${v.id}`, // ID Fictício
+            unidadeId: v.unidadeId,
+            modalidadeId: v.modalidadeId,
+            professorId: v.professorId,
+            hora: v.hora || "00:00",
+            valor: v.valorPago || 0, // Importante: Usa o valor pago gravado
+            dias: [diaSemana]
+        };
+
+        todasLinhas.push({
+            tipo: 'aulao',
+            aulaBase: aulaVirtual,
+            professorId: v.professorId,
+            validacoes: [v], // A validação em si é o histórico
+            validacoesSubstituido: []
+        });
+    });
+
+    // PASSO D: Filtragem e Mapeamento Final
     let linhasFinais = todasLinhas.map(item => {
         const { aulaBase, professorId, validacoes, validacoesSubstituido } = item;
         const unidade = data.unidades.find(u => String(u.id) === String(aulaBase.unidadeId));
@@ -361,19 +381,22 @@ export default function RelatorioPage() {
         const totalAlunos = validacoes.filter(v => v.status === 'realizada').reduce((acc, v) => acc + (Number(v.alunos) || 0), 0);
         const mediaAlunos = aulasRealizadas > 0 ? Math.round(totalAlunos / aulasRealizadas) : 0;
         
+        // Se for Aulão, usa o valor direto da "aulaVirtual", senão usa da base
         const valorHora = parseFloat(aulaBase.valor) || 0;
+        
+        // Cálculo Total: Aulas Realizadas * Valor (Para aulão, como é 1 pra 1, funciona igual)
         const totalReceber = aulasRealizadas * valorHora; 
 
         const diasTrabalho = aulaBase.dias || [];
         const mapaDatas = getDatesByWeekdayInPeriod(period.start, period.end, diasTrabalho);
 
         return {
-            id: item.tipo === 'titular' ? aulaBase.id : `${aulaBase.id}_sub_${professorId}`,
+            id: item.tipo === 'titular' ? aulaBase.id : (item.tipo === 'aulao' ? `view_${aulaBase.id}` : `${aulaBase.id}_sub_${professorId}`),
             unidadeNome: toTitleCase(unidade.nome),
             unidadeEstado: toTitleCase(unidade.estado),
             unidadePais: toTitleCase(unidade.pais),
             professorNome: getFirstLast(professor?.nome || 'Sem Professor'),
-            isSubstituto: item.tipo === 'substituto',
+            tipoLinha: item.tipo, // 'titular', 'substituto', 'aulao'
             modalidadeNome: toTitleCase(modalidade?.nome || 'Desconhecida'),
             modalidadeCor: modalidade?.cor || '#ccc',
             dias: diasTrabalho,
@@ -400,20 +423,17 @@ export default function RelatorioPage() {
     });
   }, [data, period, paisFiltro, estadoFiltro, mentorFiltro, unidadeFiltro, modalidadeFiltro, professorFiltro, turnoFiltro, filtroKPI, sortConfig, role, userId]);
 
-  // 4. PAGINAÇÃO VISUAL (Corte da lista)
+  // PAGINAÇÃO VISUAL
   const relatorioVisivel = useMemo(() => {
     return relatorioTotal.slice(0, itensVisiveis);
   }, [relatorioTotal, itensVisiveis]);
 
   const handleCarregarMais = (qtd) => {
-    if (qtd === 'todos') {
-        setItensVisiveis(relatorioTotal.length);
-    } else {
-        setItensVisiveis(prev => prev + qtd);
-    }
+    if (qtd === 'todos') setItensVisiveis(relatorioTotal.length);
+    else setItensVisiveis(prev => prev + qtd);
   };
 
-  // 5. KPIs
+  // KPIs
   const kpis = useMemo(() => {
     const totalRealizadas = relatorioTotal.reduce((acc, r) => acc + r.aulasRealizadas, 0);
     const totalCanceladas = relatorioTotal.reduce((acc, r) => acc + r.aulasCanceladas, 0);
@@ -435,7 +455,7 @@ export default function RelatorioPage() {
     const headers = ["País", "Estado", "Unidade", "Modalidade", "Horário", "Professor", "Tipo", "Aulas Realizadas", "Aulas Canceladas", "Média Alunos", "Valor Hora Aula", "Total a Receber"];
     const rows = relatorioTotal.map(r => [
         r.unidadePais||"-", r.unidadeEstado||"-", r.unidadeNome, r.modalidadeNome, r.horario, r.professorNome, 
-        r.isSubstituto ? "SUBSTITUTO" : "TITULAR",
+        r.tipoLinha === 'aulao' ? "AULÃO" : (r.tipoLinha === 'substituto' ? "SUBSTITUTO" : "TITULAR"),
         r.aulasRealizadas, r.aulasCanceladas, r.mediaAlunos, formatCurrency(r.valorHora), formatCurrency(r.totalReceber)
     ]);
 
@@ -448,8 +468,6 @@ export default function RelatorioPage() {
         link.setAttribute('download', `relatorio_${type}_${period.start}.csv`);
         document.body.appendChild(link);
         link.click();
-    } else if (type === 'pdf') {
-        alert("A exportação em PDF requer a biblioteca 'jspdf'.");
     }
   };
 
@@ -457,7 +475,7 @@ export default function RelatorioPage() {
 
   return (
     <div className="p-6 md:p-8 max-w-[1920px] mx-auto animate-fade-in space-y-8">
-      {/* ... HEADER, KPIS, FILTROS ... */}
+      {/* HEADER, KPIS, FILTROS */}
       <div className="flex flex-col md:flex-row justify-between items-center border-b border-slate-200 dark:border-slate-700 pb-6 gap-4">
         <div>
           <h1 className="text-3xl font-black text-slate-800 dark:text-white tracking-tight flex items-center gap-3">
@@ -476,7 +494,7 @@ export default function RelatorioPage() {
           <div className="h-8 w-px bg-slate-200 dark:bg-slate-600 mx-1"></div>
           <div className="relative">
             <button onClick={() => setShowExportMenu(!showExportMenu)} className="p-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg text-slate-600 dark:text-slate-300 transition-colors flex items-center gap-2 font-bold text-xs"><Download className="w-4 h-4"/> Exportar</button>
-            {showExportMenu && (<div className="absolute right-0 top-12 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl rounded-xl w-40 z-50 overflow-hidden animate-in fade-in zoom-in duration-200"><button onClick={() => handleExport('excel')} className="w-full text-left px-4 py-3 text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 text-slate-700 dark:text-slate-300"><FileSpreadsheet className="w-4 h-4 text-green-600"/> Excel (XLSX)</button><button onClick={() => handleExport('csv')} className="w-full text-left px-4 py-3 text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 text-slate-700 dark:text-slate-300"><FileText className="w-4 h-4 text-blue-600"/> CSV</button><button onClick={() => handleExport('pdf')} className="w-full text-left px-4 py-3 text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 text-slate-700 dark:text-slate-300"><Download className="w-4 h-4 text-red-600"/> PDF</button></div>)}
+            {showExportMenu && (<div className="absolute right-0 top-12 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl rounded-xl w-40 z-50 overflow-hidden animate-in fade-in zoom-in duration-200"><button onClick={() => handleExport('excel')} className="w-full text-left px-4 py-3 text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 text-slate-700 dark:text-slate-300"><FileSpreadsheet className="w-4 h-4 text-green-600"/> Excel (XLSX)</button><button onClick={() => handleExport('csv')} className="w-full text-left px-4 py-3 text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 text-slate-700 dark:text-slate-300"><FileText className="w-4 h-4 text-blue-600"/> CSV</button></div>)}
           </div>
         </div>
       </div>
@@ -491,6 +509,7 @@ export default function RelatorioPage() {
 
       {filtroKPI && (<div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-lg p-3 flex items-center justify-between animate-in fade-in slide-in-from-top-2"><div className="flex items-center gap-2 text-xs text-blue-700 dark:text-blue-300 font-bold"><MousePointerClick className="w-4 h-4"/> Visualizando apenas: <span className="uppercase">{filtroKPI}</span></div><button onClick={() => setFiltroKPI(null)} className="text-xs text-blue-500 hover:text-blue-700 underline">Remover Filtro Rápido</button></div>)}
 
+      {/* FILTROS */}
       {role !== 'professor' && (
         <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm relative group/filter">
             <div className="flex justify-between items-center mb-4">
@@ -542,12 +561,16 @@ export default function RelatorioPage() {
                     <td className="p-3 font-mono text-slate-600 dark:text-slate-400 text-xs">{row.horario}</td>
                     <td className="p-3">
                         <div className="flex items-center gap-2">
-                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-black border ${row.isSubstituto ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-slate-200 text-slate-600 border-slate-300 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600'}`}>
+                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-black border 
+                                ${row.tipoLinha === 'substituto' ? 'bg-blue-100 text-blue-700 border-blue-200' : 
+                                  row.tipoLinha === 'aulao' ? 'bg-purple-100 text-purple-700 border-purple-200' :
+                                  'bg-slate-200 text-slate-600 border-slate-300 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600'}`}>
                                 {getInitials(row.professorNome)}
                             </div>
                             <div>
-                                <span className={`font-bold ${row.isSubstituto ? 'text-blue-600 dark:text-blue-400' : 'text-slate-800 dark:text-white'}`}>{row.professorNome}</span>
-                                {row.isSubstituto && <span className="block text-[8px] uppercase font-black text-blue-400 flex items-center gap-0.5"><ArrowRightLeft className="w-2 h-2"/> Substituto</span>}
+                                <span className={`font-bold ${row.tipoLinha === 'substituto' ? 'text-blue-600 dark:text-blue-400' : row.tipoLinha === 'aulao' ? 'text-purple-600 dark:text-purple-400' : 'text-slate-800 dark:text-white'}`}>{row.professorNome}</span>
+                                {row.tipoLinha === 'substituto' && <span className="block text-[8px] uppercase font-black text-blue-400 flex items-center gap-0.5"><ArrowRightLeft className="w-2 h-2"/> Substituto</span>}
+                                {row.tipoLinha === 'aulao' && <span className="block text-[8px] uppercase font-black text-purple-400 flex items-center gap-0.5"><Star className="w-2 h-2"/> Aulão Especial</span>}
                             </div>
                         </div>
                     </td>
@@ -572,13 +595,11 @@ export default function RelatorioPage() {
                               <div className="p-2 space-y-1.5 flex-1 min-h-[50px]">
                                 {row.mapaDatas[dia]?.length === 0 && <span className="text-[10px] text-slate-300 text-center block">-</span>}
                                 {row.mapaDatas[dia]?.map(dataStr => {
-                                  // LÓGICA DE EXIBIÇÃO NO DETALHE
                                   const validacao = row.historico.find(h => h.data === dataStr);
                                   const foiSubstituido = row.historicoSubstituido?.find(h => h.data === dataStr);
                                   
                                   const diaMes = new Date(dataStr + 'T00:00:00').toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit'});
                                   
-                                  // Se tiver validação, mostra. Se não, verifica se foi substituído.
                                   const itemClass = validacao 
                                     ? (validacao.status === 'cancelada' 
                                         ? 'bg-red-50 border-red-100 text-red-700 dark:bg-red-900/20 dark:border-red-900 dark:text-red-300' 
@@ -625,7 +646,7 @@ export default function RelatorioPage() {
         </div>
       </div>
       
-      {/* BOTÕES DE CARREGAMENTO (PAGINAÇÃO) */}
+      {/* BOTÕES DE CARREGAMENTO */}
       {itensVisiveis < relatorioTotal.length && (
           <div className="flex flex-wrap justify-center gap-3 pb-4 animate-fade-in">
               <button 
