@@ -3,7 +3,7 @@ import {
   Calendar, Clock, Plus, Filter, 
   Search, Trash2, Edit2, X, Check, 
   MapPin, Loader2, AlertTriangle, Users,
-  DollarSign, Globe, ChevronRight, List, ChevronDown, User // 🟢 ChevronDown GARANTIDO
+  DollarSign, Globe, ChevronRight, List, ChevronDown, User 
 } from 'lucide-react';
 
 import { useAuth } from '../../contexts/AuthContext'; 
@@ -65,7 +65,7 @@ const ClassCard = ({ data, onClick, isReadOnly }) => {
   );
 };
 
-// 2. NOVO: Bloco de Lista Global (Estilo Tabela Expandida)
+// 2. Bloco de Lista Global (Estilo Tabela Expandida)
 const GlobalUnitBlock = ({ unitName, classes, isReadOnly, onEdit }) => {
   return (
     <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm hover:shadow-md transition-shadow mb-6">
@@ -90,7 +90,6 @@ const GlobalUnitBlock = ({ unitName, classes, isReadOnly, onEdit }) => {
             onClick={() => !isReadOnly && onEdit(aula)} 
             className={`px-6 py-4 flex flex-col md:flex-row md:items-center gap-4 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors group ${!isReadOnly ? 'cursor-pointer' : ''}`}
           >
-            
             {/* Horário (Badge) */}
             <div className="flex-shrink-0 md:w-24">
                <div className="bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 font-mono font-bold text-sm px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 flex items-center justify-center gap-2 shadow-sm">
@@ -174,7 +173,7 @@ export default function CronogramaPage() {
     unidadeId: '', modalidadeId: '', professorId: '', hora: '07:00', valor: '', dias: []
   });
 
-  const daysOfWeek = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
+  const allDays = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
 
   // --- 1. CARREGAMENTO INICIAL ---
   useEffect(() => {
@@ -308,6 +307,19 @@ export default function CronogramaPage() {
       );
     });
   }, [selectedUnit, searchTerm, aulas, catalogs, availableUnits]);
+
+  // --- LÓGICA DOS DIAS VISÍVEIS (INTELIGENTE) ---
+  const visibleDays = useMemo(() => {
+    const defaultDays = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta']; // Padrão
+    const hasSaturday = filteredClasses.some(c => c.dias && c.dias.includes('Sábado'));
+    const hasSunday = filteredClasses.some(c => c.dias && c.dias.includes('Domingo'));
+
+    const result = [...defaultDays];
+    if (hasSaturday) result.push('Sábado');
+    if (hasSunday) result.push('Domingo');
+    
+    return result;
+  }, [filteredClasses]);
 
   const groupedClasses = useMemo(() => {
       if (selectedUnit) return [];
@@ -536,7 +548,7 @@ export default function CronogramaPage() {
             </div>
         )}
 
-        {/* MODO 3: Calendário da Unidade */}
+        {/* MODO 3: Calendário da Unidade (AGORA DINÂMICO) */}
         {selectedUnit && (
             <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
                 {filteredClasses.length === 0 && !searchTerm ? (
@@ -547,15 +559,29 @@ export default function CronogramaPage() {
                     </div>
                 ) : (
                     <div className="overflow-x-auto custom-scrollbar pb-6">
-                        <div className="grid grid-cols-[80px_repeat(7,minmax(180px,1fr))] w-full min-w-[1400px]">
+                        {/* GRID DINÂMICO:
+                           - Se 5 dias (Seg-Sex): Colunas maiores
+                           - Se 7 dias: Colunas ajustadas
+                           - Cálculo: 80px (Hora) + N * 180px (Dias)
+                        */}
+                        <div 
+                            className="grid w-full"
+                            style={{ 
+                                gridTemplateColumns: `80px repeat(${visibleDays.length}, minmax(180px, 1fr))`,
+                                minWidth: `${80 + visibleDays.length * 180}px` 
+                            }}
+                        >
+                            {/* Cabeçalho */}
                             <div className="bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur border-b border-slate-200 dark:border-slate-700 p-4 text-center text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest sticky top-0 left-0 z-20">Horário</div>
-                            {daysOfWeek.map(day => (
+                            {visibleDays.map(day => (
                                 <div key={day} className="bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur border-b border-slate-200 dark:border-slate-700 border-l border-slate-100 dark:border-slate-800 p-4 text-center text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest sticky top-0 z-10">{day}</div>
                             ))}
+                            
+                            {/* Linhas */}
                             {activeTimeSlots.map(time => (
                                 <React.Fragment key={time}>
                                     <div className="bg-slate-50 dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 p-4 text-right text-xs font-bold text-slate-500 dark:text-slate-400 flex items-start justify-end pt-5 sticky left-0 z-10">{time}</div>
-                                    {daysOfWeek.map(day => {
+                                    {visibleDays.map(day => {
                                         const classesInSlot = filteredClasses.filter(c => c.dias.includes(day) && c.hora === time);
                                         return (
                                             <div key={`${day}-${time}`} className="bg-white dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700 border-l border-slate-100 dark:border-slate-700 p-2 min-h-[110px] h-auto hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition-colors flex flex-col gap-1">
@@ -616,7 +642,7 @@ export default function CronogramaPage() {
               <div>
                 <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2 block">Dias da Semana</label>
                 <div className="flex flex-wrap gap-2">
-                  {daysOfWeek.map(day => (
+                  {allDays.map(day => (
                     <button key={day} type="button" onClick={() => toggleDay(day)} className={`flex-1 min-w-[70px] py-2.5 rounded-lg text-[10px] font-black uppercase tracking-wide border transition-all ${formData.dias.includes(day) ? 'bg-red-600 text-white border-red-600 shadow-md shadow-red-200 dark:shadow-none transform scale-105' : 'bg-white dark:bg-slate-900 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-slate-700 hover:border-red-300 hover:text-red-500'}`}>{day.substring(0, 3)}</button>
                   ))}
                 </div>
