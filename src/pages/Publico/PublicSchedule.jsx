@@ -3,7 +3,7 @@ import { db } from '../../services/firebase';
 import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
 import { 
   Search, Clock, ChevronRight, Loader2, 
-  Printer, ArrowLeft, Dumbbell, Sun, Moon
+  Printer, ArrowLeft, Dumbbell, Sun, Moon, ChevronDown, List
 } from 'lucide-react';
 
 // --- CONFIGURAÇÃO DAS IMAGENS ---
@@ -24,7 +24,7 @@ const formatProfessorName = (name) => {
     return `${parts[0]} ${parts[parts.length - 1]}`;
 };
 
-// --- COMPONENTE SKELETON (IMPLEMENTADO) ---
+// Componente Skeleton
 const SkeletonItem = ({ isDark }) => (
     <div className={`p-4 rounded-xl border flex justify-between items-center ${isDark ? 'bg-[#1a1a1a] border-white/5' : 'bg-white border-slate-100'}`}>
         <div className="space-y-2 w-full">
@@ -52,6 +52,11 @@ export default function PublicSchedule() {
   const [resultadosUnidade, setResultadosUnidade] = useState([]);
   const [resultadosModalidade, setResultadosModalidade] = useState(null);
 
+  // CONTROLE DE DENSIDADE DE IMPRESSÃO
+  // 'auto', 'compact', 'comfortable'
+  const [printDensity, setPrintDensity] = useState('auto');
+  const [showPrintMenu, setShowPrintMenu] = useState(false);
+
   // 1. Inicialização
   useEffect(() => {
     const init = async () => {
@@ -70,11 +75,7 @@ export default function PublicSchedule() {
             setUnidades(uList);
             setModalidadesMap(mAbs);
             setProfessoresMap(pAbs);
-        } catch (e) { 
-            console.error("Erro ao carregar dados:", e); 
-        } finally { 
-            setLoading(false); 
-        }
+        } catch (e) { console.error(e); } finally { setLoading(false); }
     };
     init();
   }, []);
@@ -85,25 +86,13 @@ export default function PublicSchedule() {
       return () => clearTimeout(timer);
   }, [busca]);
 
-  // 3. Busca (Lógica Restaurada)
+  // 3. Busca
   useEffect(() => {
-      if (!termoDebounce.trim()) { 
-          setResultadosUnidade([]); 
-          setResultadosModalidade(null); 
-          return; 
-      }
+      if (!termoDebounce.trim()) { setResultadosUnidade([]); setResultadosModalidade(null); return; }
       const termo = termoDebounce.toLowerCase();
-      
-      // Busca Unidades
       setResultadosUnidade(unidades.filter(u => u.nome.toLowerCase().includes(termo) || u.cidade?.toLowerCase().includes(termo)));
-      
-      // Busca Modalidades
       const modIds = Object.keys(modalidadesMap).filter(id => modalidadesMap[id].nome.toLowerCase().includes(termo));
-      if (modIds.length > 0) { 
-          buscarOndeTemModalidade(modIds); 
-      } else { 
-          setResultadosModalidade(null); 
-      }
+      if (modIds.length > 0) { buscarOndeTemModalidade(modIds); } else { setResultadosModalidade(null); }
   }, [termoDebounce, unidades, modalidadesMap]);
 
   const buscarOndeTemModalidade = async (modIds) => {
@@ -154,7 +143,7 @@ export default function PublicSchedule() {
       loadGrade();
   }, [unidadeSelecionada, modalidadesMap, professoresMap]);
 
-  // --- LÓGICA INTELIGENTE DE COLUNAS ---
+  // --- LÓGICA DE DIAS E HORÁRIOS ---
   const gradeOrganizada = useMemo(() => {
       if (!gradeUnidade.length) return { dias: [], horarios: [] };
       const diasFinais = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta'];
@@ -168,15 +157,20 @@ export default function PublicSchedule() {
 
   const getAulaCell = (dia, hora) => gradeUnidade.find(a => a.hora === hora && a.dias.includes(dia));
 
-  // --- CÁLCULO DE ZOOM PARA IMPRESSÃO ---
-  const printZoomStyle = useMemo(() => {
+  // --- CÁLCULO INTELIGENTE DE DENSIDADE ---
+  const appliedDensity = useMemo(() => {
+      if (printDensity !== 'auto') return printDensity;
       const linhas = gradeOrganizada.horarios.length;
-      if (linhas <= 6) return 1;
-      if (linhas <= 9) return 0.9;
-      if (linhas <= 12) return 0.8;
-      if (linhas <= 15) return 0.7;
-      return 0.6;
-  }, [gradeOrganizada.horarios.length]);
+      if (linhas > 14) return 'ultra-compact'; // Santa Inês 2 (Muitas aulas)
+      if (linhas > 10) return 'compact';
+      return 'comfortable'; // Shopping Só Marcas (Poucas aulas)
+  }, [printDensity, gradeOrganizada]);
+
+  const handlePrint = (mode) => {
+      setPrintDensity(mode);
+      setShowPrintMenu(false);
+      setTimeout(() => window.print(), 100);
+  };
 
   const themeClasses = isDarkMode ? "bg-[#101010] text-white" : "bg-[#f5f5f5] text-[#1f1f1f]";
   const cardClasses = isDarkMode ? "bg-[#1a1a1a] border-white/10" : "bg-white border-gray-200 shadow-sm";
@@ -202,13 +196,9 @@ export default function PublicSchedule() {
                         {busca && busca !== termoDebounce && <Loader2 className="absolute right-4 top-3.5 md:top-5 w-5 h-5 animate-spin text-red-500"/>}
                     </div>
                     <div className={`max-h-[300px] overflow-y-auto custom-scrollbar pr-1 transition-opacity duration-300 ${busca ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-                        
-                        {/* RESULTADOS MODALIDADES (RESTAURADO E VISÍVEL) */}
                         {termoDebounce.length > 0 && resultadosModalidade && resultadosModalidade.length > 0 && (
                             <div className="space-y-2 mb-6">
-                                <h3 className="text-xs font-bold text-blue-500 uppercase tracking-wider flex items-center gap-1 mb-2">
-                                    <Dumbbell className="w-3 h-3"/> Aulas Encontradas
-                                </h3>
+                                <h3 className="text-xs font-bold text-blue-500 uppercase tracking-wider flex items-center gap-1 mb-2"><Dumbbell className="w-3 h-3"/> Aulas Encontradas</h3>
                                 {resultadosModalidade.map((item) => (
                                     <div key={item.unidade.id} className={`p-3 rounded-lg border flex flex-col gap-2 ${cardClasses}`}>
                                         <div className="flex justify-between items-center">
@@ -216,18 +206,12 @@ export default function PublicSchedule() {
                                             <button onClick={() => setUnidadeSelecionada(item.unidade)} className="text-[10px] font-bold text-blue-500 hover:underline flex items-center bg-blue-50 px-2 py-1 rounded">VER GRADE <ChevronRight className="w-3 h-3 ml-1"/></button>
                                         </div>
                                         <div className="flex flex-wrap gap-1">
-                                            {item.aulas.slice(0, 4).map((aula, idx) => (
-                                                <span key={idx} className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${isDarkMode ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>
-                                                    {aula.dias[0]?.substring(0,3)} {aula.hora}
-                                                </span>
-                                            ))}
+                                            {item.aulas.slice(0, 4).map((aula, idx) => (<span key={idx} className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${isDarkMode ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>{aula.dias[0]?.substring(0,3)} {aula.hora}</span>))}
                                         </div>
                                     </div>
                                 ))}
                             </div>
                         )}
-
-                        {/* RESULTADOS UNIDADES */}
                         {termoDebounce.length > 0 && resultadosUnidade.length > 0 && (
                             <div className="space-y-2">
                                 <h3 className="text-xs font-bold text-red-500 uppercase tracking-wider mb-2 mt-4">Unidades</h3>
@@ -239,8 +223,6 @@ export default function PublicSchedule() {
                                 ))}
                             </div>
                         )}
-
-                        {/* SEM RESULTADOS */}
                         {termoDebounce.length > 0 && !resultadosUnidade.length && !resultadosModalidade && <div className="text-center py-8 text-gray-500 text-sm">Nenhuma unidade ou aula encontrada.</div>}
                     </div>
                 </div>
@@ -249,12 +231,12 @@ export default function PublicSchedule() {
       );
   }
 
-  // TELA 2: GRADE DEFINITIVA
+  // TELA 2: GRADE COM IMPRESSÃO CONFIGURÁVEL
   return (
     <div className={`min-h-screen ${themeClasses} pb-10 print:bg-black print:text-white print:p-0 print:h-screen print:overflow-hidden`}>
         
         <style>{`
-            /* ESTILOS DE IMPRESSÃO (AUTO-FIT + BLACK PIANO) */
+            /* MODO DE IMPRESSÃO PROFISSIONAL */
             @media print {
                 @page { size: landscape; margin: 0; }
                 
@@ -274,10 +256,38 @@ export default function PublicSchedule() {
                     height: 100vh !important;
                     display: flex !important;
                     flex-direction: column !important;
-                    padding: 20px !important;
+                    padding: 10px !important;
                     box-sizing: border-box !important;
-                    zoom: ${printZoomStyle} !important; 
                 }
+
+                /* --- DENSIDADES (A MÁGICA ACONTECE AQUI) --- */
+                
+                /* 1. MODO ULTRA COMPACTO (Para grades gigantes tipo Santa Inês 2) */
+                .density-ultra-compact .print-header { height: 60px !important; margin-bottom: 5px !important; }
+                .density-ultra-compact .ph-title { font-size: 24px !important; }
+                .density-ultra-compact .ph-sub { font-size: 10px !important; letter-spacing: 2px !important; }
+                .density-ultra-compact .print-card-title { font-size: 9px !important; line-height: 1 !important; }
+                .density-ultra-compact .print-card-sub { font-size: 7px !important; margin-top: 1px !important; }
+                .density-ultra-compact .print-card { padding: 1px !important; border-radius: 4px !important; }
+                .density-ultra-compact .print-cell-header { font-size: 10px !important; padding: 2px !important; }
+                .density-ultra-compact .print-time { font-size: 12px !important; }
+
+                /* 2. MODO COMPACTO (Para grades médias) */
+                .density-compact .print-header { height: 80px !important; margin-bottom: 10px !important; }
+                .density-compact .ph-title { font-size: 30px !important; }
+                .density-compact .ph-sub { font-size: 12px !important; letter-spacing: 3px !important; }
+                .density-compact .print-card-title { font-size: 12px !important; }
+                .density-compact .print-card-sub { font-size: 9px !important; }
+                .density-compact .print-card { padding: 3px !important; }
+
+                /* 3. MODO CONFORTÁVEL (Para grades pequenas) */
+                .density-comfortable .print-header { height: 100px !important; margin-bottom: 15px !important; }
+                .density-comfortable .ph-title { font-size: 36px !important; }
+                .density-comfortable .print-card-title { font-size: 16px !important; }
+                .density-comfortable .print-card-sub { font-size: 11px !important; }
+                .density-comfortable .print-card { padding: 6px !important; }
+
+                /* --- ESTRUTURA GERAL --- */
 
                 .print-header {
                     display: flex !important;
@@ -285,17 +295,15 @@ export default function PublicSchedule() {
                     justify-content: space-between !important;
                     align-items: center !important;
                     width: 100% !important;
-                    height: 100px !important; 
                     border-bottom: 2px solid rgba(255,255,255,0.3) !important;
-                    margin-bottom: 15px !important;
                     flex-shrink: 0;
                 }
                 .ph-left { width: 25%; display: flex; justify-content: flex-start; }
                 .ph-center { width: 50%; text-align: center; }
                 .ph-right { width: 25%; display: flex; justify-content: flex-end; }
 
-                .ph-title { font-size: 36px; font-weight: 900; text-transform: uppercase; margin: 0; line-height: 1; font-style: italic; }
-                .ph-sub { font-size: 14px; font-weight: bold; text-transform: uppercase; color: #ccc; margin-top: 5px; letter-spacing: 4px; }
+                .ph-title { font-weight: 900; text-transform: uppercase; margin: 0; line-height: 1; font-style: italic; color: white; }
+                .ph-sub { font-weight: bold; text-transform: uppercase; color: #ccc; margin-top: 5px; }
 
                 .print-grid-wrapper {
                     flex: 1; 
@@ -303,6 +311,7 @@ export default function PublicSchedule() {
                     display: flex !important;
                     flex-direction: column !important;
                     border: 1px solid rgba(255,255,255,0.3) !important;
+                    overflow: visible !important; /* IMPORTANTE: Deixa passar, o tamanho é controlado pela fonte */
                 }
 
                 .print-grid-header {
@@ -315,7 +324,8 @@ export default function PublicSchedule() {
                 .print-grid-body {
                     display: grid;
                     grid-template-columns: 80px repeat(${gradeOrganizada.dias.length}, 1fr);
-                    grid-auto-rows: minmax(60px, auto); 
+                    grid-auto-rows: 1fr; /* Estica igualmente */
+                    height: 100%;
                 }
 
                 .print-cell {
@@ -324,37 +334,32 @@ export default function PublicSchedule() {
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    padding: 5px !important;
-                    min-height: 60px;
+                    padding: 2px !important;
                 }
 
                 .print-card {
                     width: 100% !important;
                     height: 100% !important;
-                    min-height: 50px;
                     display: flex;
                     flex-direction: column;
                     justify-content: center;
                     align-items: center;
-                    border-radius: 6px !important;
                     -webkit-print-color-adjust: exact !important; 
                     print-color-adjust: exact !important;
                     background-blend-mode: normal !important; 
                     box-shadow: none !important;
-                    padding: 5px !important;
                 }
 
-                .pc-title { font-size: 14px !important; font-weight: 900 !important; color: white !important; text-transform: uppercase; text-align: center; line-height: 1.1 !important; text-shadow: 1px 1px 1px rgba(0,0,0,0.8); }
-                .pc-sub { font-size: 10px !important; font-weight: 700 !important; color: white !important; opacity: 0.9; text-transform: uppercase; margin-top: 2px !important; text-shadow: 1px 1px 1px rgba(0,0,0,0.8); }
+                .print-card-title { color: white !important; font-weight: 900 !important; text-transform: uppercase; text-align: center; text-shadow: 1px 1px 1px rgba(0,0,0,0.8); }
+                .print-card-sub { color: white !important; opacity: 0.9; font-weight: 700 !important; text-transform: uppercase; text-shadow: 1px 1px 1px rgba(0,0,0,0.8); }
 
                 .screen-only { display: none !important; }
             }
 
-            /* ESTILOS DE TELA (CARDS QUADRADOS E BONITOS) */
+            /* TELA (MANTÉM LAYOUT QUADRADO BONITO) */
             @media screen {
                 .screen-grid {
                     display: grid;
-                    /* MANTÉM OS CARDS COM TAMANHO FIXO BONITO */
                     grid-template-columns: 80px repeat(${gradeOrganizada.dias.length}, minmax(180px, 1fr)); 
                 }
                 .print-header { display: none; }
@@ -373,14 +378,43 @@ export default function PublicSchedule() {
                         <p className="text-xs font-bold uppercase tracking-widest text-gray-500">{unidadeSelecionada.cidade}</p>
                     </div>
                 </div>
-                <div className="flex gap-3">
-                    <button onClick={() => window.print()} className="p-3 bg-red-600 text-white rounded-full hover:bg-red-700 shadow-lg shadow-red-500/30 transition-all"><Printer className="w-5 h-5"/></button>
+                
+                {/* MENU DE IMPRESSÃO */}
+                <div className="flex gap-3 relative">
+                    <button onClick={() => setIsDarkMode(!isDarkMode)} className={`p-3 rounded-full border transition-all ${isDarkMode ? 'bg-[#222] border-white/10 text-yellow-400' : 'bg-gray-100 border-gray-200 text-gray-600'}`}>{isDarkMode ? <Sun className="w-5 h-5"/> : <Moon className="w-5 h-5"/>}</button>
+                    
+                    <div className="relative">
+                        <button onClick={() => setShowPrintMenu(!showPrintMenu)} className="p-3 bg-red-600 text-white rounded-full hover:bg-red-700 shadow-lg shadow-red-500/30 transition-all flex items-center gap-2">
+                            <Printer className="w-5 h-5"/> <ChevronDown className="w-3 h-3"/>
+                        </button>
+                        
+                        {showPrintMenu && (
+                            <div className="absolute right-0 top-14 bg-white rounded-xl shadow-2xl border border-gray-200 w-64 overflow-hidden z-50 animate-in fade-in zoom-in-95">
+                                <div className="p-3 border-b border-gray-100 bg-gray-50"><p className="text-xs font-bold text-gray-500 uppercase tracking-wider text-center">Ajuste de Impressão</p></div>
+                                
+                                <button onClick={() => handlePrint('auto')} className="w-full text-left px-4 py-3 text-sm font-bold text-gray-700 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-3 border-b border-gray-100">
+                                    <span className="w-6 h-6 rounded bg-blue-100 flex items-center justify-center text-blue-600 text-xs">✨</span> 
+                                    <div><span className="block">Automático</span><span className="text-[10px] text-gray-400 font-normal">O sistema decide o melhor</span></div>
+                                </button>
+
+                                <button onClick={() => handlePrint('ultra-compact')} className="w-full text-left px-4 py-3 text-sm font-bold text-gray-700 hover:bg-purple-50 hover:text-purple-600 flex items-center gap-3 border-b border-gray-100">
+                                    <span className="w-6 h-6 rounded bg-purple-100 flex items-center justify-center text-purple-600 text-xs">📉</span> 
+                                    <div><span className="block">Compactar</span><span className="text-[10px] text-gray-400 font-normal">Para grades muito grandes</span></div>
+                                </button>
+
+                                <button onClick={() => handlePrint('comfortable')} className="w-full text-left px-4 py-3 text-sm font-bold text-gray-700 hover:bg-green-50 hover:text-green-600 flex items-center gap-3">
+                                    <span className="w-6 h-6 rounded bg-green-100 flex items-center justify-center text-green-600 text-xs">📈</span> 
+                                    <div><span className="block">Expandir</span><span className="text-[10px] text-gray-400 font-normal">Para grades pequenas</span></div>
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>
 
         {/* CONTAINER GERAL */}
-        <div className="print-container max-w-[1920px] mx-auto p-4 md:p-8 print:p-0">
+        <div className={`print-container max-w-[1920px] mx-auto p-4 md:p-8 print:p-0 density-${appliedDensity}`}>
             
             {/* HEADER DE IMPRESSÃO */}
             <div className="hidden print:flex print-header">
@@ -392,7 +426,7 @@ export default function PublicSchedule() {
             {loadingGrade ? <div className="flex justify-center h-[50vh] items-center screen-only"><Loader2 className="w-12 h-12 animate-spin text-red-600"/></div> : 
             gradeUnidade.length === 0 ? <div className="text-center py-20 opacity-50 screen-only"><p className="font-bold text-xl">Grade vazia.</p></div> : 
             (
-                /* A GRADE MÁGICA - SEPARAÇÃO TELA vs PRINT */
+                /* A GRADE MÁGICA */
                 <div className={`print-grid-wrapper overflow-x-auto rounded-2xl border ${isDarkMode ? 'bg-[#111] border-white/10' : 'bg-white border-gray-200'} print:bg-black print:border-0 print:rounded-none`}>
                     
                     {/* CABEÇALHO DA GRADE */}
@@ -412,7 +446,7 @@ export default function PublicSchedule() {
                         {gradeOrganizada.horarios.map((hora, idx) => (
                             <React.Fragment key={hora}>
                                 {/* Coluna Hora */}
-                                <div className={`print-cell border-r border-b font-mono font-bold text-xl ${isDarkMode ? 'border-white/10 text-[#00adef]' : 'border-gray-200 text-blue-600'} print:text-[#00adef] print:font-black p-4 flex items-center justify-center`}>
+                                <div className={`print-cell border-r border-b font-mono font-bold text-xl ${isDarkMode ? 'border-white/10 text-[#00adef]' : 'border-gray-200 text-blue-600'} print:text-[#00adef] print:font-black print-time p-4 flex items-center justify-center`}>
                                     {hora}
                                 </div>
                                 {/* Células */}
@@ -430,10 +464,10 @@ export default function PublicSchedule() {
                                                 className="print-card w-full h-full rounded-xl p-2 flex flex-col justify-center items-center text-center shadow-sm hover:scale-105 transition-transform cursor-default"
                                                 style={{ backgroundColor: cor }}
                                             >
-                                                <p className="pc-title font-black text-[13px] md:text-[15px] uppercase leading-tight line-clamp-2 text-white drop-shadow-md">
+                                                <p className="print-card-title font-black text-[13px] md:text-[15px] uppercase leading-tight line-clamp-2 text-white drop-shadow-md">
                                                     {aula.modalidadeNome}
                                                 </p>
-                                                <p className="pc-sub text-[10px] md:text-[11px] font-bold uppercase opacity-90 truncate w-full text-white drop-shadow-md">
+                                                <p className="print-card-sub text-[10px] md:text-[11px] font-bold uppercase opacity-90 truncate w-full text-white drop-shadow-md">
                                                     {aula.professorNome}
                                                 </p>
                                             </div>
