@@ -3,7 +3,7 @@ import { db } from '../../services/firebase';
 import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
 import { 
   Search, Clock, ChevronRight, Loader2, 
-  Printer, ArrowLeft, Dumbbell, Sun, Moon, ChevronDown, List
+  Printer, ArrowLeft, Dumbbell, Sun, Moon, ChevronDown
 } from 'lucide-react';
 
 // --- CONFIGURAÇÃO DAS IMAGENS ---
@@ -53,7 +53,6 @@ export default function PublicSchedule() {
   const [resultadosModalidade, setResultadosModalidade] = useState(null);
 
   // CONTROLE DE DENSIDADE DE IMPRESSÃO
-  // 'auto', 'compact', 'comfortable'
   const [printDensity, setPrintDensity] = useState('auto');
   const [showPrintMenu, setShowPrintMenu] = useState(false);
 
@@ -90,7 +89,11 @@ export default function PublicSchedule() {
   useEffect(() => {
       if (!termoDebounce.trim()) { setResultadosUnidade([]); setResultadosModalidade(null); return; }
       const termo = termoDebounce.toLowerCase();
+      
+      // Filtra Unidades
       setResultadosUnidade(unidades.filter(u => u.nome.toLowerCase().includes(termo) || u.cidade?.toLowerCase().includes(termo)));
+      
+      // Filtra Modalidades
       const modIds = Object.keys(modalidadesMap).filter(id => modalidadesMap[id].nome.toLowerCase().includes(termo));
       if (modIds.length > 0) { buscarOndeTemModalidade(modIds); } else { setResultadosModalidade(null); }
   }, [termoDebounce, unidades, modalidadesMap]);
@@ -158,12 +161,13 @@ export default function PublicSchedule() {
   const getAulaCell = (dia, hora) => gradeUnidade.find(a => a.hora === hora && a.dias.includes(dia));
 
   // --- CÁLCULO INTELIGENTE DE DENSIDADE ---
+  // Define qual classe CSS será usada na impressão
   const appliedDensity = useMemo(() => {
       if (printDensity !== 'auto') return printDensity;
       const linhas = gradeOrganizada.horarios.length;
-      if (linhas > 14) return 'ultra-compact'; // Santa Inês 2 (Muitas aulas)
-      if (linhas > 10) return 'compact';
-      return 'comfortable'; // Shopping Só Marcas (Poucas aulas)
+      if (linhas > 14) return 'ultra-compact'; // Santa Inês 2 (Muitas aulas) - Letra Pequena
+      if (linhas > 10) return 'compact'; // Médio
+      return 'comfortable'; // Shopping Só Marcas (Poucas aulas) - Letra Grande
   }, [printDensity, gradeOrganizada]);
 
   const handlePrint = (mode) => {
@@ -196,6 +200,7 @@ export default function PublicSchedule() {
                         {busca && busca !== termoDebounce && <Loader2 className="absolute right-4 top-3.5 md:top-5 w-5 h-5 animate-spin text-red-500"/>}
                     </div>
                     <div className={`max-h-[300px] overflow-y-auto custom-scrollbar pr-1 transition-opacity duration-300 ${busca ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                        {/* AULAS ENCONTRADAS (CORRIGIDO) */}
                         {termoDebounce.length > 0 && resultadosModalidade && resultadosModalidade.length > 0 && (
                             <div className="space-y-2 mb-6">
                                 <h3 className="text-xs font-bold text-blue-500 uppercase tracking-wider flex items-center gap-1 mb-2"><Dumbbell className="w-3 h-3"/> Aulas Encontradas</h3>
@@ -212,6 +217,7 @@ export default function PublicSchedule() {
                                 ))}
                             </div>
                         )}
+                        {/* UNIDADES ENCONTRADAS */}
                         {termoDebounce.length > 0 && resultadosUnidade.length > 0 && (
                             <div className="space-y-2">
                                 <h3 className="text-xs font-bold text-red-500 uppercase tracking-wider mb-2 mt-4">Unidades</h3>
@@ -231,7 +237,7 @@ export default function PublicSchedule() {
       );
   }
 
-  // TELA 2: GRADE COM IMPRESSÃO CONFIGURÁVEL
+  // TELA 2: GRADE COM IMPRESSÃO INTELIGENTE
   return (
     <div className={`min-h-screen ${themeClasses} pb-10 print:bg-black print:text-white print:p-0 print:h-screen print:overflow-hidden`}>
         
@@ -305,6 +311,7 @@ export default function PublicSchedule() {
                 .ph-title { font-weight: 900; text-transform: uppercase; margin: 0; line-height: 1; font-style: italic; color: white; }
                 .ph-sub { font-weight: bold; text-transform: uppercase; color: #ccc; margin-top: 5px; }
 
+                /* WRAPPER E CORPO DA GRADE NA IMPRESSÃO */
                 .print-grid-wrapper {
                     flex: 1; 
                     width: 100% !important;
@@ -316,6 +323,7 @@ export default function PublicSchedule() {
 
                 .print-grid-header {
                     display: grid;
+                    /* NA IMPRESSÃO: 1fr para esticar igualmente */
                     grid-template-columns: 80px repeat(${gradeOrganizada.dias.length}, 1fr);
                     border-bottom: 1px solid rgba(255,255,255,0.3);
                     background-color: #111 !important;
@@ -356,10 +364,11 @@ export default function PublicSchedule() {
                 .screen-only { display: none !important; }
             }
 
-            /* TELA (MANTÉM LAYOUT QUADRADO BONITO) */
+            /* ESTILOS DE TELA (CORREÇÃO DA LINGUIÇA) */
             @media screen {
                 .screen-grid {
                     display: grid;
+                    /* NA TELA: Largura mínima para manter o quadrado bonito */
                     grid-template-columns: 80px repeat(${gradeOrganizada.dias.length}, minmax(180px, 1fr)); 
                 }
                 .print-header { display: none; }
@@ -420,7 +429,7 @@ export default function PublicSchedule() {
             <div className="hidden print:flex print-header">
                 <div className="ph-left"><img src={LOGOS['pratique']} alt="Logo" className="h-16 brightness-0 invert object-contain"/></div>
                 <div className="ph-center"><h1 className="ph-title">{unidadeSelecionada.nome}</h1><p className="ph-sub">Quadro Happy Zone</p></div>
-                <div className="ph-right"><div className="bg-white p-1 rounded"><img src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(window.location.href)}`} alt="QR" className="w-16 h-16"/></div></div>
+                <div className="ph-right"><div className="bg-white p-1 rounded"><img src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent("https://gestaodecoletivas.vercel.app/horarios")}`} alt="QR" className="w-16 h-16"/></div></div>
             </div>
 
             {loadingGrade ? <div className="flex justify-center h-[50vh] items-center screen-only"><Loader2 className="w-12 h-12 animate-spin text-red-600"/></div> : 
