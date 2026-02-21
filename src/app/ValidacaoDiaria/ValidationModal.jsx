@@ -25,7 +25,7 @@ export function ValidationModal({
     // --- ESTADOS ESPECÍFICOS DO AULÃO ---
     const [etapaAulao, setEtapaAulao] = useState('aviso'); // 'aviso' ou 'form'
     const [aulaoModalidadeId, setAulaoModalidadeId] = useState("");
-    const [aulaoData, setAulaoData] = useState(""); // Nova Data
+    const [aulaoData, setAulaoData] = useState(""); 
     const [aulaoHora, setAulaoHora] = useState("10:00");
     const [aulaoValor, setAulaoValor] = useState("");
 
@@ -44,9 +44,9 @@ export function ValidationModal({
             setMotivoSubstituicao("");
             
             // Aulão Defaults
-            setEtapaAulao('aviso'); // Sempre começa no aviso
+            setEtapaAulao('aviso'); 
             setAulaoModalidadeId("");
-            setAulaoData(item.data || new Date().toISOString().split('T')[0]); // Pega a data do filtro ou hoje
+            setAulaoData(item.data || new Date().toISOString().split('T')[0]); 
             setAulaoHora("10:00");
             setAulaoValor("");
 
@@ -130,19 +130,47 @@ export function ValidationModal({
             return;
         }
 
+        // =========================================================================
+        // PASSO 1: A MÁGICA DO SNAPSHOT (FOTOGRAFIA DO PASSADO)
+        // Aqui nós capturamos os nomes efetivos para blindar o banco de dados
+        // =========================================================================
+        let nomeProfSnapshot = "";
+        let nomeModSnapshot = "";
+        let valorAulaSnapshot = 0;
+
+        if (acaoAtual.tipo === 'aulao') {
+            nomeProfSnapshot = professorEncontrado?.nome || "Professor Desconhecido";
+            const modObj = catalogs?.modalidades?.find(m => m.id === aulaoModalidadeId);
+            nomeModSnapshot = modObj?.nome || "Modalidade Desconhecida";
+            valorAulaSnapshot = aulaoValor ? parseFloat(aulaoValor) : 0;
+        } else {
+            // É validação de aula da grade normal
+            const profIdReal = isSubstituicao ? professorEncontrado?.id : acaoAtual.item.aulaBase.professorId;
+            const profObj = catalogs?.professores?.find(p => p.id === profIdReal);
+            
+            nomeProfSnapshot = profObj?.nome || acaoAtual.item.professorTitular?.nome || "Professor Desconhecido";
+            nomeModSnapshot = acaoAtual.item.modalidade?.nome || "Modalidade Desconhecida";
+            valorAulaSnapshot = acaoAtual.item.aulaBase?.valor ? parseFloat(acaoAtual.item.aulaBase.valor) : 0;
+        }
+        // =========================================================================
+
         const dadosFormulario = {
             inputValor,
             inputObs,
             isSubstituicao,
             substitutoId: professorEncontrado?.id || "",
             motivoSubstituicao,
-            // Dados extras do Aulão
             aulaoModalidadeId,
-            aulaoData, // Enviando a data escolhida
+            aulaoData, 
             aulaoHora,
             aulaoValor,
-            professorNome: professorEncontrado?.nome
+            
+            // Novos campos injetados para o Passo 2:
+            professorNomeEfetivo: nomeProfSnapshot,
+            modalidadeNomeEfetiva: nomeModSnapshot,
+            valorEfetivo: valorAulaSnapshot
         };
+        
         onConfirm(dadosFormulario);
     };
 
@@ -291,7 +319,6 @@ export function ValidationModal({
                 {/* === OUTROS FLUXOS (VALIDAR/CANCELAR - MANTIDOS) === */}
                 {(acaoAtual.tipo === 'validar' || acaoAtual.tipo === 'cancelar') && (
                     <form id="form-validacao" onSubmit={handleSubmit} className="space-y-5">
-                        {/* ... (Lógica existente de validar/cancelar mantida) ... */}
                         {acaoAtual.tipo === 'validar' ? (
                             <>
                                 <div className={`rounded-2xl border-2 transition-all duration-300 overflow-hidden ${isSubstituicao ? 'border-blue-500 bg-blue-50/50' : 'border-slate-100 hover:border-blue-200'}`}>

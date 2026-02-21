@@ -2,17 +2,16 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../services/firebase';
 import { 
-  collection, query, where, getDocs, addDoc, serverTimestamp, doc, updateDoc, deleteDoc, orderBy 
+  collection, query, where, getDocs, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, deleteDoc, orderBy 
 } from 'firebase/firestore';
 import { 
   Calendar, CircleCheck, CircleX, TriangleAlert, 
   MapPin, Filter, Search, List, ArrowDown, DownloadCloud, Loader2, LayoutDashboard, UserCog,
   Map as MapIcon, 
   Undo2,
-  Star // Ícone para o Aulão
+  Star 
 } from 'lucide-react';
 
-// Importa os componentes filhos
 import { AulaCard } from './AulaCard';
 import { ValidationModal } from './ValidationModal';
 
@@ -34,7 +33,7 @@ const diasSemanaMap = { 0: 'Domingo', 1: 'Segunda', 2: 'Terça', 3: 'Quarta', 4:
 export default function ValidacaoDiariaPage() {
   const { userData } = useAuth();
   
-  // --- PERMISSÕES ---
+  // --- PERMISSÕES (INTACTAS E BLINDADAS) ---
   const role = useMemo(() => String(userData?.role || "").trim().toLowerCase(), [userData?.role]);
   const userId = useMemo(() => userData?.id || userData?.uid, [userData]);
   const userUnidadeId = useMemo(() => userData?.unidadeId, [userData]);
@@ -52,10 +51,14 @@ export default function ValidacaoDiariaPage() {
   const [filtroProfessor, setFiltroProfessor] = useState("");
   const [filtroStatus, setFiltroStatus] = useState('todos'); 
 
-  // --- DADOS ---
+  // --- DADOS (ARQUITETURA HÍBRIDA) ---
   const [catalogs, setCatalogs] = useState({ 
       unidades: [], modalidades: [], professores: [], feriados: [], mentores: [] 
   });
+  
+  const [aulasRealtime, setAulasRealtime] = useState([]);
+  const [validacoesRealtime, setValidacoesRealtime] = useState([]);
+  
   const [gradeGerada, setGradeGerada] = useState([]);
   const [loading, setLoading] = useState(true);
   const [processando, setProcessando] = useState(false);
@@ -65,7 +68,9 @@ export default function ValidacaoDiariaPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [acaoAtual, setAcaoAtual] = useState(null); 
 
-  // 1. CARREGAMENTO INICIAL DOS DADOS
+  // ==========================================
+  // 1. CARREGAMENTO DOS CATÁLOGOS E PERMISSÕES
+  // ==========================================
   useEffect(() => {
     const loadCatalogs = async () => {
       try {
@@ -74,7 +79,7 @@ export default function ValidacaoDiariaPage() {
           getDocs(query(collection(db, 'unidades'), orderBy('nome'))),
           getDocs(query(collection(db, 'modalidades'), orderBy('nome'))),
           getDocs(query(collection(db, 'professores'), orderBy('nome'))),
-          getDocs(collection(db, 'vinculos')),
+          getDocs(collection(db, 'vinculos')), 
           getDocs(collection(db, 'feriados')),
           getDocs(query(collection(db, 'usuarios'), where('role', '==', 'mentor')))
         ]);
@@ -86,7 +91,7 @@ export default function ValidacaoDiariaPage() {
         const feriadosData = feriadosSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         const mentoresData = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-        // Filtros de Permissão
+        // Filtros de Permissão (ACL)
         if (role === 'mentor') {
           unitsData = unitsData.filter(u => u.mentorId === userId);
         } else if (role === 'unidade') {
@@ -117,7 +122,6 @@ export default function ValidacaoDiariaPage() {
     loadCatalogs();
   }, [role, userId, userUnidadeId]);
 
-  // Filtros dinâmicos
   const estadosDisponiveis = useMemo(() => {
       const ufs = catalogs.unidades.map(u => u.estado).filter(Boolean);
       return [...new Set(ufs)].sort();
@@ -132,201 +136,230 @@ export default function ValidacaoDiariaPage() {
       });
   }, [catalogs.unidades, role, filtroEstado, filtroMentor]);
 
-  // 4. MOTOR DE GERAÇÃO DA GRADE
+
+  // ==========================================
+  // 2. MOTOR DE TEMPO REAL (ESCUTA O PERÍODO SELECIONADO)
+  // ==========================================
   useEffect(() => {
     if (catalogs.unidades.length === 0 && role !== 'admin') return; 
-      
-    const gerarGrade = async () => {
-      setLoading(true);
-      try {
-        let dataInicio, dataFim;
-        let datasParaVerificar = [];
 
-        if (modoFiltro === 'dia') {
-          dataInicio = dataFiltro;
-          dataFim = dataFiltro;
-          datasParaVerificar = [new Date(dataFiltro + 'T12:00:00')]; 
-        } else {
-          const [ano, mes] = mesFiltro.split('-');
-          const lastDay = new Date(parseInt(ano), parseInt(mes), 0).getDate();
-          dataInicio = `${ano}-${mes}-01`;
-          dataFim = `${ano}-${mes}-${lastDay}`;
-          datasParaVerificar = getMonthDates(parseInt(ano), parseInt(mes) - 1);
-        }
+    setLoading(true);
 
-        // --- 1. AULAS REGULARES DO CRONOGRAMA ---
-        let aulasRef = collection(db, 'aulas');
-        let qAulas = query(aulasRef);
+    let dataInicio, dataFim;
+    if (modoFiltro === 'dia') {
+      dataInicio = dataFiltro;
+      dataFim = dataFiltro;
+    } else {
+      const [ano, mes] = mesFiltro.split('-');
+      const lastDay = new Date(parseInt(ano), parseInt(mes), 0).getDate();
+      dataInicio = `${ano}-${mes}-01`;
+      dataFim = `${ano}-${mes}-${lastDay}`;
+    }
 
-        if (role === 'unidade') {
-            qAulas = query(aulasRef, where('unidadeId', '==', userUnidadeId));
-        } else if (role === 'professor') {
-            const meuPerfil = catalogs.professores.find(p => p.uidLogin === userId);
-            const meuProfId = meuPerfil ? meuPerfil.id : 'xyz';
-            qAulas = query(aulasRef, where('professorId', '==', meuProfId));
-        }
+    let aulasRef = collection(db, 'aulas');
+    let qAulas = query(aulasRef);
+    if (role === 'unidade') {
+        qAulas = query(aulasRef, where('unidadeId', '==', userUnidadeId));
+    } else if (role === 'professor') {
+        const meuPerfil = catalogs.professores.find(p => p.uidLogin === userId);
+        const meuProfId = meuPerfil ? meuPerfil.id : 'xyz';
+        qAulas = query(aulasRef, where('professorId', '==', meuProfId));
+    }
 
-        const aulasSnap = await getDocs(qAulas);
-        let aulasBase = aulasSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const unsubAulas = onSnapshot(qAulas, (snap) => {
+        setAulasRealtime(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
 
-        // --- 2. VALIDAÇÕES EXISTENTES (Incluindo Aulões Extras) ---
-        let validacoesRef = collection(db, 'validacoes');
-        let qValidacoes = query(validacoesRef, where('data', '>=', dataInicio), where('data', '<=', dataFim));
+    let validacoesRef = collection(db, 'validacoes');
+    let qValidacoes = query(validacoesRef, where('data', '>=', dataInicio), where('data', '<=', dataFim));
+    if (role === 'unidade') {
+        qValidacoes = query(qValidacoes, where('unidadeId', '==', userUnidadeId));
+    } else if (role === 'professor') {
+        const meuPerfil = catalogs.professores.find(p => p.uidLogin === userId);
+        const meuProfId = meuPerfil ? meuPerfil.id : 'xyz';
+        qValidacoes = query(qValidacoes, where('professorId', '==', meuProfId));
+    }
 
-        if (role === 'unidade') {
-            qValidacoes = query(qValidacoes, where('unidadeId', '==', userUnidadeId));
-        } else if (role === 'professor') {
-            const meuPerfil = catalogs.professores.find(p => p.uidLogin === userId);
-            const meuProfId = meuPerfil ? meuPerfil.id : 'xyz';
-            qValidacoes = query(qValidacoes, where('professorId', '==', meuProfId));
-        }
+    const unsubValidacoes = onSnapshot(qValidacoes, (snap) => {
+        setValidacoesRealtime(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        setLoading(false); 
+    });
 
-        const validacoesSnap = await getDocs(qValidacoes); 
-        const validacoesExistentes = validacoesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    return () => {
+        unsubAulas();
+        unsubValidacoes();
+    };
+  }, [modoFiltro, dataFiltro, mesFiltro, catalogs.unidades.length, catalogs.professores, role, userId, userUnidadeId]);
 
-        let meuProfessorId = null;
-        if (role === 'professor') {
-            const meuPerfil = catalogs.professores.find(p => p.uidLogin === userId);
-            if (meuPerfil) meuProfessorId = meuPerfil.id;
-        }
 
-        // Função Feriado
-        const checkIsFeriado = (dateString) => {
-            const targetDate = new Date(dateString + 'T00:00:00');
-            return catalogs.feriados.some(f => {
-                if (f.data === dateString) return true;
-                if (f.dataInicio && f.dataFim) {
-                    const inicio = new Date(f.dataInicio + 'T00:00:00');
-                    const fim = new Date(f.dataFim + 'T00:00:00');
-                    return targetDate >= inicio && targetDate <= fim;
-                }
-                return false;
-            });
-        };
+  // ==========================================
+  // 3. PROCESSADOR DE GRADE VISUAL
+  // ==========================================
+  useEffect(() => {
+    if (loading || catalogs.unidades.length === 0) return;
 
-        let gradeFinal = [];
+    let datasParaVerificar = [];
+    if (modoFiltro === 'dia') {
+      datasParaVerificar = [new Date(dataFiltro + 'T12:00:00')]; 
+    } else {
+      const [ano, mes] = mesFiltro.split('-');
+      datasParaVerificar = getMonthDates(parseInt(ano), parseInt(mes) - 1);
+    }
 
-        // Loop principal
-        datasParaVerificar.forEach(dataObj => {
-          const dataString = dataObj.toISOString().split('T')[0];
-          const diaSemanaNome = diasSemanaMap[dataObj.getDay()];
-          const isFeriadoGlobal = checkIsFeriado(dataString);
+    let meuProfessorId = null;
+    if (role === 'professor') {
+        const meuPerfil = catalogs.professores.find(p => p.uidLogin === userId);
+        if (meuPerfil) meuProfessorId = meuPerfil.id;
+    }
 
-          // A. Processar Aulas da Grade
-          const aulasDoDia = aulasBase.filter(aula => aula.dias && aula.dias.includes(diaSemanaNome));
-
-          aulasDoDia.forEach(aula => {
-            const unidadeValida = catalogs.unidades.find(u => String(u.id) === String(aula.unidadeId));
-            if (!unidadeValida) return; 
-
-            if (filtroUnidade && String(aula.unidadeId) !== String(filtroUnidade)) return;
-            if (role === 'admin') {
-                if (filtroEstado && unidadeValida.estado !== filtroEstado) return;
-                if (filtroMentor && unidadeValida.mentorId !== filtroMentor) return;
+    const checkIsFeriado = (dateString) => {
+        const targetDate = new Date(dateString + 'T00:00:00');
+        return catalogs.feriados.some(f => {
+            if (f.data === dateString) return true;
+            if (f.dataInicio && f.dataFim) {
+                const inicio = new Date(f.dataInicio + 'T00:00:00');
+                const fim = new Date(f.dataFim + 'T00:00:00');
+                return targetDate >= inicio && targetDate <= fim;
             }
-            if (filtroModalidade && String(aula.modalidadeId) !== String(filtroModalidade)) return;
-            if (role === 'professor') {
-                if (String(aula.professorId) !== String(meuProfessorId)) return;
-            }
-
-            const prof = catalogs.professores.find(p => String(p.id) === String(aula.professorId));
-            if (filtroProfessor && prof) {
-                const termo = filtroProfessor.toLowerCase();
-                if (!prof.nome.toLowerCase().includes(termo)) return;
-            }
-
-            const validacao = validacoesExistentes.find(v => String(v.aulaId) === String(aula.id) && v.data === dataString);
-
-            let professorExibicao = prof;
-            let status = 'pendente';
-            let dadosValidacao = validacao;
-
-            if (validacao) {
-                status = validacao.status;
-            } else if (isFeriadoGlobal) {
-                status = 'cancelada';
-                dadosValidacao = { motivoCancelamento: 'Recesso/Feriado', status: 'cancelada' };
-            }
-            
-            if (validacao && validacao.substituicao && validacao.professorId) {
-                const profSub = catalogs.professores.find(p => String(p.id) === String(validacao.professorId));
-                if (profSub) professorExibicao = { ...profSub, isSubstituto: true };
-            }
-
-            gradeFinal.push({
-              key: `${aula.id}-${dataString}`,
-              data: dataString,
-              diaSemana: diaSemanaNome,
-              aulaBase: aula,
-              professor: professorExibicao, 
-              professorTitular: prof,
-              unidade: unidadeValida,
-              modalidade: catalogs.modalidades.find(m => String(m.id) === String(aula.modalidadeId)),
-              validacao: dadosValidacao || null, 
-              status: status
-            });
-          });
-
-          // B. Processar Aulões Especiais (Sem Aula Base na Grade)
-          const auloesDoDia = validacoesExistentes.filter(v => v.isAulao && v.data === dataString);
-          
-          auloesDoDia.forEach(v => {
-             const unidadeValida = catalogs.unidades.find(u => String(u.id) === String(v.unidadeId));
-             if (!unidadeValida) return;
-             if (filtroUnidade && String(v.unidadeId) !== String(filtroUnidade)) return;
-             if (role === 'admin') {
-                if (filtroEstado && unidadeValida.estado !== filtroEstado) return;
-                if (filtroMentor && unidadeValida.mentorId !== filtroMentor) return;
-             }
-
-             const prof = catalogs.professores.find(p => String(p.id) === String(v.professorId));
-             if (filtroProfessor && prof) {
-                const termo = filtroProfessor.toLowerCase();
-                if (!prof.nome.toLowerCase().includes(termo)) return;
-             }
-
-             const aulaSimulada = {
-                 id: v.id, 
-                 hora: v.hora || "00:00",
-                 unidadeId: v.unidadeId,
-                 modalidadeId: v.modalidadeId,
-                 professorId: v.professorId
-             };
-
-             gradeFinal.push({
-                 key: `aulao-${v.id}`,
-                 data: dataString,
-                 diaSemana: diaSemanaNome,
-                 aulaBase: aulaSimulada,
-                 professor: prof,
-                 professorTitular: prof,
-                 unidade: unidadeValida,
-                 modalidade: catalogs.modalidades.find(m => String(m.id) === String(v.modalidadeId)),
-                 validacao: v,
-                 status: v.status,
-                 isAulao: true
-             });
-          });
-
+            return false;
         });
-
-        gradeFinal.sort((a, b) => {
-          if (a.data !== b.data) return a.data.localeCompare(b.data);
-          return a.aulaBase.hora.localeCompare(b.aulaBase.hora);
-        });
-
-        setGradeGerada(gradeFinal);
-        setItensVisiveis(12);
-
-      } catch (error) {
-        console.error("Erro ao gerar grade:", error);
-      } finally {
-        setLoading(false);
-      }
     };
 
-    gerarGrade();
-  }, [modoFiltro, dataFiltro, mesFiltro, catalogs, filtroUnidade, filtroModalidade, filtroProfessor, filtroEstado, filtroMentor, role, userId, userUnidadeId]);
+    let gradeFinal = [];
+
+    datasParaVerificar.forEach(dataObj => {
+      const dataString = dataObj.toISOString().split('T')[0];
+      const diaSemanaNome = diasSemanaMap[dataObj.getDay()];
+      const isFeriadoGlobal = checkIsFeriado(dataString);
+
+      const aulasDoDia = aulasRealtime.filter(aula => aula.dias && aula.dias.includes(diaSemanaNome));
+
+      aulasDoDia.forEach(aula => {
+        // Trava de Vigência
+        if (aula.dataInicio && dataString < aula.dataInicio) return; 
+        if (aula.dataFim && dataString > aula.dataFim) return;
+
+        const unidadeValida = catalogs.unidades.find(u => String(u.id) === String(aula.unidadeId));
+        if (!unidadeValida) return; 
+
+        // Filtros de Tela
+        if (filtroUnidade && String(aula.unidadeId) !== String(filtroUnidade)) return;
+        if (role === 'admin') {
+            if (filtroEstado && unidadeValida.estado !== filtroEstado) return;
+            if (filtroMentor && unidadeValida.mentorId !== filtroMentor) return;
+        }
+        if (filtroModalidade && String(aula.modalidadeId) !== String(filtroModalidade)) return;
+        if (role === 'professor') {
+            if (String(aula.professorId) !== String(meuProfessorId)) return;
+        }
+
+        const validacao = validacoesRealtime.find(v => String(v.aulaId) === String(aula.id) && v.data === dataString);
+        
+        const profDoCatalogo = catalogs.professores.find(p => String(p.id) === String(aula.professorId));
+        const modDoCatalogo = catalogs.modalidades.find(m => String(m.id) === String(aula.modalidadeId));
+
+        let professorExibicao = profDoCatalogo ? { ...profDoCatalogo } : { nome: "Professor Excluído" }; 
+        let modalidadeExibicao = modDoCatalogo ? { ...modDoCatalogo } : { nome: "Modalidade Excluída" };
+
+        if (validacao) {
+            if (validacao.professorNomeEfetivo) {
+                professorExibicao.nome = validacao.professorNomeEfetivo;
+            }
+            if (validacao.modalidadeNomeEfetiva) {
+                modalidadeExibicao.nome = validacao.modalidadeNomeEfetiva;
+            }
+            if (validacao.substituicao && validacao.professorId) {
+                const profSub = catalogs.professores.find(p => String(p.id) === String(validacao.professorId));
+                if (profSub) {
+                    professorExibicao = { ...profSub, isSubstituto: true };
+                    if (validacao.professorNomeEfetivo) professorExibicao.nome = validacao.professorNomeEfetivo;
+                } else {
+                    professorExibicao.isSubstituto = true;
+                }
+            }
+        }
+
+        if (filtroProfessor && professorExibicao?.nome) {
+            const termo = filtroProfessor.toLowerCase();
+            if (!professorExibicao.nome.toLowerCase().includes(termo)) return;
+        }
+
+        let status = 'pendente';
+        let dadosValidacao = validacao;
+
+        if (validacao) {
+            status = validacao.status;
+        } else if (isFeriadoGlobal) {
+            status = 'cancelada';
+            dadosValidacao = { motivoCancelamento: 'Recesso/Feriado', status: 'cancelada' };
+        }
+
+        gradeFinal.push({
+          key: `${aula.id}-${dataString}`,
+          data: dataString,
+          diaSemana: diaSemanaNome,
+          aulaBase: aula,
+          professor: professorExibicao, 
+          professorTitular: profDoCatalogo,
+          unidade: unidadeValida,
+          modalidade: modalidadeExibicao,
+          validacao: dadosValidacao || null, 
+          status: status
+        });
+      });
+
+      // Aulões Extras
+      const auloesDoDia = validacoesRealtime.filter(v => v.isAulao && v.data === dataString);
+      auloesDoDia.forEach(v => {
+         const unidadeValida = catalogs.unidades.find(u => String(u.id) === String(v.unidadeId));
+         if (!unidadeValida) return;
+         if (filtroUnidade && String(v.unidadeId) !== String(filtroUnidade)) return;
+         if (role === 'admin') {
+            if (filtroEstado && unidadeValida.estado !== filtroEstado) return;
+            if (filtroMentor && unidadeValida.mentorId !== filtroMentor) return;
+         }
+
+         let profAulao = { nome: v.professorNomeEfetivo || "Professor Desconhecido" };
+         let modAulao = { nome: v.modalidadeNomeEfetiva || "Modalidade Desconhecida" };
+
+         if (filtroProfessor && profAulao.nome) {
+            const termo = filtroProfessor.toLowerCase();
+            if (!profAulao.nome.toLowerCase().includes(termo)) return;
+         }
+
+         const aulaSimulada = {
+             id: v.id, 
+             hora: v.hora || "00:00",
+             unidadeId: v.unidadeId,
+             modalidadeId: v.modalidadeId,
+             professorId: v.professorId
+         };
+
+         gradeFinal.push({
+             key: `aulao-${v.id}`,
+             data: dataString,
+             diaSemana: diaSemanaNome,
+             aulaBase: aulaSimulada,
+             professor: profAulao,
+             professorTitular: profAulao,
+             unidade: unidadeValida,
+             modalidade: modAulao,
+             validacao: v,
+             status: v.status,
+             isAulao: true
+         });
+      });
+    });
+
+    gradeFinal.sort((a, b) => {
+      if (a.data !== b.data) return a.data.localeCompare(b.data);
+      return a.aulaBase.hora.localeCompare(b.aulaBase.hora);
+    });
+
+    setGradeGerada(gradeFinal);
+
+  // Removido o meuProfessorId desta lista, que era o que estava causando o erro!
+  }, [aulasRealtime, validacoesRealtime, loading, catalogs, filtroUnidade, filtroModalidade, filtroProfessor, filtroEstado, filtroMentor, dataFiltro, mesFiltro, modoFiltro, role, userId]);
 
   // CONTADORES E PAGINAÇÃO
   const counts = useMemo(() => {
@@ -374,7 +407,7 @@ export default function ValidacaoDiariaPage() {
 
   const handleReverterCancelamento = async () => {
       if (!acaoAtual.item.validacao?.id && acaoAtual.item.validacao?.motivoCancelamento === 'Recesso/Feriado') {
-          return alert("Esta aula é um Feriado Automático. Para que ela aconteça, basta clicar em 'Voltar' e depois em 'Validar' (botão verde) para confirmar a presença.");
+          return alert("Esta aula é Feriado Automático. Para acontecer, clique em 'Voltar' e 'Validar'.");
       }
 
       if (!acaoAtual || !acaoAtual.item.validacao?.id) return;
@@ -383,31 +416,30 @@ export default function ValidacaoDiariaPage() {
       setProcessando(true);
       try {
           await deleteDoc(doc(db, 'validacoes', acaoAtual.item.validacao.id));
-          window.location.reload(); 
       } catch (error) {
           console.error("Erro ao reverter:", error);
           alert("Erro ao reverter cancelamento.");
       } finally {
           setProcessando(false);
+          setModalOpen(false);
       }
   };
 
-  // --- NOVO: LÓGICA DE AULÃO ESPECIAL ---
   const handleNovoAulao = () => {
       if (!filtroUnidade) return alert("Selecione uma Unidade específica no filtro para adicionar um Aulão.");
-      
       const unidadeObj = catalogs.unidades.find(u => String(u.id) === String(filtroUnidade));
-      
-      const itemAulao = {
-          unidade: unidadeObj,
-          data: dataFiltro,
-      };
-
-      abrirModal('aulao', itemAulao);
+      abrirModal('aulao', { unidade: unidadeObj, data: dataFiltro });
   };
 
+  // ==========================================
+  // CONFIRMAÇÃO DO MODAL
+  // ==========================================
   const confirmarAcao = async (dadosFormulario) => {
-    const { inputValor, inputObs, isSubstituicao, substitutoId, motivoSubstituicao, aulaoModalidadeId, aulaoHora, aulaoValor, aulaoData } = dadosFormulario;
+    const { 
+        inputValor, inputObs, isSubstituicao, substitutoId, motivoSubstituicao, 
+        aulaoModalidadeId, aulaoHora, aulaoValor, aulaoData,
+        professorNomeEfetivo, modalidadeNomeEfetiva, valorEfetivo
+    } = dadosFormulario;
     
     if (acaoAtual.tipo === 'validar' && !inputValor) return alert("Informe o número de alunos.");
     if (acaoAtual.tipo === 'aulao' && (!aulaoModalidadeId || !inputValor || !substitutoId || !aulaoData)) return alert("Preencha todos os campos do Aulão.");
@@ -417,9 +449,12 @@ export default function ValidacaoDiariaPage() {
       const { tipo, item } = acaoAtual;
       
       const payload = {
-        data: tipo === 'aulao' ? aulaoData : item.data, // Usa a data do formulário se for Aulão
+        data: tipo === 'aulao' ? aulaoData : item.data, 
         validadoPor: userId,
         timestamp: serverTimestamp(), 
+        professorNomeEfetivo: professorNomeEfetivo || "",
+        modalidadeNomeEfetiva: modalidadeNomeEfetiva || "",
+        valorEfetivo: valorEfetivo || 0
       };
 
       if (tipo === 'aulao') {
@@ -434,7 +469,6 @@ export default function ValidacaoDiariaPage() {
           payload.substituicao = false; 
           
           await addDoc(collection(db, 'validacoes'), payload);
-          window.location.reload();
 
       } else {
           payload.aulaId = item.aulaBase.id;
@@ -458,29 +492,21 @@ export default function ValidacaoDiariaPage() {
             payload.substituicao = false;
           }
 
-          let validacaoId = item.validacao?.id;
           if (item.validacao?.id) {
             await updateDoc(doc(db, 'validacoes', item.validacao.id), payload);
           } else {
-            const docRef = await addDoc(collection(db, 'validacoes'), payload);
-            validacaoId = docRef.id;
+            await addDoc(collection(db, 'validacoes'), payload);
           }
-
-          setGradeGerada(prevGrade => prevGrade.map(gridItem => {
-            if (gridItem.key === item.key) {
-               let novoProfessor = item.professorTitular;
-               if (payload.substituicao && payload.professorId) {
-                    const sub = catalogs.professores.find(p => String(p.id) === String(payload.professorId));
-                    if (sub) novoProfessor = { ...sub, isSubstituto: true };
-               }
-               return { ...gridItem, status: payload.status, professor: novoProfessor, validacao: { id: validacaoId, ...payload } };
-            }
-            return gridItem;
-          }));
       }
 
-    } catch (error) { console.error(error); alert("Erro ao salvar."); } 
-    finally { setProcessando(false); setModalOpen(false); setAcaoAtual(null); }
+    } catch (error) { 
+        console.error(error); 
+        alert("Erro ao salvar no banco de dados."); 
+    } finally { 
+        setProcessando(false); 
+        setModalOpen(false); 
+        setAcaoAtual(null); 
+    }
   };
 
   return (
@@ -513,7 +539,6 @@ export default function ValidacaoDiariaPage() {
                     </button>
                 </div>
 
-                {/* BOTÃO AULÃO ESPECIAL - POSICIONADO AO LADO DOS CARDS */}
                 {role !== 'professor' && (
                     <button 
                         onClick={handleNovoAulao}
@@ -526,7 +551,6 @@ export default function ValidacaoDiariaPage() {
             </div>
         </div>
         
-        {/* BARRA DE FILTROS */}
         <div className="bg-white dark:bg-slate-800 p-3 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm w-full">
             <div className="flex flex-wrap gap-2 items-center">
                 <div className="flex bg-slate-100 dark:bg-slate-700 rounded-xl p-1 h-10 shrink-0">
@@ -570,7 +594,6 @@ export default function ValidacaoDiariaPage() {
                     </div>
                 )}
 
-                {/* BOTÃO MOBILE AULÃO (Para aparecer em telas pequenas) */}
                 {role !== 'professor' && (
                     <button 
                         onClick={handleNovoAulao}
@@ -583,11 +606,10 @@ export default function ValidacaoDiariaPage() {
         </div>
       </div>
 
-      {/* GRID DE AULAS */}
       {loading ? (
         <div className="h-64 flex flex-col items-center justify-center text-slate-400">
           <Loader2 className="w-8 h-8 animate-spin mb-2 text-emerald-500"/>
-          <p className="text-sm font-medium">Carregando grade...</p>
+          <p className="text-sm font-medium">Carregando dados ao vivo...</p>
         </div>
       ) : listaFiltradaTotal.length === 0 ? (
         <div className="py-24 text-center bg-white dark:bg-slate-800 rounded-3xl border border-dashed border-slate-300 dark:border-slate-700">
@@ -624,7 +646,6 @@ export default function ValidacaoDiariaPage() {
         </div>
       )}
 
-      {/* MODAL */}
       <ValidationModal 
         isOpen={modalOpen} 
         onClose={() => setModalOpen(false)}

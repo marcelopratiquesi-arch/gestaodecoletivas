@@ -6,13 +6,26 @@ import {
   BarChart2, Filter, Calendar, CheckCircle2, AlertCircle, 
   Search, Trophy, ChevronRight, ChevronDown, User, Clock, ShieldCheck, 
   LayoutDashboard, Download, AlertTriangle, Building2, UserCog, List, Construction, 
-  History, Eye, EyeOff, Activity, ArrowUpDown, MessageSquare, Copy, Users, FileText, CalendarClock
+  History, Eye, EyeOff, Activity, ArrowUpDown, MessageSquare, Copy, Users, FileText, Smartphone, CalendarClock, Palmtree
 } from 'lucide-react';
 
 const diasSemanaMap = { 0: 'Domingo', 1: 'Segunda', 2: 'Terça', 3: 'Quarta', 4: 'Quinta', 5: 'Sexta', 6: 'Sábado' };
 const getTodayStr = () => new Date().toLocaleDateString('en-CA'); 
 
-// --- HELPERS ---
+// --- HELPERS IDENTICOS À VALIDAÇÃO DIÁRIA ---
+
+const normalizeDate = (d) => {
+    if (!d) return null;
+    if (d.seconds) return new Date(d.seconds * 1000).toLocaleDateString('en-CA');
+    if (typeof d === 'string') {
+        if (d.includes('/')) { 
+            const [dia, mes, ano] = d.split('/');
+            return `${ano}-${mes}-${dia}`;
+        }
+        return d.substring(0, 10);
+    }
+    return null;
+};
 
 const getDatesInRange = (startDate, endDate) => {
   const dates = [];
@@ -72,7 +85,7 @@ const getColorClassByPercent = (percent) => {
     return 'bg-red-600 shadow-red-600/50';
 };
 
-// --- COMPONENTES AUXILIARES (FORA DO ESCOPO PRINCIPAL PARA PERFORMANCE) ---
+// --- COMPONENTES AUXILIARES ---
 
 const SortableHeader = ({ label, sortKey, currentSort, onSort, align = 'left' }) => (
     <th 
@@ -113,6 +126,7 @@ const StatusBadge = ({ type, text }) => {
         'Aguardando início': 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20',
         'realizada': 'bg-green-50 text-green-700 border-green-200 dark:bg-green-500/10 dark:text-green-400',
         'cancelada': 'bg-red-50 text-red-700 border-red-200 dark:bg-red-500/10 dark:text-red-400',
+        'Feriado': 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300',
         'atrasado': 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-500/10 dark:text-orange-400',
         'futuro': 'bg-slate-50 text-slate-400 border-slate-200 dark:bg-slate-800 dark:text-slate-500'
     };
@@ -121,9 +135,10 @@ const StatusBadge = ({ type, text }) => {
         'Parabéns!': Trophy,
         'Em andamento': Activity,
         'Em construção': Construction,
-        'Aguardando início': CalendarClock, // Ícone adicionado aqui
+        'Aguardando início': CalendarClock,
         'realizada': CheckCircle2,
         'cancelada': AlertCircle,
+        'Feriado': Palmtree,
         'atrasado': Clock
     };
 
@@ -145,7 +160,7 @@ export default function ValidacaoColetiva() {
   
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState({ 
-    unidades: [], mentores: [], aulas: [], validacoes: [], usuarios: [], modalidades: [], professores: []
+    unidades: [], mentores: [], aulas: [], validacoes: [], usuarios: [], modalidades: [], professores: [], feriados: []
   });
 
   const [modoFiltro, setModoFiltro] = useState('dia'); 
@@ -164,11 +179,10 @@ export default function ValidacaoColetiva() {
     return () => clearInterval(interval);
   }, []);
 
-  // VALIDAÇÃO DE DATA (SEGURANÇA)
   useEffect(() => {
-      if (dataInicio > dataFim) {
-          setDataFim(dataInicio);
-      }
+    if (dataInicio > dataFim) {
+        setDataFim(dataInicio);
+    }
   }, [dataInicio, dataFim]);
 
   useEffect(() => {
@@ -186,14 +200,26 @@ export default function ValidacaoColetiva() {
             qUnidades = query(collection(db, 'unidades'), where('mentorId', '==', userId));
         }
 
-        const [uniSnap, userSnap, aulaSnap, valSnap, modSnap, profSnap] = await Promise.all([
+        const [uniSnap, userSnap, aulaSnap, valSnap, modSnap, profSnap, feriadosSnap] = await Promise.all([
           getDocs(qUnidades),
           getDocs(collection(db, 'usuarios')),
           getDocs(collection(db, 'aulas')),
           getDocs(qValidacoes),
           getDocs(collection(db, 'modalidades')),
-          getDocs(collection(db, 'professores'))
+          getDocs(collection(db, 'professores')),
+          getDocs(collection(db, 'feriados'))
         ]);
+
+        // NORMALIZAÇÃO DE FERIADOS (IGUAL VALIDAÇÃO DIÁRIA)
+        const feriadosNormalizados = feriadosSnap.docs.map(d => {
+            const f = d.data();
+            return {
+                id: d.id,
+                ...f,
+                inicio: normalizeDate(f.dataInicio || f.inicio || f.data), 
+                fim: normalizeDate(f.dataFim || f.fim || f.data)
+            };
+        });
 
         setData({
           unidades: uniSnap.docs.map(d => ({ id: d.id, ...d.data() })),
@@ -202,7 +228,8 @@ export default function ValidacaoColetiva() {
           aulas: aulaSnap.docs.map(d => ({ id: d.id, ...d.data() })),
           validacoes: valSnap.docs.map(d => ({ id: d.id, ...d.data() })),
           modalidades: modSnap.docs.map(d => ({ id: d.id, ...d.data() })),
-          professores: profSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+          professores: profSnap.docs.map(d => ({ id: d.id, ...d.data() })),
+          feriados: feriadosNormalizados
         });
 
       } catch (e) {
@@ -214,6 +241,7 @@ export default function ValidacaoColetiva() {
     loadData();
   }, [dataInicio, dataFim, role, userId]); 
 
+  // --- CÁLCULO UNIFICADO COM REGRA DE NEGÓCIO DA VALIDAÇÃO DIÁRIA ---
   const dadosProcessados = useMemo(() => {
     if (data.unidades.length === 0) return { mentores: [], unidades: [], kpis: { totalAulas: 0, unidadesValidadas: 0, unidadesPendentes: 0 } };
 
@@ -227,6 +255,16 @@ export default function ValidacaoColetiva() {
     data.professores.forEach(p => profMap[p.id] = p.nome);
 
     const datasDoPeriodo = getDatesInRange(dataInicio, dataFim);
+    const todayStr = getTodayStr();
+
+    // Indexação para performance
+    const validacoesIndex = {};
+    data.validacoes.forEach(v => {
+        const dataVal = normalizeDate(v.data) || String(v.data);
+        const key = `${v.unidadeId}_${dataVal}`;
+        if(!validacoesIndex[key]) validacoesIndex[key] = [];
+        validacoesIndex[key].push(v);
+    });
 
     const statusUnidades = data.unidades.map(unidade => {
         let totalEsperadoAteAgora = 0;
@@ -238,19 +276,78 @@ export default function ValidacaoColetiva() {
         const temCronograma = gradeUnidade.length > 0;
 
         datasDoPeriodo.forEach(dataStr => {
+            // TRAVA: Ignora futuro
+            if (dataStr > todayStr) return;
+
+            // --- LÓGICA DE FERIADO DO ARQUIVO DA VALIDAÇÃO DIÁRIA ---
+            const isFeriado = data.feriados.some(f => {
+                // Se não tiver data, ignora
+                if (!f.inicio || !f.fim) return false;
+                
+                // Filtro por Unidade (se o feriado tiver unidadeId, só vale pra ela. Se não tiver, é global)
+                const feriadoAplica = !f.unidadeId || String(f.unidadeId) === String(unidade.id);
+                
+                // Range de Datas
+                const dentroDoPrazo = dataStr >= f.inicio && dataStr <= f.fim;
+                
+                return feriadoAplica && dentroDoPrazo;
+            });
+
             const dateObj = new Date(dataStr + 'T00:00:00');
             const diaSemana = diasSemanaMap[dateObj.getDay()];
             const aulasDoDia = gradeUnidade.filter(a => a.dias && a.dias.includes(diaSemana));
+
+            if (aulasDoDia.length === 0) return;
+
+            const poolValidacoes = [...(validacoesIndex[`${unidade.id}_${dataStr}`] || [])];
 
             aulasDoDia.forEach(aula => {
                 const [h, m] = aula.hora.split(':');
                 const dataHoraAula = new Date(dataStr);
                 dataHoraAula.setHours(parseInt(h), parseInt(m), 59); 
 
-                const jaPassou = dataHoraAula < now;
-                if (jaPassou) totalEsperadoAteAgora++;
+                const jaPassou = (dataStr < todayStr) || (dataStr === todayStr && dataHoraAula < now);
 
-                const validacao = data.validacoes.find(v => String(v.aulaId) === String(aula.id) && v.data === dataStr);
+                if (!jaPassou) return;
+
+                totalEsperadoAteAgora++; 
+
+                // SE É FERIADO: Conta como validado (Cancelada/Sistema)
+                if (isFeriado) {
+                    totalValidado++;
+                    historicoDetalhado.push({
+                        key: aula.id + dataStr,
+                        data: new Date(dataStr + 'T00:00:00').toLocaleDateString('pt-BR'),
+                        dia: diaSemana,
+                        horaAula: aula.hora,
+                        modalidade: modMap[aula.modalidadeId] || 'Geral',
+                        professor: profMap[aula.professorId] || 'Sem professor',
+                        status: 'Feriado', 
+                        alunos: 0,
+                        motivoCancelamento: 'Recesso/Feriado Automático',
+                        responsavelNome: 'Sistema',
+                        horaValidacao: '-',
+                        dataValidacao: '-',
+                        diffDays: 0, 
+                        timestampOrdenacao: dataHoraAula 
+                    });
+                    return; 
+                }
+
+                // SE NÃO É FERIADO: Procura validação
+                let foundIndex = -1;
+                // 1. Match Exato
+                foundIndex = poolValidacoes.findIndex(v => String(v.aulaId) === String(aula.id));
+                // 2. Match Flexível (Hora)
+                if (foundIndex === -1) {
+                    foundIndex = poolValidacoes.findIndex(v => v.hora === aula.hora);
+                }
+
+                let validacao = null;
+                if (foundIndex !== -1) {
+                    validacao = poolValidacoes[foundIndex];
+                    poolValidacoes.splice(foundIndex, 1); 
+                }
                 
                 let statusItem = 'pendente';
                 let responsavelNome = '-';
@@ -259,9 +356,8 @@ export default function ValidacaoColetiva() {
                 let diffDays = 0;
 
                 if (validacao) {
-                    if (!jaPassou) totalEsperadoAteAgora++; 
                     totalValidado++;
-                    statusItem = validacao.status; 
+                    statusItem = validacao.status || 'realizada'; 
                     
                     const userLog = usuariosMap[validacao.userId || validacao.validadoPor];
                     responsavelNome = userLog ? userLog.nome : (validacao.validadoPorNome || 'Sistema');
@@ -276,17 +372,12 @@ export default function ValidacaoColetiva() {
                             const dateValidacao = new Date(dateVal);
                             dateAula.setHours(0,0,0,0);
                             dateValidacao.setHours(0,0,0,0);
-                            const diffTime = dateValidacao - dateAula;
-                            diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                            diffDays = Math.floor((dateValidacao - dateAula) / (1000 * 60 * 60 * 24));
                         }
                     }
                 } else {
-                    if (jaPassou) {
-                        pendencias.push({ data: dataStr, dia: diaSemana, info: `Aula das ${aula.hora}` });
-                        statusItem = 'atrasado';
-                    } else {
-                        statusItem = 'futuro';
-                    }
+                    pendencias.push({ data: dataStr, dia: diaSemana, info: `Aula das ${aula.hora}` });
+                    statusItem = 'atrasado';
                 }
 
                 historicoDetalhado.push({
@@ -320,7 +411,6 @@ export default function ValidacaoColetiva() {
         else if (percentual === 100 && totalEsperadoAteAgora > 0) statusTexto = 'Parabéns!';
         else if (totalEsperadoAteAgora === 0) statusTexto = 'Aguardando início';
 
-        // Correção de Referência Circular: Busca em 'data' original
         const lastVal = data.validacoes.filter(v => String(v.unidadeId) === String(unidade.id))
             .sort((a,b) => (b.validadoEm?.seconds || 0) - (a.validadoEm?.seconds || 0))[0];
         
@@ -463,7 +553,7 @@ export default function ValidacaoColetiva() {
       const today = getTodayStr(); 
       return [...new Set(pendencias
           .map(p => p.data)
-          .filter(d => d <= today) // Datas até hoje
+          .filter(d => d <= today) 
       )].sort();
   };
 
@@ -549,6 +639,7 @@ export default function ValidacaoColetiva() {
   };
 
   const getRowColor = (status, diffDays) => {
+    if (status === 'Feriado') return 'bg-purple-50 hover:bg-purple-100 border-l-4 border-l-purple-500';
     if (status !== 'realizada' && status !== 'cancelada') {
         return 'hover:bg-slate-50 dark:hover:bg-slate-700/50 border-l-4 border-l-transparent'; 
     }
@@ -636,6 +727,11 @@ export default function ValidacaoColetiva() {
                         <div className="flex-1 w-full relative">
                             <div className="w-full h-3 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden relative shadow-inner group/bar cursor-help">
                                 <div className={`h-full rounded-full transition-all duration-1000 ease-out shadow-sm ${getColorClassByPercent(mentor.mediaGeral)}`} style={{ width: `${mentor.mediaGeral}%` }}></div>
+                                <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center opacity-0 group-hover/bar:opacity-100 transition-opacity">
+                                    <span className="text-[9px] font-bold text-slate-500 bg-white/90 px-2 rounded shadow-sm">
+                                        {mentor.unidadesList.some(u => !u.temCronograma) ? 'Contém unidades em construção' : ''}
+                                    </span>
+                                </div>
                             </div>
                         </div>
                         <div className="w-full md:w-32 text-right">
@@ -679,15 +775,7 @@ export default function ValidacaoColetiva() {
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left">
                         <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200 dark:border-slate-700">
-                            <tr>
-                                <th className="p-4 w-10"></th>
-                                <SortableHeader label="Unidade / Mentor" sortKey="nome" currentSort={sortConfig} onSort={requestSort} />
-                                <SortableHeader label="Progresso" sortKey="percentual" currentSort={sortConfig} onSort={requestSort} align="center" />
-                                <SortableHeader label="Status" sortKey="status" currentSort={sortConfig} onSort={requestSort} align="center" />
-                                <SortableHeader label="Última Atualização" sortKey="lastValidation" currentSort={sortConfig} onSort={requestSort} />
-                                <SortableHeader label="Responsável" sortKey="responsavel" currentSort={sortConfig} onSort={requestSort} align="right" />
-                                <th className="p-4 text-center">Ação</th>
-                            </tr>
+                            <tr><th className="p-4 w-10"></th><SortableHeader label="Unidade / Mentor" sortKey="nome" currentSort={sortConfig} onSort={requestSort} /><SortableHeader label="Progresso" sortKey="percentual" currentSort={sortConfig} onSort={requestSort} align="center" /><SortableHeader label="Status" sortKey="status" currentSort={sortConfig} onSort={requestSort} align="center" /><SortableHeader label="Última Atualização" sortKey="lastValidation" currentSort={sortConfig} onSort={requestSort} /><SortableHeader label="Responsável" sortKey="responsavel" currentSort={sortConfig} onSort={requestSort} align="right" /><th className="p-4 text-center">Ação</th></tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                             {sortedUnidades.map(u => (
@@ -713,7 +801,7 @@ export default function ValidacaoColetiva() {
                                     </tr>
                                     {expandedUnitId === u.id && (
                                         <tr className="bg-slate-50/50 dark:bg-slate-900/20 border-b border-slate-200 dark:border-slate-700 shadow-inner">
-                                            <td colSpan="7" className="p-0"><div className="p-4"><div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden shadow-sm"><table className="w-full text-xs text-left"><thead className="bg-slate-100 dark:bg-slate-700 text-slate-500 font-bold uppercase border-b border-slate-200 dark:border-slate-600"><tr><th className="p-3">Data / Hora Aula</th><th className="p-3">Modalidade / Aula</th><th className="p-3">Professor</th><th className="p-3 text-center">Status</th><th className="p-3 text-right">Validação</th></tr></thead><tbody className="divide-y divide-slate-100 dark:divide-slate-700">{u.historicoDetalhado.map((h) => (<tr key={h.key} className={`transition-colors ${getRowColor(h.status, h.diffDays)}`}><td className="p-3"><div className="font-bold text-slate-700 dark:text-slate-200">{h.data}</div><div className="text-slate-400 font-mono">{h.horaAula}</div></td><td className="p-3 font-medium text-slate-600 dark:text-slate-300">{h.modalidade}</td><td className="p-3 text-slate-600 dark:text-slate-300">{getFirstLast(h.professor)}</td><td className="p-3 text-center"><div className="flex justify-center"><StatusBadge type={h.status} text={h.status === 'atrasado' ? 'Pendente' : h.status} /></div></td><td className="p-3 text-right">{(h.status === 'realizada' || h.status === 'cancelada') ? (<div><div className="font-bold text-slate-700 dark:text-slate-300 truncate max-w-[150px] ml-auto">{h.responsavelNome}</div><div className="text-slate-400 text-[10px] flex items-center justify-end gap-1">{h.dataValidacao} às {h.horaValidacao}</div></div>) : <span className="text-slate-300 text-[10px]">-</span>}</td></tr>))}</tbody></table></div></div></td>
+                                            <td colSpan="7" className="p-0"><div className="p-4"><div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden shadow-sm"><table className="w-full text-xs text-left"><thead className="bg-slate-100 dark:bg-slate-700 text-slate-500 font-bold uppercase border-b border-slate-200 dark:border-slate-600"><tr><th className="p-3">Data / Hora Aula</th><th className="p-3">Modalidade / Aula</th><th className="p-3">Professor</th><th className="p-3 text-center">Status</th><th className="p-3 text-right">Validação</th></tr></thead><tbody className="divide-y divide-slate-100 dark:divide-slate-700">{u.historicoDetalhado.map((h) => (<tr key={h.key} className={`transition-colors ${getRowColor(h.status, h.diffDays)}`}><td className="p-3"><div className="font-bold text-slate-700 dark:text-slate-200">{h.data}</div><div className="text-slate-400 font-mono">{h.horaAula}</div></td><td className="p-3 font-medium text-slate-600 dark:text-slate-300">{h.modalidade}</td><td className="p-3 text-slate-600 dark:text-slate-300">{getFirstLast(h.professor)}</td><td className="p-3 text-center"><div className="flex justify-center"><StatusBadge type={h.status} text={h.status === 'atrasado' ? 'Pendente' : h.status} /></div></td><td className="p-3 text-right">{(h.status === 'realizada' || h.status === 'cancelada') ? (<div><div className="font-bold text-slate-700 dark:text-slate-300 truncate max-w-[150px] ml-auto">{h.responsavelNome}</div><div className="text-slate-400 text-[10px] flex items-center justify-end gap-1">{h.dataValidacao} às {h.horaValidacao}</div></div>) : (h.status === 'Feriado' ? <span className="text-purple-500 font-bold text-[10px]">RECESSO/FERIADO</span> : <span className="text-slate-300 text-[10px]">-</span>)}</td></tr>))}</tbody></table></div></div></td>
                                         </tr>
                                     )}
                                 </React.Fragment>
@@ -728,6 +816,7 @@ export default function ValidacaoColetiva() {
         {activeTab === 'cobranca' && (
             <div className="animate-fade-in space-y-6">
                 
+                {/* 1. RELATÓRIO GERAL (NO TOPO) */}
                 <div className="bg-gradient-to-r from-indigo-900 to-slate-900 rounded-xl p-6 shadow-xl border border-indigo-500/30 text-white relative overflow-hidden mb-6">
                     <div className="flex justify-between items-center relative z-10">
                         <div>
@@ -756,6 +845,7 @@ export default function ValidacaoColetiva() {
                     </div>
                 </div>
 
+                {/* 2. TABELA ESTILO EXCEL */}
                 <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden shadow-sm">
                     <table className="w-full text-sm text-left border-collapse">
                         <thead className="bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold uppercase text-[11px] tracking-wider border-b border-slate-300 dark:border-slate-600">
@@ -768,6 +858,7 @@ export default function ValidacaoColetiva() {
                         </thead>
                         <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                             
+                            {/* MODO ADMIN: LISTA MENTORES (SÓ QUEM DEVE REAIS) */}
                             {!isMentor && dadosProcessados.mentores
                                 .filter(m => m.unidadesList.some(u => filterPendingDates(u.pendencias).length > 0)) 
                                 .sort((a, b) => b.mediaGeral - a.mediaGeral) // Ordena do maior (99%) para o menor (0%)
@@ -793,9 +884,10 @@ export default function ValidacaoColetiva() {
                                 </tr>
                             ))}
 
+                            {/* MODO MENTOR: LISTA UNIDADES (SÓ QUEM DEVE REAIS) */}
                             {isMentor && dadosProcessados.unidades
-                                .filter(u => filterPendingDates(u.pendencias).length > 0)
-                                .sort((a, b) => b.percentual - a.percentual) // Ordena do maior para o menor
+                                .filter(u => filterPendingDates(u.pendencias).length > 0) // Filtro Forte
+                                .sort((a, b) => b.percentual - a.percentual) // Ordena por maior percentual primeiro
                                 .map((unidade) => (
                                 <tr key={unidade.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
                                     <td className="p-3 border-r border-slate-100 dark:border-slate-700 font-bold text-slate-700 dark:text-slate-200">

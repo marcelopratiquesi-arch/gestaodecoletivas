@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { db } from '../../services/firebase'; 
-import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
+import { collection, getDocs, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 import { 
   Search, Clock, ChevronRight, Loader2, 
-  Printer, ArrowLeft, Dumbbell, Sun, Moon, ChevronDown, MapPin, Sparkles
+  Printer, ArrowLeft, Dumbbell, Sun, Moon, ChevronDown, MapPin
 } from 'lucide-react';
 
 // --- CONFIGURAÇÃO DAS IMAGENS ---
@@ -17,6 +17,8 @@ const LOGOS = {
     'pratique': '/logos/pratique.png'
 };
 
+const getTodayStr = () => new Date().toLocaleDateString('en-CA');
+
 const formatProfessorName = (name) => {
     if (!name) return "Instrutor";
     const parts = name.trim().split(' ');
@@ -24,42 +26,32 @@ const formatProfessorName = (name) => {
     return `${parts[0]} ${parts[parts.length - 1]}`;
 };
 
-// Componente Skeleton (Carregamento Elegante)
-const SkeletonItem = ({ isDark }) => (
-    <div className={`p-4 rounded-xl border flex justify-between items-center animate-pulse ${isDark ? 'bg-white/5 border-white/5' : 'bg-gray-100 border-gray-200'}`}>
-        <div className="space-y-2 w-full">
-            <div className={`h-4 rounded w-1/3 ${isDark ? 'bg-white/10' : 'bg-gray-300'}`}></div>
-            <div className={`h-3 rounded w-1/4 ${isDark ? 'bg-white/5' : 'bg-gray-200'}`}></div>
-        </div>
-        <div className={`w-8 h-8 rounded-full ${isDark ? 'bg-white/10' : 'bg-gray-300'}`}></div>
-    </div>
-);
-
 export default function PublicSchedule() {
+  // CATÁLOGOS BASE
   const [unidades, setUnidades] = useState([]);
   const [modalidadesMap, setModalidadesMap] = useState({});
   const [professoresMap, setProfessoresMap] = useState({});
   
+  // ESTADOS DE TELA
   const [loading, setLoading] = useState(true);
   const [loadingGrade, setLoadingGrade] = useState(false);
   const [unidadeSelecionada, setUnidadeSelecionada] = useState(null);
   const [gradeUnidade, setGradeUnidade] = useState([]);
   const [isDarkMode, setIsDarkMode] = useState(true);
   
+  // FILTROS
   const [busca, setBusca] = useState("");
   const [termoDebounce, setTermoDebounce] = useState(""); 
-  
-  // Filtro de Estado
   const [filtroEstado, setFiltroEstado] = useState(""); 
   
   const [resultadosUnidade, setResultadosUnidade] = useState([]);
   const [resultadosModalidade, setResultadosModalidade] = useState(null);
 
-  // CONTROLE DE DENSIDADE DE IMPRESSÃO
+  // CONTROLE DE IMPRESSÃO
   const [printDensity, setPrintDensity] = useState('auto');
   const [showPrintMenu, setShowPrintMenu] = useState(false);
 
-  // 1. Inicialização
+  // 1. Inicialização (Catálogos Fixos)
   useEffect(() => {
     const init = async () => {
         setLoading(true);
@@ -82,19 +74,18 @@ export default function PublicSchedule() {
     init();
   }, []);
 
-  // Extrair lista de Estados únicos para o filtro
   const estadosDisponiveis = useMemo(() => {
       const estados = unidades.map(u => u.estado).filter(Boolean);
       return [...new Set(estados)].sort(); 
   }, [unidades]);
 
-  // 2. Debounce
+  // 2. Debounce para a busca
   useEffect(() => {
       const timer = setTimeout(() => { setTermoDebounce(busca); }, 300); 
       return () => clearTimeout(timer);
   }, [busca]);
 
-  // 3. Busca e Filtragem
+  // 3. Busca e Filtragem (Tela 1)
   useEffect(() => {
       let unidadesFiltradas = unidades;
       if (filtroEstado) {
@@ -127,9 +118,15 @@ export default function PublicSchedule() {
           const q = query(collection(db, 'aulas'), where('modalidadeId', 'in', modIds.slice(0, 10)));
           const snap = await getDocs(q);
           const agrupado = {};
+          const todayStr = getTodayStr(); // Trava de tempo para a busca geral
           
           snap.docs.forEach(doc => {
               const aula = doc.data();
+              
+              // MÁGICA 1: BLINDAGEM DO PASSADO NA BUSCA DA TELA INICIAL
+              if (aula.dataFim && aula.dataFim < todayStr) return;
+              if (aula.dataInicio && aula.dataInicio > todayStr) return;
+
               const unit = unidades.find(u => u.id === aula.unidadeId);
               
               if (unit && (!estadoFilter || unit.estado === estadoFilter)) {
@@ -147,32 +144,45 @@ export default function PublicSchedule() {
       } catch (e) { console.error(e); }
   };
 
-  // 4. Carregar Grade
+  // 4. Carregar Grade ao Vivo (MÁGICA DA VELOCIDADE DA LUZ E VIGÊNCIA)
   useEffect(() => {
       if (!unidadeSelecionada) return;
-      const loadGrade = async () => {
-          setLoadingGrade(true);
-          try {
-              const q = query(collection(db, 'aulas'), where('unidadeId', '==', unidadeSelecionada.id));
-              const snap = await getDocs(q);
-              const data = snap.docs.map(d => {
-                  const a = d.data();
-                  const mod = modalidadesMap[a.modalidadeId];
-                  if(!mod) return null;
-                  return {
-                      ...a,
-                      modalidadeNome: mod.nome,
-                      modalidadeCor: mod.cor || '#333',
-                      professorNome: formatProfessorName(professoresMap[a.professorId])
-                  };
-              }).filter(Boolean);
-              setGradeUnidade(data);
-          } catch (e) { console.error("Erro grade:", e); } finally { setLoadingGrade(false); }
-      };
-      loadGrade();
+      setLoadingGrade(true);
+      
+      const q = query(collection(db, 'aulas'), where('unidadeId', '==', unidadeSelecionada.id));
+      
+      const unsubscribe = onSnapshot(q, (snap) => {
+          const todayStr = getTodayStr();
+
+          const data = snap.docs.map(d => {
+              const a = d.data();
+              
+              // MÁGICA 2: BLOQUEIO DE AULAS OCULTAS/ENCERRADAS/FUTURAS
+              if (a.dataFim && a.dataFim < todayStr) return null; 
+              if (a.dataInicio && a.dataInicio > todayStr) return null;
+
+              const mod = modalidadesMap[a.modalidadeId];
+              if(!mod) return null;
+              
+              return {
+                  ...a,
+                  modalidadeNome: mod.nome,
+                  modalidadeCor: mod.cor || '#333',
+                  professorNome: formatProfessorName(professoresMap[a.professorId])
+              };
+          }).filter(Boolean); // Remove os nulls (aulas ocultas)
+          
+          setGradeUnidade(data);
+          setLoadingGrade(false);
+      }, (error) => {
+          console.error("Erro na grade tempo real:", error);
+          setLoadingGrade(false);
+      });
+
+      return () => unsubscribe();
   }, [unidadeSelecionada, modalidadesMap, professoresMap]);
 
-  // --- LÓGICA DE DIAS E HORÁRIOS ---
+  // --- LÓGICA DE MÚLTIPLAS AULAS NO MESMO HORÁRIO ---
   const gradeOrganizada = useMemo(() => {
       if (!gradeUnidade.length) return { dias: [], horarios: [] };
       const diasFinais = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta'];
@@ -184,9 +194,10 @@ export default function PublicSchedule() {
       return { dias: diasFinais, horarios };
   }, [gradeUnidade]);
 
-  const getAulaCell = (dia, hora) => gradeUnidade.find(a => a.hora === hora && a.dias.includes(dia));
+  // MÁGICA 3: AO INVÉS DE .FIND, USAMOS .FILTER PARA EMPILHAR AULAS
+  const getAulasCell = (dia, hora) => gradeUnidade.filter(a => a.hora === hora && a.dias?.includes(dia));
 
-  // --- CÁLCULO DE DENSIDADE ---
+  // --- CÁLCULO DE DENSIDADE (IMPRESSÃO) ---
   const appliedDensity = useMemo(() => {
       if (printDensity !== 'auto') return printDensity;
       const linhas = gradeOrganizada.horarios.length;
@@ -254,7 +265,7 @@ export default function PublicSchedule() {
 
                 <div className="space-y-6">
                     
-                    {/* FILTRO DE ESTADOS (ESTILO CHIPS MODERNOS) */}
+                    {/* FILTRO DE ESTADOS */}
                     <div className="space-y-3">
                         <div className="flex items-center justify-between px-1">
                             <span className={`text-[10px] font-bold uppercase tracking-widest ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
@@ -288,7 +299,7 @@ export default function PublicSchedule() {
                         </div>
                     </div>
 
-                    {/* CAMPO DE BUSCA (ESTILO GLASS) */}
+                    {/* CAMPO DE BUSCA */}
                     <div className="relative group">
                         <div className={`absolute -inset-0.5 rounded-2xl bg-gradient-to-r from-red-500 to-blue-500 opacity-0 group-focus-within:opacity-50 blur transition duration-500`}></div>
                         <div className="relative">
@@ -365,19 +376,18 @@ export default function PublicSchedule() {
                             </div>
                         )}
 
-                        {/* EMPTY STATE ELEGANTE */}
+                        {/* EMPTY STATE */}
                         {(termoDebounce.length > 0 || filtroEstado) && !resultadosUnidade.length && !resultadosModalidade && (
                             <div className="text-center py-12 opacity-50 animate-in fade-in zoom-in-95">
                                 <div className="mb-3 inline-flex p-4 rounded-full bg-white/5"><Search className="w-6 h-6"/></div>
-                                <p className="text-sm font-medium">Nenhuma unidade encontrada.</p>
-                                <p className="text-xs mt-1">Tente mudar o termo ou limpar o filtro.</p>
+                                <p className="text-sm font-medium">Nenhuma unidade ou aula encontrada.</p>
+                                <p className="text-xs mt-1">Tente mudar o termo de busca.</p>
                             </div>
                         )}
                     </div>
                 </div>
             </div>
             
-            {/* RODAPÉ SUTIL */}
             <div className={`absolute bottom-4 text-[10px] font-medium tracking-widest uppercase opacity-30 ${isDarkMode ? 'text-white' : 'text-black'}`}>
                 Desenvolvido por Pratique Fitness
             </div>
@@ -385,12 +395,12 @@ export default function PublicSchedule() {
       );
   }
 
-  // TELA 2: GRADE COM IMPRESSÃO (ESTILO MANTIDO - BLACK PIANO)
+  // TELA 2: GRADE COM IMPRESSÃO
   return (
     <div className={`min-h-screen ${isDarkMode ? "bg-[#101010] text-white" : "bg-[#f5f5f5] text-[#1f1f1f]"} pb-10 print:bg-black print:text-white print:p-0 print:h-screen print:overflow-hidden`}>
         
         <style>{`
-            /* ESTILOS DE IMPRESSÃO PROFISSIONAL */
+            /* ESTILOS DE IMPRESSÃO PROFISSIONAL (MELHORADOS) */
             @media print {
                 @page { size: landscape; margin: 0; }
                 
@@ -411,25 +421,22 @@ export default function PublicSchedule() {
                     padding: 10px !important; box-sizing: border-box !important;
                 }
 
-                /* DENSIDADES */
+                /* MÁGICA 2: FONTE MAIOR NA IMPRESSÃO PORQUE O NOME DO PROFESSOR SOME */
                 .density-ultra-compact .print-header { height: 60px !important; margin-bottom: 5px !important; }
                 .density-ultra-compact .ph-title { font-size: 24px !important; }
-                .density-ultra-compact .print-card-title { font-size: 9px !important; line-height: 1 !important; }
-                .density-ultra-compact .print-card-sub { font-size: 7px !important; margin-top: 1px !important; }
+                .density-ultra-compact .print-card-title { font-size: 11px !important; line-height: 1.1 !important; }
                 .density-ultra-compact .print-card { padding: 1px !important; border-radius: 4px !important; }
                 .density-ultra-compact .print-cell-header { font-size: 10px !important; padding: 2px !important; }
                 .density-ultra-compact .print-time { font-size: 12px !important; }
 
                 .density-compact .print-header { height: 80px !important; margin-bottom: 10px !important; }
                 .density-compact .ph-title { font-size: 30px !important; }
-                .density-compact .print-card-title { font-size: 12px !important; }
-                .density-compact .print-card-sub { font-size: 9px !important; }
+                .density-compact .print-card-title { font-size: 14px !important; }
                 .density-compact .print-card { padding: 3px !important; }
 
                 .density-comfortable .print-header { height: 100px !important; margin-bottom: 15px !important; }
                 .density-comfortable .ph-title { font-size: 36px !important; }
-                .density-comfortable .print-card-title { font-size: 16px !important; }
-                .density-comfortable .print-card-sub { font-size: 11px !important; }
+                .density-comfortable .print-card-title { font-size: 18px !important; }
                 .density-comfortable .print-card { padding: 6px !important; }
 
                 /* ESTRUTURA GERAL */
@@ -457,16 +464,15 @@ export default function PublicSchedule() {
                 .print-cell {
                     border-right: 1px solid rgba(255,255,255,0.2) !important;
                     border-bottom: 1px solid rgba(255,255,255,0.2) !important;
-                    display: flex; align-items: center; justify-content: center; padding: 2px !important;
+                    display: flex; align-items: stretch; justify-content: center; padding: 2px !important;
                 }
                 .print-card {
-                    width: 100% !important; height: 100% !important; display: flex;
+                    width: 100% !important; display: flex; flex: 1;
                     flex-direction: column; justify-content: center; align-items: center;
                     -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important;
                     background-blend-mode: normal !important; box-shadow: none !important;
                 }
                 .print-card-title { color: white !important; font-weight: 900 !important; text-transform: uppercase; text-align: center; text-shadow: 1px 1px 1px rgba(0,0,0,0.8); }
-                .print-card-sub { color: white !important; opacity: 0.9; font-weight: 700 !important; text-transform: uppercase; text-shadow: 1px 1px 1px rgba(0,0,0,0.8); }
                 .screen-only { display: none !important; }
             }
 
@@ -535,7 +541,6 @@ export default function PublicSchedule() {
             {loadingGrade ? <div className="flex justify-center h-[50vh] items-center screen-only"><Loader2 className="w-12 h-12 animate-spin text-red-600"/></div> : 
             gradeUnidade.length === 0 ? <div className="text-center py-20 opacity-50 screen-only"><p className="font-bold text-xl">Grade vazia.</p></div> : 
             (
-                /* A GRADE MÁGICA */
                 <div className={`print-grid-wrapper overflow-x-auto rounded-2xl border ${isDarkMode ? 'bg-[#111] border-white/10' : 'bg-white border-gray-200'} print:bg-black print:border-0 print:rounded-none`}>
                     <div className={`screen-grid print-grid-header ${isDarkMode ? 'bg-[#1a1a1a] border-white/10' : 'bg-gray-50 border-gray-200'} border-b flex`}>
                         <div className={`p-4 flex items-center justify-center border-r print-cell-header ${isDarkMode ? 'border-white/10' : 'border-gray-200'}`}>
@@ -555,26 +560,33 @@ export default function PublicSchedule() {
                                     {hora}
                                 </div>
                                 {gradeOrganizada.dias.map(dia => {
-                                    const aula = getAulaCell(dia, hora);
+                                    // MÁGICA 3: Usar FILTER ao invés de FIND. Traz todas as aulas do mesmo dia e hora.
+                                    const aulasNoHorario = getAulasCell(dia, hora);
                                     const borderClass = `border-r border-b ${isDarkMode ? 'border-white/10' : 'border-gray-200'} print:border-[#222]`;
                                     
-                                    if (!aula) return <div key={`${dia}-${hora}`} className={`print-cell ${borderClass} ${isDarkMode ? 'border-white/5' : 'border-gray-100'}`}></div>;
-                                    
-                                    const cor = aula.modalidadeCor || '#333';
+                                    if (aulasNoHorario.length === 0) return <div key={`${dia}-${hora}`} className={`print-cell ${borderClass} ${isDarkMode ? 'border-white/5' : 'border-gray-100'}`}></div>;
                                     
                                     return (
-                                        <div key={`${dia}-${hora}`} className={`print-cell ${borderClass} p-1`}>
-                                            <div 
-                                                className="print-card w-full h-full rounded-xl p-2 flex flex-col justify-center items-center text-center shadow-sm hover:scale-105 transition-transform cursor-default"
-                                                style={{ backgroundColor: cor }}
-                                            >
-                                                <p className="print-card-title font-black text-[13px] md:text-[15px] uppercase leading-tight line-clamp-2 text-white drop-shadow-md">
-                                                    {aula.modalidadeNome}
-                                                </p>
-                                                <p className="print-card-sub text-[10px] md:text-[11px] font-bold uppercase opacity-90 truncate w-full text-white drop-shadow-md">
-                                                    {aula.professorNome}
-                                                </p>
-                                            </div>
+                                        <div key={`${dia}-${hora}`} className={`print-cell ${borderClass} p-1 flex flex-col gap-1`}>
+                                            {/* Faz um map para renderizar cada aula em um card próprio dentro da mesma célula */}
+                                            {aulasNoHorario.map((aula, i) => {
+                                                const cor = aula.modalidadeCor || '#333';
+                                                return (
+                                                    <div 
+                                                        key={i}
+                                                        className="print-card w-full rounded-xl p-2 flex flex-col justify-center items-center text-center shadow-sm hover:scale-105 transition-transform cursor-default flex-1"
+                                                        style={{ backgroundColor: cor }}
+                                                    >
+                                                        <p className="print-card-title font-black text-[13px] md:text-[15px] uppercase leading-tight line-clamp-2 text-white drop-shadow-md">
+                                                            {aula.modalidadeNome}
+                                                        </p>
+                                                        {/* print:hidden oculta o nome do professor no PDF/Papel */}
+                                                        <p className="print-card-sub text-[10px] md:text-[11px] font-bold uppercase opacity-90 truncate w-full text-white drop-shadow-md print:hidden mt-1">
+                                                            {aula.professorNome}
+                                                        </p>
+                                                    </div>
+                                                )
+                                            })}
                                         </div>
                                     );
                                 })}
