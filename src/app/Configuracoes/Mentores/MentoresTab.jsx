@@ -1,446 +1,521 @@
-import { useEffect, useState } from "react";
-import { useAuth } from "../contexts/AuthContext";
-
+import { useState, useEffect, useMemo } from "react";
+import { useAuth } from "../../../contexts/AuthContext";
 import {
-  collection,
-  deleteDoc,
-  doc,
-  getDocs,
-  query,
-  serverTimestamp,
-  setDoc,
-  updateDoc,
-  where,
+  collection, updateDoc, deleteDoc, doc, query, where, serverTimestamp, setDoc, onSnapshot
 } from "firebase/firestore";
 
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { db, auth } from "../services/firebase";
+// Auth imports (Instância secundária para não deslogar o admin)
+import { createUserWithEmailAndPassword, getAuth, signOut } from "firebase/auth";
+import { initializeApp, getApp, deleteApp } from "firebase/app"; 
+import { db } from "../../../services/firebase";
+
+import { 
+    ShieldCheck, Edit2, Trash2, AlertTriangle, CheckCircle2, 
+    Loader2, User, Search, Mail, Lock, ChevronDown, ChevronUp, Ban, PowerOff, Plus, X, Phone, Check
+} from "lucide-react";
+
+// ==========================================
+// MÁSCARA INTELIGENTE DE TELEFONE (Padrão BR)
+// ==========================================
+const formatarTelefone = (valor) => {
+    if (!valor) return "";
+    let v = valor.replace(/\D/g, ''); // Remove tudo que não é número
+    
+    if (v.startsWith('55')) v = v.slice(2);
+    v = v.slice(0, 11); // Max 11 digitos
+    
+    if (v.length > 2) v = v.replace(/^(\d{2})(\d)/g, '($1) $2');
+    if (v.length > 7) v = v.replace(/(\d{5})(\d)/, '$1-$2');
+    
+    return v ? `+55 ${v}` : '';
+};
 
 export function MentoresTab() {
   const { userData } = useAuth();
+  
+  const role = useMemo(() => String(userData?.role || "").trim().toLowerCase(), [userData?.role]);
+  const userId = useMemo(() => userData?.id || userData?.uid, [userData]);
 
+  // Cadeado de Permissão (Só Admin acessa Mentores)
+  const podeAcessar = role === "admin";
+
+  // Dados
   const [mentores, setMentores] = useState([]);
   const [loading, setLoading] = useState(true);
-
+  
+  // UX
+  const [busca, setBusca] = useState("");
+  const [sortConfig, setSortConfig] = useState({ field: 'nome', direction: 'asc' });
   const [modalAberto, setModalAberto] = useState(false);
+  
+  // Feedback
   const [salvando, setSalvando] = useState(false);
-
   const [erro, setErro] = useState("");
   const [sucesso, setSucesso] = useState("");
-  const [showPopup, setShowPopup] = useState(false);
 
-  // Form
+  // Forms Modal
   const [mentorEditando, setMentorEditando] = useState(null);
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
+  const [telefone, setTelefone] = useState("");
   const [status, setStatus] = useState("ativo");
 
-  // Apenas admin pode acessar
-  const podeAcessar = userData?.role === "admin";
-  const criadoPor = userData?.id || userData?.uid || null;
+  // Edição Inline do Telefone na Tabela
+  const [editandoTelefoneId, setEditandoTelefoneId] = useState(null);
+  const [telefoneInline, setTelefoneInline] = useState("");
 
-  useEffect(() => {
-    if (podeAcessar) carregarMentores();
-    // se não puder acessar, não faz nada
+  // ==========================================
+  // 1. MOTOR DE TEMPO REAL
+  // ==========================================
+  useEffect(() => { 
+    if (!podeAcessar) return;
+
+    setLoading(true);
+    
+    const q = query(collection(db, "usuarios"), where("role", "==", "mentor"));
+    const unsub = onSnapshot(q, (snap) => {
+        setMentores(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        setLoading(false);
+    }, (error) => {
+        console.error("Erro no tempo real de mentores:", error);
+        setLoading(false);
+    });
+
+    return () => unsub();
   }, [podeAcessar]);
 
-  async function carregarMentores() {
-    try {
-      setLoading(true);
-      setErro("");
+  // ==========================================
+  // 2. PROCESSADOR DE BUSCA E ORDENAÇÃO
+  // ==========================================
+  const mentoresProcessados = useMemo(() => {
+      let resultado = mentores;
 
-      const q = query(collection(db, "usuarios"), where("role", "==", "mentor"));
-      const snapshot = await getDocs(q);
+      if (busca.trim()) {
+          const termo = busca.toLowerCase();
+          resultado = resultado.filter(m => 
+              (m.nome || "").toLowerCase().includes(termo) ||
+              (m.email || "").toLowerCase().includes(termo) ||
+              (m.telefone || "").toLowerCase().includes(termo)
+          );
+      }
 
-      const lista = [];
-      snapshot.forEach((d) => {
-        // ✅ CORRETO: spread do data()
-        lista.push({ id: d.id, ...d.data() });
+      return resultado.sort((a, b) => {
+          let valA = (a[sortConfig.field] || "").toLowerCase();
+          let valB = (b[sortConfig.field] || "").toLowerCase();
+          
+          if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+          if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+          return 0;
       });
+  }, [mentores, busca, sortConfig]);
 
-      setMentores(lista);
-    } catch (e) {
-      console.error("Erro ao carregar mentores:", e);
-      setErro("Erro ao carregar mentores.");
-    } finally {
-      setLoading(false);
-    }
-  }
+  const handleSort = (field) => {
+      setSortConfig(prev => ({ 
+          field, 
+          direction: prev.field === field && prev.direction === 'asc' ? 'desc' : 'asc' 
+      }));
+  };
 
+  const SortIcon = ({ field }) => {
+      if (sortConfig.field !== field) return <div className="w-4 h-4 opacity-20"><ChevronDown className="w-3 h-3"/></div>;
+      return sortConfig.direction === 'asc' ? <ChevronUp className="w-3 h-3 text-blue-500"/> : <ChevronDown className="w-3 h-3 text-blue-500"/>;
+  };
+
+  const kpis = useMemo(() => {
+      const ativos = mentores.filter(m => m.status === 'ativo').length;
+      const inativos = mentores.filter(m => m.status !== 'ativo').length;
+      return { total: mentores.length, ativos, inativos };
+  }, [mentores]);
+
+  // ==========================================
+  // 3. AÇÕES (CRUD)
+  // ==========================================
   function abrirModalNovo() {
-    setMentorEditando(null);
-    setNome("");
-    setEmail("");
-    setSenha("");
+    setMentorEditando(null); 
+    setNome(""); 
+    setEmail(""); 
+    setSenha(""); 
+    setTelefone(""); 
     setStatus("ativo");
-    setErro("");
-    setSucesso("");
-    setShowPopup(false);
+    setErro(""); 
+    setSucesso(""); 
     setModalAberto(true);
   }
 
-  function abrirModalEditar(mentor) {
-    setMentorEditando(mentor);
-    setNome(mentor?.nome || "");
-    setEmail(mentor?.email || "");
-    setSenha(""); // não exibe senha
-    setStatus(mentor?.status || "ativo");
-    setErro("");
-    setSucesso("");
-    setShowPopup(false);
+  function abrirModalEditar(m) {
+    setMentorEditando(m); 
+    setNome(m.nome || ""); 
+    setEmail(m.email || ""); 
+    setSenha(""); 
+    setTelefone(m.telefone || ""); 
+    setStatus(m.status || "ativo");
+    setErro(""); 
+    setSucesso(""); 
     setModalAberto(true);
-  }
-
-  function fecharModal() {
-    setModalAberto(false);
-    setMentorEditando(null);
-  }
-
-  function validarFormulario() {
-    if (!nome.trim()) {
-      setErro("Nome é obrigatório.");
-      return false;
-    }
-    if (!email.trim()) {
-      setErro("Email é obrigatório.");
-      return false;
-    }
-    if (!mentorEditando && !senha) {
-      setErro("Senha é obrigatória para novo mentor.");
-      return false;
-    }
-    if (senha && senha.length < 6) {
-      setErro("Senha deve ter no mínimo 6 caracteres.");
-      return false;
-    }
-    return true;
   }
 
   async function salvar(e) {
     e.preventDefault();
-    if (!validarFormulario()) return;
+    setErro(""); 
+    setSucesso(""); 
+    setSalvando(true);
+
+    if (!nome.trim()) { setSalvando(false); return setErro("Nome é obrigatório."); }
+    if (!telefone.trim()) { setSalvando(false); return setErro("WhatsApp é obrigatório."); }
+    if (!email.trim()) { setSalvando(false); return setErro("E-mail é obrigatório."); }
+    if (!mentorEditando && senha.length < 6) { setSalvando(false); return setErro("Senha mín. 6 dígitos."); }
+
+    let secondaryApp = null;
 
     try {
-      setSalvando(true);
-      setErro("");
-      setSucesso("");
-
       if (mentorEditando) {
-        // EDITAR (nome/status)
         await updateDoc(doc(db, "usuarios", mentorEditando.id), {
-          nome: nome.trim(),
-          status,
+          nome: nome.trim(), 
+          telefone: telefone.trim(), 
+          status, 
+          atualizadoEm: serverTimestamp()
         });
-
-        setShowPopup(true);
-        setSucesso("Mentor atualizado com sucesso!");
+        setSucesso("Mentor atualizado!");
       } else {
-        // NOVO: cria no Auth e grava no Firestore com ID = uid
-        const userCredential = await createUserWithEmailAndPassword(
-          auth,
-          email.trim(),
-          senha
-        );
+        secondaryApp = initializeApp(getApp().options, "SecondaryAppMentor");
+        const secondaryAuth = getAuth(secondaryApp);
 
-        const uid = userCredential.user.uid;
+        const userCred = await createUserWithEmailAndPassword(secondaryAuth, email.trim().toLowerCase(), senha);
+        const newUid = userCred.user.uid;
 
-        await setDoc(doc(db, "usuarios", uid), {
-          nome: nome.trim(),
-          email: email.trim(),
-          role: "mentor",
-          status,
-          criadoPor,
-          criadoEm: serverTimestamp(),
+        await setDoc(doc(db, "usuarios", newUid), {
+          nome: nome.trim(), 
+          email: email.trim().toLowerCase(), 
+          telefone: telefone.trim(),
+          role: "mentor", 
+          status: status,
+          criadoPor: userId, 
+          criadoEm: serverTimestamp()
         });
 
-        setShowPopup(true);
+        await signOut(secondaryAuth);
         setSucesso("Mentor criado com sucesso!");
       }
+      
+      setTimeout(() => { setModalAberto(false); setSucesso(""); }, 1000);
 
-      await carregarMentores();
+    } catch (e) { 
+      if (e.code === 'auth/email-already-in-use') setErro("Este e-mail já está cadastrado.");
+      else setErro("Erro: " + e.message); 
+    } finally { 
+      if (secondaryApp) await deleteApp(secondaryApp).catch(() => {});
+      setSalvando(false); 
+    }
+  }
 
-      setTimeout(() => {
-        fecharModal();
-        setSucesso("");
-        setShowPopup(false);
-      }, 1800);
-    } catch (error) {
-      console.error("Erro ao salvar:", error);
-
-      let mensagemErro = "Erro ao salvar mentor.";
-      if (error?.code === "auth/email-already-in-use") {
-        mensagemErro = "Este email já está cadastrado.";
-      } else if (error?.code === "auth/invalid-email") {
-        mensagemErro = "Email inválido.";
-      } else if (error?.code === "auth/weak-password") {
-        mensagemErro = "Senha muito fraca (mínimo 6 caracteres).";
+  // EDICAO INLINE DO TELEFONE
+  async function salvarTelefoneInline(mentor) {
+      if (!telefoneInline.trim()) { alert("O telefone é obrigatório!"); return; }
+      try {
+          await updateDoc(doc(db, "usuarios", mentor.id), { 
+              telefone: telefoneInline.trim() 
+          });
+          setEditandoTelefoneId(null);
+      } catch (error) { 
+          alert("Erro ao salvar telefone."); 
       }
+  }
 
-      setErro(mensagemErro);
-    } finally {
-      setSalvando(false);
+  async function alternarStatus(m) {
+    try { 
+        await updateDoc(doc(db, "usuarios", m.id), { 
+            status: m.status === 'ativo' ? 'inativo' : 'ativo' 
+        }); 
+    } catch (e) { 
+        alert("Erro ao mudar status"); 
     }
   }
 
-  async function excluir(mentor) {
-    if (
-      !window.confirm(
-        `Tem certeza que deseja excluir o mentor "${mentor?.nome}"?\n\nEsta ação não pode ser desfeita.`
-      )
-    ) {
-      return;
-    }
-
+  async function excluir(m) {
+    if(!window.confirm(`ATENÇÃO: Excluir o mentor "${m.nome}" apagará o login dele.\nConfirmar?`)) return;
+    
     try {
-      setErro("");
-      setSucesso("");
-
-      await deleteDoc(doc(db, "usuarios", mentor.id));
-
-      setSucesso("Mentor excluído com sucesso!");
-      await carregarMentores();
-      setTimeout(() => setSucesso(""), 2500);
-    } catch (e) {
-      console.error("Erro ao excluir:", e);
-      setErro("Erro ao excluir mentor.");
+        setSalvando(true);
+        await deleteDoc(doc(db, "usuarios", m.id));
+    } catch (e) { 
+        alert("Erro ao excluir: " + e.message); 
+    } finally { 
+        setSalvando(false); 
     }
   }
 
-  async function alternarStatus(mentor) {
-    try {
-      setErro("");
-      setSucesso("");
-
-      const novoStatus = mentor.status === "ativo" ? "inativo" : "ativo";
-      await updateDoc(doc(db, "usuarios", mentor.id), { status: novoStatus });
-
-      setSucesso(
-        `Mentor ${
-          novoStatus === "ativo" ? "ativado" : "desativado"
-        } com sucesso!`
-      );
-      await carregarMentores();
-      setTimeout(() => setSucesso(""), 2500);
-    } catch (e) {
-      console.error("Erro ao alterar status:", e);
-      setErro("Erro ao alterar status.");
-    }
-  }
-
-  // Bloqueio de acesso
-  if (!podeAcessar) {
-    return (
-      <div className="p-10 text-center">
-        <p className="text-red-600 font-semibold">
-          Apenas administradores podem gerenciar mentores.
-        </p>
-      </div>
-    );
-  }
+  // Barreira de Segurança Final
+  if (!podeAcessar) return <div className="p-8 text-center text-slate-500 font-bold">Acesso Restrito: Apenas Administradores.</div>;
 
   return (
-    <div className="p-6">
-      {/* HEADER */}
-      <div className="flex justify-between items-center mb-6">
+    <div className="p-6 animate-fade-in max-w-7xl mx-auto space-y-6">
+      
+      {/* HEADER E KPIS */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-slate-200 dark:border-slate-700 pb-6">
         <div>
-          <h2 className="text-xl font-bold text-slate-800">Mentores</h2>
-          <p className="text-sm text-slate-500 mt-1">
-            Gestão de mentores responsáveis pelas unidades
+          <h2 className="text-2xl font-black text-slate-800 dark:text-white flex items-center gap-3">
+            <span className="p-2 bg-blue-600 text-white rounded-lg shadow-md shadow-blue-500/20">
+                <ShieldCheck className="w-6 h-6"/>
+            </span>
+            Gestão de Mentores
+          </h2>
+          <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-2">
+              Diretoria e Gestores Regionais.
           </p>
         </div>
 
-        <button
-          onClick={abrirModalNovo}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 shadow-sm"
-        >
-          + Novo Mentor
-        </button>
+        <div className="flex gap-3 w-full md:w-auto">
+            <div className="flex items-center gap-4 bg-white dark:bg-slate-800 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                <div className="text-center">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total</p>
+                    <p className="text-lg font-black text-slate-700 dark:text-white leading-none">{kpis.total}</p>
+                </div>
+                <div className="w-px h-8 bg-slate-200 dark:bg-slate-700"></div>
+                <div className="text-center">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Ativos</p>
+                    <p className="text-lg font-black text-green-600 leading-none">{kpis.ativos}</p>
+                </div>
+                <div className="w-px h-8 bg-slate-200 dark:bg-slate-700"></div>
+                <div className="text-center">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Inativos</p>
+                    <p className="text-lg font-black text-red-500 leading-none">{kpis.inativos}</p>
+                </div>
+            </div>
+            
+            <button 
+                onClick={abrirModalNovo} 
+                className="px-5 py-2 h-full bg-blue-600 text-white rounded-xl font-bold text-xs uppercase tracking-wide hover:bg-blue-700 shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 transition-transform active:scale-95 whitespace-nowrap"
+            >
+                <Plus className="w-4 h-4"/> Novo Mentor
+            </button>
+        </div>
       </div>
 
-      {/* MENSAGENS */}
-      {erro && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-          {erro}
-        </div>
-      )}
-      {sucesso && (
-        <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
-          {sucesso}
-        </div>
-      )}
+      {/* BUSCA */}
+      <div className="relative w-full md:w-96 group">
+          <Search className="absolute left-4 top-3.5 w-5 h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors"/>
+          <input 
+              type="text" 
+              placeholder="Buscar mentor, e-mail ou telefone..." 
+              className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/50 shadow-sm transition-all dark:text-white" 
+              value={busca} 
+              onChange={(e) => setBusca(e.target.value)} 
+          />
+      </div>
 
-      {/* LISTAGEM */}
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-        <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-          <h3 className="text-sm font-bold text-slate-700 uppercase">
-            Mentores cadastrados ({mentores.length})
-          </h3>
-        </div>
-
-        {loading ? (
-          <div className="p-8 text-center text-slate-400">Carregando...</div>
-        ) : mentores.length === 0 ? (
-          <div className="p-8 text-center text-slate-400">
-            Nenhum mentor encontrado.
-          </div>
-        ) : (
-          <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50 text-slate-500 font-bold uppercase text-xs">
+      {/* TABELA */}
+      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
               <tr>
-                <th className="p-4">Nome</th>
-                <th className="p-4">Email</th>
-                <th className="p-4">Status</th>
-                <th className="p-4 text-right">Ações</th>
+                <th className="p-4 text-xs font-bold text-slate-500 uppercase cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors w-28" onClick={() => handleSort('status')}>
+                    <div className="flex items-center gap-2">Status <SortIcon field="status"/></div>
+                </th>
+                <th className="p-4 text-xs font-bold text-slate-500 uppercase cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('nome')}>
+                    <div className="flex items-center gap-2">Mentor <SortIcon field="nome"/></div>
+                </th>
+                <th className="p-4 text-xs font-bold text-slate-500 uppercase cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('telefone')}>
+                    <div className="flex items-center gap-2">WhatsApp <SortIcon field="telefone"/></div>
+                </th>
+                <th className="p-4 text-xs font-bold text-slate-500 uppercase text-right">Ações</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
-              {mentores.map((m) => (
-                <tr key={m.id} className="hover:bg-slate-50">
-                  <td className="p-4 font-semibold text-slate-700">
-                    {m.nome || "-"}
-                  </td>
-                  <td className="p-4 text-slate-600">{m.email || "-"}</td>
-                  <td className="p-4">
-                    <span
-                      className={`px-2 py-1 rounded text-xs font-bold ${
-                        m.status === "ativo"
-                          ? "bg-green-50 text-green-700 border border-green-200"
-                          : "bg-slate-50 text-slate-600 border border-slate-200"
-                      }`}
-                    >
-                      {m.status === "ativo" ? "ATIVO" : "INATIVO"}
-                    </span>
-                  </td>
-                  <td className="p-4 text-right space-x-2">
-                    <button
-                      onClick={() => abrirModalEditar(m)}
-                      className="px-3 py-1.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      onClick={() => alternarStatus(m)}
-                      className="px-3 py-1.5 rounded bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold"
-                    >
-                      {m.status === "ativo" ? "Desativar" : "Ativar"}
-                    </button>
-                    <button
-                      onClick={() => excluir(m)}
-                      className="px-3 py-1.5 rounded bg-red-50 hover:bg-red-100 text-red-700 text-xs font-bold"
-                    >
-                      Excluir
-                    </button>
-                  </td>
-                </tr>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50 text-sm">
+              {loading ? (
+                  <tr>
+                      <td colSpan="4" className="p-10 text-center">
+                          <Loader2 className="w-8 h-8 animate-spin text-blue-500 mx-auto mb-2"/>
+                          <p className="text-slate-400 font-bold">Sincronizando...</p>
+                      </td>
+                  </tr>
+              ) : mentoresProcessados.map(m => (
+                  <tr key={m.id} className={`transition-colors group ${m.status === 'inativo' ? 'bg-slate-50 dark:bg-slate-900/30 opacity-75 grayscale-[0.5]' : 'hover:bg-slate-50 dark:hover:bg-slate-700/30'}`}>
+                    
+                    {/* STATUS */}
+                    <td className="p-4">
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wide border ${m.status === 'ativo' ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800' : 'bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'}`}>
+                        {m.status === 'ativo' ? <CheckCircle2 className="w-3 h-3"/> : <Ban className="w-3 h-3"/>} {m.status}
+                      </span>
+                    </td>
+
+                    {/* NOME E EMAIL */}
+                    <td className="p-4">
+                      <div className="font-black text-slate-800 dark:text-white text-base uppercase">{m.nome}</div>
+                      <div className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5 flex items-center gap-1">
+                          <Mail className="w-3 h-3"/> {m.email}
+                      </div>
+                    </td>
+
+                    {/* EDIÇÃO INLINE DO TELEFONE */}
+                    <td className="p-4">
+                        {editandoTelefoneId === m.id ? (
+                            <div className="flex items-center gap-2 animate-in fade-in zoom-in duration-200">
+                                <input 
+                                    autoFocus 
+                                    className="px-3 py-1.5 border border-blue-300 dark:border-blue-500/50 bg-white dark:bg-slate-900 rounded-lg text-sm font-mono font-bold outline-none ring-2 ring-blue-500/20 w-40 dark:text-white" 
+                                    value={telefoneInline} 
+                                    onChange={(e) => setTelefoneInline(formatarTelefone(e.target.value))} 
+                                    onKeyDown={(e) => e.key === 'Enter' && salvarTelefoneInline(m)} 
+                                    placeholder="Número..." 
+                                />
+                                <button onClick={() => salvarTelefoneInline(m)} className="p-1.5 bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400 rounded-lg hover:bg-green-600 hover:text-white transition-colors" title="Salvar">
+                                    <Check className="w-4 h-4"/>
+                                </button>
+                                <button onClick={() => setEditandoTelefoneId(null)} className="p-1.5 bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400 rounded-lg hover:bg-slate-300 transition-colors" title="Cancelar">
+                                    <X className="w-4 h-4"/>
+                                </button>
+                            </div>
+                        ) : (
+                            <div 
+                                onClick={() => { setEditandoTelefoneId(m.id); setTelefoneInline(m.telefone || ""); }} 
+                                className="flex items-center gap-2 cursor-pointer p-1.5 -ml-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors group/edit w-fit" 
+                                title="Clique para editar rapidamente"
+                            >
+                                <Phone className={`w-3.5 h-3.5 ${m.telefone ? 'text-green-500 dark:text-green-400' : 'text-slate-300 dark:text-slate-600'}`}/>
+                                <span className={`font-mono text-sm font-bold ${m.telefone ? 'text-slate-700 dark:text-slate-300' : 'text-slate-400 dark:text-slate-500 italic font-normal text-xs'}`}>
+                                    {m.telefone || "Adicionar nº"}
+                                </span>
+                                <Edit2 className="w-3 h-3 text-slate-400 opacity-0 group-hover/edit:opacity-100 transition-opacity ml-1"/>
+                            </div>
+                        )}
+                    </td>
+                    
+                    {/* AÇÕES */}
+                    <td className="p-4 text-right">
+                        <div className="flex gap-2 justify-end opacity-40 group-hover:opacity-100 transition-opacity">
+                            <button onClick={() => abrirModalEditar(m)} className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-600 dark:hover:text-white transition-colors" title="Editar Completo">
+                                <Edit2 className="w-4 h-4"/>
+                            </button>
+                            <button onClick={() => alternarStatus(m)} className={`p-2 rounded-lg transition-colors ${m.status === "ativo" ? "bg-orange-50 text-orange-600 hover:bg-orange-500 hover:text-white dark:bg-orange-900/30 dark:text-orange-400" : "bg-green-50 text-green-600 hover:bg-green-500 hover:text-white dark:bg-green-900/30 dark:text-green-400"}`} title="Alternar Status">
+                                {m.status === "ativo" ? <PowerOff className="w-4 h-4"/> : <CheckCircle2 className="w-4 h-4"/>}
+                            </button>
+                            <button onClick={() => excluir(m)} className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-600 hover:text-white dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-600 dark:hover:text-white transition-colors" title="Excluir Definitivamente">
+                                <Trash2 className="w-4 h-4"/>
+                            </button>
+                        </div>
+                    </td>
+                  </tr>
               ))}
             </tbody>
           </table>
-        )}
+        </div>
       </div>
 
       {/* MODAL */}
       {modalAberto && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white w-full max-w-lg rounded-xl shadow-lg border border-slate-200 overflow-hidden">
-            <div className="p-5 border-b border-slate-200 bg-slate-50">
-              <h3 className="font-bold text-slate-800">
-                {mentorEditando ? "Editar Mentor" : "Novo Mentor"}
-              </h3>
-              <p className="text-xs text-slate-500 mt-1">
-                Preencha os dados e clique em salvar.
-              </p>
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-800 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-700">
+            
+            <div className="p-6 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 flex justify-between items-center">
+              <div>
+                  <h3 className="font-black text-xl text-slate-800 dark:text-white flex items-center gap-2">
+                      {mentorEditando ? <Edit2 className="w-5 h-5 text-blue-500"/> : <ShieldCheck className="w-5 h-5 text-blue-600"/>}
+                      {mentorEditando ? "Editar Mentor" : "Novo Mentor"}
+                  </h3>
+                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">Preencha os dados abaixo.</p>
+              </div>
+              <button onClick={() => setModalAberto(false)} className="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-slate-400 hover:text-red-500">
+                  <X className="w-5 h-5"/>
+              </button>
             </div>
-
-            <form onSubmit={salvar} className="p-5 space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
-                  Nome
-                </label>
-                <input
-                  className="w-full p-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
-                  value={nome}
-                  onChange={(e) => setNome(e.target.value)}
-                />
-              </div>
+            
+            <form onSubmit={salvar} className="p-6 space-y-5">
+              
+              {erro && <div className="p-4 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100 flex items-center gap-2"><AlertTriangle className="w-5 h-5 flex-shrink-0"/> {erro}</div>}
+              {sucesso && <div className="p-4 bg-green-50 text-green-600 text-sm rounded-lg border border-green-100 flex items-center gap-2"><CheckCircle2 className="w-5 h-5 flex-shrink-0"/> {sucesso}</div>}
 
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  className="w-full p-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={!!mentorEditando} // não muda email em edição
-                />
-                {mentorEditando && (
-                  <p className="text-[11px] text-slate-400 mt-1">
-                    Email não é editável.
-                  </p>
-                )}
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-1 block">Nome do Mentor</label>
+                  <div className="relative">
+                      <User className="absolute left-4 top-3.5 w-4 h-4 text-slate-400"/>
+                      <input 
+                          value={nome} 
+                          onChange={e=>setNome(e.target.value)} 
+                          className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-blue-500 rounded-xl text-sm font-bold outline-none dark:text-white" 
+                          placeholder="Nome completo" 
+                      />
+                  </div>
               </div>
-
-              {!mentorEditando && (
+              
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
-                    Senha
-                  </label>
-                  <input
-                    type="password"
-                    className="w-full p-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
-                    value={senha}
-                    onChange={(e) => setSenha(e.target.value)}
-                  />
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-1 block">WhatsApp</label>
+                    <div className="relative">
+                        <Phone className="absolute left-4 top-3.5 w-4 h-4 text-slate-400"/>
+                        <input 
+                            value={telefone} 
+                            onChange={e=>setTelefone(formatarTelefone(e.target.value))} 
+                            className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-blue-500 rounded-xl text-sm font-bold outline-none dark:text-white" 
+                            placeholder="Apenas números..." 
+                        />
+                    </div>
                 </div>
-              )}
-
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
-                  Status
-                </label>
-                <select
-                  className="w-full p-2.5 border border-slate-300 rounded-lg text-sm bg-white"
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
-                >
-                  <option value="ativo">Ativo</option>
-                  <option value="inativo">Inativo</option>
-                </select>
+                <div>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-1 block">Status</label>
+                    <div className="relative">
+                        <select 
+                            value={status} 
+                            onChange={e=>setStatus(e.target.value)} 
+                            className="w-full pl-4 pr-10 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-blue-500 rounded-xl text-sm font-bold outline-none appearance-none dark:text-white"
+                        >
+                            <option value="ativo">✅ ATIVO</option>
+                            <option value="inativo">🚫 INATIVO</option>
+                        </select>
+                        <ChevronDown className="absolute right-4 top-3.5 w-4 h-4 text-slate-400 pointer-events-none"/>
+                    </div>
+                </div>
               </div>
 
-              {erro && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-                  {erro}
-                </div>
+              <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-1 block">Login (E-mail)</label>
+                  <div className="relative">
+                      <Mail className="absolute left-4 top-3.5 w-4 h-4 text-slate-400"/>
+                      <input 
+                          value={email} 
+                          onChange={e=>setEmail(e.target.value)} 
+                          disabled={!!mentorEditando} 
+                          className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-blue-500 rounded-xl text-sm font-bold outline-none disabled:opacity-50 dark:text-white" 
+                          placeholder="mentor@pratique.com" 
+                      />
+                  </div>
+              </div>
+              
+              {!mentorEditando && (
+                  <div>
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-1 block">Senha Inicial</label>
+                      <div className="relative">
+                          <Lock className="absolute left-4 top-3.5 w-4 h-4 text-slate-400"/>
+                          <input 
+                              type="password" 
+                              value={senha} 
+                              onChange={e=>setSenha(e.target.value)} 
+                              className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-blue-500 rounded-xl text-sm font-bold outline-none dark:text-white" 
+                              placeholder="Mínimo 6 dígitos" 
+                          />
+                      </div>
+                  </div>
               )}
 
-              <div className="flex justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={fecharModal}
-                  className="px-4 py-2 rounded-lg border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={salvando}
-                  className="px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 disabled:opacity-60"
-                >
-                  {salvando ? "Salvando..." : "Salvar"}
-                </button>
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-700 mt-6">
+                  <button 
+                      type="button" 
+                      onClick={()=>setModalAberto(false)} 
+                      className="px-6 py-3 rounded-xl font-bold text-xs uppercase text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700"
+                  >
+                      Cancelar
+                  </button>
+                  <button 
+                      type="submit" 
+                      disabled={salvando} 
+                      className="px-8 py-3 bg-blue-600 text-white rounded-xl font-bold text-xs uppercase hover:bg-blue-700 flex items-center gap-2"
+                  >
+                      {salvando ? <Loader2 className="w-4 h-4 animate-spin" /> : "Salvar"}
+                  </button>
               </div>
             </form>
           </div>
-        </div>
-      )}
-
-      {/* POPUP */}
-      {showPopup && (
-        <div className="fixed bottom-6 right-6 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-lg text-sm">
-          {sucesso || "Concluído."}
         </div>
       )}
     </div>

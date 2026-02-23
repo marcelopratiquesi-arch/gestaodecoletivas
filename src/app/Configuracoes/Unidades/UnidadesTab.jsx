@@ -1,20 +1,16 @@
 import { useState, useEffect, useMemo } from "react";
-// ROTAS CORRIGIDAS AQUI (Voltando 3 pastas para achar o Context)
 import { useAuth } from "../../../contexts/AuthContext";
 import {
   collection, addDoc, updateDoc, deleteDoc, doc, query, where, serverTimestamp, setDoc, writeBatch, onSnapshot, getDocs
 } from "firebase/firestore";
-
-// Auth imports (Instância secundária para não deslogar o admin)
 import { createUserWithEmailAndPassword, getAuth, signOut } from "firebase/auth";
 import { initializeApp, getApp, deleteApp } from "firebase/app"; 
-// ROTA CORRIGIDA AQUI TAMBÉM
 import { db } from "../../../services/firebase";
 
-// ÍCONE DE TELEFONE ADICIONADO (Phone)
+// Adicionado o ícone "Check" para confirmar a edição inline do telefone
 import { 
     Building2, MapPin, Edit2, Trash2, AlertTriangle, CheckCircle2, 
-    Loader2, User, Search, Mail, Lock, Globe, Key, ChevronDown, ChevronUp, Ban, PowerOff, Plus, X, Phone
+    Loader2, User, Search, Mail, Lock, Globe, Key, ChevronDown, ChevronUp, Ban, PowerOff, Plus, X, Phone, Check
 } from "lucide-react";
 
 /* ================= LOCALIZAÇÕES ================= */
@@ -44,6 +40,38 @@ const LOCATIONS = {
   ]
 };
 
+// ==========================================
+// MÁSCARA INTELIGENTE DE TELEFONE
+// ==========================================
+const formatarTelefone = (valor, pais) => {
+    if (!valor) return "";
+    let v = valor.replace(/\D/g, ''); // Remove tudo que não é número
+    
+    if (pais === 'Brasil') {
+        if (v.startsWith('55')) v = v.slice(2);
+        v = v.slice(0, 11); // Max 11 digitos
+        if (v.length > 2) v = v.replace(/^(\d{2})(\d)/g, '($1) $2');
+        if (v.length > 7) v = v.replace(/(\d{5})(\d)/, '$1-$2');
+        return v ? `+55 ${v}` : '';
+    } 
+    else if (pais === 'Estados Unidos') {
+        if (v.startsWith('1')) v = v.slice(1);
+        v = v.slice(0, 10);
+        if (v.length > 3) v = v.replace(/^(\d{3})(\d)/g, '($1) $2');
+        if (v.length > 6) v = v.replace(/(\d{3})(\d)/, '$1-$2');
+        return v ? `+1 ${v}` : '';
+    } 
+    else if (pais === 'Argentina') {
+        if (v.startsWith('54')) v = v.slice(2);
+        if (v.startsWith('9')) v = v.slice(1);
+        v = v.slice(0, 10);
+        if (v.length > 2) v = v.replace(/^(\d{2})(\d)/g, '$1 $2');
+        if (v.length > 6) v = v.replace(/(\d{4})(\d)/, '$1-$2');
+        return v ? `+54 9 ${v}` : '';
+    }
+    return valor;
+};
+
 export function UnidadesTab() {
   const { userData } = useAuth();
   
@@ -52,7 +80,7 @@ export function UnidadesTab() {
   const userId = useMemo(() => userData?.id || userData?.uid, [userData]);
   const userName = useMemo(() => userData?.nome || "Mentor", [userData]);
 
-  // Cadeado de Permissão (Só Admin e Mentor entram aqui)
+  // Cadeado de Permissão
   const podeAcessar = role === "admin" || role === "mentor";
 
   // Dados em Tempo Real
@@ -76,8 +104,12 @@ export function UnidadesTab() {
   const [estado, setEstado] = useState("");
   const [mentorId, setMentorId] = useState("");
   const [nome, setNome] = useState("");
-  const [telefone, setTelefone] = useState(""); // NOVO CAMPO: TELEFONE
+  const [telefone, setTelefone] = useState("");
   const [status, setStatus] = useState("ativa");
+
+  // Edição Inline do Telefone na Tabela
+  const [editandoTelefoneId, setEditandoTelefoneId] = useState(null);
+  const [telefoneInline, setTelefoneInline] = useState("");
 
   // Forms Login
   const [emailLogin, setEmailLogin] = useState("");
@@ -86,14 +118,13 @@ export function UnidadesTab() {
   const estadosDisponiveis = pais ? LOCATIONS[pais] || [] : [];
 
   // ==========================================
-  // 1. MOTOR DE TEMPO REAL (Velocidade da Luz)
+  // 1. MOTOR DE TEMPO REAL
   // ==========================================
   useEffect(() => { 
     if (!podeAcessar) return;
 
     setLoading(true);
     
-    // Listener de Unidades (Mentor vê só as dele, Admin vê todas)
     const ref = collection(db, "unidades");
     const qUnidades = role === "admin" ? ref : query(ref, where("mentorId", "==", userId));
     
@@ -105,7 +136,6 @@ export function UnidadesTab() {
         setLoading(false);
     });
 
-    // Listener de Mentores (Para o Admin poder selecionar)
     let unsubMentores = () => {};
     if (role === "admin") {
         const qm = query(collection(db, "usuarios"), where("role", "==", "mentor"));
@@ -136,14 +166,12 @@ export function UnidadesTab() {
     }
   }, [nome, editando, modalUnidadeAberto]);
 
-
   // ==========================================
   // 2. PROCESSADOR DE BUSCA E ORDENAÇÃO
   // ==========================================
   const unidadesProcessadas = useMemo(() => {
       let resultado = unidadesBase;
 
-      // Filtro de Busca (Texto livre)
       if (busca.trim()) {
           const termo = busca.toLowerCase();
           resultado = resultado.filter(u => 
@@ -155,7 +183,6 @@ export function UnidadesTab() {
           );
       }
 
-      // Ordenação (Sort)
       return resultado.sort((a, b) => {
           let valA = (a[sortConfig.field] || "").toLowerCase();
           let valB = (b[sortConfig.field] || "").toLowerCase();
@@ -178,15 +205,11 @@ export function UnidadesTab() {
       return sortConfig.direction === 'asc' ? <ChevronUp className="w-3 h-3 text-red-500"/> : <ChevronDown className="w-3 h-3 text-red-500"/>;
   };
 
-  // ==========================================
-  // 3. KPIs E MÉTRICAS
-  // ==========================================
   const kpis = useMemo(() => {
       const ativas = unidadesBase.filter(u => u.status === 'ativa').length;
       const inativas = unidadesBase.filter(u => u.status !== 'ativa').length;
       return { total: unidadesBase.length, ativas, inativas };
   }, [unidadesBase]);
-
 
   // ==========================================
   // 4. AÇÕES DE BANCO DE DADOS (CRUD)
@@ -196,7 +219,7 @@ export function UnidadesTab() {
     setPais("Brasil"); 
     setEstado(""); 
     setNome(""); 
-    setTelefone(""); // RESETA O TELEFONE
+    setTelefone(""); 
     setStatus("ativa");
     
     setEmailLogin("");
@@ -214,7 +237,7 @@ export function UnidadesTab() {
     setPais(u.pais || "Brasil");
     setEstado(u.estado || "");
     setNome(u.nome || ""); 
-    setTelefone(u.telefone || ""); // CARREGA O TELEFONE
+    setTelefone(u.telefone || ""); 
     setStatus(u.status || "ativa");
     setMentorId(u.mentorId || "");
     
@@ -231,6 +254,7 @@ export function UnidadesTab() {
     setSalvando(true);
 
     if (!nome.trim()) { setSalvando(false); return setErro("Nome da unidade é obrigatório."); }
+    if (!telefone.trim()) { setSalvando(false); return setErro("O Telefone (WhatsApp) é obrigatório."); }
     if (!estado) { setSalvando(false); return setErro("Selecione um estado."); }
     if (!mentorId) { setSalvando(false); return setErro("Mentor é obrigatório."); }
 
@@ -243,10 +267,12 @@ export function UnidadesTab() {
 
     try {
       if (editando) {
-        // ATUALIZA NO BANCO COM O TELEFONE
         await updateDoc(doc(db, "unidades", editando.id), {
           pais, estado, nome: nome.trim(), telefone: telefone.trim(), status, mentorId, atualizadoEm: serverTimestamp()
         });
+        if(editando.uidLogin) {
+            try { await updateDoc(doc(db, "usuarios", editando.uidLogin), { telefone: telefone.trim() }); } catch(err){}
+        }
         setSucesso("Unidade atualizada!");
       } else {
         secondaryApp = initializeApp(getApp().options, "SecondaryAppUnitCreate");
@@ -257,14 +283,12 @@ export function UnidadesTab() {
         );
         const newUid = userCred.user.uid;
 
-        // CRIA NO BANCO COM O TELEFONE
         const unidadeRef = await addDoc(collection(db, "unidades"), {
           pais, estado, nome: nome.trim(), telefone: telefone.trim(), status, mentorId, 
           uidLogin: newUid, email: emailLogin.trim().toLowerCase(), 
           criadoPor: userId, criadoEm: serverTimestamp()
         });
 
-        // SALVA O TELEFONE NO USUÁRIO DA UNIDADE TAMBÉM
         await setDoc(doc(db, "usuarios", newUid), {
           nome: nome.trim(), email: emailLogin.trim().toLowerCase(), telefone: telefone.trim(),
           role: "unidade", unidadeId: unidadeRef.id, status: "ativo",
@@ -288,6 +312,20 @@ export function UnidadesTab() {
     }
   }
 
+  // FUNÇÃO DE SALVAMENTO RÁPIDO (INLINE)
+  async function salvarTelefoneInline(unidade) {
+      if (!telefoneInline.trim()) { alert("O telefone não pode ficar vazio!"); return; }
+      try {
+          await updateDoc(doc(db, "unidades", unidade.id), { telefone: telefoneInline.trim() });
+          if(unidade.uidLogin) {
+              await updateDoc(doc(db, "usuarios", unidade.uidLogin), { telefone: telefoneInline.trim() }).catch(()=>{});
+          }
+          setEditandoTelefoneId(null);
+      } catch (error) { 
+          alert("Erro ao salvar telefone rápido."); 
+      }
+  }
+
   async function alternarStatus(u) {
     const novoStatus = u.status === 'ativa' ? 'inativa' : 'ativa';
     try {
@@ -301,7 +339,6 @@ export function UnidadesTab() {
     if(!window.confirm(`ATENÇÃO: Excluir a unidade "${u.nome}" apagará permanentemente o painel e o login dela.\n\nConfirmar exclusão?`)) return;
     try {
         setSalvando(true);
-        // Acha o usuário de login para deletar junto
         const qUsers = query(collection(db, "usuarios"), where("unidadeId", "==", u.id));
         const snapUsers = await getDocs(qUsers);
         
@@ -317,7 +354,6 @@ export function UnidadesTab() {
     }
   }
 
-  // Barreira de Segurança Final
   if (!podeAcessar) return <div className="p-8 text-center text-slate-500 dark:text-slate-400 font-bold">Acesso Restrito: Apenas Administradores e Mentores podem acessar esta área.</div>;
 
   return (
@@ -388,8 +424,14 @@ export function UnidadesTab() {
                     <div className="flex items-center gap-2">Status <SortIcon field="status"/></div>
                 </th>
                 <th className="p-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('nome')}>
-                    <div className="flex items-center gap-2">Unidade e Contato <SortIcon field="nome"/></div>
+                    <div className="flex items-center gap-2">Unidade e Login <SortIcon field="nome"/></div>
                 </th>
+                
+                {/* NOVA COLUNA DE TELEFONE */}
+                <th className="p-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('telefone')}>
+                    <div className="flex items-center gap-2">WhatsApp <SortIcon field="telefone"/></div>
+                </th>
+
                 <th className="p-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('estado')}>
                     <div className="flex items-center gap-2">Localização <SortIcon field="estado"/></div>
                 </th>
@@ -402,14 +444,14 @@ export function UnidadesTab() {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50 text-sm">
               {loading ? (
                   <tr>
-                      <td colSpan="5" className="p-10 text-center">
+                      <td colSpan="6" className="p-10 text-center">
                           <Loader2 className="w-8 h-8 animate-spin text-red-500 mx-auto mb-2"/>
                           <p className="text-slate-400 font-bold">Sincronizando banco de dados...</p>
                       </td>
                   </tr>
               ) : unidadesProcessadas.length === 0 ? (
                   <tr>
-                      <td colSpan="5" className="p-10 text-center text-slate-400 font-bold">
+                      <td colSpan="6" className="p-10 text-center text-slate-400 font-bold">
                           <Building2 className="w-8 h-8 mx-auto mb-2 opacity-20"/> Nenhuma unidade encontrada.
                       </td>
                   </tr>
@@ -424,24 +466,51 @@ export function UnidadesTab() {
                       </span>
                     </td>
 
-                    {/* 2. NOME & LOGIN & TELEFONE */}
+                    {/* 2. NOME & LOGIN */}
                     <td className="p-4">
                       <div className="font-black text-slate-800 dark:text-white text-base uppercase">{u.nome}</div>
-                      <div className="flex flex-col gap-1 mt-1">
-                          {u.email && (
-                            <div className="text-xs text-slate-500 dark:text-slate-400 font-mono flex items-center gap-1">
-                                <Mail className="w-3 h-3"/> {u.email}
-                            </div>
-                          )}
-                          {u.telefone && (
-                            <div className="text-xs text-green-600 dark:text-green-400 font-mono font-bold flex items-center gap-1">
-                                <Phone className="w-3 h-3"/> {u.telefone}
-                            </div>
-                          )}
-                      </div>
+                      {u.email && (
+                        <div className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5 flex items-center gap-1">
+                            <Mail className="w-3 h-3"/> {u.email}
+                        </div>
+                      )}
                     </td>
 
-                    {/* 3. LOCAL */}
+                    {/* 3. COLUNA DE TELEFONE COM EDIÇÃO INLINE */}
+                    <td className="p-4">
+                        {editandoTelefoneId === u.id ? (
+                            <div className="flex items-center gap-2 animate-in fade-in zoom-in duration-200">
+                                <input 
+                                    autoFocus
+                                    className="px-3 py-1.5 border border-red-300 dark:border-red-500/50 bg-white dark:bg-slate-900 rounded-lg text-sm font-mono font-bold outline-none ring-2 ring-red-500/20 w-40 dark:text-white"
+                                    value={telefoneInline}
+                                    onChange={(e) => setTelefoneInline(formatarTelefone(e.target.value, u.pais))}
+                                    onKeyDown={(e) => e.key === 'Enter' && salvarTelefoneInline(u)}
+                                    placeholder="Número..."
+                                />
+                                <button onClick={() => salvarTelefoneInline(u)} className="p-1.5 bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400 rounded-lg hover:bg-green-600 hover:text-white transition-colors" title="Salvar">
+                                    <Check className="w-4 h-4"/>
+                                </button>
+                                <button onClick={() => setEditandoTelefoneId(null)} className="p-1.5 bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400 rounded-lg hover:bg-slate-300 transition-colors" title="Cancelar">
+                                    <X className="w-4 h-4"/>
+                                </button>
+                            </div>
+                        ) : (
+                            <div 
+                                onClick={() => { setEditandoTelefoneId(u.id); setTelefoneInline(u.telefone || ""); }}
+                                className="flex items-center gap-2 cursor-pointer p-1.5 -ml-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors group/edit w-fit"
+                                title="Clique para editar rapidamente"
+                            >
+                                <Phone className={`w-3.5 h-3.5 ${u.telefone ? 'text-green-500 dark:text-green-400' : 'text-slate-300 dark:text-slate-600'}`}/>
+                                <span className={`font-mono text-sm font-bold ${u.telefone ? 'text-slate-700 dark:text-slate-300' : 'text-slate-400 dark:text-slate-500 italic font-normal text-xs'}`}>
+                                    {u.telefone || "Adicionar nº"}
+                                </span>
+                                <Edit2 className="w-3 h-3 text-slate-400 opacity-0 group-hover/edit:opacity-100 transition-opacity ml-1"/>
+                            </div>
+                        )}
+                    </td>
+
+                    {/* 4. LOCAL */}
                     <td className="p-4">
                       <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-200 font-bold text-sm">
                         <MapPin className="w-4 h-4 text-red-500"/> {u.estado}
@@ -451,7 +520,7 @@ export function UnidadesTab() {
                       </div>
                     </td>
 
-                    {/* 4. RESPONSÁVEL */}
+                    {/* 5. RESPONSÁVEL */}
                     <td className="p-4">
                       <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300 text-xs font-bold bg-slate-100 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 px-3 py-1.5 rounded-lg w-fit">
                         <User className="w-3.5 h-3.5 text-blue-500"/>
@@ -459,13 +528,13 @@ export function UnidadesTab() {
                       </div>
                     </td>
                     
-                    {/* 5. AÇÕES */}
+                    {/* 6. AÇÕES */}
                     <td className="p-4 text-right">
                         <div className="flex gap-2 justify-end opacity-40 group-hover:opacity-100 transition-opacity">
                             <button 
                                 onClick={() => abrirEditarUnidade(u)} 
                                 className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-600 dark:hover:text-white transition-colors" 
-                                title="Editar Unidade"
+                                title="Editar Unidade Completo"
                             >
                                 <Edit2 className="w-4 h-4"/>
                             </button>
@@ -530,7 +599,7 @@ export function UnidadesTab() {
                         <div>
                             <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1 pl-1 block">País</label>
                             <div className="relative">
-                                <select value={pais} onChange={e=>{setPais(e.target.value); setEstado("")}} className="w-full pl-4 pr-10 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-red-500 rounded-xl text-sm font-bold outline-none appearance-none transition-all dark:text-white">
+                                <select value={pais} onChange={e=>{setPais(e.target.value); setEstado(""); setTelefone("");}} className="w-full pl-4 pr-10 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-red-500 rounded-xl text-sm font-bold outline-none appearance-none transition-all dark:text-white">
                                     {Object.keys(LOCATIONS).map(k=><option key={k}>{k}</option>)}
                                 </select>
                                 <ChevronDown className="absolute right-4 top-3.5 w-4 h-4 text-slate-400 pointer-events-none"/>
@@ -562,14 +631,14 @@ export function UnidadesTab() {
                             </div>
                         </div>
                         <div>
-                            <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1 pl-1 block">WhatsApp (Opcional)</label>
+                            <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1 pl-1 block">WhatsApp (Obrigatório)</label>
                             <div className="relative">
                                 <Phone className="absolute left-4 top-3.5 w-4 h-4 text-slate-400"/>
                                 <input 
                                 value={telefone} 
-                                onChange={e=>setTelefone(e.target.value)} 
+                                onChange={e=>setTelefone(formatarTelefone(e.target.value, pais))} 
                                 className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-red-500 rounded-xl text-sm font-bold outline-none transition-all dark:text-white" 
-                                placeholder="Ex: 31999999999" 
+                                placeholder="Ex: Apenas números..." 
                                 />
                             </div>
                         </div>
