@@ -416,7 +416,7 @@ export default function CronogramaPage() {
         hora: '07:00', 
         valor: '', 
         dias: [],
-        dataInicio: getTodayStr(), 
+        dataInicio: getTodayStr(), // NOVO CRONOGRAMA: VEM COM A DATA DE HOJE
         dataFim: '' 
     });
     setEditingClass(null);
@@ -429,7 +429,8 @@ export default function CronogramaPage() {
     setFormData({ 
         ...cls, 
         dias: cls.dias || [],
-        dataInicio: cls.dataInicio || getTodayStr(), 
+        // MÁGICA AQUI: SE FOR AULA ANTIGA SEM DATA, FORÇA 1º DE JANEIRO DO ANO ATUAL
+        dataInicio: cls.dataInicio || `${new Date().getFullYear()}-01-01`, 
         dataFim: cls.dataFim || ''
     });
     setShowModal(true);
@@ -684,7 +685,7 @@ export default function CronogramaPage() {
                 </div>
               </div>
 
-              {/* NOVOS CAMPOS: DATAS DE VIGÊNCIA (A SOLUÇÃO DO PROBLEMA 1) */}
+              {/* NOVOS CAMPOS: DATAS DE VIGÊNCIA */}
               <div className="grid grid-cols-2 gap-5 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700">
                 <div>
                   <label className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase mb-1.5 block">Válida A partir de *</label>
