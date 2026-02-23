@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 // ROTAS CORRIGIDAS AQUI (Voltando 3 pastas para achar o Context)
 import { useAuth } from "../../../contexts/AuthContext";
 import {
-  collection, addDoc, updateDoc, deleteDoc, doc, query, where, serverTimestamp, setDoc, writeBatch, onSnapshot, orderBy
+  collection, addDoc, updateDoc, deleteDoc, doc, query, where, serverTimestamp, setDoc, writeBatch, onSnapshot, getDocs
 } from "firebase/firestore";
 
 // Auth imports (Instância secundária para não deslogar o admin)
@@ -11,10 +11,10 @@ import { initializeApp, getApp, deleteApp } from "firebase/app";
 // ROTA CORRIGIDA AQUI TAMBÉM
 import { db } from "../../../services/firebase";
 
-// TODOS OS ÍCONES IMPORTADOS CORRETAMENTE AQUI
+// ÍCONE DE TELEFONE ADICIONADO (Phone)
 import { 
     Building2, MapPin, Edit2, Trash2, AlertTriangle, CheckCircle2, 
-    Loader2, User, Search, Mail, Lock, Globe, Key, ChevronDown, ChevronUp, Ban, PowerOff, Plus, X
+    Loader2, User, Search, Mail, Lock, Globe, Key, ChevronDown, ChevronUp, Ban, PowerOff, Plus, X, Phone
 } from "lucide-react";
 
 /* ================= LOCALIZAÇÕES ================= */
@@ -76,6 +76,7 @@ export function UnidadesTab() {
   const [estado, setEstado] = useState("");
   const [mentorId, setMentorId] = useState("");
   const [nome, setNome] = useState("");
+  const [telefone, setTelefone] = useState(""); // NOVO CAMPO: TELEFONE
   const [status, setStatus] = useState("ativa");
 
   // Forms Login
@@ -149,7 +150,8 @@ export function UnidadesTab() {
               (u.nome || "").toLowerCase().includes(termo) ||
               (u.email || "").toLowerCase().includes(termo) ||
               (u.estado || "").toLowerCase().includes(termo) ||
-              (u.pais || "").toLowerCase().includes(termo)
+              (u.pais || "").toLowerCase().includes(termo) ||
+              (u.telefone || "").toLowerCase().includes(termo)
           );
       }
 
@@ -194,6 +196,7 @@ export function UnidadesTab() {
     setPais("Brasil"); 
     setEstado(""); 
     setNome(""); 
+    setTelefone(""); // RESETA O TELEFONE
     setStatus("ativa");
     
     setEmailLogin("");
@@ -211,6 +214,7 @@ export function UnidadesTab() {
     setPais(u.pais || "Brasil");
     setEstado(u.estado || "");
     setNome(u.nome || ""); 
+    setTelefone(u.telefone || ""); // CARREGA O TELEFONE
     setStatus(u.status || "ativa");
     setMentorId(u.mentorId || "");
     
@@ -239,8 +243,9 @@ export function UnidadesTab() {
 
     try {
       if (editando) {
+        // ATUALIZA NO BANCO COM O TELEFONE
         await updateDoc(doc(db, "unidades", editando.id), {
-          pais, estado, nome: nome.trim(), status, mentorId, atualizadoEm: serverTimestamp()
+          pais, estado, nome: nome.trim(), telefone: telefone.trim(), status, mentorId, atualizadoEm: serverTimestamp()
         });
         setSucesso("Unidade atualizada!");
       } else {
@@ -252,14 +257,16 @@ export function UnidadesTab() {
         );
         const newUid = userCred.user.uid;
 
+        // CRIA NO BANCO COM O TELEFONE
         const unidadeRef = await addDoc(collection(db, "unidades"), {
-          pais, estado, nome: nome.trim(), status, mentorId, 
+          pais, estado, nome: nome.trim(), telefone: telefone.trim(), status, mentorId, 
           uidLogin: newUid, email: emailLogin.trim().toLowerCase(), 
           criadoPor: userId, criadoEm: serverTimestamp()
         });
 
+        // SALVA O TELEFONE NO USUÁRIO DA UNIDADE TAMBÉM
         await setDoc(doc(db, "usuarios", newUid), {
-          nome: nome.trim(), email: emailLogin.trim().toLowerCase(),
+          nome: nome.trim(), email: emailLogin.trim().toLowerCase(), telefone: telefone.trim(),
           role: "unidade", unidadeId: unidadeRef.id, status: "ativo",
           criadoPor: userId, criadoEm: serverTimestamp()
         });
@@ -363,7 +370,7 @@ export function UnidadesTab() {
               <Search className="absolute left-4 top-3.5 w-5 h-5 text-slate-400 group-focus-within:text-red-500 transition-colors"/>
               <input 
                   type="text" 
-                  placeholder="Buscar unidade, e-mail ou local..." 
+                  placeholder="Buscar unidade, telefone ou local..." 
                   className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500 shadow-sm transition-all text-slate-700 dark:text-white"
                   value={busca}
                   onChange={(e) => setBusca(e.target.value)}
@@ -381,7 +388,7 @@ export function UnidadesTab() {
                     <div className="flex items-center gap-2">Status <SortIcon field="status"/></div>
                 </th>
                 <th className="p-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('nome')}>
-                    <div className="flex items-center gap-2">Unidade e Login <SortIcon field="nome"/></div>
+                    <div className="flex items-center gap-2">Unidade e Contato <SortIcon field="nome"/></div>
                 </th>
                 <th className="p-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('estado')}>
                     <div className="flex items-center gap-2">Localização <SortIcon field="estado"/></div>
@@ -417,14 +424,21 @@ export function UnidadesTab() {
                       </span>
                     </td>
 
-                    {/* 2. NOME & LOGIN */}
+                    {/* 2. NOME & LOGIN & TELEFONE */}
                     <td className="p-4">
                       <div className="font-black text-slate-800 dark:text-white text-base uppercase">{u.nome}</div>
-                      {u.email && (
-                        <div className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5 flex items-center gap-1">
-                            <Mail className="w-3 h-3"/> {u.email}
-                        </div>
-                      )}
+                      <div className="flex flex-col gap-1 mt-1">
+                          {u.email && (
+                            <div className="text-xs text-slate-500 dark:text-slate-400 font-mono flex items-center gap-1">
+                                <Mail className="w-3 h-3"/> {u.email}
+                            </div>
+                          )}
+                          {u.telefone && (
+                            <div className="text-xs text-green-600 dark:text-green-400 font-mono font-bold flex items-center gap-1">
+                                <Phone className="w-3 h-3"/> {u.telefone}
+                            </div>
+                          )}
+                      </div>
                     </td>
 
                     {/* 3. LOCAL */}
@@ -534,16 +548,30 @@ export function UnidadesTab() {
                         </div>
                     </div>
 
-                    <div>
-                        <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1 pl-1 block">Nome da Unidade</label>
-                        <div className="relative">
-                            <Building2 className="absolute left-4 top-3.5 w-4 h-4 text-slate-400"/>
-                            <input 
-                            value={nome} 
-                            onChange={e=>setNome(e.target.value)} 
-                            className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-red-500 rounded-xl text-sm font-bold outline-none transition-all dark:text-white" 
-                            placeholder="Ex: Barreiro" 
-                            />
+                    <div className={`grid ${!editando ? 'grid-cols-1' : 'grid-cols-2'} gap-4`}>
+                        <div>
+                            <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1 pl-1 block">Nome da Unidade</label>
+                            <div className="relative">
+                                <Building2 className="absolute left-4 top-3.5 w-4 h-4 text-slate-400"/>
+                                <input 
+                                value={nome} 
+                                onChange={e=>setNome(e.target.value)} 
+                                className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-red-500 rounded-xl text-sm font-bold outline-none transition-all dark:text-white" 
+                                placeholder="Ex: Barreiro" 
+                                />
+                            </div>
+                        </div>
+                        <div>
+                            <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1 pl-1 block">WhatsApp (Opcional)</label>
+                            <div className="relative">
+                                <Phone className="absolute left-4 top-3.5 w-4 h-4 text-slate-400"/>
+                                <input 
+                                value={telefone} 
+                                onChange={e=>setTelefone(e.target.value)} 
+                                className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-red-500 rounded-xl text-sm font-bold outline-none transition-all dark:text-white" 
+                                placeholder="Ex: 31999999999" 
+                                />
+                            </div>
                         </div>
                     </div>
 

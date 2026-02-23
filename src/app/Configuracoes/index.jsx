@@ -10,7 +10,8 @@ import {
 
 // Para abas que usam "export function NomeDaAba" (Named Exports):
 const UnidadesTab = lazy(() => import('./Unidades/UnidadesTab').then(module => ({ default: module.UnidadesTab })));
-const MentoresTab = lazy(() => import('../../components/MentoresTab').then(module => ({ default: module.MentoresTab })));
+// 🟢 CORREÇÃO AQUI: Apontando para a pasta correta de Mentores
+const MentoresTab = lazy(() => import('./Mentores/MentoresTab').then(module => ({ default: module.MentoresTab })));
 const ModalidadesTab = lazy(() => import('./Modalidades/ModalidadesTab').then(module => ({ default: module.ModalidadesTab })));
 const ProfessoresTab = lazy(() => import('./Professores/ProfessoresTab').then(module => ({ default: module.ProfessoresTab })));
 const FeriadosTab = lazy(() => import('./Feriados/FeriadosTab').then(module => ({ default: module.FeriadosTab })));
