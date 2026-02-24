@@ -67,14 +67,13 @@ const getFirstLast = (fullName) => {
     return `${parts[0]} ${parts[parts.length - 1]}`;
 };
 
-// --- MENSAGERIA WHATSAPP (CORRIGIDO PARA UTF-8) ---
+// --- MENSAGERIA WHATSAPP ---
 const sendWhatsApp = (telefone, mensagem) => {
     if (!telefone) {
         alert("⚠️ TELEFONE NÃO CADASTRADO PARA ESTE CONTATO! ATUALIZE O CADASTRO NA ABA DE CONFIGURAÇÕES.");
         return;
     }
     const numeroLimpo = telefone.replace(/\D/g, '');
-    // Rota API Oficial do WhatsApp (Garante que Emojis não quebrem no Windows)
     const url = `https://api.whatsapp.com/send?phone=${numeroLimpo}&text=${encodeURIComponent(mensagem)}`;
     window.open(url, '_blank');
 };
@@ -125,6 +124,7 @@ const KPICard = ({ title, value, icon: Icon, colorClass, iconBg, subTitle }) => 
 const StatusBadge = ({ type, text }) => {
     const configs = {
         'PARABÉNS!': 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20',
+        'TUDO OK!': 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20',
         'EM ANDAMENTO': 'bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20',
         'EM CONSTRUÇÃO': 'bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-700/50 dark:text-slate-400 dark:border-slate-600',
         'AGUARDANDO INÍCIO': 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20',
@@ -132,12 +132,13 @@ const StatusBadge = ({ type, text }) => {
         'CANCELADA': 'bg-red-50 text-red-700 border-red-200 dark:bg-red-500/10 dark:text-red-400',
         'FERIADO': 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300',
         'ATRASADO': 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-500/10 dark:text-orange-400',
-        'PENDENTE': 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-500/10 dark:text-orange-400',
+        'PENDENTE': 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/10 dark:text-rose-400',
         'FUTURO': 'bg-slate-50 text-slate-400 border-slate-200 dark:bg-slate-800 dark:text-slate-500'
     };
     
     const Icons = {
         'PARABÉNS!': Trophy,
+        'TUDO OK!': CheckCircle2,
         'EM ANDAMENTO': Activity,
         'EM CONSTRUÇÃO': Construction,
         'AGUARDANDO INÍCIO': CalendarClock,
@@ -145,7 +146,7 @@ const StatusBadge = ({ type, text }) => {
         'CANCELADA': AlertCircle,
         'FERIADO': Palmtree,
         'ATRASADO': Clock,
-        'PENDENTE': Clock
+        'PENDENTE': AlertCircle
     };
 
     const upperType = String(type).toUpperCase();
@@ -282,7 +283,6 @@ export default function ValidacaoColetiva() {
         validacoesIndex[key].push(v);
     });
 
-    // APLICA O FILTRO DE ESTADO GERAL ANTES DE CALCULAR
     let unidadesAtivas = unidadesBase;
     if (estadoFiltro) {
         unidadesAtivas = unidadesAtivas.filter(u => u.estado === estadoFiltro);
@@ -309,7 +309,16 @@ export default function ValidacaoColetiva() {
 
             const dateObj = new Date(dataStr + 'T00:00:00');
             const diaSemana = diasSemanaMap[dateObj.getDay()];
-            const aulasDoDia = gradeUnidade.filter(a => a.dias && a.dias.includes(diaSemana));
+            
+            // FILTRO ABSOLUTO DE VIGÊNCIA (RESOLVE O BUG DE AULAS NOVAS COBRADAS NO PASSADO)
+            const aulasDoDia = gradeUnidade.filter(a => {
+                if (!a.dias || !a.dias.includes(diaSemana)) return false;
+                
+                const dataInicioValida = a.dataInicio ? dataStr >= a.dataInicio : true;
+                const dataFimValida = a.dataFim ? dataStr <= a.dataFim : true;
+                
+                return dataInicioValida && dataFimValida;
+            });
 
             if (aulasDoDia.length === 0) return;
 
@@ -409,8 +418,6 @@ export default function ValidacaoColetiva() {
 
         historicoDetalhado.sort((a, b) => b.timestampOrdenacao - a.timestampOrdenacao);
 
-        // AQUI ESTÁ A MÁGICA DE NÃO PREJUDICAR A MÉDIA DO MENTOR:
-        // Se a unidade não tem cronograma ou não teve aula no período, ela vale 100%.
         let percentual = 100;
         if (totalEsperadoAteAgora > 0) {
             percentual = Math.round((totalValidado / totalEsperadoAteAgora) * 100);
@@ -464,11 +471,13 @@ export default function ValidacaoColetiva() {
                 telefone: mData?.telefone || "",
                 totalUnidades: 0,
                 somaPercentuais: 0,
+                totalPendencias: 0, // NOVO CONTADOR DE PENDENCIAS ABSOLUTO
                 unidadesList: []
             };
         }
         acc[unit.mentorId].totalUnidades++;
-        acc[unit.mentorId].somaPercentuais += unit.percentual; // Unidades em construção agora contam como 100%
+        acc[unit.mentorId].somaPercentuais += unit.percentual; 
+        acc[unit.mentorId].totalPendencias += unit.pendencias.length; // SOMA AS FALTAS
         acc[unit.mentorId].unidadesList.push(unit);
         return acc;
     }, {})).map(m => ({
@@ -553,9 +562,9 @@ export default function ValidacaoColetiva() {
   const toggleUnit = (unitId) => setExpandedUnitId(prev => prev === unitId ? null : unitId);
 
   const exportarCSV = () => {
-    const headers = "UNIDADE,MENTOR,REALIZADO,ESPERADO,STATUS,PROGRESSO\n";
+    const headers = "UNIDADE,MENTOR,REALIZADO,ESPERADO,STATUS,PROGRESSO,PENDENCIAS\n";
     const rows = sortedUnidades.map(u => 
-        `${u.nome.toUpperCase()},${u.mentorNome.toUpperCase()},${u.totalValidado},${u.totalEsperado},${u.statusTexto.toUpperCase()},${u.percentual}%`
+        `${u.nome.toUpperCase()},${u.mentorNome.toUpperCase()},${u.totalValidado},${u.totalEsperado},${u.statusTexto.toUpperCase()},${u.percentual}%,${u.pendencias.length}`
     ).join("\n");
     const blob = new Blob([headers + rows], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -592,8 +601,8 @@ export default function ValidacaoColetiva() {
   };
 
   const msgAdminGeneralReport = () => {
-      const destaques = dadosProcessados.mentores.filter(m => m.mediaGeral === 100);
-      const atencao = dadosProcessados.mentores.filter(m => m.mediaGeral < 100).sort((a, b) => b.mediaGeral - a.mediaGeral);
+      const destaques = dadosProcessados.mentores.filter(m => m.totalPendencias === 0);
+      const atencao = dadosProcessados.mentores.filter(m => m.totalPendencias > 0).sort((a, b) => b.mediaGeral - a.mediaGeral);
 
       let msg = `📢 *STATUS VALIDAÇÃO COLETIVA - ${formatHeaderPeriodo(dataInicio, dataFim)}*\n\n`;
       if (destaques.length > 0) {
@@ -605,7 +614,7 @@ export default function ValidacaoColetiva() {
           msg += `⚠️ *PENDENTES DE VALIDAÇÃO:*\n`;
           msg += atencao.map(m => {
               const emoji = getEmojiByPercent(m.mediaGeral);
-              return `${emoji} ${getFirstLast(m.nome).toUpperCase()} (${m.mediaGeral}%)`;
+              return `${emoji} ${getFirstLast(m.nome).toUpperCase()} (${m.totalPendencias} FALTAS)`;
           }).join('\n');
           msg += `\n`;
       }
@@ -615,8 +624,8 @@ export default function ValidacaoColetiva() {
 
   const msgMentorGeneralReport = () => {
       const minhasUnidades = dadosProcessados.unidades; 
-      const destaques = minhasUnidades.filter(u => u.percentual === 100 && u.temCronograma && u.totalEsperado > 0);
-      const pendentes = minhasUnidades.filter(u => u.percentual < 100 && u.temCronograma).sort((a, b) => b.percentual - a.percentual);
+      const destaques = minhasUnidades.filter(u => u.pendencias.length === 0 && u.temCronograma && u.totalEsperado > 0);
+      const pendentes = minhasUnidades.filter(u => u.pendencias.length > 0 && u.temCronograma).sort((a, b) => b.percentual - a.percentual);
 
       let msg = `📢 *STATUS VALIDAÇÃO COLETIVA - ${formatHeaderPeriodo(dataInicio, dataFim)}*\n\n`;
       if (destaques.length > 0) {
@@ -628,7 +637,7 @@ export default function ValidacaoColetiva() {
           msg += `⚠️ *ATENÇÃO (PENDÊNCIAS):*\n`;
           msg += pendentes.map(u => {
               const emoji = getEmojiByPercent(u.percentual);
-              return `${emoji} ${u.nome.toUpperCase()} (${u.percentual}%)`;
+              return `${emoji} ${u.nome.toUpperCase()} (${u.pendencias.length} FALTAS)`;
           }).join('\n');
           msg += `\n`;
       }
@@ -738,7 +747,7 @@ export default function ValidacaoColetiva() {
         {activeTab === 'ranking' && (
             <div className="grid gap-4 uppercase">
                 {!isMentor && dadosProcessados.mentores.map((mentor, index) => (
-                    <div key={mentor.id} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-5 flex flex-col md:flex-row items-center gap-6 hover:shadow-md transition-shadow group relative">
+                    <div key={mentor.id} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-5 flex flex-col md:flex-row items-center gap-6 hover:shadow-md transition-shadow group relative z-10 hover:z-50">
                         <div className="flex items-center gap-4 w-full md:w-1/4 min-w-[200px]">
                             <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-sm shadow-sm ${index === 0 ? 'bg-yellow-400 text-yellow-900 ring-2 ring-yellow-200' : index === 1 ? 'bg-slate-300 text-slate-800 ring-2 ring-slate-200' : index === 2 ? 'bg-orange-300 text-orange-900 ring-2 ring-orange-200' : 'bg-slate-100 dark:bg-slate-700 text-slate-500'}`}>{index + 1}</div>
                             <div>
@@ -755,27 +764,35 @@ export default function ValidacaoColetiva() {
                             </div>
                             
                             {/* O BALÃO DE TOOLTIP (Fica fora da barra, flutuando em cima) */}
-                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 opacity-0 group-hover/bar:opacity-100 pointer-events-none transition-opacity bg-slate-800 dark:bg-slate-900 border border-slate-700 text-white text-xs p-3 rounded-lg shadow-2xl z-50 min-w-[200px] flex flex-col gap-1">
-                                <div className="font-bold border-b border-slate-700 pb-1 mb-1 text-slate-300 uppercase">STATUS DAS UNIDADES</div>
-                                {mentor.unidadesList.map(u => (
-                                    <div key={u.id} className="flex justify-between items-center gap-4">
-                                        <span className="font-medium truncate max-w-[150px] uppercase">{u.nome}</span>
-                                        <span className={`font-black ${!u.temCronograma ? 'text-slate-400' : u.percentual === 100 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                                            {!u.temCronograma ? 'CONSTRUÇÃO' : `${u.percentual}%`}
-                                        </span>
-                                    </div>
-                                ))}
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover/bar:opacity-100 pointer-events-none transition-all duration-200 bg-slate-800 dark:bg-slate-900 border border-slate-700 text-white p-3 rounded-xl shadow-2xl z-50 min-w-[240px] flex flex-col gap-2">
+                                <div className="font-black border-b border-slate-700 pb-2 text-slate-300 uppercase tracking-widest text-[10px]">PENDÊNCIAS POR UNIDADE</div>
+                                <div className="flex flex-col gap-1.5">
+                                    {mentor.unidadesList.map(u => {
+                                        const pendenciasCount = u.pendencias.length;
+                                        return (
+                                            <div key={u.id} className="flex justify-between items-center gap-4">
+                                                <span className="font-bold truncate max-w-[150px] uppercase text-[11px]">{u.nome}</span>
+                                                <span className={`font-black text-[11px] px-1.5 py-0.5 rounded ${!u.temCronograma ? 'bg-slate-700 text-slate-400' : pendenciasCount === 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>
+                                                    {!u.temCronograma ? 'CONSTRUÇÃO' : pendenciasCount === 0 ? 'TUDO OK' : `${pendenciasCount} FALTA(M)`}
+                                                </span>
+                                            </div>
+                                        )
+                                    })}
+                                </div>
                             </div>
                         </div>
 
-                        <div className="w-full md:w-32 text-right">
-                             <StatusBadge type={mentor.mediaGeral === 100 ? 'PARABÉNS!' : 'EM ANDAMENTO'} text={mentor.mediaGeral === 100 ? 'PARABÉNS!' : `${mentor.mediaGeral}%`} />
+                        <div className="w-full md:w-36 text-right">
+                             <StatusBadge 
+                                type={mentor.totalPendencias === 0 ? 'TUDO OK!' : 'PENDENTE'} 
+                                text={mentor.totalPendencias === 0 ? 'TUDO OK!' : `${mentor.totalPendencias} FALTAS`} 
+                             />
                         </div>
                     </div>
                 ))}
 
                 {isMentor && rankingUnidades.map((unidade, index) => (
-                    <div key={unidade.id} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-5 flex flex-col md:flex-row items-center gap-6 hover:shadow-md transition-shadow group relative">
+                    <div key={unidade.id} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-5 flex flex-col md:flex-row items-center gap-6 hover:shadow-md transition-shadow group relative z-10 hover:z-50">
                         <div className="flex items-center gap-4 w-full md:w-1/4 min-w-[200px]">
                             <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-sm shadow-sm ${index === 0 ? 'bg-yellow-400 text-yellow-900 ring-2 ring-yellow-200' : index === 1 ? 'bg-slate-300 text-slate-800 ring-2 ring-slate-200' : index === 2 ? 'bg-orange-300 text-orange-900 ring-2 ring-orange-200' : 'bg-slate-100 dark:bg-slate-700 text-slate-500'}`}>{index + 1}</div>
                             <div>
@@ -789,14 +806,20 @@ export default function ValidacaoColetiva() {
                                 <div className={`h-full rounded-full transition-all duration-1000 ease-out shadow-sm ${getColorClassByPercent(unidade.percentual)}`} style={{ width: `${unidade.percentual}%` }}></div>
                             </div>
 
-                            {/* TOOLTIP DO MENTOR */}
-                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 opacity-0 group-hover/bar:opacity-100 pointer-events-none transition-opacity bg-slate-800 dark:bg-slate-900 border border-slate-700 text-white text-xs p-3 rounded-lg shadow-2xl z-50 whitespace-nowrap">
-                                <span className="font-black text-emerald-400">{unidade.totalValidado}</span> DE <span className="font-black text-slate-300">{unidade.totalEsperado}</span> AULAS VALIDADAS
+                            {/* TOOLTIP DA UNIDADE */}
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover/bar:opacity-100 pointer-events-none transition-all duration-200 bg-slate-800 dark:bg-slate-900 border border-slate-700 text-white text-[11px] uppercase font-bold p-3 rounded-xl shadow-2xl z-50 whitespace-nowrap">
+                                {unidade.pendencias.length === 0 
+                                    ? <span className="text-emerald-400">TODAS AS AULAS VALIDADAS</span> 
+                                    : <span>FALTAM <span className="text-rose-400 font-black text-sm">{unidade.pendencias.length}</span> VALIDAÇÕES</span>
+                                }
                             </div>
                         </div>
 
-                        <div className="w-full md:w-32 text-right">
-                             <StatusBadge type={unidade.percentual === 100 ? 'PARABÉNS!' : 'EM ANDAMENTO'} text={unidade.percentual === 100 ? 'PARABÉNS!' : `${unidade.percentual}%`} />
+                        <div className="w-full md:w-36 text-right">
+                             <StatusBadge 
+                                type={unidade.pendencias.length === 0 ? 'TUDO OK!' : 'PENDENTE'} 
+                                text={unidade.pendencias.length === 0 ? 'TUDO OK!' : `${unidade.pendencias.length} FALTAS`} 
+                             />
                         </div>
                     </div>
                 ))}
@@ -861,7 +884,25 @@ export default function ValidacaoColetiva() {
                                     <tr className={`hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer group ${expandedUnitId === u.id ? 'bg-slate-50 dark:bg-slate-700/30' : ''}`} onClick={() => toggleUnit(u.id)}>
                                         <td className="p-4 text-slate-300 group-hover:text-blue-500 transition-colors">{expandedUnitId === u.id ? <ChevronDown className="w-5 h-5"/> : <ChevronRight className="w-5 h-5"/>}</td>
                                         <td className="p-4"><div className="font-bold text-slate-700 dark:text-slate-200 text-base uppercase">{u.nome}</div><div className="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5 font-bold uppercase"><User className="w-3 h-3"/> {u.mentorNome}</div></td>
-                                        <td className="p-4 text-center">{!u.temCronograma ? <span className="text-xs font-bold text-slate-400 bg-slate-100 dark:bg-slate-700 px-3 py-1 rounded-full uppercase">CONSTRUÇÃO</span> : <div className="flex items-center gap-3 justify-center"><div className="w-24 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden"><div className={`h-full rounded-full transition-all duration-500 ${getColorClassByPercent(u.percentual)}`} style={{width: `${u.percentual}%`}}></div></div><span className="text-xs font-black text-slate-600 dark:text-slate-300">{u.percentual}%</span></div>}</td>
+                                        
+                                        {/* COLUNA DE PROGRESSO / FALTAS */}
+                                        <td className="p-4 text-center">
+                                            {!u.temCronograma ? (
+                                                <span className="text-xs font-bold text-slate-400 bg-slate-100 dark:bg-slate-700 px-3 py-1 rounded-full uppercase">CONSTRUÇÃO</span>
+                                            ) : (
+                                                <div className="flex flex-col items-center gap-1 justify-center">
+                                                    <div className="flex items-center gap-2 w-full max-w-[120px]">
+                                                        <div className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                                                            <div className={`h-full rounded-full transition-all duration-500 ${getColorClassByPercent(u.percentual)}`} style={{width: `${u.percentual}%`}}></div>
+                                                        </div>
+                                                    </div>
+                                                    <span className={`text-[10px] font-black uppercase tracking-wider ${u.pendencias.length === 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                                        {u.pendencias.length === 0 ? '100% OK' : `${u.pendencias.length} FALTA(S)`}
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </td>
+                                        
                                         <td className="p-4 text-center"><StatusBadge type={u.statusTexto} text={u.statusTexto} /></td>
                                         <td className="p-4">{u.lastValidation ? <div className="flex flex-col text-xs"><span className="text-slate-700 dark:text-slate-200 font-bold flex items-center gap-1 uppercase"><Calendar className="w-3 h-3 text-slate-400"/> {u.lastValidation.data}</span><span className="text-slate-400 dark:text-slate-500 flex items-center gap-1 mt-0.5 uppercase"><Clock className="w-3 h-3"/> {u.historicoDetalhado[0]?.horaValidacao || '-'}</span></div> : <span className="text-xs text-slate-300 italic">-</span>}</td>
                                         <td className="p-4 text-right">{u.lastValidation ? <div className="flex justify-end"><div className="text-right"><span className="block text-xs font-bold text-slate-700 dark:text-white truncate max-w-[150px] uppercase">{u.lastValidation.responsavelNome}</span><span className="inline-flex items-center gap-1 text-[9px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded mt-0.5 border border-slate-200 dark:border-slate-600 uppercase">{u.lastValidation.responsavelRole}</span></div></div> : <span className="text-xs text-slate-300">-</span>}</td>
