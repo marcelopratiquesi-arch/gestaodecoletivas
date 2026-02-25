@@ -4,7 +4,7 @@ import { usePlayer } from '../../contexts/PlayerContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../services/firebase';
 import { doc, setDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
-import { Play, Pause, SkipBack, SkipForward, Music, ChevronDown, Heart } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, Music, ChevronDown, Heart, AlertCircle, X } from 'lucide-react';
 import Player from '@vimeo/player';
 
 export default function PlayerGlobal() {
@@ -17,6 +17,7 @@ export default function PlayerGlobal() {
     const [duracaoTotal, setDuracaoTotal] = useState(0);
     const [isExpanded, setIsExpanded] = useState(false);
     const [isFavorito, setIsFavorito] = useState(false);
+    const [erroVimeo, setErroVimeo] = useState(""); // 🟢 NOSSO DETETIVE DE ERROS
 
     const isPratiquePlayPage = location.pathname.includes('/pratique-play');
     const userId = userData?.uid || userData?.id;
@@ -40,13 +41,24 @@ export default function PlayerGlobal() {
     // Motor do Vimeo
     useEffect(() => {
         if (!faixaAtual || !containerRef.current) return;
+        setErroVimeo(""); // Limpa erros passados
+
+        const handleVimeoError = (error) => {
+            console.error("Erro no Vimeo:", error);
+            if (error.name === 'PrivacyError') {
+                setErroVimeo("O Vimeo bloqueou! Libere o domínio do site nas configurações do vídeo.");
+            } else {
+                setErroVimeo("O iPhone exigiu um toque manual. Aperte o Play!");
+            }
+            setIsPlaying(false);
+        };
 
         if (!playerRef.current) {
             playerRef.current = new Player(containerRef.current, {
                 url: faixaAtual.vimeoUrl, 
                 autopause: false, 
                 controls: false,
-                playsinline: true, // Essencial para iPhone
+                playsinline: true, // Obriga o iPhone a não abrir a tela preta
                 dnt: true
             });
 
@@ -55,42 +67,28 @@ export default function PlayerGlobal() {
             playerRef.current.on('play', () => setIsPlaying(true));
             
             playerRef.current.on('timeupdate', (data) => setTempoAtual(data.seconds));
-            
-            // 🟢 Correção 2: Força a leitura da duração exata para a barra não quebrar no celular
             playerRef.current.on('loaded', () => {
-                playerRef.current.getDuration().then(duration => {
-                    setDuracaoTotal(duration);
-                });
+                playerRef.current.getDuration().then(d => setDuracaoTotal(d));
                 playerRef.current.setVolume(1);
             });
 
-            playerRef.current.play().catch(e => {
-                console.log("Aguardando interação do usuário (Regra do iOS)...");
-                setIsPlaying(false);
-            });
+            playerRef.current.play().catch(handleVimeoError);
         } else {
             playerRef.current.loadVideo(faixaAtual.vimeoUrl).then(() => {
                 setTempoAtual(0);
                 playerRef.current.getDuration().then(d => setDuracaoTotal(d));
                 playerRef.current.setVolume(1);
                 
-                // No iOS, se a promessa do load demorar, o play automático é bloqueado.
-                // Mas tentamos mesmo assim.
-                playerRef.current.play().then(() => {
-                    setIsPlaying(true);
-                }).catch(() => {
-                    // Se o iPhone bloquear, ele deixa pausado esperando o professor apertar o play grande
-                    setIsPlaying(false);
-                });
-            });
+                playerRef.current.play().then(() => setIsPlaying(true)).catch(handleVimeoError);
+            }).catch(handleVimeoError);
         }
 
-        // Metadados para tela de bloqueio
+        // Metadados para tela de bloqueio do celular e Bluetooth
         if ('mediaSession' in navigator) {
             navigator.mediaSession.metadata = new MediaMetadata({
                 title: faixaAtual.titulo,
                 artist: 'Pratique Play',
-                album: faixaAtual.bpm !== "N/A" ? `${faixaAtual.bpm} BPM` : 'Pratique'
+                album: faixaAtual.bpm !== "N/A" ? `${faixaAtual.bpm} BPM` : 'Aulas Coletivas'
             });
             navigator.mediaSession.setActionHandler('play', togglePlay);
             navigator.mediaSession.setActionHandler('pause', togglePlay);
@@ -100,7 +98,7 @@ export default function PlayerGlobal() {
     }, [faixaAtual]);
 
     const formatarTempo = (segundos) => {
-        if (!segundos || isNaN(segundos)) return '00:00';
+        if (!segundos || isNaN(segundos) || segundos === Infinity) return '00:00';
         const m = Math.floor(segundos / 60).toString().padStart(2, '0');
         const s = Math.floor(segundos % 60).toString().padStart(2, '0');
         return `${m}:${s}`;
@@ -116,8 +114,21 @@ export default function PlayerGlobal() {
 
     return (
         <>
-            {/* 🟢 Correção 3: Esconderijo inteligente para burlar o Safari. Nunca use display:none ou 0x0 */}
-            <div ref={containerRef} className="fixed top-0 left-0 w-[10px] h-[10px] opacity-[0.01] z-[-1] pointer-events-none overflow-hidden"></div>
+            {/* 🟢 O TRUQUE DE MESTRE: O Vimeo carrega gigante na tela inteira, mas fica invisível por trás do seu sistema! */}
+            <div className="fixed top-0 left-0 w-screen h-screen z-[-100] pointer-events-none overflow-hidden" style={{ opacity: 0.01 }}>
+                <div ref={containerRef} className="w-full h-full"></div>
+            </div>
+
+            {/* AVISO DE ERRO (Aparece se o Vimeo barrar) */}
+            {erroVimeo && (
+                <div className="fixed top-4 left-4 right-4 md:left-1/2 md:-translate-x-1/2 md:w-[400px] bg-red-600 text-white p-3 rounded-xl shadow-2xl z-[10000] flex items-center justify-between animate-in slide-in-from-top-4">
+                    <div className="flex items-center gap-3">
+                        <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                        <p className="text-xs font-bold leading-tight">{erroVimeo}</p>
+                    </div>
+                    <button onClick={() => setErroVimeo("")} className="p-1 hover:bg-red-700 rounded-lg"><X className="w-4 h-4"/></button>
+                </div>
+            )}
 
             {isPratiquePlayPage && (
                 <>
@@ -125,7 +136,7 @@ export default function PlayerGlobal() {
                     {!isExpanded && (
                         <div 
                             onClick={() => setIsExpanded(true)}
-                            className="absolute bottom-0 left-0 w-full bg-black border-t border-[#282828] text-white z-[90] px-4 md:px-6 py-2.5 flex items-center justify-between shadow-[0_-10px_30px_rgba(0,0,0,0.5)] cursor-pointer active:bg-[#111] transition-colors pb-[env(safe-area-inset-bottom)]"
+                            className="absolute bottom-0 left-0 w-full bg-[#121212] border-t border-[#282828] text-white z-[90] px-4 md:px-6 py-2.5 flex items-center justify-between shadow-[0_-10px_30px_rgba(0,0,0,0.8)] cursor-pointer active:bg-[#181818] transition-colors pb-[calc(env(safe-area-inset-bottom)+10px)]"
                         >
                             <div className="flex items-center gap-3 flex-1 overflow-hidden">
                                 <div className="w-10 h-10 bg-[#282828] rounded-md flex items-center justify-center shadow-lg flex-shrink-0">
@@ -133,11 +144,14 @@ export default function PlayerGlobal() {
                                 </div>
                                 <div className="overflow-hidden pr-2 flex-1">
                                     <h4 className="text-sm font-bold truncate leading-tight text-white">{faixaAtual.titulo}</h4>
-                                    <p className="text-[10px] text-[#1DB954] uppercase tracking-widest truncate mt-0.5">Clique para expandir</p>
+                                    <p className="text-[10px] text-[#1DB954] uppercase tracking-widest truncate mt-0.5">Clique para tela cheia</p>
                                 </div>
                             </div>
 
                             <div className="flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                                <button onClick={toggleFavorito} className="p-2 hidden md:block">
+                                    <Heart className={`w-5 h-5 transition-colors ${isFavorito ? 'text-[#1DB954] fill-[#1DB954]' : 'text-gray-400 hover:text-white'}`} />
+                                </button>
                                 <button onClick={togglePlay} className="w-12 h-12 bg-transparent text-white flex items-center justify-center active:scale-90 transition-transform">
                                     {isPlaying ? <Pause className="w-7 h-7 fill-current" /> : <Play className="w-7 h-7 fill-current ml-1" />}
                                 </button>
@@ -147,9 +161,9 @@ export default function PlayerGlobal() {
                         </div>
                     )}
 
-                    {/* TELA CHEIA (Spotify Clone Mobile) */}
+                    {/* TELA CHEIA (Spotify Mobile) */}
                     {isExpanded && (
-                        /* 🟢 Correção 1: h-[100dvh] resolve o problema dos botões sumirem debaixo da barra do iPhone */
+                        /* h-[100dvh] resolve o corte dos botões no iPhone */
                         <div className="fixed top-0 left-0 w-full h-[100dvh] bg-gradient-to-b from-[#2a2a2a] to-[#121212] z-[9999] flex flex-col animate-in slide-in-from-bottom-full duration-300 pb-[env(safe-area-inset-bottom)]">
                             
                             {/* Header */}
@@ -161,7 +175,7 @@ export default function PlayerGlobal() {
                                 <div className="w-8"></div>
                             </div>
 
-                            {/* Capa Gigante - Centralizada e responsiva */}
+                            {/* Capa */}
                             <div className="flex-1 flex flex-col items-center justify-center px-8 min-h-0">
                                 <div className="w-full max-w-[320px] aspect-square bg-[#181818] shadow-[0_16px_40px_rgba(0,0,0,0.6)] flex items-center justify-center mb-6 border border-[#282828] shrink">
                                     <Music className="w-32 h-32 text-gray-600" />
@@ -178,10 +192,10 @@ export default function PlayerGlobal() {
                                 </div>
                             </div>
 
-                            {/* Controles Principais - Presos na parte inferior da tela */}
+                            {/* Controles Principais */}
                             <div className="w-full max-w-[400px] mx-auto px-6 pb-12 shrink-0">
                                 
-                                {/* Linha do Tempo */}
+                                {/* Linha do Tempo Engrossada para o dedão */}
                                 <div className="flex flex-col gap-2 mb-8">
                                     <input 
                                         type="range" 
@@ -191,18 +205,18 @@ export default function PlayerGlobal() {
                                         onChange={mudarTempo}
                                         className="w-full h-2 bg-[#4d4d4d] rounded-lg appearance-none cursor-pointer accent-white active:accent-[#1DB954] transition-all"
                                     />
-                                    <div className="flex justify-between text-[11px] font-medium text-gray-400">
+                                    <div className="flex justify-between text-[11px] font-bold text-gray-400">
                                         <span>{formatarTempo(tempoAtual)}</span>
                                         <span>{formatarTempo(duracaoTotal)}</span>
                                     </div>
                                 </div>
 
-                                {/* Botões Grandes */}
+                                {/* Botões */}
                                 <div className="flex items-center justify-between px-2">
                                     <button onClick={tocarAnterior} className="text-white active:text-[#1DB954] transition-colors p-2">
                                         <SkipBack className="w-10 h-10 fill-current" />
                                     </button>
-                                    <button onClick={togglePlay} className="w-20 h-20 bg-white text-black rounded-full flex items-center justify-center active:scale-95 transition-transform shadow-xl">
+                                    <button onClick={(e) => togglePlay(e)} className="w-20 h-20 bg-white text-black rounded-full flex items-center justify-center active:scale-95 transition-transform shadow-xl">
                                         {isPlaying ? <Pause className="w-8 h-8 fill-current" /> : <Play className="w-8 h-8 fill-current ml-2" />}
                                     </button>
                                     <button onClick={tocarProxima} className="text-white active:text-[#1DB954] transition-colors p-2">
