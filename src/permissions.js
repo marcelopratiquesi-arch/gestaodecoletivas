@@ -1,32 +1,19 @@
 // src/permissions.js
-
 const PAGE_RULES = {
-  // Todos acessam o início
   inicio: ["admin", "mentor", "unidade", "professor"],
-  
   relatorio_gerencial: ["admin", "mentor", "unidade", "professor"],
-  
   cronograma: ["admin", "mentor", "unidade", "professor"], 
-  
   validacao_diaria: ["admin", "mentor", "unidade", "professor"],
-  
-  // Apenas Admin e Mentor acessam.
   validacao_coletiva: ["admin", "mentor"], 
-  
-  // 🟢 REGRA ATUALIZADA: Financeiro (Mudamos o nome para corrigir o erro)
   financeiro: ["admin", "mentor"],
-  
   configuracoes: ["admin", "mentor", "unidade"], 
+  // 🟢 REGRA NOVA: Todo mundo pode ouvir música!
+  pratique_play: ["admin", "mentor", "unidade", "professor"]
 };
 
 export function canAccessPage(userData, pageKey) {
-  // Garante que role seja string e minúsculo para evitar erros de comparação
   const role = (userData?.role || "").toString().trim().toLowerCase();
-  
   const allowed = PAGE_RULES[pageKey];
-
-  // Se a página não está listada nas regras, bloqueia por segurança
   if (!allowed) return false;
-
   return allowed.includes(role);
 }

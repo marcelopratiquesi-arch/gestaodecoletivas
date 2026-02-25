@@ -3,12 +3,14 @@ import { Outlet } from "react-router-dom";
 import Sidebar from "../components/Sidebar/Sidebar"; 
 import { Menu, X, ChevronLeft, ChevronRight } from "lucide-react";
 
+// 🟢 Importação do nosso Player
+import PlayerGlobal from "../components/PlayerGlobal"; 
+
 export default function AppLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
 
   return (
-    // MUDANÇA 2: dark:bg-slate-950 no container principal
     <div className="flex h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden transition-colors duration-300">
       
       <aside
@@ -21,7 +23,6 @@ export default function AppLayout() {
           ${collapsed ? "w-20" : "w-64"}
         `}
       >
-        {/* Header Mobile da Sidebar */}
         <div className="flex items-center justify-between p-4 h-16 border-b border-slate-800 md:hidden">
            <span className="text-white font-bold">Menu</span>
            <button onClick={() => setMobileOpen(false)} className="text-slate-400 hover:text-white">
@@ -33,7 +34,6 @@ export default function AppLayout() {
           <Sidebar collapsed={collapsed} />
         </div>
 
-        {/* Botão Retrátil (Desktop) - Ajustado para o tema escuro da sidebar */}
         <button 
           onClick={() => setCollapsed(!collapsed)}
           className="hidden md:flex absolute -right-3 top-20 bg-slate-800 border border-slate-700 text-slate-400 hover:text-white hover:bg-red-600 rounded-full p-1 shadow-md z-50 items-center justify-center w-6 h-6 transition-all hover:scale-110 hover:border-red-600"
@@ -42,10 +42,9 @@ export default function AppLayout() {
         </button>
       </aside>
 
-      {/* ÁREA PRINCIPAL */}
-      <div className="flex-1 flex flex-col min-w-0 transition-all duration-300 ease-in-out">
+      {/* 🟢 CORREÇÃO: Container principal agora é "relative" para ancorar o Player perfeitamente */}
+      <div className="flex-1 flex flex-col min-w-0 transition-all duration-300 ease-in-out relative">
         
-        {/* Header Mobile (Topo da página) */}
         <header className="md:hidden bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 flex items-center gap-3 h-16 transition-colors">
           <button onClick={() => setMobileOpen(true)} className="text-slate-600 dark:text-slate-200 hover:text-red-600">
             <Menu className="w-6 h-6" />
@@ -53,12 +52,14 @@ export default function AppLayout() {
           <span className="font-bold text-slate-800 dark:text-white">Gestão Pratique</span>
         </header>
 
-        {/* MUDANÇA 3: Conteúdo com fundo dinâmico */}
-        <main className="flex-1 overflow-auto p-4 md:p-8 bg-slate-50 dark:bg-slate-950 relative">
+        <main className="flex-1 overflow-auto p-4 md:p-8 pb-24 md:pb-24 bg-slate-50 dark:bg-[#121212] relative">
           <div className="max-w-7xl mx-auto">
              <Outlet />
           </div>
         </main>
+
+        {/* 🟢 O RÁDIO AGORA FICA AQUI DENTRO: Ele vai esticar e encolher junto com a tela! */}
+        <PlayerGlobal />
       </div>
 
       {mobileOpen && (

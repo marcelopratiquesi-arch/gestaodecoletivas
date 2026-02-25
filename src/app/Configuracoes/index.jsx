@@ -2,22 +2,19 @@ import { useState, useMemo, Suspense, lazy } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { 
   Building2, Users, Dumbbell, CalendarDays, 
-  ShieldCheck, Database, LayoutDashboard, Loader2 
+  ShieldCheck, Database, LayoutDashboard, Loader2, Headphones 
 } from "lucide-react";
 
 // --- LAZY LOADING ---
-// Ajustamos os imports para garantir compatibilidade
-
-// Para abas que usam "export function NomeDaAba" (Named Exports):
 const UnidadesTab = lazy(() => import('./Unidades/UnidadesTab').then(module => ({ default: module.UnidadesTab })));
-// 🟢 CORREÇÃO AQUI: Apontando para a pasta correta de Mentores
 const MentoresTab = lazy(() => import('./Mentores/MentoresTab').then(module => ({ default: module.MentoresTab })));
 const ModalidadesTab = lazy(() => import('./Modalidades/ModalidadesTab').then(module => ({ default: module.ModalidadesTab })));
 const ProfessoresTab = lazy(() => import('./Professores/ProfessoresTab').then(module => ({ default: module.ProfessoresTab })));
 const FeriadosTab = lazy(() => import('./Feriados/FeriadosTab').then(module => ({ default: module.FeriadosTab })));
-
-// 🟢 CORREÇÃO AQUI: O BackupTab agora é "export default", então a importação é direta:
 const BackupTab = lazy(() => import('./Backup/BackupTab'));
+
+// 🟢 NOVA ABA: PRATIQUE PLAY
+const PratiquePlayTab = lazy(() => import('./PratiquePlay/PratiquePlayTab').then(module => ({ default: module.PratiquePlayTab })));
 
 // Componente de Loading
 const TabLoading = () => (
@@ -38,14 +35,13 @@ export default function ConfiguracoesPage() {
     { id: "professores", label: "Professores", icon: Users, roles: ["admin", "mentor", "unidade"] },
     { id: "modalidades", label: "Modalidades", icon: Dumbbell, roles: ["admin", "mentor"] },
     { id: "feriados", label: "Feriados", icon: CalendarDays, roles: ["admin", "mentor"] },
-    // Backup: Apenas Admin
+    // 🎧 Nova Aba de Músicas
+    { id: "pratique-play", label: "Pratique Play", icon: Headphones, roles: ["admin"] },
     { id: "backup", label: "Backup", icon: Database, roles: ["admin"] },
   ], []);
 
-  // Filtra as abas permitidas
   const allowedTabs = useMemo(() => tabs.filter(t => t.roles.includes(role)), [role, tabs]);
 
-  // Define a aba ativa inicial com base na role
   const [activeTab, setActiveTab] = useState(() => {
     if (role === 'unidade') return 'professores';
     const firstAllowed = tabs.find(t => t.roles.includes(role));
@@ -117,6 +113,7 @@ export default function ConfiguracoesPage() {
                 {activeTab === "modalidades" && allowedTabs.some(t => t.id === 'modalidades') && <ModalidadesTab />}
                 {activeTab === "professores" && allowedTabs.some(t => t.id === 'professores') && <ProfessoresTab />}
                 {activeTab === "feriados" && allowedTabs.some(t => t.id === 'feriados') && <FeriadosTab />}
+                {activeTab === "pratique-play" && allowedTabs.some(t => t.id === 'pratique-play') && <PratiquePlayTab />}
                 {activeTab === "backup" && allowedTabs.some(t => t.id === 'backup') && <BackupTab />}
             </div>
         </Suspense>

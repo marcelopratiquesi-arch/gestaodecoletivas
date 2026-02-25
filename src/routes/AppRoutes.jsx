@@ -12,12 +12,11 @@ import CronogramaPage from "../app/Cronograma/index";
 import RelatorioPage from "../app/Relatorios"; 
 import ValidacaoColetivaPage from "../app/ValidacaoColetiva"; 
 import PerformanceFinanceiraPage from "../app/Financeiro"; 
-
-// 🟢 NOVA IMPORTAÇÃO: Central de Comunicação
 import CentralComunicacao from "../app/Comunicacao";
-
-// Importação: Cronograma Público
 import PublicSchedule from "../pages/Publico/PublicSchedule"; 
+
+// 🟢 NOVA IMPORTAÇÃO: Pratique Play
+import PratiquePlay from "../app/PratiquePlay";
 
 export default function AppRoutes() {
   return (
@@ -87,7 +86,7 @@ export default function AppRoutes() {
             } 
           />
 
-          {/* 🟢 NOVA ROTA: Central de Comunicação */}
+          {/* Central de Comunicação */}
           <Route 
             path="comunicacao" 
             element={
@@ -101,6 +100,16 @@ export default function AppRoutes() {
             element={
               <RoleRoute pageKey="configuracoes">
                 <ConfiguracoesPage />
+              </RoleRoute>
+            } 
+          />
+
+          {/* 🟢 ROTA DO SPOTIFY (PRATIQUE PLAY) */}
+          <Route 
+            path="pratique-play" 
+            element={
+              <RoleRoute pageKey="pratique_play">
+                <PratiquePlay />
               </RoleRoute>
             } 
           />

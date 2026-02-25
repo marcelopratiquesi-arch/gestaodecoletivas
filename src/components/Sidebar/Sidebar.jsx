@@ -5,11 +5,11 @@ import { useTheme } from "../../contexts/ThemeContext";
 import { db } from "../../services/firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
 
-// 👇 AQUI ESTAVA O ERRO: Esta é a lista correta de ícones do Menu Lateral
+// 🟢 Adicionei o ícone 'Headphones' aqui na lista!
 import { 
   LayoutDashboard, BarChart3, Calendar, CircleCheck, 
   Users, Settings, LogOut, Moon, Sun, ShieldCheck, 
-  ChevronRight, TrendingUp, Globe, Megaphone 
+  ChevronRight, TrendingUp, Globe, Megaphone, Headphones 
 } from "lucide-react";
 
 export default function Sidebar({ collapsed }) { 
@@ -93,6 +93,8 @@ export default function Sidebar({ collapsed }) {
 
       {/* NAV */}
       <nav className="flex-1 overflow-y-auto px-4 space-y-6 custom-scrollbar py-4">
+        
+        {/* BLOCO PRINCIPAL */}
         <div className="space-y-1.5">
             {!collapsed && <p className="px-4 text-[9px] font-black text-slate-400/60 uppercase tracking-widest mb-2">Principal</p>}
             
@@ -102,7 +104,12 @@ export default function Sidebar({ collapsed }) {
                 <NavItem to="/app/cronograma" icon={Calendar} label="Cronograma" collapsed={collapsed} active={isActive("/app/cronograma")} />
             }
 
-            {/* 🟢 LINK PÚBLICO (Abre em nova aba) */}
+            {/* 🟢 O BOTÃO DO PRATIQUE PLAY AQUI! */}
+            {["admin", "mentor", "unidade", "professor"].includes(role) && 
+                <NavItem to="/app/pratique-play" icon={Headphones} label="Pratique Play" collapsed={collapsed} active={isActive("/app/pratique-play")} />
+            }
+
+            {/* Link Público (Abre em nova aba) */}
             <NavItem 
                 to="/horarios" 
                 icon={Globe} 
@@ -113,13 +120,14 @@ export default function Sidebar({ collapsed }) {
             />
         </div>
 
+        {/* BLOCO OPERACIONAL */}
         <div className="space-y-1.5">
             {!collapsed && <p className="px-4 text-[9px] font-black text-slate-400/60 uppercase tracking-widest mb-2">Operacional</p>}
             <NavItem to="/app/validacao-diaria" icon={CircleCheck} label="Validação Diária" collapsed={collapsed} active={isActive("/app/validacao-diaria")} badge={pendencias}/>
             {["admin", "mentor"].includes(role) && <NavItem to="/app/validacao-coletiva" icon={ShieldCheck} label="Validação Coletiva" collapsed={collapsed} active={isActive("/app/validacao-coletiva")} />}
         </div>
 
-        {/* 🟢 CORREÇÃO: Bloco de Gestão agora permite que Professores vejam pelo menos o Relatório */}
+        {/* BLOCO DE GESTÃO */}
         {["admin", "mentor", "unidade", "professor"].includes(role) && (
             <div className="space-y-1.5">
                 {!collapsed && <p className="px-4 text-[9px] font-black text-slate-400/60 uppercase tracking-widest mb-2">Gestão</p>}
