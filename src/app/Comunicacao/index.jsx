@@ -3,14 +3,23 @@ import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../services/firebase';
 import { collection, getDocs } from 'firebase/firestore';
 
+// FIX: Removido Download e CheckCircle2 (Não utilizados)
 import { 
   Megaphone, Search, Users, MapPin, CheckSquare, Square, 
   Copy, Smartphone, FileSpreadsheet, Loader2, AlertCircle, 
-  Tags, Download, ChevronDown, CheckCircle2,
-  Filter, Building2, Clock, MessageSquare, Check, UserCog, Eraser, RefreshCw
+  Tags, ChevronDown, Filter, Building2, Clock, MessageSquare, 
+  Check, UserCog, Eraser, RefreshCw
 } from 'lucide-react';
 
-// --- HELPERS E CONSTANTES GLOBAIS ---
+// --- HELPERS E CONSTANTES GLOBAIS (Estáticas - Não mudam no render) ---
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutos de cache
+
+const TURNOS_OPTIONS = [
+    { id: 'manha', nome: 'Manhã (05:00 as 11:59)' },
+    { id: 'tarde', nome: 'Tarde (12:00 as 17:59)' },
+    { id: 'noite', nome: 'Noite (18:00 as 23:59)' }
+];
+
 const getFirstLast = (fullName) => {
     if (!fullName) return '';
     const parts = fullName.trim().split(' ');
@@ -29,9 +38,6 @@ const getSaudacao = () => {
     if (hora < 18) return "Boa tarde";
     return "Boa noite";
 };
-
-// FIX 1: Movido para fora para não recriar a cada renderização
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutos de cache
 
 // Componente de Dropdown Multi-Select Turbinado
 const MultiSelect = ({ label, options, selected, onChange, icon: Icon, searchable = false }) => {
@@ -164,7 +170,7 @@ export default function CentralComunicacao() {
     const [professoresFiltrados, setProfessoresFiltrados] = useState([]);
     const [buscaRealizada, setBuscaRealizada] = useState(false);
 
-    // --- CACHE DE MEMÓRIA ---
+    // --- CACHE E CONTROLE DE REQUISIÇÃO ---
     const cacheRef = useRef({ professores: null, aulas: null, timestamp: 0 });
     const buscaRef = useRef(0);
 
@@ -184,12 +190,6 @@ export default function CentralComunicacao() {
     }, [estados, mentores]);
 
     const resultadoDesatualizado = buscaRealizada && filtrosNaBusca !== JSON.stringify(filtros);
-
-    const turnosOptions = [
-        { id: 'manha', nome: 'Manhã (05:00 as 11:59)' },
-        { id: 'tarde', nome: 'Tarde (12:00 as 17:59)' },
-        { id: 'noite', nome: 'Noite (18:00 as 23:59)' }
-    ];
 
     const [mensagem, setMensagem] = useState("Olá [PRIMEIRO_NOME], tudo bem?\n\nAqui é da gestão Pratique.");
 
@@ -407,7 +407,7 @@ export default function CentralComunicacao() {
             setCopiado(true);
             setTimeout(() => setCopiado(false), 3000);
         } catch (err) {
-            alert("❌ Permissão negada pelo navegador. Tente copiar manualmente ou verifique as permissões do site.");
+            alert("❌ Permissão negada pelo navegador. Tente copiar manualmente.");
         }
     };
 
@@ -481,7 +481,7 @@ export default function CentralComunicacao() {
                                 <MultiSelect label="UNIDADES" options={unidadesOptions} selected={filtros.unidades} onChange={v => setFiltros({...filtros, unidades: v})} icon={Building2} searchable={true} />
                                 <MultiSelect label="MODALIDADES" options={modalidadesOptions} selected={filtros.modalidades} onChange={v => setFiltros({...filtros, modalidades: v})} icon={Users} searchable={true} />
                                 
-                                <MultiSelect label="TURNOS" options={turnosOptions} selected={filtros.turnos} onChange={v => setFiltros({...filtros, turnos: v})} icon={Clock} />
+                                <MultiSelect label="TURNOS" options={TURNOS_OPTIONS} selected={filtros.turnos} onChange={v => setFiltros({...filtros, turnos: v})} icon={Clock} />
 
                                 <div className="flex gap-2 pt-2">
                                     <button 
@@ -495,7 +495,7 @@ export default function CentralComunicacao() {
                                     <button 
                                         onClick={() => limparFiltros(true)}
                                         className="w-[28%] px-1 py-4 bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/20 dark:hover:bg-amber-900/40 text-amber-700 dark:text-amber-500 font-bold text-[10px] sm:text-xs uppercase rounded-xl flex items-center justify-center gap-1.5 transition-colors border border-transparent shadow-sm"
-                                        title="Zerar os filtros e forçar a busca mais recente do banco de dados (Zerar Cache)"
+                                        title="Zerar os filtros e forçar a busca mais recente do banco de dados"
                                     >
                                         <RefreshCw className="w-4 h-4"/> Atualizar
                                     </button>
@@ -503,7 +503,7 @@ export default function CentralComunicacao() {
                                     <button 
                                         onClick={buscarPublico}
                                         disabled={processing}
-                                        className="w-[44%] bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-wider py-4 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-blue-500/30 transition-transform active:scale-95 disabled:opacity-70"
+                                        className="w-[44%] bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-wider py-4 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-blue-500/30 transition-transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         {processing ? <Loader2 className="w-5 h-5 animate-spin"/> : <Search className="w-5 h-5"/>}
                                         Buscar
@@ -581,7 +581,6 @@ export default function CentralComunicacao() {
                                 </div>
                                 
                                 <div className="flex gap-2 w-full xl:w-auto">
-                                    {/* FIX 5: Classes de opacidade nos botões desabilitados */}
                                     <button 
                                         onClick={exportarCSV}
                                         disabled={resultadoDesatualizado}
