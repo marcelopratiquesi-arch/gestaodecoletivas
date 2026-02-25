@@ -4,10 +4,12 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useTheme } from "../../contexts/ThemeContext";
 import { db } from "../../services/firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
+
+// 👇 AQUI ESTAVA O ERRO: Esta é a lista correta de ícones do Menu Lateral
 import { 
   LayoutDashboard, BarChart3, Calendar, CircleCheck, 
   Users, Settings, LogOut, Moon, Sun, ShieldCheck, 
-  ChevronRight, TrendingUp, Globe // 🟢 ADICIONADO GLOBE
+  ChevronRight, TrendingUp, Globe, Megaphone 
 } from "lucide-react";
 
 export default function Sidebar({ collapsed }) { 
@@ -100,14 +102,14 @@ export default function Sidebar({ collapsed }) {
                 <NavItem to="/app/cronograma" icon={Calendar} label="Cronograma" collapsed={collapsed} active={isActive("/app/cronograma")} />
             }
 
-            {/* 🟢 NOVO LINK PÚBLICO (Abre em nova aba) */}
+            {/* 🟢 LINK PÚBLICO (Abre em nova aba) */}
             <NavItem 
                 to="/horarios" 
                 icon={Globe} 
                 label="Link do Aluno" 
                 collapsed={collapsed} 
                 active={false} 
-                target="_blank" // Importante para não fechar o sistema
+                target="_blank" 
             />
         </div>
 
@@ -117,12 +119,20 @@ export default function Sidebar({ collapsed }) {
             {["admin", "mentor"].includes(role) && <NavItem to="/app/validacao-coletiva" icon={ShieldCheck} label="Validação Coletiva" collapsed={collapsed} active={isActive("/app/validacao-coletiva")} />}
         </div>
 
-        {["admin", "mentor", "unidade"].includes(role) && (
+        {/* 🟢 CORREÇÃO: Bloco de Gestão agora permite que Professores vejam pelo menos o Relatório */}
+        {["admin", "mentor", "unidade", "professor"].includes(role) && (
             <div className="space-y-1.5">
                 {!collapsed && <p className="px-4 text-[9px] font-black text-slate-400/60 uppercase tracking-widest mb-2">Gestão</p>}
+                
                 {["admin", "mentor"].includes(role) && <NavItem to="/app/financeiro" icon={TrendingUp} label="Performance Financeira" collapsed={collapsed} active={isActive("/app/financeiro")} />}
+                
+                {/* Professor só vê Relatórios aqui dentro */}
                 <NavItem to="/app/relatorio-gerencial" icon={BarChart3} label="Relatórios" collapsed={collapsed} active={isActive("/app/relatorio-gerencial")} />
-                <NavItem to="/app/configuracoes" icon={Settings} label="Configurações" collapsed={collapsed} active={isActive("/app/configuracoes")} />
+                
+                {/* Nova Central de Comunicação (Gestão) */}
+                {["admin", "mentor"].includes(role) && <NavItem to="/app/comunicacao" icon={Megaphone} label="Comunicados" collapsed={collapsed} active={isActive("/app/comunicacao")} />}
+                
+                {["admin", "mentor", "unidade"].includes(role) && <NavItem to="/app/configuracoes" icon={Settings} label="Configurações" collapsed={collapsed} active={isActive("/app/configuracoes")} />}
             </div>
         )}
       </nav>
@@ -153,7 +163,7 @@ export default function Sidebar({ collapsed }) {
 const NavItem = ({ to, icon: Icon, label, collapsed, active, badge, target }) => (
   <Link 
     to={to} 
-    target={target} // 🟢 Suporte a nova aba
+    target={target} 
     className={`relative flex items-center gap-3 px-3 py-2.5 mx-1 rounded-xl transition-all duration-300 group ${active ? "bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-lg shadow-red-500/20" : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white"} ${collapsed ? "justify-center" : ""}`}
   >
     {collapsed && <div className="absolute left-14 px-2 py-1 bg-slate-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">{label}</div>}

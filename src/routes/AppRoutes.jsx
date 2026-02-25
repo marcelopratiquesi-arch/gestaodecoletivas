@@ -13,7 +13,10 @@ import RelatorioPage from "../app/Relatorios";
 import ValidacaoColetivaPage from "../app/ValidacaoColetiva"; 
 import PerformanceFinanceiraPage from "../app/Financeiro"; 
 
-// 🟢 NOVA IMPORTAÇÃO: Cronograma Público
+// 🟢 NOVA IMPORTAÇÃO: Central de Comunicação
+import CentralComunicacao from "../app/Comunicacao";
+
+// Importação: Cronograma Público
 import PublicSchedule from "../pages/Publico/PublicSchedule"; 
 
 export default function AppRoutes() {
@@ -81,6 +84,14 @@ export default function AppRoutes() {
               <RoleRoute pageKey="validacao_coletiva">
                 <ValidacaoColetivaPage />
               </RoleRoute>
+            } 
+          />
+
+          {/* 🟢 NOVA ROTA: Central de Comunicação */}
+          <Route 
+            path="comunicacao" 
+            element={
+              <CentralComunicacao /> 
             } 
           />
           

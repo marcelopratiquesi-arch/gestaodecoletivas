@@ -17,6 +17,23 @@ import {
   ChevronUp, ArrowDown, DownloadCloud, Layers, Ban, ShieldCheck, MapPin
 } from "lucide-react";
 
+// --- MÁSCARA INTELIGENTE DE TELEFONE ---
+const mascaraTelefone = (valor) => {
+    if (!valor) return "";
+    let v = valor.replace(/\D/g, ""); // Tira tudo que não é número
+    if (v.length > 11) v = v.substring(0, 11); // Limita a 11 dígitos
+    
+    if (v.length > 10) {
+        return v.replace(/^(\d{2})(\d{5})(\d{4}).*/, "($1) $2-$3");
+    } else if (v.length > 5) {
+        return v.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, "($1) $2-$3");
+    } else if (v.length > 2) {
+        return v.replace(/^(\d{2})(\d{0,5})/, "($1) $2");
+    } else {
+        return v.replace(/^(\d*)/, "($1");
+    }
+};
+
 export function ProfessoresTab() {
   const { userData } = useAuth();
   
@@ -117,7 +134,8 @@ export function ProfessoresTab() {
     
     let lista = meusProfessores.filter(p => 
         (p.nome || "").toLowerCase().includes(termo) || 
-        (p.email || "").toLowerCase().includes(termo)
+        (p.email || "").toLowerCase().includes(termo) ||
+        (p.telefone || "").includes(termo)
     );
 
     return lista.sort((a, b) => {
@@ -195,16 +213,14 @@ export function ProfessoresTab() {
       const prof = professoresTotais.find(p => p.email.toLowerCase() === emailBusca);
 
       if (prof) {
-          // Achou? Mostra o card do professor.
           setProfessorEncontrado(prof);
       } else {
-          // Não achou? Pula direto para o cadastro com o email já preenchido!
           abrirCadastroCompleto(emailBusca);
       }
   }
 
   async function vincularExistente(e) {
-      e.preventDefault(); // Trava o F5
+      e.preventDefault(); 
       if (!unidadeSelecionadaId) return setErro("Selecione uma unidade.");
       setSalvando(true);
 
@@ -254,23 +270,33 @@ export function ProfessoresTab() {
       setProfEditando(p);
       setNome(p.nome);
       setEmail(p.email);
-      setTelefone(p.telefone || "");
+      setTelefone(mascaraTelefone(p.telefone || "")); // Já aplica máscara se for edição de dado sujo
       setStatus(p.status || "ativo");
       setErro("");
       setModalFormAberto(true);
   }
 
-  // TRAVA DE F5 APLICADA AQUI
+  // TRAVA DE F5 E VALIDAÇÃO DE TELEFONE
   async function salvarProfessor(e) {
-    e.preventDefault(); // Trava o F5 do navegador
+    e.preventDefault(); 
     setSalvando(true);
     setErro("");
     setSucesso("");
     
     const nomeLimpo = nome.trim();
     const emailLimpo = email.trim().toLowerCase(); 
+    const telLimpo = telefone.replace(/\D/g, ''); // Tira a formatação pra contar
 
-    if (!nomeLimpo) { setSalvando(false); return setErro("Nome obrigatório"); }
+    if (!nomeLimpo) { 
+        setSalvando(false); 
+        return setErro("Nome obrigatório"); 
+    }
+
+    // 🛑 BLINDAGEM DE TELEFONE NO CADASTRO/EDIÇÃO (Mínimo de 10 dígitos)
+    if (telefone && telLimpo.length < 10) {
+        setSalvando(false);
+        return setErro("WhatsApp inválido. Digite o número completo com DDD (Ex: 31 99999-8888).");
+    }
 
     let secondaryApp = null;
 
@@ -288,6 +314,7 @@ export function ProfessoresTab() {
           }
       }
 
+      // O Telefone agora é salvo sempre com a máscara certinha no banco
       if (profEditando) { 
           await updateDoc(doc(db, "professores", profEditando.id), { 
             nome: nomeLimpo, telefone, status, updatedAt: serverTimestamp() 
@@ -326,7 +353,6 @@ export function ProfessoresTab() {
           setSucesso("Professor criado com sucesso!");
       }
       
-      // Fecha a janela logo após o sucesso
       setTimeout(() => {
           setModalFormAberto(false);
           setSucesso("");
@@ -437,7 +463,7 @@ export function ProfessoresTab() {
               <Search className="absolute left-4 top-3.5 w-5 h-5 text-slate-400 group-focus-within:text-red-500 transition-colors"/>
               <input 
                   type="text" 
-                  placeholder="Buscar por nome ou e-mail..." 
+                  placeholder="Buscar por nome, telefone ou e-mail..." 
                   className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500 shadow-sm transition-all text-slate-700 dark:text-white"
                   value={busca}
                   onChange={(e) => setBusca(e.target.value)}
@@ -483,6 +509,10 @@ export function ProfessoresTab() {
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50 text-sm">
                     {professoresVisiveis.map(p => {
                         const units = getUnidadesVinculadas(p.id);
+                        
+                        // LÓGICA DE AUDITORIA DE TELEFONE (Acha os errados para envio de WaSeller)
+                        const isTelefoneValido = p.telefone && p.telefone.replace(/\D/g, '').length >= 10;
+                        
                         return (
                             <tr key={p.id} className={`transition-colors group ${p.status === 'inativo' ? 'bg-slate-50 dark:bg-slate-900/30 opacity-75 grayscale-[0.5]' : 'hover:bg-slate-50 dark:hover:bg-slate-700/30'}`}>
                                 <td className="p-4">
@@ -494,9 +524,19 @@ export function ProfessoresTab() {
                                     {p.nome}
                                 </td>
                                 <td className="p-4">
-                                    <div className="flex flex-col gap-1 text-xs font-medium text-slate-500 dark:text-slate-400">
+                                    <div className="flex flex-col gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400">
                                         <span className="flex items-center gap-1"><Mail className="w-3.5 h-3.5 text-blue-500"/> {p.email}</span>
-                                        {p.telefone && <span className="flex items-center gap-1"><Phone className="w-3.5 h-3.5 text-green-500"/> {p.telefone}</span>}
+                                        
+                                        {/* A ETIQUETA VISUAL DO TELEFONE */}
+                                        {isTelefoneValido ? (
+                                            <span className="flex items-center gap-1 text-slate-600 dark:text-slate-300">
+                                                <Phone className="w-3.5 h-3.5 text-green-500"/> {p.telefone}
+                                            </span>
+                                        ) : (
+                                            <span className="flex items-center gap-1 text-red-600 dark:text-red-400 font-bold bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 px-2 py-0.5 rounded-md w-fit" title="Telefone ausente ou inválido para envios do WaSeller. Edite o cadastro.">
+                                                <AlertTriangle className="w-3.5 h-3.5"/> {p.telefone || "Sem Telefone"}
+                                            </span>
+                                        )}
                                     </div>
                                 </td>
                                 <td className="p-4">
@@ -523,7 +563,7 @@ export function ProfessoresTab() {
                                     <div className="flex gap-2 justify-end opacity-40 group-hover:opacity-100 transition-opacity">
                                         {podeEditar && (
                                             <>
-                                                <button type="button" onClick={() => abrirEdicao(p)} className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-600 dark:hover:text-white transition-colors" title="Editar Dados">
+                                                <button type="button" onClick={() => abrirEdicao(p)} className={`p-2 rounded-lg transition-colors title="Editar Dados" ${!isTelefoneValido ? 'bg-red-50 text-red-600 animate-pulse' : 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'}`}>
                                                     <Edit2 className="w-4 h-4"/>
                                                 </button>
                                                 <button type="button" onClick={() => alternarStatusProf(p)} className={`p-2 rounded-lg transition-colors ${p.status === "ativo" ? "bg-orange-50 text-orange-600 hover:bg-orange-500 hover:text-white dark:bg-orange-900/30 dark:text-orange-400" : "bg-green-50 text-green-600 hover:bg-green-500 hover:text-white dark:bg-green-900/30 dark:text-green-400"}`} title={p.status === "ativo" ? "Desativar Perfil" : "Ativar Perfil"}>
@@ -645,7 +685,7 @@ export function ProfessoresTab() {
           </div>
       )}
 
-      {/* MODAL 2: FORMULÁRIO COMPLETO */}
+      {/* MODAL 2: FORMULÁRIO COMPLETO COM MÁSCARA */}
       {modalFormAberto && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in zoom-in duration-200">
           <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200 dark:border-slate-700 flex flex-col max-h-[90vh]">
@@ -684,10 +724,16 @@ export function ProfessoresTab() {
 
                 <div className="grid grid-cols-2 gap-4">
                     <div>
-                        <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 pl-1">WhatsApp</label>
+                        <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 pl-1">WhatsApp <span className="text-red-500">*</span></label>
                         <div className="relative">
                             <Phone className="absolute left-4 top-3.5 w-4 h-4 text-slate-400"/>
-                            <input className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-red-500 rounded-xl text-sm font-bold outline-none transition-all dark:text-white" value={telefone} onChange={e => setTelefone(e.target.value)} placeholder="(00) 00000-0000" />
+                            <input 
+                                className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-red-500 rounded-xl text-sm font-bold outline-none transition-all dark:text-white" 
+                                value={telefone} 
+                                onChange={e => setTelefone(mascaraTelefone(e.target.value))} 
+                                placeholder="(00) 00000-0000" 
+                                maxLength={15}
+                            />
                         </div>
                     </div>
                     <div>
