@@ -5,7 +5,7 @@ import { collection, query, where, getDocs } from "firebase/firestore";
 import { 
   BarChart2, Calendar, CheckCircle2, ShieldCheck, Settings, 
   ArrowRight, Loader2, TrendingUp, MapPin, Building2, User, Check,
-  Users, Dumbbell
+  Users, Dumbbell, Headphones, Link as LinkIcon
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -72,6 +72,16 @@ const DashboardCard = ({ title, subtitle, icon: Icon, theme, onClick, footerText
             hover: "hover:border-orange-400 group-hover:text-orange-700",
             accent: "text-orange-600"
         },
+        pink: {
+            iconBox: "bg-pink-50 text-pink-600 dark:bg-pink-900/20 dark:text-pink-400",
+            hover: "hover:border-pink-400 group-hover:text-pink-700",
+            accent: "text-pink-600"
+        },
+        cyan: {
+            iconBox: "bg-cyan-50 text-cyan-600 dark:bg-cyan-900/20 dark:text-cyan-400",
+            hover: "hover:border-cyan-400 group-hover:text-cyan-700",
+            accent: "text-cyan-600"
+        },
         slate: {
             iconBox: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400",
             hover: "hover:border-slate-400 group-hover:text-slate-700",
@@ -103,7 +113,7 @@ const DashboardCard = ({ title, subtitle, icon: Icon, theme, onClick, footerText
                     <h3 className="text-lg font-bold text-slate-800 dark:text-white leading-tight uppercase tracking-wide">
                         {title}
                     </h3>
-                    <p className="text-xs text-slate-400 font-medium mt-1">
+                    <p className="text-xs text-slate-400 font-medium mt-1 uppercase">
                         {subtitle}
                     </p>
                 </div>
@@ -130,7 +140,7 @@ export default function Home() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   
-  const [resumoRelatorio, setResumoRelatorio] = useState({ valor: 0 });
+  const [resumoRelatorio, setResumoRelatorio] = useState({ valor: 0, label: "RECEITA DE ONTEM" });
   const [resumoCronograma, setResumoCronograma] = useState({ proximaAula: null });
   const [resumoValidacao, setResumoValidacao] = useState({ pendentes: 0 });
   const [resumoColetiva, setResumoColetiva] = useState({ percentual: 0, validadas: 0, total: 0 });
@@ -152,21 +162,45 @@ export default function Home() {
       validacaoDiaria: true, 
       validacaoColetiva: ['admin', 'mentor'].includes(role), 
       configuracoes: ['admin', 'mentor', 'unidade'].includes(role),
+      pratiquePlay: ['admin', 'mentor', 'unidade', 'professor'].includes(role),
+      linkAluno: ['admin', 'mentor', 'unidade', 'professor'].includes(role),
   }), [role]);
 
-  // --- LÓGICA DE DADOS REAIS (DATA FETCHING) ---
+  // --- LÓGICA DE DADOS REAIS E OTIMIZAÇÃO MISTA (D-0 e D-1) ---
   useEffect(() => {
     async function fetchDashboardData() {
       if (!userData) return;
       setLoading(true);
       
       try {
-        const todayStr = new Date().toLocaleDateString('en-CA');
         const weekDayMap = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
-        const todayWeekDay = weekDayMap[new Date().getDay()];
-        const nowTime = new Date().toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
+        
+        // 1. CONSTRUÇÃO DO TEMPO LOCAL (D-0 e D-1)
+        const d = new Date();
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        
+        const todayStr = `${y}-${m}-${day}`; // String local exata (D-0)
+        const todayWeekDay = weekDayMap[d.getDay()];
+        const nowTime = d.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
 
-        // 1. CARREGAR CATÁLOGOS NECESSÁRIOS
+        // Regra de Ouro do D-1 (Se Hoje for Segunda, Ontem é Sábado)
+        const ontemData = new Date(d);
+        if (d.getDay() === 1) { // 1 = Segunda-feira
+            ontemData.setDate(d.getDate() - 2); 
+        } else {
+            ontemData.setDate(d.getDate() - 1);
+        }
+        
+        const yO = ontemData.getFullYear();
+        const mO = String(ontemData.getMonth() + 1).padStart(2, '0');
+        const dayO = String(ontemData.getDate()).padStart(2, '0');
+        
+        const ontemStr = `${yO}-${mO}-${dayO}`; // String do dia anterior (D-1)
+        const ontemWeekDay = weekDayMap[ontemData.getDay()];
+
+        // 2. CARREGAR CATÁLOGOS NECESSÁRIOS E RESOLVER BIND DO PROFESSOR
         const [uniSnap, modSnap, profSnap] = await Promise.all([
             getDocs(collection(db, "unidades")),
             getDocs(collection(db, "modalidades")),
@@ -174,73 +208,107 @@ export default function Home() {
         ]);
 
         const unidadesMap = {};
-        const unidadesMentorIds = []; // Lista de IDs de unidades do mentor logado
+        const unidadesMentorIds = []; 
 
-        uniSnap.forEach(d => {
-            const uData = d.data();
-            unidadesMap[d.id] = uData.nome;
+        uniSnap.forEach(doc => {
+            const uData = doc.data();
+            unidadesMap[doc.id] = uData.nome;
             if (role === 'mentor' && uData.mentorId === userId) {
-                unidadesMentorIds.push(d.id);
+                unidadesMentorIds.push(doc.id);
             }
         });
 
         const modalidadesMap = {};
-        modSnap.forEach(d => modalidadesMap[d.id] = d.data());
+        modSnap.forEach(doc => modalidadesMap[doc.id] = doc.data());
 
         const professoresMap = {};
-        profSnap.forEach(d => professoresMap[d.id] = d.data().nome);
+        let meuProfId = null;
 
-        // 2. BUSCAR AULAS (Base de tudo)
-        const qAulas = collection(db, "aulas");
-        const aulasSnap = await getDocs(qAulas); 
-        
-        // Acumuladores
-        let totalValorMensal = 0;
-        let totalAulasHoje = 0; // Minhas aulas do dia
-        let nextClass = null; // Minha próxima aula
-        
-        let totalAulasEscopo = 0; // Total de aulas do escopo (para Coletiva)
-        let idsAulasEscopo = []; // IDs das aulas do escopo
+        profSnap.forEach(doc => {
+            const pData = doc.data();
+            professoresMap[doc.id] = pData.nome;
+            // 🟢 VÍNCULO CORRETO: Encontra o doc do professor logado pelo uidLogin
+            if (role === 'professor' && (pData.uidLogin === userId || pData.uid === userId)) {
+                meuProfId = doc.id;
+            }
+        });
 
-        aulasSnap.forEach(doc => {
+        // 3. QUERIES OTIMIZADAS NO SERVIDOR
+        let aulasSnapDocs = [];
+        
+        if (role === 'admin') {
+            const snap = await getDocs(collection(db, "aulas"));
+            aulasSnapDocs = snap.docs;
+        } else if (role === 'mentor') {
+            if (unidadesMentorIds.length > 0) {
+                for (let i = 0; i < unidadesMentorIds.length; i += 10) {
+                    const chunk = unidadesMentorIds.slice(i, i + 10);
+                    const qAulas = query(collection(db, "aulas"), where("unidadeId", "in", chunk));
+                    const snap = await getDocs(qAulas);
+                    aulasSnapDocs.push(...snap.docs);
+                }
+            }
+        } else if (role === 'unidade' && userData?.unidadeId) {
+            const qAulas = query(collection(db, "aulas"), where("unidadeId", "==", String(userData.unidadeId)));
+            const snap = await getDocs(qAulas);
+            aulasSnapDocs = snap.docs;
+        } else if (role === 'professor' && meuProfId) {
+            // 🟢 Usa o ID mestre real (meuProfId) para a query no servidor
+            const qAulas = query(collection(db, "aulas"), where("professorId", "==", String(meuProfId)));
+            const snap = await getDocs(qAulas);
+            aulasSnapDocs = snap.docs;
+        }
+        
+        // Acumuladores D-1 (Ontem) e Professor (Mês)
+        let totalValorOntem = 0;
+        let totalValorMesProf = 0;
+        let totalAulasOntem = 0; 
+        let idsAulasOntem = []; 
+        
+        // Acumuladores D-0 (Hoje)
+        let totalAulasHoje = 0;
+        let idsAulasHoje = [];
+        let nextClass = null; 
+        
+        aulasSnapDocs.forEach(doc => {
             const aula = doc.data();
             const aulaId = doc.id;
 
-            // --- 🔒 FILTRO DE PERMISSÃO DE DADOS (REGRA DE OURO) ---
-            // Define se o usuário tem direito de VER/CONTABILIZAR esta aula
+            // --- 🔒 FILTRO DE PERMISSÃO DE DADOS ---
             let hasAccess = false;
-
             if (role === 'admin') {
-                hasAccess = true; // Admin vê tudo
+                hasAccess = true;
             } else if (role === 'mentor') {
-                // Mentor vê apenas suas unidades
                 if (unidadesMentorIds.includes(String(aula.unidadeId))) hasAccess = true;
             } else if (role === 'unidade') {
-                // Unidade vê apenas ela mesma
                 if (String(aula.unidadeId) === String(userData.unidadeId)) hasAccess = true;
             } else if (role === 'professor') {
-                // Professor vê apenas suas aulas
-                if (String(aula.professorId) === String(userId)) hasAccess = true;
+                if (String(aula.professorId) === String(meuProfId)) hasAccess = true;
             }
 
-            // Se não tem acesso, PULA para a próxima aula. Não contabiliza nada.
             if (!hasAccess) return;
 
-            // Se chegou aqui, a aula pertence ao escopo do usuário.
-            
-            // 1. DADOS FINANCEIROS (Estimativa Mensal das Aulas Ativas do Usuário)
-            // Multiplicamos por 4 semanas como estimativa padrão mensal
-            const nDias = aula.dias ? aula.dias.length : 0;
-            totalValorMensal += (parseFloat(aula.valor) || 0) * nDias * 4;
+            // --- ACUMULADOR HÍBRIDO (MENSAL PROFESSOR) ---
+            if (role === 'professor') {
+                const diasCount = aula.dias ? aula.dias.length : 0;
+                totalValorMesProf += (parseFloat(aula.valor) || 0) * diasCount * 4; // Média de 4 semanas no mês
+            }
 
-            // 2. DADOS DO DIA (HOJE)
+            // --- PROCESSAMENTO D-1 (ONTEM) ---
+            if (aula.dias && aula.dias.includes(ontemWeekDay)) {
+                totalAulasOntem++;
+                idsAulasOntem.push(aulaId);
+                // Se não for professor, acumula a receita de ontem normalmente
+                if (role !== 'professor') {
+                    totalValorOntem += (parseFloat(aula.valor) || 0); 
+                }
+            }
+
+            // --- PROCESSAMENTO D-0 (HOJE) ---
             if (aula.dias && aula.dias.includes(todayWeekDay)) {
-                // Contabiliza para validação
                 totalAulasHoje++;
-                totalAulasEscopo++; // Para admin/mentor é rede/equipe, para outros é igual ao totalHoje
-                idsAulasEscopo.push(aulaId);
-
-                // Lógica de Próxima Aula
+                idsAulasHoje.push(aulaId);
+                
                 if (aula.hora >= nowTime) {
                     if (!nextClass || aula.hora < nextClass.hora) {
                         const modData = modalidadesMap[aula.modalidadeId];
@@ -256,31 +324,42 @@ export default function Home() {
             }
         });
 
-        setResumoRelatorio({ valor: totalValorMensal });
+        // 🟢 Seta o Card de Relatório Híbrido (Mês x Dia)
+        if (role === 'professor') {
+            setResumoRelatorio({ valor: totalValorMesProf, label: "PREVISÃO MENSAL" });
+        } else {
+            setResumoRelatorio({ valor: totalValorOntem, label: "RECEITA DE ONTEM" });
+        }
+        
         setResumoCronograma({ proximaAula: nextClass });
 
-        // 3. BUSCAR VALIDAÇÕES DO DIA (Cruzamento)
-        const qVal = query(collection(db, "validacoes"), where("data", "==", todayStr));
+        // 4. BUSCAR VALIDAÇÕES SIMULTÂNEAS DE D-0 E D-1 PARA MÁXIMA ECONOMIA
+        const qVal = query(collection(db, "validacoes"), where("data", "in", [todayStr, ontemStr]));
         const valSnap = await getDocs(qVal);
         
-        let validacoesRealizadas = 0;
+        let validacoesRealizadasOntem = 0;
+        let validacoesRealizadasHoje = 0;
 
         valSnap.forEach(doc => {
             const val = doc.data();
-            // Verifica se a validação pertence a uma das aulas do meu escopo de hoje
-            if (idsAulasEscopo.includes(val.aulaId)) {
-                validacoesRealizadas++;
+            // Contabiliza se for de Ontem
+            if (val.data === ontemStr && idsAulasOntem.includes(val.aulaId)) {
+                validacoesRealizadasOntem++;
+            }
+            // Contabiliza se for de Hoje
+            if (val.data === todayStr && idsAulasHoje.includes(val.aulaId)) {
+                validacoesRealizadasHoje++;
             }
         });
 
-        // Cálculos Finais
-        // Pendentes = Total do dia (meu escopo) - Validadas (meu escopo)
-        const pendentes = Math.max(0, totalAulasHoje - validacoesRealizadas);
-        setResumoValidacao({ pendentes });
+        // --- CÁLCULOS FINAIS ---
+        // Validação Diária usa o D-0 (HOJE)
+        const pendentesHoje = Math.max(0, totalAulasHoje - validacoesRealizadasHoje);
+        setResumoValidacao({ pendentes: pendentesHoje });
 
-        // Coletiva (Mesmo cálculo, pois totalAulasEscopo já filtrou se é Rede ou Equipe Mentor)
-        const pctColetiva = totalAulasEscopo > 0 ? Math.round((validacoesRealizadas / totalAulasEscopo) * 100) : 100;
-        setResumoColetiva({ percentual: pctColetiva, total: totalAulasEscopo, validadas: validacoesRealizadas });
+        // Coletiva usa o D-1 (ONTEM)
+        const pctColetiva = totalAulasOntem > 0 ? Math.round((validacoesRealizadasOntem / totalAulasOntem) * 100) : 100;
+        setResumoColetiva({ percentual: pctColetiva, total: totalAulasOntem, validadas: validacoesRealizadasOntem });
 
       } catch (error) {
         console.error("Erro dashboard:", error);
@@ -290,15 +369,16 @@ export default function Home() {
     }
 
     fetchDashboardData();
-  }, [userData, role, userId]); // Recalcula se o usuário mudar
+  }, [userData, role, userId]);
 
   if (!userData) return null;
 
+  // --- REGRAS DE CORES E STATUS DA COLETIVA ATUALIZADAS ---
   const getColetivaStatus = (pct) => {
-      if (pct === 100) return { color: "text-emerald-500", theme: "green", label: "Meta Batida", bar: "bg-emerald-500" };
-      if (pct >= 80) return { color: "text-blue-500", theme: "blue", label: "Alta Adesão", bar: "bg-blue-500" };
-      if (pct >= 50) return { color: "text-amber-500", theme: "orange", label: "Atenção", bar: "bg-amber-500" };
-      return { color: "text-red-500", theme: "red", label: "Crítico", bar: "bg-red-500" };
+      if (pct === 100) return { color: "text-emerald-500", theme: "green", label: "EXCELENTE", bar: "bg-emerald-500" };
+      if (pct >= 80) return { color: "text-blue-500", theme: "blue", label: "EM ANDAMENTO", bar: "bg-blue-500" };
+      if (pct >= 50) return { color: "text-amber-500", theme: "orange", label: "EM ANDAMENTO", bar: "bg-amber-500" };
+      return { color: "text-red-500", theme: "red", label: "ATENÇÃO", bar: "bg-red-500" };
   };
   const coletivaStatus = getColetivaStatus(resumoColetiva.percentual);
 
@@ -332,21 +412,21 @@ export default function Home() {
         <CorporateClock />
       </div>
 
-      {/* GRID DE CARDS: 3 CIMA, 2 BAIXO */}
+      {/* 1. GRID SUPERIOR */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
         
-        {/* RELATÓRIO */}
+        {/* RELATÓRIO HÍBRIDO (D-1 ou Mês) */}
         {permissions.relatorio && (
             <DashboardCard 
                 title="Relatório Gerencial"
-                subtitle="Performance Financeira"
+                subtitle={resumoRelatorio.label}
                 icon={BarChart2}
                 theme="blue"
                 footerText="Ver Detalhes"
                 onClick={() => navigate('/app/relatorio-gerencial')}
             >
                 <div className="bg-blue-50 dark:bg-blue-900/10 p-4 rounded-2xl border border-blue-100 dark:border-blue-800/50 mt-2">
-                    <p className="text-[10px] font-bold text-blue-400 uppercase mb-1">Previsão Mensal (Est.)</p>
+                    <p className="text-[10px] font-bold text-blue-400 uppercase mb-1">{resumoRelatorio.label}</p>
                     {loading ? <Loader2 className="w-6 h-6 animate-spin text-blue-500"/> : (
                         <h4 className="text-3xl font-black text-blue-700 dark:text-blue-300 tracking-tight">
                             {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(resumoRelatorio.valor)}
@@ -356,7 +436,7 @@ export default function Home() {
             </DashboardCard>
         )}
 
-        {/* CRONOGRAMA */}
+        {/* CRONOGRAMA (D-0) */}
         {permissions.cronograma && (
             <DashboardCard 
                 title="Cronograma"
@@ -411,11 +491,11 @@ export default function Home() {
             </DashboardCard>
         )}
 
-        {/* VALIDAÇÃO DIÁRIA */}
+        {/* VALIDAÇÃO DIÁRIA (D-0) */}
         {permissions.validacaoDiaria && (
             <DashboardCard 
                 title="Validação Diária"
-                subtitle="Controle de presença"
+                subtitle="CONTROLE DE PRESENÇA"
                 icon={CheckCircle2}
                 theme={resumoValidacao.pendentes > 0 ? "red" : "green"}
                 footerText={resumoValidacao.pendentes > 0 ? "Resolver Agora" : "Histórico"}
@@ -444,19 +524,18 @@ export default function Home() {
 
       </div>
 
-      {/* 3. GRID BAIXO (2 Cards Largos) */}
-      <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* 2. GRID INFERIOR */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         
-        {/* VALIDAÇÃO COLETIVA */}
+        {/* VALIDAÇÃO COLETIVA (D-1) */}
         {permissions.validacaoColetiva && (
             <DashboardCard 
                 title="Monitoramento de Validação"
-                subtitle="Status da Rede"
+                subtitle="Status de Ontem"
                 icon={ShieldCheck}
                 theme={coletivaStatus.theme}
                 footerText="Ver Ranking"
                 onClick={() => navigate('/app/validacao-coletiva')}
-                className="col-span-1"
             >
                 <div className="flex flex-col justify-center h-full">
                     <div className="flex items-baseline justify-between mb-2">
@@ -480,6 +559,44 @@ export default function Home() {
             </DashboardCard>
         )}
 
+        {/* PRATIQUE PLAY (NOVO CARD DE MÚSICAS) */}
+        {permissions.pratiquePlay && (
+            <DashboardCard 
+                title="PRATIQUE PLAY"
+                subtitle="MÚSICAS PARA AULAS"
+                icon={Headphones}
+                theme="pink"
+                footerText="Acessar Play"
+                onClick={() => navigate('/app/pratique-play')}
+            >
+                <div className="flex flex-col items-center justify-center h-full bg-pink-50 dark:bg-pink-900/10 rounded-xl border border-pink-100 dark:border-pink-800/50 p-4">
+                    <Headphones className="w-10 h-10 text-pink-500 mb-2 animate-pulse" />
+                    <p className="text-sm font-black text-pink-600 dark:text-pink-400 uppercase text-center leading-tight">
+                        PLAYLISTS DAS <br /> COLETIVAS
+                    </p>
+                </div>
+            </DashboardCard>
+        )}
+
+        {/* LINK DO ALUNO (NOVO CARD PORTAL EXTERNO) */}
+        {permissions.linkAluno && (
+            <DashboardCard 
+                title="LINK DO ALUNO"
+                subtitle="ACESSO EXTERNO"
+                icon={LinkIcon}
+                theme="cyan"
+                footerText="Abrir Portal"
+                onClick={() => navigate('/app/link-aluno')}
+            >
+                <div className="flex flex-col items-center justify-center h-full bg-cyan-50 dark:bg-cyan-900/10 rounded-xl border border-cyan-100 dark:border-cyan-800/50 p-4">
+                    <LinkIcon className="w-10 h-10 text-cyan-500 mb-2 animate-pulse" />
+                    <p className="text-sm font-black text-cyan-600 dark:text-cyan-400 uppercase text-center leading-tight">
+                        PORTAL DE <br /> ALUNOS
+                    </p>
+                </div>
+            </DashboardCard>
+        )}
+
         {/* CONFIGURAÇÕES */}
         {permissions.configuracoes && (
             <DashboardCard 
@@ -489,7 +606,6 @@ export default function Home() {
                 theme="slate"
                 footerText="Gerenciar"
                 onClick={() => navigate('/app/configuracoes')}
-                className="col-span-1"
             >
                 <div className="flex items-center justify-around h-full bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 px-2 mt-1">
                     {(role === 'admin' || role === 'mentor') && (

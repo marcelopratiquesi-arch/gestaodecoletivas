@@ -68,6 +68,9 @@ export default function ValidacaoDiariaPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [acaoAtual, setAcaoAtual] = useState(null); 
 
+  // 🟢 REGRA DO COFRE: Determina se a tela deve ficar em branco aguardando o clique do Admin/Mentor
+  const isCofreFechado = (role === 'admin' || role === 'mentor') && !filtroUnidade;
+
   // ==========================================
   // 0. MOTOR DE AUDITORIA FINANCEIRA (O X-9)
   // ==========================================
@@ -83,7 +86,7 @@ export default function ValidacaoDiariaPage() {
               tipoAcao,
               descricao,
               diffExtras: detalhes,
-              modulo: 'VALIDACAO', // Nova chave exclusiva para Validação Diária
+              modulo: 'VALIDACAO', 
               unidadeNome: nomeUnidade,
               professorNome: nomeProf, 
               modalidadeNome: nomeMod, 
@@ -166,10 +169,18 @@ export default function ValidacaoDiariaPage() {
 
 
   // ==========================================
-  // 2. MOTOR DE TEMPO REAL (ESCUTA O PERÍODO)
+  // 2. MOTOR DE TEMPO REAL BLINDADO (O COFRE)
   // ==========================================
   useEffect(() => {
     if (catalogs.unidades.length === 0 && role !== 'admin') return; 
+
+    // 🟢 INJEÇÃO CIRÚRGICA: Se o cofre estiver fechado, não consulta nada no Firebase!
+    if (isCofreFechado) {
+        setAulasRealtime([]);
+        setValidacoesRealtime([]);
+        setLoading(false);
+        return;
+    }
 
     setLoading(true);
 
@@ -184,29 +195,26 @@ export default function ValidacaoDiariaPage() {
       dataFim = `${ano}-${mes}-${lastDay}`;
     }
 
-    let aulasRef = collection(db, 'aulas');
-    let qAulas = query(aulasRef);
+    let qAulas;
+    let qValidacoes;
+
     if (role === 'unidade') {
-        qAulas = query(aulasRef, where('unidadeId', '==', userUnidadeId));
+        qAulas = query(collection(db, 'aulas'), where('unidadeId', '==', userUnidadeId));
+        qValidacoes = query(collection(db, 'validacoes'), where('data', '>=', dataInicio), where('data', '<=', dataFim), where('unidadeId', '==', userUnidadeId));
     } else if (role === 'professor') {
         const meuPerfil = catalogs.professores.find(p => p.uidLogin === userId);
         const meuProfId = meuPerfil ? meuPerfil.id : 'xyz';
-        qAulas = query(aulasRef, where('professorId', '==', meuProfId));
+        qAulas = query(collection(db, 'aulas'), where('professorId', '==', meuProfId));
+        qValidacoes = query(collection(db, 'validacoes'), where('data', '>=', dataInicio), where('data', '<=', dataFim), where('professorId', '==', meuProfId));
+    } else {
+        // 🟢 ECONOMIA DE DADOS: Consulta EXATA para a Unidade Selecionada pelo Admin/Mentor
+        qAulas = query(collection(db, 'aulas'), where('unidadeId', '==', filtroUnidade));
+        qValidacoes = query(collection(db, 'validacoes'), where('data', '>=', dataInicio), where('data', '<=', dataFim), where('unidadeId', '==', filtroUnidade));
     }
 
     const unsubAulas = onSnapshot(qAulas, (snap) => {
         setAulasRealtime(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
-
-    let validacoesRef = collection(db, 'validacoes');
-    let qValidacoes = query(validacoesRef, where('data', '>=', dataInicio), where('data', '<=', dataFim));
-    if (role === 'unidade') {
-        qValidacoes = query(qValidacoes, where('unidadeId', '==', userUnidadeId));
-    } else if (role === 'professor') {
-        const meuPerfil = catalogs.professores.find(p => p.uidLogin === userId);
-        const meuProfId = meuPerfil ? meuPerfil.id : 'xyz';
-        qValidacoes = query(qValidacoes, where('professorId', '==', meuProfId));
-    }
 
     const unsubValidacoes = onSnapshot(qValidacoes, (snap) => {
         setValidacoesRealtime(snap.docs.map(d => ({ id: d.id, ...d.data() })));
@@ -217,14 +225,14 @@ export default function ValidacaoDiariaPage() {
         unsubAulas();
         unsubValidacoes();
     };
-  }, [modoFiltro, dataFiltro, mesFiltro, catalogs.unidades.length, catalogs.professores, role, userId, userUnidadeId]);
+  }, [modoFiltro, dataFiltro, mesFiltro, catalogs.unidades.length, catalogs.professores, role, userId, userUnidadeId, filtroUnidade, isCofreFechado]);
 
 
   // ==========================================
   // 3. PROCESSADOR DE GRADE VISUAL
   // ==========================================
   useEffect(() => {
-    if (loading || catalogs.unidades.length === 0) return;
+    if (loading || catalogs.unidades.length === 0 || isCofreFechado) return;
 
     let datasParaVerificar = [];
     if (modoFiltro === 'dia') {
@@ -386,7 +394,7 @@ export default function ValidacaoDiariaPage() {
 
     setGradeGerada(gradeFinal);
 
-  }, [aulasRealtime, validacoesRealtime, loading, catalogs, filtroUnidade, filtroModalidade, filtroProfessor, filtroEstado, filtroMentor, dataFiltro, mesFiltro, modoFiltro, role, userId]);
+  }, [aulasRealtime, validacoesRealtime, loading, catalogs, filtroUnidade, filtroModalidade, filtroProfessor, filtroEstado, filtroMentor, dataFiltro, mesFiltro, modoFiltro, role, userId, isCofreFechado]);
 
   // CONTADORES E PAGINAÇÃO
   const counts = useMemo(() => {
@@ -405,6 +413,7 @@ export default function ValidacaoDiariaPage() {
       return gradeGerada;
   }, [gradeGerada, filtroStatus]);
 
+  // 🟢 A MÁGICA DA FILA: Mostra apenas 12. Se um sair da lista, o próximo entra!
   const listaExibicao = useMemo(() => listaFiltradaTotal.slice(0, itensVisiveis), [listaFiltradaTotal, itensVisiveis]);
 
   const handleCarregarMais = (qtd) => {
@@ -661,13 +670,26 @@ export default function ValidacaoDiariaPage() {
         </div>
       </div>
 
-      {loading ? (
+      {/* 🟢 O COFRE: Se não tiver unidade selecionada, mostra aviso e economiza dados */}
+      {isCofreFechado ? (
+          <div className="py-24 text-center bg-white dark:bg-slate-800 rounded-3xl border border-dashed border-slate-300 dark:border-slate-700 shadow-sm animate-fade-in">
+            <div className="bg-slate-50 dark:bg-slate-900 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-100 dark:border-slate-800 shadow-inner">
+              <MapPin className="w-8 h-8 text-emerald-500 animate-bounce"/>
+            </div>
+            <h3 className="text-xl font-black text-slate-700 dark:text-white mb-2">
+                Selecione uma Unidade
+            </h3>
+            <p className="text-slate-500 dark:text-slate-400 text-sm font-medium max-w-md mx-auto">
+                Para manter o sistema super rápido, a grade de aulas só é carregada após você selecionar uma unidade específica no filtro acima.
+            </p>
+          </div>
+      ) : loading ? (
         <div className="h-64 flex flex-col items-center justify-center text-slate-400">
           <Loader2 className="w-8 h-8 animate-spin mb-2 text-emerald-500"/>
           <p className="text-sm font-medium">Carregando dados ao vivo...</p>
         </div>
       ) : listaFiltradaTotal.length === 0 ? (
-        <div className="py-24 text-center bg-white dark:bg-slate-800 rounded-3xl border border-dashed border-slate-300 dark:border-slate-700">
+        <div className="py-24 text-center bg-white dark:bg-slate-800 rounded-3xl border border-dashed border-slate-300 dark:border-slate-700 animate-fade-in">
           <div className="bg-slate-50 dark:bg-slate-900 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
             <LayoutDashboard className="w-8 h-8 text-slate-300"/>
           </div>
@@ -675,7 +697,7 @@ export default function ValidacaoDiariaPage() {
               {filtroStatus === 'pendente' ? "Tudo Validado!" : filtroStatus === 'cancelada' ? "Nenhum cancelamento" : "Nenhuma aula encontrada"}
           </h3>
           <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
-              {filtroStatus === 'pendente' ? "Parabéns, você zerou as pendências." : "Tente ajustar os filtros ou a data selecionada."}
+              {filtroStatus === 'pendente' ? "Parabéns, não há pendências nesta data/unidade." : "Tente ajustar os filtros ou a data selecionada."}
           </p>
         </div>
       ) : (
