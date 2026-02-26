@@ -3,8 +3,9 @@ import { Outlet } from "react-router-dom";
 import Sidebar from "../components/Sidebar/Sidebar"; 
 import { Menu, X, ChevronLeft, ChevronRight } from "lucide-react";
 
-// 🟢 Importação do nosso Player
+// 🟢 Importação do nosso Player e do nosso Vigia
 import PlayerGlobal from "../components/PlayerGlobal"; 
+import VigiaNoturno from "../components/VigiaNoturno"; 
 
 export default function AppLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -42,7 +43,6 @@ export default function AppLayout() {
         </button>
       </aside>
 
-      {/* 🟢 CORREÇÃO: Container principal agora é "relative" para ancorar o Player perfeitamente */}
       <div className="flex-1 flex flex-col min-w-0 transition-all duration-300 ease-in-out relative">
         
         <header className="md:hidden bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 flex items-center gap-3 h-16 transition-colors">
@@ -54,11 +54,14 @@ export default function AppLayout() {
 
         <main className="flex-1 overflow-auto p-4 md:p-8 pb-24 md:pb-24 bg-slate-50 dark:bg-[#121212] relative">
           <div className="max-w-7xl mx-auto">
-             <Outlet />
+             {/* 🟢 O VIGIA NOTURNO PROTEGENDO APENAS AS PÁGINAS DE DADOS (15 mins) */}
+             <VigiaNoturno timeoutMinutes={15}>
+                 <Outlet />
+             </VigiaNoturno>
           </div>
         </main>
 
-        {/* 🟢 O RÁDIO AGORA FICA AQUI DENTRO: Ele vai esticar e encolher junto com a tela! */}
+        {/* 🟢 O PLAYER GLOBAL FICA FORA DO VIGIA: Se a tela apagar, a música continua rolando! */}
         <PlayerGlobal />
       </div>
 
