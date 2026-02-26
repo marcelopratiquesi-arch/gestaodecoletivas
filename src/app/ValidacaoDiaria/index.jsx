@@ -69,6 +69,34 @@ export default function ValidacaoDiariaPage() {
   const [acaoAtual, setAcaoAtual] = useState(null); 
 
   // ==========================================
+  // 0. MOTOR DE AUDITORIA FINANCEIRA (O X-9)
+  // ==========================================
+  const registrarLogAuditoria = async (tipoAcao, descricao, itemAula, detalhes = "") => {
+      try {
+          const nomeUsuario = userData?.nome || userData?.email || 'Administrador';
+          
+          let nomeUnidade = itemAula.unidade?.nome || '-';
+          let nomeProf = itemAula.professor?.nome || itemAula.professorTitular?.nome || '-';
+          let nomeMod = itemAula.modalidade?.nome || '-';
+
+          await addDoc(collection(db, 'auditoria_cronograma'), {
+              tipoAcao,
+              descricao,
+              diffExtras: detalhes,
+              modulo: 'VALIDACAO', // Nova chave exclusiva para Validação Diária
+              unidadeNome: nomeUnidade,
+              professorNome: nomeProf, 
+              modalidadeNome: nomeMod, 
+              dias: [itemAula.diaSemana || ''],
+              hora: itemAula.aulaBase?.hora || '',
+              usuarioAcaoNome: nomeUsuario,
+              usuarioAcaoId: userId,
+              dataAcao: serverTimestamp()
+          });
+      } catch (e) { console.error("Erro ao gerar log de auditoria", e); }
+  };
+
+  // ==========================================
   // 1. CARREGAMENTO DOS CATÁLOGOS E PERMISSÕES
   // ==========================================
   useEffect(() => {
@@ -138,7 +166,7 @@ export default function ValidacaoDiariaPage() {
 
 
   // ==========================================
-  // 2. MOTOR DE TEMPO REAL (ESCUTA O PERÍODO SELECIONADO)
+  // 2. MOTOR DE TEMPO REAL (ESCUTA O PERÍODO)
   // ==========================================
   useEffect(() => {
     if (catalogs.unidades.length === 0 && role !== 'admin') return; 
@@ -358,7 +386,6 @@ export default function ValidacaoDiariaPage() {
 
     setGradeGerada(gradeFinal);
 
-  // Removido o meuProfessorId desta lista, que era o que estava causando o erro!
   }, [aulasRealtime, validacoesRealtime, loading, catalogs, filtroUnidade, filtroModalidade, filtroProfessor, filtroEstado, filtroMentor, dataFiltro, mesFiltro, modoFiltro, role, userId]);
 
   // CONTADORES E PAGINAÇÃO
@@ -405,6 +432,9 @@ export default function ValidacaoDiariaPage() {
     setModalOpen(true);
   };
 
+  // ==========================================
+  // CONFIRMAÇÕES NO BANCO E O X-9 OPERANDO
+  // ==========================================
   const handleReverterCancelamento = async () => {
       if (!acaoAtual.item.validacao?.id && acaoAtual.item.validacao?.motivoCancelamento === 'Recesso/Feriado') {
           return alert("Esta aula é Feriado Automático. Para acontecer, clique em 'Voltar' e 'Validar'.");
@@ -416,6 +446,8 @@ export default function ValidacaoDiariaPage() {
       setProcessando(true);
       try {
           await deleteDoc(doc(db, 'validacoes', acaoAtual.item.validacao.id));
+          // 🟢 AUDITORIA: REVERSÃO
+          await registrarLogAuditoria('EXCLUÍDA', `Cancelamento revertido. Aula voltou para pendente.`, acaoAtual.item, `O cancelamento por motivo de "${acaoAtual.item.validacao?.motivoCancelamento}" foi desfeito.`);
       } catch (error) {
           console.error("Erro ao reverter:", error);
           alert("Erro ao reverter cancelamento.");
@@ -431,9 +463,6 @@ export default function ValidacaoDiariaPage() {
       abrirModal('aulao', { unidade: unidadeObj, data: dataFiltro });
   };
 
-  // ==========================================
-  // CONFIRMAÇÃO DO MODAL
-  // ==========================================
   const confirmarAcao = async (dadosFormulario) => {
     const { 
         inputValor, inputObs, isSubstituicao, substitutoId, motivoSubstituicao, 
@@ -469,6 +498,19 @@ export default function ValidacaoDiariaPage() {
           payload.substituicao = false; 
           
           await addDoc(collection(db, 'validacoes'), payload);
+          // 🟢 AUDITORIA: AULÃO
+          await registrarLogAuditoria(
+              'NOVA', 
+              `Aulão Especial registrado com sucesso.`, 
+              {
+                  unidade: item.unidade, 
+                  professor: {nome: professorNomeEfetivo}, 
+                  modalidade: {nome: modalidadeNomeEfetiva}, 
+                  aulaBase: {hora: aulaoHora}, 
+                  diaSemana: aulaoData
+              }, 
+              `Qtd Alunos: ${inputValor} | Valor: R$ ${aulaoValor}`
+          );
 
       } else {
           payload.aulaId = item.aulaBase.id;
@@ -476,12 +518,17 @@ export default function ValidacaoDiariaPage() {
           payload.professorId = (tipo === 'validar' && isSubstituicao) ? substitutoId : item.aulaBase.professorId;
           payload.status = tipo === 'validar' ? 'realizada' : 'cancelada';
 
+          let diffLog = [];
+
           if (tipo === 'validar') {
             payload.alunos = parseInt(inputValor);
+            diffLog.push(`Alunos validados: ${inputValor}`);
+
             if (isSubstituicao) {
                 payload.substituicao = true;
                 payload.professorOriginalId = item.aulaBase.professorId;
                 payload.motivoSubstituicao = motivoSubstituicao;
+                diffLog.push(`Substituição: ${item.professorTitular?.nome} ➔ ${professorNomeEfetivo} (${motivoSubstituicao})`);
             } else {
                 payload.substituicao = false;
                 payload.professorOriginalId = null;
@@ -490,12 +537,20 @@ export default function ValidacaoDiariaPage() {
           } else {
             payload.motivoCancelamento = inputValor === 'Outros' ? inputObs : inputValor;
             payload.substituicao = false;
+            diffLog.push(`Motivo Cancelamento: ${payload.motivoCancelamento}`);
           }
 
           if (item.validacao?.id) {
+            // Se já existia validação, é uma EDIÇÃO!
+            if (tipo === 'validar' && item.validacao.alunos !== payload.alunos) {
+                diffLog.push(`Alteração de Alunos: de ${item.validacao.alunos} para ${payload.alunos}`);
+            }
             await updateDoc(doc(db, 'validacoes', item.validacao.id), payload);
+            await registrarLogAuditoria('ALTERADA', tipo === 'validar' ? `Validação editada.` : `Motivo de cancelamento editado.`, item, diffLog.join(' | '));
           } else {
+            // Validação NOVA
             await addDoc(collection(db, 'validacoes'), payload);
+            await registrarLogAuditoria('NOVA', tipo === 'validar' ? `Aula validada.` : `Aula cancelada.`, item, diffLog.join(' | '));
           }
       }
 

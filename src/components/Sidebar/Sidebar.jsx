@@ -5,11 +5,11 @@ import { useTheme } from "../../contexts/ThemeContext";
 import { db } from "../../services/firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
 
-// 🟢 Adicionei o ícone 'Headphones' aqui na lista!
+// 🟢 Adicionei o ícone 'Activity' para a Auditoria!
 import { 
   LayoutDashboard, BarChart3, Calendar, CircleCheck, 
   Users, Settings, LogOut, Moon, Sun, ShieldCheck, 
-  ChevronRight, TrendingUp, Globe, Megaphone, Headphones 
+  ChevronRight, TrendingUp, Globe, Megaphone, Headphones, Activity
 } from "lucide-react";
 
 export default function Sidebar({ collapsed }) { 
@@ -139,6 +139,9 @@ export default function Sidebar({ collapsed }) {
                 
                 {/* Nova Central de Comunicação (Gestão) */}
                 {["admin", "mentor"].includes(role) && <NavItem to="/app/comunicacao" icon={Megaphone} label="Comunicados" collapsed={collapsed} active={isActive("/app/comunicacao")} />}
+
+                {/* 🟢 NOVO: ABA DE AUDITORIA (Só para Admin) */}
+                {["admin"].includes(role) && <NavItem to="/app/auditoria" icon={Activity} label="Auditoria" collapsed={collapsed} active={isActive("/app/auditoria")} />}
                 
                 {["admin", "mentor", "unidade"].includes(role) && <NavItem to="/app/configuracoes" icon={Settings} label="Configurações" collapsed={collapsed} active={isActive("/app/configuracoes")} />}
             </div>

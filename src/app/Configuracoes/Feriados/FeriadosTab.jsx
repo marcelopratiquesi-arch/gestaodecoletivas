@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../../services/firebase';
+import { useAuth } from "../../../contexts/AuthContext"; // Importado para Auditoria
 import { 
   collection, addDoc, getDocs, deleteDoc, doc, 
   writeBatch, query, where, serverTimestamp 
@@ -21,11 +22,13 @@ const getDatesInRange = (startDate, endDate) => {
 };
 
 export function FeriadosTab() {
+  const { userData } = useAuth(); // Pegando dados do Admin para Auditoria
+  const userId = userData?.id || userData?.uid;
+
   const [feriados, setFeriados] = useState([]);
   const [loading, setLoading] = useState(false);
   const [processando, setProcessando] = useState(false);
   
-  // Agora usamos Início e Fim para permitir recessos longos
   const [form, setForm] = useState({ 
     nome: '', 
     dataInicio: '', 
@@ -33,13 +36,33 @@ export function FeriadosTab() {
     tipo: 'Recesso' 
   });
 
+  // ==========================================
+  // 0. MOTOR DE AUDITORIA (CÂMERA INVISÍVEL)
+  // ==========================================
+  const registrarLogAuditoria = async (tipoAcao, descricao, nomeFeriado, detalhes = "") => {
+      try {
+          const nomeUsuario = userData?.nome || userData?.email || 'Administrador do Sistema';
+          await addDoc(collection(db, 'auditoria_cronograma'), {
+              tipoAcao,
+              descricao: `Calendário: ${descricao}`,
+              diffExtras: detalhes,
+              modulo: 'CONFIGURACOES',
+              unidadeNome: 'Rede Global',
+              professorNome: '-', 
+              modalidadeNome: nomeFeriado || '-', 
+              usuarioAcaoNome: nomeUsuario,
+              usuarioAcaoId: userId,
+              dataAcao: serverTimestamp()
+          });
+      } catch (e) { console.error("Erro ao gerar log de auditoria", e); }
+  };
+
   useEffect(() => { loadFeriados(); }, []);
 
   async function loadFeriados() {
     setLoading(true);
     try {
       const snap = await getDocs(collection(db, "feriados"));
-      // Ordena por data mais recente
       const lista = snap.docs.map(d => ({ id: d.id, ...d.data() }))
                              .sort((a, b) => new Date(a.dataInicio) - new Date(b.dataInicio));
       setFeriados(lista);
@@ -60,32 +83,23 @@ export function FeriadosTab() {
 
     setProcessando(true);
     try {
-      // 1. Salvar o registro do Feriado (para exibir na lista)
       const feriadoDoc = await addDoc(collection(db, "feriados"), form);
       
-      // 2. BUSCAR TODAS AS AULAS DO SISTEMA
-      // (Para saber o que precisa ser cancelado)
       const aulasSnap = await getDocs(collection(db, "aulas"));
       const todasAulas = aulasSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-      // 3. GERAR AS DATAS DO INTERVALO
       const datasDoRecesso = getDatesInRange(form.dataInicio, form.dataFim);
       
-      // 4. PREPARAR O LOTE DE GRAVAÇÃO (BATCH)
-      // O Firebase aceita máx 500 operações por lote. Vamos controlar isso.
       let batch = writeBatch(db);
       let count = 0;
 
       for (const dateObj of datasDoRecesso) {
-        const dataStr = dateObj.toISOString().split('T')[0]; // YYYY-MM-DD
+        const dataStr = dateObj.toISOString().split('T')[0];
         const diaSemana = diasSemanaMap[dateObj.getDay()];
 
-        // Acha aulas que ocorrem nesse dia da semana
         const aulasDoDia = todasAulas.filter(aula => aula.dias && aula.dias.includes(diaSemana));
 
         for (const aula of aulasDoDia) {
-          // Cria o ID único da validação (AulaID + Data) para garantir que não duplique
-          // Isso sobrescreve se já existir (garantindo o cancelamento)
           const validacaoRef = doc(collection(db, "validacoes")); 
           
           batch.set(validacaoRef, {
@@ -94,14 +108,13 @@ export function FeriadosTab() {
             professorId: aula.professorId,
             data: dataStr,
             status: 'cancelada',
-            motivoCancelamento: `Recesso: ${form.nome}`, // Aparecerá no relatório
+            motivoCancelamento: `Recesso: ${form.nome}`,
             validadoPor: 'SISTEMA_FERIADO',
-            feriadoId: feriadoDoc.id, // Vínculo para saber quem causou o cancelamento
+            feriadoId: feriadoDoc.id, 
             timestamp: serverTimestamp()
           });
 
           count++;
-          // Se encher o lote de 500, envia e abre outro
           if (count >= 450) {
             await batch.commit();
             batch = writeBatch(db);
@@ -110,12 +123,18 @@ export function FeriadosTab() {
         }
       }
 
-      // Envia o restante
       if (count > 0) {
         await batch.commit();
       }
 
-      // Atualiza tela
+      // 🟢 AUDITORIA: Registro de novo feriado e quantidade de cancelamentos
+      await registrarLogAuditoria(
+          'NOVA', 
+          `Novo ${form.tipo} agendado na rede.`, 
+          form.nome, 
+          `Período: ${formatDate(form.dataInicio)} até ${formatDate(form.dataFim)} | 🚨 Aulas canceladas automaticamente: ${count}`
+      );
+
       setFeriados([...feriados, { id: feriadoDoc.id, ...form }]);
       setForm({ nome: '', dataInicio: '', dataFim: '', tipo: 'Recesso' });
       alert(`Sucesso! Recesso criado e ${count} aulas foram canceladas automaticamente.`);
@@ -133,6 +152,10 @@ export function FeriadosTab() {
     
     try {
       await deleteDoc(doc(db, "feriados", id));
+      
+      // 🟢 AUDITORIA
+      await registrarLogAuditoria('EXCLUÍDA', 'Evento removido do calendário.', nomeFeriado, 'O recesso/feriado foi deletado do sistema.');
+
       setFeriados(feriados.filter(f => f.id !== id));
     } catch (e) { alert("Erro ao excluir"); }
   }

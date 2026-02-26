@@ -14,9 +14,10 @@ import ValidacaoColetivaPage from "../app/ValidacaoColetiva";
 import PerformanceFinanceiraPage from "../app/Financeiro"; 
 import CentralComunicacao from "../app/Comunicacao";
 import PublicSchedule from "../pages/Publico/PublicSchedule"; 
-
-// 🟢 NOVA IMPORTAÇÃO: Pratique Play
 import PratiquePlay from "../app/PratiquePlay";
+
+// 🟢 NOVA IMPORTAÇÃO: Auditoria do Sistema
+import AuditoriaPage from "../app/Auditoria"; 
 
 export default function AppRoutes() {
   return (
@@ -94,6 +95,12 @@ export default function AppRoutes() {
             } 
           />
           
+          {/* 🟢 NOVA ROTA: Auditoria (Ajustada sem o bloqueio do RoleRoute) */}
+          <Route 
+            path="auditoria" 
+            element={<AuditoriaPage />} 
+          />
+          
           {/* Configurações */}
           <Route 
             path="configuracoes" 
@@ -104,7 +111,7 @@ export default function AppRoutes() {
             } 
           />
 
-          {/* 🟢 ROTA DO SPOTIFY (PRATIQUE PLAY) */}
+          {/* ROTA DO SPOTIFY (PRATIQUE PLAY) */}
           <Route 
             path="pratique-play" 
             element={

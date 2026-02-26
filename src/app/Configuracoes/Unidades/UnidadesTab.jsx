@@ -7,7 +7,7 @@ import { createUserWithEmailAndPassword, getAuth, signOut } from "firebase/auth"
 import { initializeApp, getApp, deleteApp } from "firebase/app"; 
 import { db } from "../../../services/firebase";
 
-// Adicionado o ícone "Check" para confirmar a edição inline do telefone
+// Ícones
 import { 
     Building2, MapPin, Edit2, Trash2, AlertTriangle, CheckCircle2, 
     Loader2, User, Search, Mail, Lock, Globe, Key, ChevronDown, ChevronUp, Ban, PowerOff, Plus, X, Phone, Check
@@ -45,11 +45,11 @@ const LOCATIONS = {
 // ==========================================
 const formatarTelefone = (valor, pais) => {
     if (!valor) return "";
-    let v = valor.replace(/\D/g, ''); // Remove tudo que não é número
+    let v = valor.replace(/\D/g, ''); 
     
     if (pais === 'Brasil') {
         if (v.startsWith('55')) v = v.slice(2);
-        v = v.slice(0, 11); // Max 11 digitos
+        v = v.slice(0, 11); 
         if (v.length > 2) v = v.replace(/^(\d{2})(\d)/g, '($1) $2');
         if (v.length > 7) v = v.replace(/(\d{5})(\d)/, '$1-$2');
         return v ? `+55 ${v}` : '';
@@ -116,6 +116,27 @@ export function UnidadesTab() {
   const [senhaLogin, setSenhaLogin] = useState("123456");
 
   const estadosDisponiveis = pais ? LOCATIONS[pais] || [] : [];
+
+  // ==========================================
+  // 0. MOTOR DE AUDITORIA (CÂMERA INVISÍVEL)
+  // ==========================================
+  const registrarLogAuditoria = async (tipoAcao, descricao, nomeUnidade, detalhes = "") => {
+      try {
+          const nomeUsuario = userData?.nome || userData?.email || 'Administrador do Sistema';
+          await addDoc(collection(db, 'auditoria_cronograma'), {
+              tipoAcao,
+              descricao,
+              diffExtras: detalhes,
+              modulo: 'CONFIGURACOES', // Mesma chave para juntar tudo no histórico
+              unidadeNome: nomeUnidade || '-',
+              professorNome: '-', 
+              modalidadeNome: '-', 
+              usuarioAcaoNome: nomeUsuario,
+              usuarioAcaoId: userId,
+              dataAcao: serverTimestamp()
+          });
+      } catch (e) { console.error("Erro ao gerar log de auditoria", e); }
+  };
 
   // ==========================================
   // 1. MOTOR DE TEMPO REAL
@@ -212,7 +233,7 @@ export function UnidadesTab() {
   }, [unidadesBase]);
 
   // ==========================================
-  // 4. AÇÕES DE BANCO DE DADOS (CRUD)
+  // 4. AÇÕES DE BANCO DE DADOS (CRUD) + AUDITORIA
   // ==========================================
   function abrirNovaUnidade() {
     setEditando(null); 
@@ -267,14 +288,33 @@ export function UnidadesTab() {
 
     try {
       if (editando) {
+        // 🟢 AUDITORIA: Descobrir o que mudou na Unidade (X-9 Detalhado)
+        let mudancas = [];
+        if (editando.nome !== nome.trim()) mudancas.push(`Nome: ${editando.nome} ➔ ${nome.trim()}`);
+        if (editando.telefone !== telefone.trim()) mudancas.push(`WhatsApp: ${editando.telefone || 'Sem tel'} ➔ ${telefone.trim()}`);
+        if (editando.estado !== estado) mudancas.push(`Estado: ${editando.estado || '-'} ➔ ${estado}`);
+        if (editando.status !== status) mudancas.push(`Status: ${editando.status} ➔ ${status}`);
+        
+        if (editando.mentorId !== mentorId) {
+            const mAntigo = mentores.find(m => m.id === editando.mentorId)?.nome || 'Sem Mentor';
+            const mNovo = mentores.find(m => m.id === mentorId)?.nome || 'Sem Mentor';
+            mudancas.push(`Mentor: ${mAntigo} ➔ ${mNovo}`);
+        }
+
         await updateDoc(doc(db, "unidades", editando.id), {
           pais, estado, nome: nome.trim(), telefone: telefone.trim(), status, mentorId, atualizadoEm: serverTimestamp()
         });
         if(editando.uidLogin) {
             try { await updateDoc(doc(db, "usuarios", editando.uidLogin), { telefone: telefone.trim() }); } catch(err){}
         }
+
+        if (mudancas.length > 0) {
+            await registrarLogAuditoria('ALTERADA', 'Dados cadastrais da Unidade atualizados.', nome.trim(), mudancas.join('\n'));
+        }
+
         setSucesso("Unidade atualizada!");
       } else {
+        // 🟢 AUDITORIA: Criação de Unidade Nova
         secondaryApp = initializeApp(getApp().options, "SecondaryAppUnitCreate");
         const secondaryAuth = getAuth(secondaryApp);
 
@@ -296,6 +336,10 @@ export function UnidadesTab() {
         });
 
         await signOut(secondaryAuth);
+        
+        const mNome = mentores.find(m => m.id === mentorId)?.nome || 'Sem Mentor';
+        await registrarLogAuditoria('NOVA', 'Nova unidade e credenciais criadas no sistema.', nome.trim(), `Local: ${estado} | Mentor: ${mNome}`);
+
         setSucesso("Unidade e Acesso criados!");
       }
       
@@ -312,41 +356,67 @@ export function UnidadesTab() {
     }
   }
 
-  // FUNÇÃO DE SALVAMENTO RÁPIDO (INLINE)
+  // FUNÇÃO DE SALVAMENTO RÁPIDO (INLINE) COM AUDITORIA
   async function salvarTelefoneInline(unidade) {
       if (!telefoneInline.trim()) { alert("O telefone não pode ficar vazio!"); return; }
       try {
+          const telAntigo = unidade.telefone || "Sem telefone";
           await updateDoc(doc(db, "unidades", unidade.id), { telefone: telefoneInline.trim() });
+          
           if(unidade.uidLogin) {
               await updateDoc(doc(db, "usuarios", unidade.uidLogin), { telefone: telefoneInline.trim() }).catch(()=>{});
           }
+          
+          // 🟢 AUDITORIA: Edição rápida do WhatsApp
+          if (telAntigo !== telefoneInline.trim()) {
+              await registrarLogAuditoria('ALTERADA', 'Edição rápida do WhatsApp da Unidade.', unidade.nome, `Telefone: ${telAntigo} ➔ ${telefoneInline.trim()}`);
+          }
+
           setEditandoTelefoneId(null);
       } catch (error) { 
           alert("Erro ao salvar telefone rápido."); 
       }
   }
 
+  // STATUS COM AUDITORIA
   async function alternarStatus(u) {
     const novoStatus = u.status === 'ativa' ? 'inativa' : 'ativa';
     try {
         await updateDoc(doc(db, "unidades", u.id), { status: novoStatus });
+        // 🟢 AUDITORIA
+        await registrarLogAuditoria('ALTERADA', `Status do painel modificado para ${novoStatus.toUpperCase()}`, u.nome, `Bloqueio/Desbloqueio de acesso rápido.`);
     } catch (e) { 
         alert("Erro ao mudar status"); 
     }
   }
 
+  // EXCLUSÃO COM AUDITORIA E VERIFICAÇÃO DE VÍNCULOS
   async function excluir(u) {
     if(!window.confirm(`ATENÇÃO: Excluir a unidade "${u.nome}" apagará permanentemente o painel e o login dela.\n\nConfirmar exclusão?`)) return;
     try {
         setSalvando(true);
+        // BUSCA VÍNCULOS E USUÁRIOS
+        const qVinculos = query(collection(db, "vinculos"), where("unidadeId", "==", u.id));
+        const snapVinculos = await getDocs(qVinculos);
+        
         const qUsers = query(collection(db, "usuarios"), where("unidadeId", "==", u.id));
         const snapUsers = await getDocs(qUsers);
         
         const batch = writeBatch(db);
         batch.delete(doc(db, "unidades", u.id));
+        snapVinculos.forEach((v) => batch.delete(v.ref));
         snapUsers.forEach((userDoc) => batch.delete(userDoc.ref));
         
         await batch.commit();
+
+        // 🟢 AUDITORIA: Mostra que a unidade foi pro espaço e relata quantos professores "caíram" junto.
+        await registrarLogAuditoria(
+            'EXCLUÍDA', 
+            'Unidade e acessos excluídos do sistema.', 
+            u.nome, 
+            `Exclusão definitiva. \n🚨 Auditoria: ${snapVinculos.size} vínculo(s) de professores invalidados.`
+        );
+
     } catch (e) { 
         alert("Erro ao excluir: " + e.message); 
     } finally { 

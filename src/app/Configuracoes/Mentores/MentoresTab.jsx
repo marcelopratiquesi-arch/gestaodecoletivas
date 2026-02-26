@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "../../../contexts/AuthContext";
 import {
-  collection, updateDoc, deleteDoc, doc, query, where, serverTimestamp, setDoc, onSnapshot
+  collection, updateDoc, deleteDoc, doc, query, where, serverTimestamp, setDoc, onSnapshot, addDoc
 } from "firebase/firestore";
 
 // Auth imports (Instância secundária para não deslogar o admin)
@@ -64,6 +64,27 @@ export function MentoresTab() {
   // Edição Inline do Telefone na Tabela
   const [editandoTelefoneId, setEditandoTelefoneId] = useState(null);
   const [telefoneInline, setTelefoneInline] = useState("");
+
+  // ==========================================
+  // 0. MOTOR DE AUDITORIA (CÂMERA INVISÍVEL)
+  // ==========================================
+  const registrarLogAuditoria = async (tipoAcao, descricao, nomeMentor, detalhes = "") => {
+      try {
+          const nomeUsuario = userData?.nome || userData?.email || 'Administrador do Sistema';
+          await addDoc(collection(db, 'auditoria_cronograma'), {
+              tipoAcao,
+              descricao: `Mentor(a) ${nomeMentor}: ${descricao}`,
+              diffExtras: detalhes,
+              modulo: 'CONFIGURACOES',
+              unidadeNome: 'Gestão/Diretoria', 
+              professorNome: nomeMentor || '-', 
+              modalidadeNome: '-', 
+              usuarioAcaoNome: nomeUsuario,
+              usuarioAcaoId: userId,
+              dataAcao: serverTimestamp()
+          });
+      } catch (e) { console.error("Erro ao gerar log de auditoria", e); }
+  };
 
   // ==========================================
   // 1. MOTOR DE TEMPO REAL
@@ -129,7 +150,7 @@ export function MentoresTab() {
   }, [mentores]);
 
   // ==========================================
-  // 3. AÇÕES (CRUD)
+  // 3. AÇÕES (CRUD) COM AUDITORIA
   // ==========================================
   function abrirModalNovo() {
     setMentorEditando(null); 
@@ -170,14 +191,26 @@ export function MentoresTab() {
 
     try {
       if (mentorEditando) {
+        // 🟢 AUDITORIA: Descobrir o que mudou na edição
+        let mudancas = [];
+        if (mentorEditando.nome !== nome.trim()) mudancas.push(`Nome: ${mentorEditando.nome} ➔ ${nome.trim()}`);
+        if (mentorEditando.telefone !== telefone.trim()) mudancas.push(`WhatsApp: ${mentorEditando.telefone || 'Sem tel'} ➔ ${telefone.trim()}`);
+        if (mentorEditando.status !== status) mudancas.push(`Status: ${mentorEditando.status} ➔ ${status}`);
+
         await updateDoc(doc(db, "usuarios", mentorEditando.id), {
           nome: nome.trim(), 
           telefone: telefone.trim(), 
           status, 
           atualizadoEm: serverTimestamp()
         });
+
+        if (mudancas.length > 0) {
+            await registrarLogAuditoria('ALTERADA', 'Dados cadastrais do Mentor atualizados.', nome.trim(), mudancas.join(' | '));
+        }
+
         setSucesso("Mentor atualizado!");
       } else {
+        // 🟢 AUDITORIA: Novo mentor criado
         secondaryApp = initializeApp(getApp().options, "SecondaryAppMentor");
         const secondaryAuth = getAuth(secondaryApp);
 
@@ -195,6 +228,8 @@ export function MentoresTab() {
         });
 
         await signOut(secondaryAuth);
+        await registrarLogAuditoria('NOVA', 'Novo mentor e credenciais criadas no sistema.', nome.trim(), `Email: ${email.trim().toLowerCase()}`);
+        
         setSucesso("Mentor criado com sucesso!");
       }
       
@@ -209,35 +244,43 @@ export function MentoresTab() {
     }
   }
 
-  // EDICAO INLINE DO TELEFONE
+  // EDICAO INLINE DO TELEFONE COM AUDITORIA
   async function salvarTelefoneInline(mentor) {
       if (!telefoneInline.trim()) { alert("O telefone é obrigatório!"); return; }
       try {
+          const telAntigo = mentor.telefone || "Sem telefone";
           await updateDoc(doc(db, "usuarios", mentor.id), { 
               telefone: telefoneInline.trim() 
           });
+
+          if (telAntigo !== telefoneInline.trim()) {
+              await registrarLogAuditoria('ALTERADA', 'Edição rápida do WhatsApp do Mentor.', mentor.nome, `Telefone: ${telAntigo} ➔ ${telefoneInline.trim()}`);
+          }
           setEditandoTelefoneId(null);
       } catch (error) { 
           alert("Erro ao salvar telefone."); 
       }
   }
 
+  // STATUS COM AUDITORIA
   async function alternarStatus(m) {
+    const novoStatus = m.status === 'ativo' ? 'inativo' : 'ativo';
     try { 
-        await updateDoc(doc(db, "usuarios", m.id), { 
-            status: m.status === 'ativo' ? 'inativo' : 'ativo' 
-        }); 
+        await updateDoc(doc(db, "usuarios", m.id), { status: novoStatus }); 
+        await registrarLogAuditoria('ALTERADA', `Status modificado para ${novoStatus.toUpperCase()}`, m.nome, `Bloqueio/Desbloqueio de acesso rápido.`);
     } catch (e) { 
         alert("Erro ao mudar status"); 
     }
   }
 
+  // EXCLUSÃO COM AUDITORIA
   async function excluir(m) {
     if(!window.confirm(`ATENÇÃO: Excluir o mentor "${m.nome}" apagará o login dele.\nConfirmar?`)) return;
     
     try {
         setSalvando(true);
         await deleteDoc(doc(db, "usuarios", m.id));
+        await registrarLogAuditoria('EXCLUÍDA', 'Mentor e acessos excluídos do sistema.', m.nome, `Exclusão definitiva.`);
     } catch (e) { 
         alert("Erro ao excluir: " + e.message); 
     } finally { 

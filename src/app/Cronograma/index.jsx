@@ -141,7 +141,7 @@ const GlobalUnitBlock = ({ unitName, classes, isReadOnly, onEdit }) => {
 export default function CronogramaPage() {
   const { userData } = useAuth();
   
-  // --- PERMISSÕES (INTACTAS) ---
+  // --- PERMISSÕES ---
   const role = useMemo(() => String(userData?.role || "").trim().toLowerCase(), [userData?.role]);
   const userId = useMemo(() => userData?.id || userData?.uid, [userData]);
   const isReadOnly = role === 'professor';
@@ -173,15 +173,12 @@ export default function CronogramaPage() {
 
   const allDays = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
 
-  // Controle de delay para a barra de pesquisa
   useEffect(() => {
       const timer = setTimeout(() => setDebouncedSearchTerm(searchTerm), 500);
       return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  // ==========================================
-  // 1. CARREGAMENTO DOS CATÁLOGOS (Roda 1 vez)
-  // ==========================================
+  // 1. CARREGAMENTO DOS CATÁLOGOS
   useEffect(() => {
     const fetchCatalogs = async () => {
       try {
@@ -236,9 +233,7 @@ export default function CronogramaPage() {
     fetchCatalogs();
   }, [role, userId, userData]); 
 
-  // ==========================================
   // 2. MOTOR DE TEMPO REAL DAS AULAS
-  // ==========================================
   useEffect(() => {
     let qAulas;
     
@@ -258,7 +253,6 @@ export default function CronogramaPage() {
       return;
     }
 
-    // Abre o canal com o banco (Qualquer alteração pisca na tela na hora)
     const unsubscribe = onSnapshot(qAulas, (snap) => {
         const aulasData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         setAulas(aulasData);
@@ -267,9 +261,7 @@ export default function CronogramaPage() {
     return () => unsubscribe();
   }, [selectedUnit, debouncedSearchTerm, availableUnits]);
 
-  // ==========================================
   // 3. PROCESSADOR VISUAL DA TELA
-  // ==========================================
   const filteredClasses = useMemo(() => {
     let classes = aulas;
 
@@ -278,7 +270,6 @@ export default function CronogramaPage() {
         classes = classes.filter(c => allowedIds.includes(String(c.unidadeId)));
     }
 
-    // LÓGICA DA LIXEIRA: Remove aulas mortas da tela, a não ser que o usuário queira ver
     if (!mostrarEncerradas) {
         const today = getTodayStr();
         classes = classes.filter(c => !(c.dataFim && c.dataFim < today));
@@ -334,63 +325,148 @@ export default function CronogramaPage() {
       return availableUnits.filter(u => u.estado === selectedState);
   }, [availableUnits, selectedState]);
 
+
   // ==========================================
-  // 4. AÇÕES DO MODAL (SALVAR E EXCLUIR)
+  // 4. AÇÕES DO MODAL E MOTOR DE AUDITORIA FINO
   // ==========================================
+
+  // O Motor Invisível que envia os detalhes exatos para o Histórico Global
+  const registrarLogAuditoria = async (tipoAcao, descricao, aulaReferencia, diffExtras = "") => {
+    try {
+        const uni = catalogs.unidades.find(u => u.id === aulaReferencia.unidadeId);
+        const mod = catalogs.modalidades.find(m => m.id === aulaReferencia.modalidadeId);
+        const prof = catalogs.professores.find(p => p.id === aulaReferencia.professorId);
+        const nomeUsuario = userData?.nome || userData?.email || 'Administrador do Sistema';
+
+        await addDoc(collection(db, 'auditoria_cronograma'), {
+            tipoAcao,
+            descricao,
+            diffExtras,
+            unidadeNome: uni?.nome || 'Unidade Desconhecida',
+            modalidadeNome: mod?.nome || 'Modalidade Desconhecida',
+            professorNome: prof?.nome || 'Professor Desconhecido',
+            dias: aulaReferencia.dias || [],
+            hora: aulaReferencia.hora || '',
+            valor: aulaReferencia.valor || 0,
+            usuarioAcaoNome: nomeUsuario,
+            usuarioAcaoId: userId,
+            dataAcao: serverTimestamp()
+        });
+    } catch (e) { console.error("Erro ao gerar log de auditoria", e); }
+  };
+
   const handleSave = async (e) => {
     e.preventDefault();
     if (isReadOnly || saving) return; 
 
-    // TRAVAS DE SEGURANÇA E PREVENÇÃO DE ERROS BÁSICOS
-    if (!formData.unidadeId) return alert("❌ ERRO: Por favor, selecione a Unidade.");
-    if (!formData.modalidadeId) return alert("❌ ERRO: Por favor, selecione a Modalidade.");
-    if (!formData.professorId) return alert("❌ ERRO: Por favor, selecione o Professor.");
-    if (!formData.hora) return alert("❌ ERRO: Por favor, informe o horário da aula.");
-    if (formData.dias.length === 0) return alert("❌ ERRO: Selecione pelo menos um dia da semana.");
-    if (!formData.dataInicio) return alert("❌ ERRO: A data 'Válida A partir de' é obrigatória.");
-
+    if (!formData.unidadeId || !formData.modalidadeId || !formData.professorId || !formData.hora || formData.dias.length === 0 || !formData.dataInicio) {
+        return alert("❌ Preencha todos os campos obrigatórios.");
+    }
     if (formData.dataFim && formData.dataInicio > formData.dataFim) {
-        return alert("❌ ERRO: A data de encerramento não pode ser anterior à data de início.");
+        return alert("❌ A data de encerramento não pode ser anterior à data de início.");
     }
 
     try {
       setSaving(true);
       const payload = {
-        unidadeId: formData.unidadeId,
-        modalidadeId: formData.modalidadeId,
-        professorId: formData.professorId,
-        hora: formData.hora,
-        valor: formData.valor ? parseFloat(formData.valor) : 0, 
-        dias: formData.dias,
-        dataInicio: formData.dataInicio, 
-        dataFim: formData.dataFim || null 
+        unidadeId: formData.unidadeId, modalidadeId: formData.modalidadeId, professorId: formData.professorId,
+        hora: formData.hora, valor: formData.valor ? parseFloat(formData.valor) : 0, 
+        dias: formData.dias, dataInicio: formData.dataInicio, dataFim: formData.dataFim || null 
       };
 
       if (editingClass) {
-        await updateDoc(doc(db, "aulas", editingClass.id), { ...payload, updatedAt: serverTimestamp() });
+        const diasAntigos = [...(editingClass.dias || [])].sort();
+        const diasNovos = [...formData.dias].sort();
+        const valorAntigo = editingClass.valor ? parseFloat(editingClass.valor) : 0;
+        const valorNovo = formData.valor ? parseFloat(formData.valor) : 0;
+
+        let mudancas = [];
+        
+        // 1. Comparação de Professor
+        if (editingClass.professorId !== formData.professorId) {
+            const pAntigo = catalogs.professores.find(p => p.id === editingClass.professorId)?.nome || 'Sem Prof';
+            const pNovo = catalogs.professores.find(p => p.id === formData.professorId)?.nome || 'Sem Prof';
+            mudancas.push(`Prof: ${pAntigo} ➔ ${pNovo}`);
+        }
+
+        // 2. Comparação de Modalidade
+        if (editingClass.modalidadeId !== formData.modalidadeId) {
+            const mAntigo = catalogs.modalidades.find(m => m.id === editingClass.modalidadeId)?.nome || 'Desconhecida';
+            const mNovo = catalogs.modalidades.find(m => m.id === formData.modalidadeId)?.nome || 'Desconhecida';
+            mudancas.push(`Modalidade: ${mAntigo} ➔ ${mNovo}`);
+        }
+
+        // 3. Comparação de Valor Financeiro
+        if (valorAntigo !== valorNovo) mudancas.push(`Valor: R$ ${valorAntigo} ➔ R$ ${valorNovo}`);
+        
+        // 4. Comparação de Horário
+        if (editingClass.hora !== formData.hora) mudancas.push(`Hora: ${editingClass.hora} ➔ ${formData.hora}`);
+        
+        // 5. Comparação Detalhada dos Dias (O que acrescentou e o que tirou)
+        const diasAdicionados = diasNovos.filter(d => !diasAntigos.includes(d));
+        const diasRemovidos = diasAntigos.filter(d => !diasNovos.includes(d));
+        
+        if (diasAdicionados.length > 0 || diasRemovidos.length > 0) {
+            let diasTexto = [];
+            if (diasAdicionados.length > 0) diasTexto.push(`+ ${diasAdicionados.join(', ')}`);
+            if (diasRemovidos.length > 0) diasTexto.push(`- ${diasRemovidos.join(', ')}`);
+            mudancas.push(`Dias: ${diasTexto.join(' e ')}`);
+        }
+
+        const isCriticalChange = mudancas.length > 0;
+
+        if (isCriticalChange) {
+            const diffString = mudancas.join('\n'); 
+            const dataInicioObj = new Date(formData.dataInicio + 'T12:00:00');
+            dataInicioObj.setDate(dataInicioObj.getDate() - 1);
+            const dataFimAntiga = dataInicioObj.toISOString().split('T')[0];
+
+            const dataNovaBR = new Date(formData.dataInicio + 'T12:00:00').toLocaleDateString('pt-BR');
+            const dataFimAntigaBR = dataInicioObj.toLocaleDateString('pt-BR');
+
+            const confirmacao = window.confirm(
+                "🚨 ALTERAÇÃO DETECTADA\n\n" +
+                "Você está salvando as seguintes mudanças:\n" + mudancas.join(' | ') + "\n\n" +
+                "Para preservar o histórico passado:\n" +
+                `👉 A aula antiga será ENCERRADA em: ${dataFimAntigaBR}\n` +
+                `👉 A aula NOVA começará em: ${dataNovaBR}\n\n` +
+                "Confirma a transição?"
+            );
+            if (!confirmacao) { setSaving(false); return; }
+
+            // Fecha a aula velha, abre a nova e loga tudo
+            await updateDoc(doc(db, "aulas", editingClass.id), { dataFim: dataFimAntiga, updatedAt: serverTimestamp() });
+            await addDoc(collection(db, "aulas"), { ...payload, createdAt: serverTimestamp() });
+            await registrarLogAuditoria('ALTERADA', 'Transição estrutural gravada.', payload, diffString);
+
+        } else {
+            // Mudança simples de data de validade
+            let msgData = [];
+            if (editingClass.dataInicio !== formData.dataInicio) msgData.push(`Início: ${editingClass.dataInicio} ➔ ${formData.dataInicio}`);
+            if (editingClass.dataFim !== formData.dataFim) msgData.push(`Fim: ${editingClass.dataFim || 'Vazio'} ➔ ${formData.dataFim || 'Vazio'}`);
+            
+            await updateDoc(doc(db, "aulas", editingClass.id), { ...payload, updatedAt: serverTimestamp() });
+            await registrarLogAuditoria('VIGÊNCIA', 'Datas limite atualizadas.', payload, msgData.join(' | '));
+        }
       } else {
+        // Aula totalmente nova
         await addDoc(collection(db, "aulas"), { ...payload, createdAt: serverTimestamp() });
+        await registrarLogAuditoria('NOVA', 'Aula adicionada na grade.', payload, `Dias: ${formData.dias.join(', ')} | Hora: ${formData.hora} | Valor: R$ ${formData.valor}`);
       }
-      
-      // Fecha o modal e a tela atualiza sozinha (Pela mágica do onSnapshot lá em cima)
       setShowModal(false);
-      
     } catch (error) { 
-        console.error("Erro no catch do handleSave:", error);
-        alert("Erro no servidor ao salvar: " + error.message); 
-    } finally { 
-        setSaving(false); 
-    }
+        console.error(error); alert("Erro ao salvar."); 
+    } finally { setSaving(false); }
   };
 
   const handleDelete = async () => {
     if (isReadOnly) return;
     
-    // Alerta arquitetural: Ensina o usuário a não destruir o histórico
     if (confirm("🚨 ATENÇÃO: Excluir esta aula apaga ela da grade e pode afetar relatórios do passado.\n\n👉 Se houve apenas troca de professor, NÃO EXCLUA. Apenas edite e preencha a 'Data de Encerramento', e crie uma aula nova para o novo professor.\n\nTem certeza que deseja EXCLUIR DEFINITIVAMENTE esta aula?")) {
       try {
         setSaving(true);
         await deleteDoc(doc(db, "aulas", editingClass.id));
+        await registrarLogAuditoria('EXCLUÍDA', 'Aula apagada do banco de dados.', editingClass, 'Ação definitiva de exclusão.');
         setShowModal(false);
       } catch (error) { 
           alert("Erro ao excluir do banco de dados."); 
@@ -400,25 +476,12 @@ export default function CronogramaPage() {
     }
   };
 
-  const toggleDay = (day) => {
-    setFormData(prev => {
-      const exists = prev.dias.includes(day);
-      return exists ? { ...prev, dias: prev.dias.filter(d => d !== day) } : { ...prev, dias: [...prev.dias, day] };
-    });
-  };
+  // --- HELPERS DE INTERFACE ---
+  const toggleDay = (day) => setFormData(prev => ({ ...prev, dias: prev.dias.includes(day) ? prev.dias.filter(d => d !== day) : [...prev.dias, day] }));
 
   const openNewModal = () => {
     if (isReadOnly) return;
-    setFormData({ 
-        unidadeId: selectedUnit || '', 
-        modalidadeId: '', 
-        professorId: '', 
-        hora: '07:00', 
-        valor: '', 
-        dias: [],
-        dataInicio: getTodayStr(), // NOVO CRONOGRAMA: VEM COM A DATA DE HOJE
-        dataFim: '' 
-    });
+    setFormData({ unidadeId: selectedUnit || '', modalidadeId: '', professorId: '', hora: '07:00', valor: '', dias: [], dataInicio: getTodayStr(), dataFim: '' });
     setEditingClass(null);
     setShowModal(true);
   };
@@ -429,7 +492,6 @@ export default function CronogramaPage() {
     setFormData({ 
         ...cls, 
         dias: cls.dias || [],
-        // MÁGICA AQUI: SE FOR AULA ANTIGA SEM DATA, FORÇA 1º DE JANEIRO DO ANO ATUAL
         dataInicio: cls.dataInicio || `${new Date().getFullYear()}-01-01`, 
         dataFim: cls.dataFim || ''
     });
@@ -600,13 +662,11 @@ export default function CronogramaPage() {
                                 minWidth: `${80 + visibleDays.length * 180}px` 
                             }}
                         >
-                            {/* Cabeçalho */}
                             <div className="bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur border-b border-slate-200 dark:border-slate-700 p-4 text-center text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest sticky top-0 left-0 z-20">Horário</div>
                             {visibleDays.map(day => (
                                 <div key={day} className="bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur border-b border-slate-200 dark:border-slate-700 border-l border-slate-100 dark:border-slate-800 p-4 text-center text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest sticky top-0 z-10">{day}</div>
                             ))}
                             
-                            {/* Linhas */}
                             {activeTimeSlots.map(time => (
                                 <React.Fragment key={time}>
                                     <div className="bg-slate-50 dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 p-4 text-right text-xs font-bold text-slate-500 dark:text-slate-400 flex items-start justify-end pt-5 sticky left-0 z-10">{time}</div>
@@ -638,14 +698,12 @@ export default function CronogramaPage() {
             
             <form onSubmit={handleSave} className="p-8 space-y-5 overflow-y-auto custom-scrollbar">
               
-              {/* ALERTA DE VIGÊNCIA E BOAS PRÁTICAS */}
               <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-200 dark:border-blue-800">
                  <h4 className="text-blue-800 dark:text-blue-300 font-bold text-sm mb-1 flex items-center gap-2">
-                    <CalendarDays className="w-4 h-4"/> Regra de Vigência (Histórico)
+                    <CalendarDays className="w-4 h-4"/> Regra de Vigência (Auditoria)
                  </h4>
                  <p className="text-blue-600 dark:text-blue-400 text-xs">
-                    A <strong>Data Inicial</strong> determina a partir de qual dia a aula aparece na validação.<br/>
-                    <strong>Troca de Professor:</strong> Preencha a <strong>Data de Encerramento</strong> da aula antiga para fechá-la e crie uma nova aula com o professor atual.
+                    <strong>Troca de Professor, Dia ou Valor:</strong> O sistema fechará a aula antiga e criará uma nova para proteger seu histórico financeiro, detalhando cada mudança na Auditoria Geral.
                  </p>
               </div>
 
@@ -667,7 +725,7 @@ export default function CronogramaPage() {
                 </div>
                 <div>
                   <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 block">Professor Titular</label>
-                  <select className="w-full p-3 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-700 dark:text-white rounded-xl text-sm focus:border-red-500 outline-none" value={formData.professorId} onChange={e => setFormData({...formData, professorId: e.target.value})} required disabled={!formData.unidadeId}>
+                  <select className="w-full p-3 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-700 dark:text-white rounded-xl text-sm focus:border-red-500 outline-none" value={formData.professorId} onChange={e => setFormData({...formData,professorId: e.target.value})} required disabled={!formData.unidadeId}>
                     <option value="">{!formData.unidadeId ? "Selecione a unidade" : (professoresDoModal.length === 0 ? "Nenhum vinculado" : "Selecione...")}</option>
                     {professoresDoModal.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
                   </select>
@@ -685,7 +743,6 @@ export default function CronogramaPage() {
                 </div>
               </div>
 
-              {/* NOVOS CAMPOS: DATAS DE VIGÊNCIA */}
               <div className="grid grid-cols-2 gap-5 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700">
                 <div>
                   <label className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase mb-1.5 block">Válida A partir de *</label>

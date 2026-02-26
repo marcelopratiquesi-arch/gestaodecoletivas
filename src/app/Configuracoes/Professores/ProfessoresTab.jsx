@@ -82,6 +82,27 @@ export function ProfessoresTab() {
   const senhaPadrao = "123456";
 
   // ==========================================
+  // 0. MOTOR DE AUDITORIA (CÂMERA INVISÍVEL)
+  // ==========================================
+  const registrarLogAuditoria = async (tipoAcao, descricao, nomeProfessor, detalhes = "", nomeUnidade = "") => {
+      try {
+          const nomeUsuario = userData?.nome || userData?.email || 'Administrador do Sistema';
+          await addDoc(collection(db, 'auditoria_cronograma'), {
+              tipoAcao,
+              descricao,
+              diffExtras: detalhes,
+              modulo: 'CONFIGURACOES', // Chave exata para o filtro da nova tela
+              professorNome: nomeProfessor || '-',
+              unidadeNome: nomeUnidade || '-',
+              modalidadeNome: '-', // Não se aplica a professores
+              usuarioAcaoNome: nomeUsuario,
+              usuarioAcaoId: userId,
+              dataAcao: serverTimestamp()
+          });
+      } catch (e) { console.error("Erro ao gerar log de auditoria", e); }
+  };
+
+  // ==========================================
   // 1. MOTOR DE TEMPO REAL (Velocidade da Luz)
   // ==========================================
   useEffect(() => { 
@@ -191,7 +212,7 @@ export function ProfessoresTab() {
   };
 
   // ==========================================
-  // 4. AÇÕES E FLUXOS
+  // 4. AÇÕES E FLUXOS (COM AUDITORIA INJETADA)
   // ==========================================
   function abrirFluxoNovo() {
       setEmailVerificacao("");
@@ -201,15 +222,13 @@ export function ProfessoresTab() {
       setModalVerificacaoAberto(true);
   }
 
-  // NOVA LÓGICA DE VERIFICAÇÃO AUTOMÁTICA
   function verificarEmail(e) {
-      e.preventDefault(); // Trava o F5
+      e.preventDefault(); 
       if (!emailVerificacao.includes("@")) return setErro("E-mail inválido.");
       
       setErro("");
       const emailBusca = emailVerificacao.trim().toLowerCase(); 
 
-      // Busca na memória em milissegundos
       const prof = professoresTotais.find(p => p.email.toLowerCase() === emailBusca);
 
       if (prof) {
@@ -242,6 +261,10 @@ export function ProfessoresTab() {
               createdAt: serverTimestamp()
           });
 
+          // 🟢 AUDITORIA: Novo Vínculo
+          const uniNome = unidades.find(u => String(u.id) === String(unidadeSelecionadaId))?.nome || 'Unidade';
+          await registrarLogAuditoria('ALTERADA', 'Professor vinculado a nova unidade.', professorEncontrado.nome, `Vinculado à: ${uniNome}`, uniNome);
+
           setSucesso("Vinculado com sucesso!");
           setTimeout(() => {
               setModalVerificacaoAberto(false);
@@ -270,13 +293,12 @@ export function ProfessoresTab() {
       setProfEditando(p);
       setNome(p.nome);
       setEmail(p.email);
-      setTelefone(mascaraTelefone(p.telefone || "")); // Já aplica máscara se for edição de dado sujo
+      setTelefone(mascaraTelefone(p.telefone || "")); 
       setStatus(p.status || "ativo");
       setErro("");
       setModalFormAberto(true);
   }
 
-  // TRAVA DE F5 E VALIDAÇÃO DE TELEFONE
   async function salvarProfessor(e) {
     e.preventDefault(); 
     setSalvando(true);
@@ -285,14 +307,13 @@ export function ProfessoresTab() {
     
     const nomeLimpo = nome.trim();
     const emailLimpo = email.trim().toLowerCase(); 
-    const telLimpo = telefone.replace(/\D/g, ''); // Tira a formatação pra contar
+    const telLimpo = telefone.replace(/\D/g, ''); 
 
     if (!nomeLimpo) { 
         setSalvando(false); 
         return setErro("Nome obrigatório"); 
     }
 
-    // 🛑 BLINDAGEM DE TELEFONE NO CADASTRO/EDIÇÃO (Mínimo de 10 dígitos)
     if (telefone && telLimpo.length < 10) {
         setSalvando(false);
         return setErro("WhatsApp inválido. Digite o número completo com DDD (Ex: 31 99999-8888).");
@@ -314,8 +335,13 @@ export function ProfessoresTab() {
           }
       }
 
-      // O Telefone agora é salvo sempre com a máscara certinha no banco
       if (profEditando) { 
+          // 🟢 AUDITORIA: Descobrir o que mudou na edição
+          let mudancas = [];
+          if (profEditando.nome !== nomeLimpo) mudancas.push(`Nome: ${profEditando.nome} ➔ ${nomeLimpo}`);
+          if (profEditando.telefone !== telefone) mudancas.push(`Telefone: ${profEditando.telefone || 'Sem tel'} ➔ ${telefone}`);
+          if (profEditando.status !== status) mudancas.push(`Status: ${profEditando.status} ➔ ${status}`);
+          
           await updateDoc(doc(db, "professores", profEditando.id), { 
             nome: nomeLimpo, telefone, status, updatedAt: serverTimestamp() 
           });
@@ -323,8 +349,14 @@ export function ProfessoresTab() {
           if (profEditando.uidLogin) {
              try { await updateDoc(doc(db, "usuarios", profEditando.uidLogin), { nome: nomeLimpo }); } catch(err) {}
           }
+
+          if (mudancas.length > 0) {
+              await registrarLogAuditoria('ALTERADA', 'Dados cadastrais do professor atualizados.', nomeLimpo, mudancas.join(' | '));
+          }
+
           setSucesso("Dados atualizados!");
       } else { 
+          // 🟢 AUDITORIA: Criação de novo professor
           secondaryApp = initializeApp(getApp().options, "SecondaryAppProfCreate");
           const secondaryAuth = getAuth(secondaryApp);
           const userCred = await createUserWithEmailAndPassword(secondaryAuth, emailLimpo, senhaPadrao);
@@ -342,6 +374,9 @@ export function ProfessoresTab() {
 
           await signOut(secondaryAuth);
 
+          let logDetalhe = `Email: ${emailLimpo}`;
+          let nomeUnidadeAudit = "";
+
           if (unidadeSelecionadaId) {
               await addDoc(collection(db, "vinculos"), {
                   professorId: docRef.id,
@@ -349,7 +384,15 @@ export function ProfessoresTab() {
                   status: "ativo",
                   createdAt: serverTimestamp()
               });
+              const uniNome = unidades.find(u => String(u.id) === String(unidadeSelecionadaId))?.nome;
+              if(uniNome) {
+                  logDetalhe += ` | Vinculado à: ${uniNome}`;
+                  nomeUnidadeAudit = uniNome;
+              }
           }
+          
+          await registrarLogAuditoria('NOVA', 'Novo professor cadastrado na rede.', nomeLimpo, logDetalhe, nomeUnidadeAudit);
+          
           setSucesso("Professor criado com sucesso!");
       }
       
@@ -372,12 +415,18 @@ export function ProfessoresTab() {
       const novoStatus = p.status === 'ativo' ? 'inativo' : 'ativo';
       try {
           await updateDoc(doc(db, "professores", p.id), { status: novoStatus });
+          // 🟢 AUDITORIA: Mudança Rápida de Status
+          await registrarLogAuditoria('ALTERADA', `Status modificado para ${novoStatus.toUpperCase()}`, p.nome, `Alteração rápida de status`);
       } catch (e) { alert("Erro ao mudar status"); }
   }
 
-  async function removerVinculo(idVinculo) {
-      if (!confirm("Remover o professor desta unidade?")) return;
-      try { await deleteDoc(doc(db, "vinculos", idVinculo)); } catch (e) {}
+  async function removerVinculo(idVinculo, nomeUnidade, nomeProfessor) {
+      if (!confirm(`Remover o professor ${nomeProfessor} da unidade ${nomeUnidade}?`)) return;
+      try { 
+          await deleteDoc(doc(db, "vinculos", idVinculo)); 
+          // 🟢 AUDITORIA: Desvinculação
+          await registrarLogAuditoria('ALTERADA', 'Vínculo removido.', nomeProfessor, `Desvinculado da unidade: ${nomeUnidade}`, nomeUnidade);
+      } catch (e) { console.error(e); }
   }
 
   async function excluirProfessorTotal(p) {
@@ -386,6 +435,9 @@ export function ProfessoresTab() {
           await deleteDoc(doc(db, "professores", p.id));
           const vinculadosDoProf = vinculos.filter(v => v.professorId === p.id);
           vinculadosDoProf.forEach(v => deleteDoc(doc(db, "vinculos", v.id)));
+          
+          // 🟢 AUDITORIA: Morte do Professor
+          await registrarLogAuditoria('EXCLUÍDA', 'Professor excluído do sistema.', p.nome, `Exclusão definitiva de toda a rede.`);
       } catch (e) { alert("Erro ao excluir"); }
   }
 
@@ -405,6 +457,8 @@ export function ProfessoresTab() {
             }
         });
         await Promise.all(updates);
+        // 🟢 AUDITORIA: Correção em massa
+        await registrarLogAuditoria('ALTERADA', 'Correção em massa de e-mails', '-', `${contador} e-mails convertidos para letras minúsculas.`);
         alert(`SUCESSO! ${contador} e-mails corrigidos.`);
     } catch (e) { alert("Erro na correção."); } finally { setCorrigindoBase(false); }
   };
@@ -545,7 +599,7 @@ export function ProfessoresTab() {
                                             <span key={u.vinculoId} className="pl-3 pr-1 py-1.5 border border-slate-200 dark:border-slate-600 rounded-lg text-xs font-bold flex items-center gap-2 bg-slate-50 dark:bg-slate-800/50 text-slate-700 dark:text-slate-300">
                                                 <MapPin className="w-3 h-3 text-red-500"/> {u.nome}
                                                 {u.podeMexer && (
-                                                    <button type="button" onClick={() => removerVinculo(u.vinculoId)} className="p-1 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-md text-slate-400 hover:text-red-600 transition-colors" title="Remover Desta Unidade">
+                                                    <button type="button" onClick={() => removerVinculo(u.vinculoId, u.nome, p.nome)} className="p-1 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-md text-slate-400 hover:text-red-600 transition-colors" title="Remover Desta Unidade">
                                                         <X className="w-3 h-3" />
                                                     </button>
                                                 )}
@@ -685,7 +739,7 @@ export function ProfessoresTab() {
           </div>
       )}
 
-      {/* MODAL 2: FORMULÁRIO COMPLETO COM MÁSCARA */}
+      {/* MODAL 2: FORMULÁRIO COMPLETO COM MÁSCARA E AUDITORIA */}
       {modalFormAberto && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in zoom-in duration-200">
           <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200 dark:border-slate-700 flex flex-col max-h-[90vh]">

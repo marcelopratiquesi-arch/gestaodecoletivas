@@ -36,7 +36,7 @@ export function ModalidadesTab() {
   // ========== STATE ==========
   const [loading, setLoading] = useState(true);
   const [modalidades, setModalidades] = useState([]);
-  const [busca, setBusca] = useState(""); // Filtro de busca
+  const [busca, setBusca] = useState(""); 
 
   const [erro, setErro] = useState("");
   const [sucesso, setSucesso] = useState("");
@@ -47,8 +47,29 @@ export function ModalidadesTab() {
   const [editando, setEditando] = useState(null);
 
   const [nome, setNome] = useState("");
-  const [cor, setCor] = useState("#EC1C24"); // Vermelho Pratique Padrão
+  const [cor, setCor] = useState("#EC1C24"); 
   const [status, setStatus] = useState("ativa");
+
+  // ==========================================
+  // 0. MOTOR DE AUDITORIA (CÂMERA INVISÍVEL)
+  // ==========================================
+  const registrarLogAuditoria = async (tipoAcao, descricao, nomeMod, detalhes = "") => {
+      try {
+          const nomeUsuario = userData?.nome || userData?.email || 'Administrador do Sistema';
+          await addDoc(collection(db, 'auditoria_cronograma'), {
+              tipoAcao,
+              descricao: `Modalidade: ${descricao}`,
+              diffExtras: detalhes,
+              modulo: 'CONFIGURACOES',
+              unidadeNome: 'Base Global',
+              professorNome: '-', 
+              modalidadeNome: nomeMod || '-', 
+              usuarioAcaoNome: nomeUsuario,
+              usuarioAcaoId: userId,
+              dataAcao: serverTimestamp()
+          });
+      } catch (e) { console.error("Erro ao gerar log de auditoria", e); }
+  };
 
   useEffect(() => {
     if (podeVer) carregar();
@@ -60,7 +81,6 @@ export function ModalidadesTab() {
       const snap = await getDocs(collection(db, "modalidades"));
       const lista = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
       
-      // Ordenação alfabética
       lista.sort((a, b) => a.nome.localeCompare(b.nome));
       setModalidades(lista);
     } catch (e) {
@@ -71,7 +91,6 @@ export function ModalidadesTab() {
     }
   }
 
-  // Filtro de Busca
   const modalidadesFiltradas = useMemo(() => {
     const termo = busca.toLowerCase();
     return modalidades.filter(m => m.nome.toLowerCase().includes(termo));
@@ -82,7 +101,7 @@ export function ModalidadesTab() {
     if (!podeEditar) return;
     setEditando(null); 
     setNome(""); 
-    setCor("#EC1C24"); // Reseta para vermelho padrão
+    setCor("#EC1C24"); 
     setStatus("ativa");
     setErro(""); setSucesso(""); setModalAberto(true);
   }
@@ -91,7 +110,7 @@ export function ModalidadesTab() {
     if (!podeEditar) return;
     setEditando(m); 
     setNome(m.nome); 
-    setCor(m.cor || "#EC1C24"); // Carrega cor existente ou padrão
+    setCor(m.cor || "#EC1C24"); 
     setStatus(m.status);
     setErro(""); setSucesso(""); setModalAberto(true);
   }
@@ -106,21 +125,36 @@ export function ModalidadesTab() {
       
       const payload = {
         nome: nome.trim(),
-        cor: cor, // Salva a cor escolhida
+        cor: cor, 
         status,
         atualizadoEm: serverTimestamp(),
         atualizadoPor: userId,
       };
 
       if (editando) {
+        // 🟢 AUDITORIA: Descobrir o que mudou na edição
+        let mudancas = [];
+        if (editando.nome !== nome.trim()) mudancas.push(`Nome: ${editando.nome} ➔ ${nome.trim()}`);
+        if (editando.cor !== cor) mudancas.push(`Cor: ${editando.cor || '#EC1C24'} ➔ ${cor}`);
+        if (editando.status !== status) mudancas.push(`Status: ${editando.status} ➔ ${status}`);
+
         await updateDoc(doc(db, "modalidades", editando.id), payload);
+
+        if (mudancas.length > 0) {
+            await registrarLogAuditoria('ALTERADA', 'Dados da modalidade atualizados.', nome.trim(), mudancas.join(' | '));
+        }
+
         setSucesso("Modalidade atualizada!");
       } else {
+        // 🟢 AUDITORIA: Criação
         await addDoc(collection(db, "modalidades"), {
           ...payload,
           criadoEm: serverTimestamp(),
           criadoPor: userId,
         });
+        
+        await registrarLogAuditoria('NOVA', 'Nova modalidade cadastrada.', nome.trim(), `Cor definida: ${cor}`);
+
         setSucesso("Modalidade criada!");
       }
 
@@ -134,7 +168,10 @@ export function ModalidadesTab() {
     try {
       const novo = m.status === "ativa" ? "inativa" : "ativa";
       await updateDoc(doc(db, "modalidades", m.id), { status: novo });
-      // Atualização Otimista (Local)
+      
+      // 🟢 AUDITORIA
+      await registrarLogAuditoria('ALTERADA', `Status modificado para ${novo.toUpperCase()}`, m.nome, `Alteração rápida de visibilidade na grade`);
+
       setModalidades(prev => prev.map(item => item.id === m.id ? {...item, status: novo} : item));
     } catch (e) { alert("Erro ao mudar status"); }
   }
@@ -143,6 +180,10 @@ export function ModalidadesTab() {
     if (!podeEditar || !window.confirm(`Excluir ${m.nome}?`)) return;
     try {
       await deleteDoc(doc(db, "modalidades", m.id));
+      
+      // 🟢 AUDITORIA
+      await registrarLogAuditoria('EXCLUÍDA', 'Modalidade apagada do sistema.', m.nome, 'Ação definitiva.');
+
       setModalidades(prev => prev.filter(item => item.id !== m.id));
     } catch (e) { alert("Erro ao excluir"); }
   }
@@ -164,7 +205,6 @@ export function ModalidadesTab() {
         </div>
 
         <div className="flex items-center gap-2 w-full md:w-auto">
-          {/* Busca */}
           <div className="relative w-full md:w-64">
             <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
             <input 
@@ -187,14 +227,13 @@ export function ModalidadesTab() {
         </div>
       </div>
 
-      {/* FEEDBACK */}
       {erro && <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm flex items-center gap-2"><AlertTriangle className="w-4 h-4"/>{erro}</div>}
       {sucesso && <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm flex items-center gap-2"><CheckCircle2 className="w-4 h-4"/>{sucesso}</div>}
 
-      {/* === GRID DE CARDS COMPACTOS === */}
+      {/* === GRID DE CARDS === */}
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-           {[1,2,3,4].map(i => <div key={i} className="h-24 bg-slate-100 rounded-lg animate-pulse"/>)}
+           {[1,2,3,4].map(i => <div key={i} className="h-24 bg-slate-100 dark:bg-slate-800 rounded-lg animate-pulse"/>)}
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -205,7 +244,6 @@ export function ModalidadesTab() {
                 group relative bg-white dark:bg-slate-800 border rounded-lg p-4 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between
                 ${m.status === 'inativa' ? 'opacity-60 grayscale' : ''}
               `}
-              // A Borda Colorida é definida aqui dinamicamente
               style={{ borderLeft: `5px solid ${m.cor || '#EC1C24'}` }}
             >
               <div className="flex justify-between items-start mb-2">
@@ -213,13 +251,11 @@ export function ModalidadesTab() {
                   {m.nome}
                 </h3>
                 
-                {/* Indicador de Status */}
                 <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${m.status === 'ativa' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
                   {m.status}
                 </span>
               </div>
 
-              {/* Linha da Cor (Visual) */}
               <div className="flex items-center gap-2 mb-3">
                  <div className="w-3 h-3 rounded-full shadow-sm border border-black/10" style={{ backgroundColor: m.cor || '#EC1C24' }}></div>
                  <span className="text-xs text-slate-400 font-mono">{m.cor || '#EC1C24'}</span>
@@ -256,7 +292,7 @@ export function ModalidadesTab() {
           ))}
           
           {modalidadesFiltradas.length === 0 && (
-            <div className="col-span-full py-10 text-center text-slate-400 border-2 border-dashed border-slate-200 rounded-xl">
+            <div className="col-span-full py-10 text-center text-slate-400 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl">
               <Dumbbell className="w-10 h-10 mx-auto mb-2 opacity-20"/>
               <p className="text-sm">Nenhuma modalidade encontrada.</p>
             </div>
