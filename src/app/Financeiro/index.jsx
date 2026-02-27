@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useCatalogs } from '../../contexts/CatalogContext'; 
 import { db } from '../../services/firebase';
 import { 
   collection, query, where, getDocs, doc, setDoc, getDoc, orderBy, addDoc, serverTimestamp 
@@ -7,7 +8,7 @@ import {
 import { 
   TrendingUp, TrendingDown, DollarSign, AlertTriangle, Building2, 
   BarChart3, Calendar, Loader2, Lock, PieChart, Users, Wallet, 
-  ChevronDown, Edit2, Check, X, Trophy, AlertCircle, ArrowDown, DownloadCloud, Search, FileSpreadsheet
+  ChevronDown, Edit2, Check, X, Trophy, ArrowDown, DownloadCloud, Search, FileSpreadsheet
 } from 'lucide-react';
 
 // Bibliotecas Externas
@@ -255,25 +256,43 @@ export default function PerformanceFinanceiraPage() {
   const role = String(userData?.role || "").toLowerCase();
   const userId = userData?.id || userData?.uid;
 
+  // 🟢 INJEÇÃO DA MEMÓRIA GLOBAL (FASE 3)
+  const { catalogs: globalCatalogs, loadingCatalogs } = useCatalogs();
+
   // Estados
-  const [loading, setLoading] = useState(true);
-  const [mesFiltro, setMesFiltro] = useState(getPreviousMonthStr()); // 🟢 MÊS PADRÃO (D-1 MÊS)
-  const [filtroMentor, setFiltroMentor] = useState([]); // 🟢 PADRÃO: COFRE FECHADO (ARRAY VAZIO)
+  const [loadingRealtime, setLoadingRealtime] = useState(true);
+  const [erroCarregamento, setErroCarregamento] = useState(false); // 🟢 CORREÇÃO: Controle de Erro de Rede
+  const [mesFiltro, setMesFiltro] = useState(getPreviousMonthStr());
+  const [filtroMentor, setFiltroMentor] = useState([]); 
   const [busca, setBusca] = useState("");
   
   // Ordenação e Paginação
   const [sortConfig, setSortConfig] = useState({ field: 'percent', direction: 'desc' });
   const [itensVisiveis, setItensVisiveis] = useState(12);
 
-  // Dados
-  const [unidades, setUnidades] = useState([]);
-  const [mentores, setMentores] = useState([]);
+  // Dados Financeiros
   const [dadosFinanceiros, setDadosFinanceiros] = useState({});
   const [custosColetiva, setCustosColetiva] = useState({});
   const [comparativoAnoAnterior, setComparativoAnoAnterior] = useState({});
 
   // 🟢 LÓGICA DO COFRE
   const isCofreFechado = role === 'admin' && filtroMentor.length === 0;
+
+  // ==========================================
+  // 1. APLICAÇÃO DE PERMISSÕES NA MEMÓRIA GLOBAL (ACL)
+  // ==========================================
+  const { unidades, mentores } = useMemo(() => {
+      if (!globalCatalogs || loadingCatalogs) return { unidades: [], mentores: [] };
+      
+      let unitsData = [...(globalCatalogs.unidades || [])];
+      let mentoresData = [...(globalCatalogs.mentores || [])]; 
+
+      if (role === 'mentor') {
+          unitsData = unitsData.filter(u => u.mentorId === userId);
+      }
+      
+      return { unidades: unitsData, mentores: mentoresData };
+  }, [globalCatalogs, loadingCatalogs, role, userId]);
 
   // --- OPÇÕES PARA MULTI-SELECT ---
   const mentoresOptions = useMemo(() => {
@@ -283,91 +302,92 @@ export default function PerformanceFinanceiraPage() {
       ];
   }, [mentores]);
 
-  if (role !== 'admin' && role !== 'mentor') {
-      return (
-          <div className="flex h-screen items-center justify-center flex-col gap-4 text-slate-400 uppercase">
-              <div className="bg-slate-100 p-6 rounded-full"><Lock className="w-12 h-12 text-slate-300" /></div>
-              <h2 className="text-xl font-black text-slate-600 tracking-wider">ACESSO RESTRITO</h2>
-              <p className="font-bold">APENAS GESTORES TÊM ACESSO À PERFORMANCE FINANCEIRA.</p>
-          </div>
-      );
-  }
-
-  // 1. CARREGAMENTO (COM GATILHO DE ECONOMIA DO COFRE)
+  // ==========================================
+  // 2. MOTOR DE TEMPO REAL BLINDADO (O COFRE & SANGUE)
+  // ==========================================
   useEffect(() => {
+    if (loadingCatalogs) return;
+
     const carregarDados = async () => {
-      setLoading(true);
-      try {
-        let listaUnidades = [], listaMentores = [];
-
-        // BUSCA DE CATÁLOGOS BASE (Sempre Carrega)
-        if (role === 'admin') {
-            const [uSnap, mSnap] = await Promise.all([
-                getDocs(query(collection(db, 'unidades'), orderBy('nome'))),
-                getDocs(query(collection(db, 'usuarios'), where('role', '==', 'mentor')))
-            ]);
-            listaUnidades = uSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-            listaMentores = mSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        } else {
-            const uSnap = await getDocs(query(collection(db, 'unidades'), where('mentorId', '==', userId)));
-            listaUnidades = uSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        }
-        
-        setUnidades(listaUnidades);
-        setMentores(listaMentores);
-
-        // 🟢 GATILHO DE ECONOMIA: ABORTA AQUI SE O COFRE ESTIVER FECHADO
-        if (role === 'admin' && filtroMentor.length === 0) {
+        // GATILHO DE ECONOMIA
+        if (isCofreFechado) {
             setCustosColetiva({});
             setComparativoAnoAnterior({});
             setDadosFinanceiros({});
-            setLoading(false);
+            setLoadingRealtime(false);
             return;
         }
 
-        // BUSCAS PESADAS (Só rodam se o Cofre estiver destrancado)
-        const processarPeriodo = async (ano, mes) => {
-            const inicio = `${ano}-${mes}-01`;
-            const fim = `${ano}-${mes}-${new Date(ano, mes, 0).getDate()}`;
-            const qVal = query(collection(db, 'validacoes'), where('data', '>=', inicio), where('data', '<=', fim), where('status', '==', 'realizada'));
-            const [valSnap, aulasSnap] = await Promise.all([getDocs(qVal), getDocs(collection(db, 'aulas'))]);
+        setLoadingRealtime(true);
+        setErroCarregamento(false); // Reseta o status de erro
+        try {
+            // MAPA DE AULAS LOCAL
             const aulasMap = {};
-            aulasSnap.docs.forEach(d => aulasMap[d.id] = d.data());
-            const custosMap = {};
-            valSnap.docs.forEach(d => {
-                const val = d.data();
-                if (listaUnidades.some(u => u.id === val.unidadeId)) {
-                    const aula = aulasMap[val.aulaId];
-                    if (aula) {
-                        const valor = parseFloat(aula.valor) || 0;
-                        if (!custosMap[val.unidadeId]) custosMap[val.unidadeId] = 0;
-                        custosMap[val.unidadeId] += valor;
+            (globalCatalogs.aulas || []).forEach(d => aulasMap[d.id] = d);
+
+            // 🟢 CORREÇÃO O(1): Usar SET para performance máxima
+            const unidadesSet = new Set(unidades.map(u => u.id));
+
+            const processarPeriodo = async (ano, mes) => {
+                const inicio = `${ano}-${mes}-01`;
+                const fim = `${ano}-${mes}-${new Date(ano, mes, 0).getDate()}`;
+                
+                const qVal = query(collection(db, 'validacoes'), where('data', '>=', inicio), where('data', '<=', fim), where('status', '==', 'realizada'));
+                const valSnap = await getDocs(qVal);
+                
+                const custosMap = {};
+                valSnap.docs.forEach(d => {
+                    const val = d.data();
+                    // 🟢 OTIMIZAÇÃO: Busca no SET é 100x mais rápida que o .some() num array
+                    if (unidadesSet.has(val.unidadeId)) {
+                        const aula = aulasMap[val.aulaId];
+                        if (aula) {
+                            const valor = parseFloat(aula.valor) || 0;
+                            if (!custosMap[val.unidadeId]) custosMap[val.unidadeId] = 0;
+                            custosMap[val.unidadeId] += valor;
+                        }
                     }
+                });
+                return custosMap;
+            };
+
+            const [anoAtual, mesAtual] = mesFiltro.split('-');
+            const anoAnterior = (parseInt(anoAtual) - 1).toString();
+            
+            const [custosAtual, custosAnterior] = await Promise.all([
+                processarPeriodo(anoAtual, mesAtual), 
+                processarPeriodo(anoAnterior, mesAtual)
+            ]);
+
+            setCustosColetiva(custosAtual);
+            setComparativoAnoAnterior(custosAnterior);
+
+            // 🟢 CORREÇÃO DE LEITURA: 1 única query em vez de 150 getDocs separados
+            const qIndicadores = query(collection(db, 'indicadores_mensais'), where('mes', '==', mesFiltro));
+            const indSnap = await getDocs(qIndicadores);
+            
+            const inputsMap = {};
+            indSnap.docs.forEach(d => {
+                const data = d.data();
+                // 🟢 Usando o Set de alta performance de novo
+                if (unidadesSet.has(data.unidadeId)) {
+                     inputsMap[data.unidadeId] = data.folhaPagamento || 0;
                 }
             });
-            return custosMap;
-        };
+            
+            setDadosFinanceiros(inputsMap);
 
-        const [anoAtual, mesAtual] = mesFiltro.split('-');
-        const anoAnterior = (parseInt(anoAtual) - 1).toString();
-        const [custosAtual, custosAnterior] = await Promise.all([processarPeriodo(anoAtual, mesAtual), processarPeriodo(anoAnterior, mesAtual)]);
-
-        setCustosColetiva(custosAtual);
-        setComparativoAnoAnterior(custosAnterior);
-
-        const inputsMap = {};
-        const promessas = listaUnidades.map(async (u) => {
-            const docId = `${mesFiltro}_${u.id}`;
-            const docSnap = await getDoc(doc(db, 'indicadores_mensais', docId));
-            if (docSnap.exists()) inputsMap[u.id] = docSnap.data().folhaPagamento || 0;
-        });
-        await Promise.all(promessas);
-        setDadosFinanceiros(inputsMap);
-
-      } catch (error) { console.error("Erro processamento:", error); } finally { setLoading(false); }
+        } catch (error) { 
+            console.error("Erro no processamento financeiro:", error); 
+            setErroCarregamento(true); // 🟢 Dispara a tela de erro
+        } finally { 
+            setLoadingRealtime(false); 
+        }
     };
     carregarDados();
-  }, [mesFiltro, role, userId, filtroMentor]); // filtroMentor adicionado à array de dependências para destrancar
+    // 🟢 CORREÇÃO DEPENDÊNCIAS: Removido globais voláteis para evitar Loop Infinito de renders
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mesFiltro, role, userId, filtroMentor, isCofreFechado, loadingCatalogs]);
 
   // 🟢 MOTOR DE AUDITORIA (X-9 FINANCEIRO)
   const handleUpdateFolha = async (unidadeId, novoValor, valorAntigo) => {
@@ -488,7 +508,33 @@ export default function PerformanceFinanceiraPage() {
       return { totalFolha, totalColetiva, percentualGeral, variacao: Math.round(variacao) };
   }, [tabelaDados, comparativoAnoAnterior]);
 
-  if (loading && unidades.length === 0) return <div className="flex h-screen items-center justify-center text-slate-400 gap-2 font-bold uppercase tracking-wider"><Loader2 className="w-8 h-8 animate-spin"/> PROCESSANDO DADOS...</div>;
+  // 🟢 BLOQUEIO DE TELA
+  if (role !== 'admin' && role !== 'mentor') {
+      return (
+          <div className="flex h-screen items-center justify-center flex-col gap-4 text-slate-400 uppercase">
+              <div className="bg-slate-100 p-6 rounded-full"><Lock className="w-12 h-12 text-slate-300" /></div>
+              <h2 className="text-xl font-black text-slate-600 tracking-wider">ACESSO RESTRITO</h2>
+              <p className="font-bold">APENAS GESTORES TÊM ACESSO À PERFORMANCE FINANCEIRA.</p>
+          </div>
+      );
+  }
+
+  // 🟢 TRATAMENTO DE ERRO (UX)
+  if (erroCarregamento) {
+      return (
+          <div className="flex h-[80vh] items-center justify-center flex-col gap-4 text-rose-500 uppercase animate-fade-in">
+              <div className="bg-rose-50 p-6 rounded-full border border-rose-200 shadow-inner"><AlertTriangle className="w-12 h-12 text-rose-500" /></div>
+              <h2 className="text-xl font-black tracking-wider text-slate-800">FALHA DE COMUNICAÇÃO</h2>
+              <p className="font-bold text-slate-500">NÃO FOI POSSÍVEL CARREGAR OS DADOS FINANCEIROS. TENTE NOVAMENTE.</p>
+              <button onClick={() => window.location.reload()} className="mt-4 px-6 py-3 bg-rose-500 text-white rounded-xl font-black shadow-lg shadow-rose-500/30 hover:bg-rose-600 transition-colors active:scale-95">
+                  ATUALIZAR PÁGINA
+              </button>
+          </div>
+      );
+  }
+
+  // Loading principal que aguarda a Memória Global baixar pela primeira vez
+  if (loadingCatalogs) return <div className="flex h-screen items-center justify-center text-slate-400 gap-2 font-bold uppercase tracking-wider"><Loader2 className="w-8 h-8 animate-spin"/> CARREGANDO MEMÓRIA GLOBAL...</div>;
 
   return (
     <div className="p-6 md:p-10 animate-fade-in max-w-[1920px] mx-auto space-y-8 uppercase">
@@ -496,7 +542,6 @@ export default function PerformanceFinanceiraPage() {
       {/* 1. TOPO (AJUSTE DE TAMANHO E ORGANIZAÇÃO) */}
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 border-b border-slate-200 dark:border-slate-800 pb-6">
         <div>
-            {/* Título reduzido de text-3xl para text-xl/md:text-2xl para equilibrar o ALL CAPS */}
             <h1 className="text-xl md:text-2xl font-black text-slate-800 dark:text-white flex items-center gap-3 tracking-tight">
                 <span className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-2.5 rounded-xl shadow-lg shadow-purple-500/20">
                     <TrendingUp className="w-6 h-6"/>
@@ -547,7 +592,7 @@ export default function PerformanceFinanceiraPage() {
         </div>
       </div>
 
-      {/* 🟢 O COFRE GLOBAL: TRAVA TUDO SE ESTIVER FECHADO */}
+      {/* 🟢 O COFRE E LOADING TEMPO REAL */}
       {isCofreFechado ? (
           <div className="py-24 text-center bg-white dark:bg-slate-800 border-dashed border-2 border-slate-300 dark:border-slate-700 shadow-sm animate-in fade-in zoom-in duration-300 m-4 rounded-2xl">
               <div className="bg-purple-50 dark:bg-slate-900 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 border border-purple-100 dark:border-slate-800 shadow-inner">
@@ -560,6 +605,8 @@ export default function PerformanceFinanceiraPage() {
                   SELECIONE UM OU MAIS MENTORES NO FILTRO ACIMA PARA OBTER O RELATÓRIO FINANCEIRO.
               </p>
           </div>
+      ) : loadingRealtime ? (
+          <div className="flex h-64 items-center justify-center text-slate-400 gap-2 font-bold uppercase tracking-wider"><Loader2 className="w-8 h-8 animate-spin"/> PROCESSANDO DADOS...</div>
       ) : (
           <>
             {/* 2. KPI CARDS */}

@@ -14,7 +14,8 @@ export const CatalogProvider = ({ children }) => {
         professores: [],
         vinculos: [],
         feriados: [],
-        mentores: []
+        mentores: [],
+        aulas: [] // 🟢 CORREÇÃO: AULAS ADICIONADAS AO CACHE!
     });
     
     const [loadingCatalogs, setLoadingCatalogs] = useState(true);
@@ -22,13 +23,14 @@ export const CatalogProvider = ({ children }) => {
     const fetchCatalogs = async () => {
         setLoadingCatalogs(true);
         try {
-            const [unitsSnap, modsSnap, profsSnap, linksSnap, feriadosSnap, usersSnap] = await Promise.all([
+            const [unitsSnap, modsSnap, profsSnap, linksSnap, feriadosSnap, usersSnap, aulasSnap] = await Promise.all([
                 getDocs(query(collection(db, 'unidades'), orderBy('nome'))),
                 getDocs(query(collection(db, 'modalidades'), orderBy('nome'))),
                 getDocs(query(collection(db, 'professores'), orderBy('nome'))),
                 getDocs(collection(db, 'vinculos')),
                 getDocs(collection(db, 'feriados')),
-                getDocs(query(collection(db, 'usuarios'), where('role', '==', 'mentor')))
+                getDocs(query(collection(db, 'usuarios'), where('role', '==', 'mentor'))),
+                getDocs(collection(db, 'aulas')) // 🟢 CORREÇÃO: BAIXAMOS APENAS UMA VEZ!
             ]);
 
             setCatalogs({
@@ -37,7 +39,8 @@ export const CatalogProvider = ({ children }) => {
                 professores: profsSnap.docs.map(d => ({ id: d.id, ...d.data() })),
                 vinculos: linksSnap.docs.map(d => ({ id: d.id, ...d.data() })),
                 feriados: feriadosSnap.docs.map(d => ({ id: d.id, ...d.data() })),
-                mentores: usersSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+                mentores: usersSnap.docs.map(d => ({ id: d.id, ...d.data() })),
+                aulas: aulasSnap.docs.map(d => ({ id: d.id, ...d.data() })) // 🟢 SALVAMOS NA MEMÓRIA
             });
         } catch (error) {
             console.error("Erro ao buscar catálogos globais (Memória de Elefante):", error);
