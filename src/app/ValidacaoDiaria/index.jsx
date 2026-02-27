@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useCatalogs } from '../../contexts/CatalogContext'; // 🟢 INJEÇÃO DA MEMÓRIA GLOBAL (FASE 3)
 import { db } from '../../services/firebase';
 import { 
   collection, query, where, getDocs, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, deleteDoc, orderBy 
@@ -33,6 +34,9 @@ const diasSemanaMap = { 0: 'Domingo', 1: 'Segunda', 2: 'Terça', 3: 'Quarta', 4:
 export default function ValidacaoDiariaPage() {
   const { userData } = useAuth();
   
+  // 🟢 ACESSANDO A MEMÓRIA GLOBAL DO SISTEMA (OS OSSOS)
+  const { catalogs: globalCatalogs, loadingCatalogs } = useCatalogs();
+
   // --- PERMISSÕES (INTACTAS E BLINDADAS) ---
   const role = useMemo(() => String(userData?.role || "").trim().toLowerCase(), [userData?.role]);
   const userId = useMemo(() => userData?.id || userData?.uid, [userData]);
@@ -51,11 +55,7 @@ export default function ValidacaoDiariaPage() {
   const [filtroProfessor, setFiltroProfessor] = useState("");
   const [filtroStatus, setFiltroStatus] = useState('todos'); 
 
-  // --- DADOS (ARQUITETURA HÍBRIDA) ---
-  const [catalogs, setCatalogs] = useState({ 
-      unidades: [], modalidades: [], professores: [], feriados: [], mentores: [] 
-  });
-  
+  // --- DADOS TEMPO REAL (SANGUE) E ESTADOS DE TELA ---
   const [aulasRealtime, setAulasRealtime] = useState([]);
   const [validacoesRealtime, setValidacoesRealtime] = useState([]);
   
@@ -70,6 +70,56 @@ export default function ValidacaoDiariaPage() {
 
   // 🟢 REGRA DO COFRE: Determina se a tela deve ficar em branco aguardando o clique do Admin/Mentor
   const isCofreFechado = (role === 'admin' || role === 'mentor') && !filtroUnidade;
+
+
+  // ==========================================
+  // 1. APLICAÇÃO DE PERMISSÕES NA MEMÓRIA GLOBAL (ACL)
+  // ==========================================
+  const catalogs = useMemo(() => {
+    if (!globalCatalogs || loadingCatalogs) return { unidades: [], modalidades: [], professores: [], feriados: [], mentores: [], vinculos: [] };
+    
+    let unitsData = [...(globalCatalogs.unidades || [])];
+    
+    if (role === 'mentor') {
+      unitsData = unitsData.filter(u => u.mentorId === userId);
+    } else if (role === 'unidade') {
+      unitsData = unitsData.filter(u => String(u.id) === String(userUnidadeId));
+    } else if (role === 'professor') {
+      const meuPerfil = globalCatalogs.professores.find(p => p.uidLogin === userId);
+      if (meuPerfil) {
+         const meusLinks = globalCatalogs.vinculos.filter(l => String(l.professorId) === String(meuPerfil.id));
+         const minhasUnidadesIds = meusLinks.map(l => String(l.unidadeId));
+         unitsData = unitsData.filter(u => minhasUnidadesIds.includes(String(u.id)));
+      } else {
+         unitsData = [];
+      }
+    }
+
+    return { ...globalCatalogs, unidades: unitsData };
+  }, [globalCatalogs, loadingCatalogs, role, userId, userUnidadeId]);
+
+  // Garante que o perfil de 'unidade' tenha a unidade auto-selecionada.
+  useEffect(() => {
+      if (role === 'unidade' && userUnidadeId) {
+          setFiltroUnidade(userUnidadeId);
+      }
+  }, [role, userUnidadeId]);
+
+
+  const estadosDisponiveis = useMemo(() => {
+      const ufs = catalogs.unidades.map(u => u.estado).filter(Boolean);
+      return [...new Set(ufs)].sort();
+  }, [catalogs.unidades]);
+
+  const unidadesFiltradasSelect = useMemo(() => {
+      if (role !== 'admin') return catalogs.unidades;
+      return catalogs.unidades.filter(u => {
+          const matchEstado = filtroEstado ? u.estado === filtroEstado : true;
+          const matchMentor = filtroMentor ? u.mentorId === filtroMentor : true;
+          return matchEstado && matchMentor;
+      });
+  }, [catalogs.unidades, role, filtroEstado, filtroMentor]);
+
 
   // ==========================================
   // 0. MOTOR DE AUDITORIA FINANCEIRA (O X-9)
@@ -99,80 +149,13 @@ export default function ValidacaoDiariaPage() {
       } catch (e) { console.error("Erro ao gerar log de auditoria", e); }
   };
 
-  // ==========================================
-  // 1. CARREGAMENTO DOS CATÁLOGOS E PERMISSÕES
-  // ==========================================
-  useEffect(() => {
-    const loadCatalogs = async () => {
-      try {
-        setLoading(true);
-        const [unitsSnap, modsSnap, profsSnap, linksSnap, feriadosSnap, usersSnap] = await Promise.all([
-          getDocs(query(collection(db, 'unidades'), orderBy('nome'))),
-          getDocs(query(collection(db, 'modalidades'), orderBy('nome'))),
-          getDocs(query(collection(db, 'professores'), orderBy('nome'))),
-          getDocs(collection(db, 'vinculos')), 
-          getDocs(collection(db, 'feriados')),
-          getDocs(query(collection(db, 'usuarios'), where('role', '==', 'mentor')))
-        ]);
-
-        let unitsData = unitsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        let modsData = modsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        const profsData = profsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        const linksData = linksSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        const feriadosData = feriadosSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        const mentoresData = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-        // Filtros de Permissão (ACL)
-        if (role === 'mentor') {
-          unitsData = unitsData.filter(u => u.mentorId === userId);
-        } else if (role === 'unidade') {
-          unitsData = unitsData.filter(u => String(u.id) === String(userUnidadeId));
-          setFiltroUnidade(userUnidadeId); 
-        } else if (role === 'professor') {
-          const meuPerfil = profsData.find(p => p.uidLogin === userId);
-          if (meuPerfil) {
-             const meusLinks = linksData.filter(l => String(l.professorId) === String(meuPerfil.id));
-             const minhasUnidadesIds = meusLinks.map(l => String(l.unidadeId));
-             unitsData = unitsData.filter(u => minhasUnidadesIds.includes(String(u.id)));
-          } else {
-             unitsData = [];
-          }
-        }
-
-        setCatalogs({ 
-            unidades: unitsData, 
-            modalidades: modsData, 
-            professores: profsData, 
-            feriados: feriadosData, 
-            mentores: mentoresData 
-        });
-      } catch (error) {
-        console.error("Erro ao carregar catálogos:", error);
-      }
-    };
-    loadCatalogs();
-  }, [role, userId, userUnidadeId]);
-
-  const estadosDisponiveis = useMemo(() => {
-      const ufs = catalogs.unidades.map(u => u.estado).filter(Boolean);
-      return [...new Set(ufs)].sort();
-  }, [catalogs.unidades]);
-
-  const unidadesFiltradasSelect = useMemo(() => {
-      if (role !== 'admin') return catalogs.unidades;
-      return catalogs.unidades.filter(u => {
-          const matchEstado = filtroEstado ? u.estado === filtroEstado : true;
-          const matchMentor = filtroMentor ? u.mentorId === filtroMentor : true;
-          return matchEstado && matchMentor;
-      });
-  }, [catalogs.unidades, role, filtroEstado, filtroMentor]);
-
 
   // ==========================================
   // 2. MOTOR DE TEMPO REAL BLINDADO (O COFRE)
   // ==========================================
   useEffect(() => {
-    if (catalogs.unidades.length === 0 && role !== 'admin') return; 
+    // 🟢 Depende do loadingCatalogs para não rodar antes da memória global estar pronta
+    if (loadingCatalogs || (catalogs.unidades.length === 0 && role !== 'admin')) return; 
 
     // 🟢 INJEÇÃO CIRÚRGICA: Se o cofre estiver fechado, não consulta nada no Firebase!
     if (isCofreFechado) {
@@ -225,14 +208,14 @@ export default function ValidacaoDiariaPage() {
         unsubAulas();
         unsubValidacoes();
     };
-  }, [modoFiltro, dataFiltro, mesFiltro, catalogs.unidades.length, catalogs.professores, role, userId, userUnidadeId, filtroUnidade, isCofreFechado]);
+  }, [modoFiltro, dataFiltro, mesFiltro, catalogs.unidades.length, catalogs.professores, role, userId, userUnidadeId, filtroUnidade, isCofreFechado, loadingCatalogs]);
 
 
   // ==========================================
   // 3. PROCESSADOR DE GRADE VISUAL
   // ==========================================
   useEffect(() => {
-    if (loading || catalogs.unidades.length === 0 || isCofreFechado) return;
+    if (loading || loadingCatalogs || catalogs.unidades.length === 0 || isCofreFechado) return;
 
     let datasParaVerificar = [];
     if (modoFiltro === 'dia') {
@@ -394,7 +377,7 @@ export default function ValidacaoDiariaPage() {
 
     setGradeGerada(gradeFinal);
 
-  }, [aulasRealtime, validacoesRealtime, loading, catalogs, filtroUnidade, filtroModalidade, filtroProfessor, filtroEstado, filtroMentor, dataFiltro, mesFiltro, modoFiltro, role, userId, isCofreFechado]);
+  }, [aulasRealtime, validacoesRealtime, loading, loadingCatalogs, catalogs, filtroUnidade, filtroModalidade, filtroProfessor, filtroEstado, filtroMentor, dataFiltro, mesFiltro, modoFiltro, role, userId, isCofreFechado]);
 
   // CONTADORES E PAGINAÇÃO
   const counts = useMemo(() => {
@@ -637,7 +620,7 @@ export default function ValidacaoDiariaPage() {
                         </div>
                         <div className="relative h-10 w-[160px] shrink-0">
                             <UserCog className="absolute left-3 top-2.5 w-4 h-4 text-purple-500"/>
-                            <select value={filtroMentor} onChange={e => setFiltroMentor(e.target.value)} className="w-full h-full pl-9 pr-2 border-0 bg-slate-50 dark:bg-slate-900 rounded-xl text-xs font-bold uppercase text-slate-600 dark:text-slate-300 focus:ring-2 focus:ring-purple-500 outline-none cursor-pointer"><option value="">MENTOR</option>{catalogs.mentores.map(m => <option key={m.id} value={m.id}>{m.nome?.toUpperCase().split(' ')[0]}</option>)}</select>
+                            <select value={filtroMentor} onChange={e => setFiltroMentor(e.target.value)} className="w-full h-full pl-9 pr-2 border-0 bg-slate-50 dark:bg-slate-900 rounded-xl text-xs font-bold uppercase text-slate-600 dark:text-slate-300 focus:ring-2 focus:ring-purple-500 outline-none cursor-pointer"><option value="">MENTOR</option>{catalogs.mentores?.map(m => <option key={m.id} value={m.id}>{m.nome?.toUpperCase().split(' ')[0]}</option>)}</select>
                         </div>
                     </>
                 )}
@@ -649,7 +632,7 @@ export default function ValidacaoDiariaPage() {
                 )}
                 <div className="relative h-10 w-[180px] shrink-0">
                     <Filter className="absolute left-3 top-2.5 w-4 h-4 text-slate-400"/>
-                    <select value={filtroModalidade} onChange={e => setFiltroModalidade(e.target.value)} className="w-full h-full pl-9 pr-2 border-0 bg-slate-50 dark:bg-slate-900 rounded-xl text-xs font-bold uppercase text-slate-600 dark:text-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none cursor-pointer"><option value="">MODALIDADE</option>{catalogs.modalidades.map(m => <option key={m.id} value={m.id}>{m.nome?.toUpperCase()}</option>)}</select>
+                    <select value={filtroModalidade} onChange={e => setFiltroModalidade(e.target.value)} className="w-full h-full pl-9 pr-2 border-0 bg-slate-50 dark:bg-slate-900 rounded-xl text-xs font-bold uppercase text-slate-600 dark:text-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none cursor-pointer"><option value="">MODALIDADE</option>{catalogs.modalidades?.map(m => <option key={m.id} value={m.id}>{m.nome?.toUpperCase()}</option>)}</select>
                 </div>
                 {(role === 'admin' || role === 'mentor') && (
                     <div className="relative h-10 flex-1 min-w-[200px]">
@@ -670,7 +653,7 @@ export default function ValidacaoDiariaPage() {
         </div>
       </div>
 
-      {/* 🟢 O COFRE: Se não tiver unidade selecionada, mostra aviso e economiza dados */}
+      {/* 🟢 O COFRE & LOADING HÍBRIDO */}
       {isCofreFechado ? (
           <div className="py-24 text-center bg-white dark:bg-slate-800 rounded-3xl border border-dashed border-slate-300 dark:border-slate-700 shadow-sm animate-fade-in">
             <div className="bg-slate-50 dark:bg-slate-900 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-100 dark:border-slate-800 shadow-inner">
@@ -683,7 +666,7 @@ export default function ValidacaoDiariaPage() {
                 Para manter o sistema super rápido, a grade de aulas só é carregada após você selecionar uma unidade específica no filtro acima.
             </p>
           </div>
-      ) : loading ? (
+      ) : (loading || loadingCatalogs) ? (
         <div className="h-64 flex flex-col items-center justify-center text-slate-400">
           <Loader2 className="w-8 h-8 animate-spin mb-2 text-emerald-500"/>
           <p className="text-sm font-medium">Carregando dados ao vivo...</p>

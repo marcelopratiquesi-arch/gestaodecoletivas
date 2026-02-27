@@ -16,6 +16,13 @@ const formatarDataHora = (dateObj) => {
     return `${d} ÀS ${h}`;
 };
 
+const formatarDataSimples = (dateStr) => {
+    if (!dateStr || dateStr === 'N/A') return 'N/A';
+    const parts = dateStr.split('-');
+    if (parts.length !== 3) return dateStr;
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+};
+
 const formatCurrency = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
 
 export default function AuditoriaPage() {
@@ -37,7 +44,7 @@ export default function AuditoriaPage() {
         );
     }
 
-    // 🟢 MOTOR DE MESCLAGEM EM TEMPO REAL (CRONOGRAMA + FINANCEIRO)
+    // 🟢 MOTOR DE MESCLAGEM EM TEMPO REAL
     useEffect(() => {
         const qCronograma = query(collection(db, 'auditoria_cronograma'), orderBy('dataAcao', 'desc'), limit(500));
         const qFinanceiro = query(collection(db, 'auditoria_financeiro'), orderBy('timestamp', 'desc'), limit(500));
@@ -48,14 +55,13 @@ export default function AuditoriaPage() {
         const updateLogs = () => {
             const combined = [...logsCronograma, ...logsFinanceiro];
             
-            // Ordenação global baseada no timestamp
             combined.sort((a, b) => {
                 const timeA = a.dataAcao?.toMillis?.() || 0;
                 const timeB = b.dataAcao?.toMillis?.() || 0;
                 return timeB - timeA;
             });
             
-            setLogs(combined.slice(0, 500)); // Mantém o limite de 500 na tela
+            setLogs(combined.slice(0, 500)); 
             setLoading(false);
         };
 
@@ -74,8 +80,8 @@ export default function AuditoriaPage() {
                 return {
                     id: d.id, 
                     _source: 'financeiro', 
-                    modulo: 'FINANCEIRO', // Força o módulo
-                    dataAcao: data.timestamp, // Normaliza a variável de tempo para o renderizador
+                    modulo: 'FINANCEIRO', 
+                    dataAcao: data.timestamp, 
                     ...data 
                 };
             });
@@ -102,6 +108,8 @@ export default function AuditoriaPage() {
                     ${log.unidadeNome || ''} 
                     ${log.professorNome || ''}
                     ${log.mesReferencia || ''}
+                    ${log.estadoAnterior?.professor || ''}
+                    ${log.estadoNovo?.professor || ''}
                 `.toLowerCase();
                 if (!textoCompleto.includes(term)) return false;
             }
@@ -149,7 +157,6 @@ export default function AuditoriaPage() {
                     <button onClick={() => setFiltroModulo("CRONOGRAMA")} className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${filtroModulo === "CRONOGRAMA" ? 'bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900' : 'bg-slate-100 text-slate-500 hover:bg-slate-200 dark:bg-slate-900 dark:border-slate-700'}`}><Calendar className="w-3 h-3"/> CRONOGRAMA</button>
                     <button onClick={() => setFiltroModulo("VALIDACAO")} className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${filtroModulo === "VALIDACAO" ? 'bg-emerald-600 text-white dark:bg-emerald-500 dark:text-white' : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800'}`}><CircleCheck className="w-3 h-3"/> VALIDAÇÃO</button>
                     
-                    {/* 🟢 NOVO FILTRO: FINANCEIRO */}
                     <button onClick={() => setFiltroModulo("FINANCEIRO")} className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${filtroModulo === "FINANCEIRO" ? 'bg-purple-600 text-white dark:bg-purple-500 dark:text-white' : 'bg-purple-50 text-purple-600 hover:bg-purple-100 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-800'}`}><TrendingUp className="w-3 h-3"/> FINANCEIRO</button>
                     
                     <button onClick={() => setFiltroModulo("CONFIGURACOES")} className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${filtroModulo === "CONFIGURACOES" ? 'bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900' : 'bg-slate-100 text-slate-500 hover:bg-slate-200 dark:bg-slate-900 dark:border-slate-700'}`}><Settings className="w-3 h-3"/> CONFIGURAÇÕES</button>
@@ -175,11 +182,11 @@ export default function AuditoriaPage() {
                         <table className="w-full text-left text-sm">
                             <thead className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700 text-[10px] font-black text-slate-500 uppercase tracking-widest">
                                 <tr>
-                                    <th className="p-4">DATA E HORA (AÇÃO)</th>
-                                    <th className="p-4">USUÁRIO</th>
-                                    <th className="p-4">MÓDULO</th>
-                                    <th className="p-4">AÇÃO</th>
-                                    <th className="p-4 w-1/2">O QUE FOI ALTERADO? (DETALHES)</th>
+                                    <th className="p-4 w-40">DATA E HORA (AÇÃO)</th>
+                                    <th className="p-4 w-40">USUÁRIO</th>
+                                    <th className="p-4 w-32">MÓDULO</th>
+                                    <th className="p-4 w-32">AÇÃO</th>
+                                    <th className="p-4">O QUE FOI ALTERADO? (DETALHES)</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
@@ -194,14 +201,14 @@ export default function AuditoriaPage() {
 
                                         return (
                                             <tr key={log.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/20 transition-colors group">
-                                                <td className="p-4 align-top w-48">
+                                                <td className="p-4 align-top">
                                                     <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400 font-mono font-bold text-xs">
                                                         <Clock className="w-3.5 h-3.5 opacity-50" />
                                                         {formatarDataHora(dataAcao)}
                                                     </div>
                                                 </td>
 
-                                                <td className="p-4 align-top w-48">
+                                                <td className="p-4 align-top">
                                                     <div className="flex items-center gap-2">
                                                         <div className="w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
                                                             <User className="w-3 h-3 text-slate-500" />
@@ -212,7 +219,7 @@ export default function AuditoriaPage() {
                                                     </div>
                                                 </td>
 
-                                                <td className="p-4 align-top w-36">
+                                                <td className="p-4 align-top">
                                                     <span className={`text-[10px] font-black px-2 py-1 rounded flex items-center gap-1 w-fit uppercase tracking-wider 
                                                         ${modulo === 'VALIDACAO' ? 'bg-emerald-50 text-emerald-600 border border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800' : 
                                                         modulo === 'FINANCEIRO' ? 'bg-purple-50 text-purple-600 border border-purple-200 dark:bg-purple-900/20 dark:border-purple-800' :
@@ -225,7 +232,7 @@ export default function AuditoriaPage() {
                                                     </span>
                                                 </td>
 
-                                                <td className="p-4 align-top w-36">
+                                                <td className="p-4 align-top">
                                                     <div className="flex items-center gap-1.5">
                                                         {getIconeAcao(log.tipoAcao)}
                                                         {getBadgeAcao(log.tipoAcao)}
@@ -233,32 +240,75 @@ export default function AuditoriaPage() {
                                                 </td>
 
                                                 <td className="p-4 align-top">
-                                                    <div className="space-y-2">
+                                                    <div className="space-y-3">
                                                         
-                                                        {/* LÓGICA DE DETALHES PARA CRONOGRAMA / VALIDAÇÃO / CONFIG */}
+                                                        {/* LÓGICA DE DETALHES PARA CRONOGRAMA */}
                                                         {log._source === 'cronograma' && (
                                                             <>
                                                                 <p className="text-sm font-black text-slate-800 dark:text-slate-200">
                                                                     {log.descricao}
                                                                 </p>
                                                                 
-                                                                {(modulo === 'Cronograma' || modulo === 'VALIDACAO') && log.unidadeNome && (
-                                                                    <div className="text-[10px] font-black text-slate-500 flex flex-wrap items-center gap-2">
-                                                                        <span className="bg-slate-100 dark:bg-slate-900 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700 shadow-sm">{log.unidadeNome}</span>
-                                                                        <span className="bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 px-1.5 py-0.5 rounded border border-blue-100 dark:border-blue-800 shadow-sm">{log.modalidadeNome}</span>
-                                                                        <span className="bg-slate-100 dark:bg-slate-900 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700 shadow-sm">{log.professorNome}</span>
+                                                                {/* 🟢 O NOVO CÉREBRO DA AUDITORIA: "COMO ERA" VS "COMO FICOU" */}
+                                                                {(log.estadoAnterior || log.estadoNovo) ? (
+                                                                    <div className="flex flex-col lg:flex-row gap-4 mt-3">
+                                                                        {log.estadoAnterior && (
+                                                                            <div className="flex-1 border border-rose-200 dark:border-rose-900/50 bg-rose-50/50 dark:bg-rose-900/10 rounded-xl p-4 shadow-sm">
+                                                                                <h5 className="text-[10px] font-black text-rose-600 dark:text-rose-400 mb-3 border-b border-rose-100 dark:border-rose-900/30 pb-2 flex items-center gap-1">
+                                                                                    <Trash2 className="w-3 h-3"/> COMO ERA:
+                                                                                </h5>
+                                                                                <ul className="space-y-1.5 text-[11px] text-slate-600 dark:text-slate-400 font-medium">
+                                                                                    <li><span className="font-black text-slate-800 dark:text-slate-200">UNIDADE:</span> {log.estadoAnterior.unidade}</li>
+                                                                                    <li><span className="font-black text-slate-800 dark:text-slate-200">MODALIDADE:</span> {log.estadoAnterior.modalidade}</li>
+                                                                                    <li className={log.estadoNovo && log.estadoAnterior.professor !== log.estadoNovo.professor ? "text-rose-600 font-black bg-rose-100/50 px-1 rounded -mx-1" : ""}><span className="font-black text-slate-800 dark:text-slate-200">PROFESSOR:</span> {log.estadoAnterior.professor}</li>
+                                                                                    <li className={log.estadoNovo && log.estadoAnterior.dias !== log.estadoNovo.dias ? "text-rose-600 font-black bg-rose-100/50 px-1 rounded -mx-1" : ""}><span className="font-black text-slate-800 dark:text-slate-200">DIAS:</span> {log.estadoAnterior.dias}</li>
+                                                                                    <li className={log.estadoNovo && log.estadoAnterior.hora !== log.estadoNovo.hora ? "text-rose-600 font-black bg-rose-100/50 px-1 rounded -mx-1" : ""}><span className="font-black text-slate-800 dark:text-slate-200">HORÁRIO:</span> {log.estadoAnterior.hora}</li>
+                                                                                    <li className={log.estadoNovo && log.estadoAnterior.valor !== log.estadoNovo.valor ? "text-rose-600 font-black bg-rose-100/50 px-1 rounded -mx-1" : ""}><span className="font-black text-slate-800 dark:text-slate-200">VALOR:</span> {formatCurrency(log.estadoAnterior.valor)}</li>
+                                                                                    <li className={log.estadoNovo && log.estadoAnterior.dataInicio !== log.estadoNovo.dataInicio ? "text-rose-600 font-black bg-rose-100/50 px-1 rounded -mx-1" : ""}><span className="font-black text-slate-800 dark:text-slate-200">INÍCIO:</span> {formatarDataSimples(log.estadoAnterior.dataInicio)}</li>
+                                                                                    <li className={log.estadoNovo && log.estadoAnterior.dataFim !== log.estadoNovo.dataFim ? "text-rose-600 font-black bg-rose-100/50 px-1 rounded -mx-1" : ""}><span className="font-black text-slate-800 dark:text-slate-200">FIM:</span> {formatarDataSimples(log.estadoAnterior.dataFim)}</li>
+                                                                                </ul>
+                                                                            </div>
+                                                                        )}
                                                                         
-                                                                        {log.dias && log.dias.length > 0 && log.hora && (
-                                                                            <span className="bg-slate-100 dark:bg-slate-900 px-1.5 py-0.5 rounded text-slate-400 border border-slate-200 dark:border-slate-700 shadow-sm">{log.dias[0]} ÀS {log.hora}</span>
+                                                                        {log.estadoNovo && (
+                                                                            <div className="flex-1 border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/50 dark:bg-emerald-900/10 rounded-xl p-4 shadow-sm">
+                                                                                <h5 className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 mb-3 border-b border-emerald-100 dark:border-emerald-900/30 pb-2 flex items-center gap-1">
+                                                                                    <PlusCircle className="w-3 h-3"/> COMO FICOU:
+                                                                                </h5>
+                                                                                <ul className="space-y-1.5 text-[11px] text-slate-600 dark:text-slate-400 font-medium">
+                                                                                    <li><span className="font-black text-slate-800 dark:text-slate-200">UNIDADE:</span> {log.estadoNovo.unidade}</li>
+                                                                                    <li><span className="font-black text-slate-800 dark:text-slate-200">MODALIDADE:</span> {log.estadoNovo.modalidade}</li>
+                                                                                    <li className={log.estadoAnterior && log.estadoAnterior.professor !== log.estadoNovo.professor ? "text-emerald-600 font-black bg-emerald-100/50 px-1 rounded -mx-1" : ""}><span className="font-black text-slate-800 dark:text-slate-200">PROFESSOR:</span> {log.estadoNovo.professor}</li>
+                                                                                    <li className={log.estadoAnterior && log.estadoAnterior.dias !== log.estadoNovo.dias ? "text-emerald-600 font-black bg-emerald-100/50 px-1 rounded -mx-1" : ""}><span className="font-black text-slate-800 dark:text-slate-200">DIAS:</span> {log.estadoNovo.dias}</li>
+                                                                                    <li className={log.estadoAnterior && log.estadoAnterior.hora !== log.estadoNovo.hora ? "text-emerald-600 font-black bg-emerald-100/50 px-1 rounded -mx-1" : ""}><span className="font-black text-slate-800 dark:text-slate-200">HORÁRIO:</span> {log.estadoNovo.hora}</li>
+                                                                                    <li className={log.estadoAnterior && log.estadoAnterior.valor !== log.estadoNovo.valor ? "text-emerald-600 font-black bg-emerald-100/50 px-1 rounded -mx-1" : ""}><span className="font-black text-slate-800 dark:text-slate-200">VALOR:</span> {formatCurrency(log.estadoNovo.valor)}</li>
+                                                                                    <li className={log.estadoAnterior && log.estadoAnterior.dataInicio !== log.estadoNovo.dataInicio ? "text-emerald-600 font-black bg-emerald-100/50 px-1 rounded -mx-1" : ""}><span className="font-black text-slate-800 dark:text-slate-200">INÍCIO:</span> {formatarDataSimples(log.estadoNovo.dataInicio)}</li>
+                                                                                    <li className={log.estadoAnterior && log.estadoAnterior.dataFim !== log.estadoNovo.dataFim ? "text-emerald-600 font-black bg-emerald-100/50 px-1 rounded -mx-1" : ""}><span className="font-black text-slate-800 dark:text-slate-200">FIM:</span> {formatarDataSimples(log.estadoNovo.dataFim)}</li>
+                                                                                </ul>
+                                                                            </div>
                                                                         )}
                                                                     </div>
+                                                                ) : (
+                                                                    /* RETROCOMPATIBILIDADE PARA LOGS ANTIGOS (SEM FOTOGRAFIA) */
+                                                                    (modulo === 'Cronograma' || modulo === 'VALIDACAO') && log.unidadeNome && (
+                                                                        <div className="text-[10px] font-black text-slate-500 flex flex-wrap items-center gap-2 mt-2">
+                                                                            <span className="bg-slate-100 dark:bg-slate-900 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700 shadow-sm">{log.unidadeNome}</span>
+                                                                            <span className="bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 px-1.5 py-0.5 rounded border border-blue-100 dark:border-blue-800 shadow-sm">{log.modalidadeNome}</span>
+                                                                            <span className="bg-slate-100 dark:bg-slate-900 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700 shadow-sm">{log.professorNome}</span>
+                                                                            
+                                                                            {log.dias && log.dias.length > 0 && log.hora && (
+                                                                                <span className="bg-slate-100 dark:bg-slate-900 px-1.5 py-0.5 rounded text-slate-400 border border-slate-200 dark:border-slate-700 shadow-sm">{log.dias[0]} ÀS {log.hora}</span>
+                                                                            )}
+                                                                        </div>
+                                                                    )
                                                                 )}
 
+                                                                {/* DETALHES EXTRAS / MENSAGENS DO CÉREBRO TEMPORAL */}
                                                                 {log.diffExtras && (
-                                                                    <div className="mt-2 p-2.5 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 rounded-lg shadow-sm">
+                                                                    <div className="mt-3 p-2.5 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 rounded-lg shadow-sm w-fit">
                                                                         <div className="flex gap-1.5 mb-1 text-amber-700 dark:text-amber-500">
                                                                             <AlertTriangle className="w-3 h-3 flex-shrink-0" />
-                                                                            <span className="text-[9px] font-black uppercase tracking-widest">DETALHES DO REGISTRO:</span>
+                                                                            <span className="text-[9px] font-black uppercase tracking-widest">OBSERVAÇÕES DO SISTEMA:</span>
                                                                         </div>
                                                                         <p className="text-[11px] font-mono font-bold text-amber-900 dark:text-amber-200 whitespace-pre-wrap leading-relaxed">
                                                                             {log.diffExtras}

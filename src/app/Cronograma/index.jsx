@@ -3,7 +3,7 @@ import {
   Calendar, Clock, Plus, Filter, 
   Search, Trash2, Edit2, X, Check, 
   MapPin, Loader2, AlertTriangle, Users,
-  DollarSign, Globe, ChevronRight, List, ChevronDown, User, CalendarDays, EyeOff, History 
+  DollarSign, Globe, ChevronRight, List, ChevronDown, User, CalendarDays, EyeOff, History, ArrowRightLeft 
 } from 'lucide-react';
 
 import { useAuth } from '../../contexts/AuthContext'; 
@@ -166,6 +166,10 @@ export default function CronogramaPage() {
   const [showModal, setShowModal] = useState(false);
   const [editingClass, setEditingClass] = useState(null);
 
+  // 🟢 ESTADO DO MOTOR DE TRANSIÇÃO (CÉREBRO TEMPORAL)
+  const [pendingSplit, setPendingSplit] = useState(null);
+  const [dataCorteTransicao, setDataCorteTransicao] = useState("");
+
   const [formData, setFormData] = useState({
     unidadeId: '', modalidadeId: '', professorId: '', hora: '07:00', valor: '', dias: [],
     dataInicio: getTodayStr(), dataFim: '' 
@@ -327,27 +331,49 @@ export default function CronogramaPage() {
 
 
   // ==========================================
-  // 4. AÇÕES DO MODAL E MOTOR DE AUDITORIA FINO
+  // 4. AÇÕES DO MODAL E MOTOR DE AUDITORIA X-9 ("DE -> PARA")
   // ==========================================
 
-  // O Motor Invisível que envia os detalhes exatos para o Histórico Global
-  const registrarLogAuditoria = async (tipoAcao, descricao, aulaReferencia, diffExtras = "") => {
+  // 🟢 HELPER: Constrói a FOTOGRAFIA COMPLETA do card para a auditoria
+  const buildEstadoCompleto = (aulaData) => {
+      if (!aulaData) return null;
+      const uni = catalogs.unidades.find(u => u.id === aulaData.unidadeId)?.nome || 'Unidade Desconhecida';
+      const mod = catalogs.modalidades.find(m => m.id === aulaData.modalidadeId)?.nome || 'Modalidade Desconhecida';
+      const prof = catalogs.professores.find(p => p.id === aulaData.professorId)?.nome || 'Professor Desconhecido';
+      
+      return {
+          unidade: uni,
+          modalidade: mod,
+          professor: prof,
+          hora: aulaData.hora || '',
+          dias: [...(aulaData.dias || [])].sort().join(', '),
+          valor: aulaData.valor ? parseFloat(aulaData.valor) : 0,
+          dataInicio: aulaData.dataInicio || '',
+          dataFim: aulaData.dataFim || 'N/A'
+      };
+  };
+
+  // O Motor Invisível Enriquecido
+  const registrarLogAuditoria = async (tipoAcao, descricao, diffExtras = "", estadoAnterior = null, estadoNovo = null) => {
     try {
-        const uni = catalogs.unidades.find(u => u.id === aulaReferencia.unidadeId);
-        const mod = catalogs.modalidades.find(m => m.id === aulaReferencia.modalidadeId);
-        const prof = catalogs.professores.find(p => p.id === aulaReferencia.professorId);
         const nomeUsuario = userData?.nome || userData?.email || 'Administrador do Sistema';
+        const ref = estadoNovo || estadoAnterior || {};
 
         await addDoc(collection(db, 'auditoria_cronograma'), {
             tipoAcao,
             descricao,
             diffExtras,
-            unidadeNome: uni?.nome || 'Unidade Desconhecida',
-            modalidadeNome: mod?.nome || 'Modalidade Desconhecida',
-            professorNome: prof?.nome || 'Professor Desconhecido',
-            dias: aulaReferencia.dias || [],
-            hora: aulaReferencia.hora || '',
-            valor: aulaReferencia.valor || 0,
+            estadoAnterior, // Fotografia DE
+            estadoNovo,     // Fotografia PARA
+            
+            // Retrocompatibilidade
+            unidadeNome: ref.unidade || 'Unidade Desconhecida',
+            modalidadeNome: ref.modalidade || 'Modalidade Desconhecida',
+            professorNome: ref.professor || 'Professor Desconhecido',
+            dias: ref.dias ? ref.dias.split(', ') : [],
+            hora: ref.hora || '',
+            valor: ref.valor || 0,
+            
             usuarioAcaoNome: nomeUsuario,
             usuarioAcaoId: userId,
             dataAcao: serverTimestamp()
@@ -355,7 +381,7 @@ export default function CronogramaPage() {
     } catch (e) { console.error("Erro ao gerar log de auditoria", e); }
   };
 
-  const handleSave = async (e) => {
+  const handleFirstSaveClick = (e) => {
     e.preventDefault();
     if (isReadOnly || saving) return; 
 
@@ -366,15 +392,14 @@ export default function CronogramaPage() {
         return alert("❌ A data de encerramento não pode ser anterior à data de início.");
     }
 
-    try {
-      setSaving(true);
-      const payload = {
+    const payload = {
         unidadeId: formData.unidadeId, modalidadeId: formData.modalidadeId, professorId: formData.professorId,
         hora: formData.hora, valor: formData.valor ? parseFloat(formData.valor) : 0, 
         dias: formData.dias, dataInicio: formData.dataInicio, dataFim: formData.dataFim || null 
-      };
+    };
 
-      if (editingClass) {
+    if (editingClass) {
+        // Verifica se há MUDANÇAS ESTRUTURAIS para ativar o Cérebro Temporal
         const diasAntigos = [...(editingClass.dias || [])].sort();
         const diasNovos = [...formData.dias].sort();
         const valorAntigo = editingClass.valor ? parseFloat(editingClass.valor) : 0;
@@ -382,30 +407,21 @@ export default function CronogramaPage() {
 
         let mudancas = [];
         
-        // 1. Comparação de Professor
         if (editingClass.professorId !== formData.professorId) {
             const pAntigo = catalogs.professores.find(p => p.id === editingClass.professorId)?.nome || 'Sem Prof';
             const pNovo = catalogs.professores.find(p => p.id === formData.professorId)?.nome || 'Sem Prof';
             mudancas.push(`Prof: ${pAntigo} ➔ ${pNovo}`);
         }
-
-        // 2. Comparação de Modalidade
         if (editingClass.modalidadeId !== formData.modalidadeId) {
             const mAntigo = catalogs.modalidades.find(m => m.id === editingClass.modalidadeId)?.nome || 'Desconhecida';
             const mNovo = catalogs.modalidades.find(m => m.id === formData.modalidadeId)?.nome || 'Desconhecida';
             mudancas.push(`Modalidade: ${mAntigo} ➔ ${mNovo}`);
         }
-
-        // 3. Comparação de Valor Financeiro
         if (valorAntigo !== valorNovo) mudancas.push(`Valor: R$ ${valorAntigo} ➔ R$ ${valorNovo}`);
-        
-        // 4. Comparação de Horário
         if (editingClass.hora !== formData.hora) mudancas.push(`Hora: ${editingClass.hora} ➔ ${formData.hora}`);
         
-        // 5. Comparação Detalhada dos Dias (O que acrescentou e o que tirou)
         const diasAdicionados = diasNovos.filter(d => !diasAntigos.includes(d));
         const diasRemovidos = diasAntigos.filter(d => !diasNovos.includes(d));
-        
         if (diasAdicionados.length > 0 || diasRemovidos.length > 0) {
             let diasTexto = [];
             if (diasAdicionados.length > 0) diasTexto.push(`+ ${diasAdicionados.join(', ')}`);
@@ -413,61 +429,102 @@ export default function CronogramaPage() {
             mudancas.push(`Dias: ${diasTexto.join(' e ')}`);
         }
 
-        const isCriticalChange = mudancas.length > 0;
-
-        if (isCriticalChange) {
-            const diffString = mudancas.join('\n'); 
-            const dataInicioObj = new Date(formData.dataInicio + 'T12:00:00');
-            dataInicioObj.setDate(dataInicioObj.getDate() - 1);
-            const dataFimAntiga = dataInicioObj.toISOString().split('T')[0];
-
-            const dataNovaBR = new Date(formData.dataInicio + 'T12:00:00').toLocaleDateString('pt-BR');
-            const dataFimAntigaBR = dataInicioObj.toLocaleDateString('pt-BR');
-
-            const confirmacao = window.confirm(
-                "🚨 ALTERAÇÃO DETECTADA\n\n" +
-                "Você está salvando as seguintes mudanças:\n" + mudancas.join(' | ') + "\n\n" +
-                "Para preservar o histórico passado:\n" +
-                `👉 A aula antiga será ENCERRADA em: ${dataFimAntigaBR}\n` +
-                `👉 A aula NOVA começará em: ${dataNovaBR}\n\n` +
-                "Confirma a transição?"
-            );
-            if (!confirmacao) { setSaving(false); return; }
-
-            // Fecha a aula velha, abre a nova e loga tudo
-            await updateDoc(doc(db, "aulas", editingClass.id), { dataFim: dataFimAntiga, updatedAt: serverTimestamp() });
-            await addDoc(collection(db, "aulas"), { ...payload, createdAt: serverTimestamp() });
-            await registrarLogAuditoria('ALTERADA', 'Transição estrutural gravada.', payload, diffString);
-
-        } else {
-            // Mudança simples de data de validade
-            let msgData = [];
-            if (editingClass.dataInicio !== formData.dataInicio) msgData.push(`Início: ${editingClass.dataInicio} ➔ ${formData.dataInicio}`);
-            if (editingClass.dataFim !== formData.dataFim) msgData.push(`Fim: ${editingClass.dataFim || 'Vazio'} ➔ ${formData.dataFim || 'Vazio'}`);
-            
-            await updateDoc(doc(db, "aulas", editingClass.id), { ...payload, updatedAt: serverTimestamp() });
-            await registrarLogAuditoria('VIGÊNCIA', 'Datas limite atualizadas.', payload, msgData.join(' | '));
+        if (mudancas.length > 0) {
+            // 🟢 ENGATILHA A TELA DE TRANSIÇÃO (O ROBÔ INTELIGENTE)
+            let defaultDate = getTodayStr();
+            if (new Date().getHours() >= 12) {
+                const tomorrow = new Date();
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                defaultDate = tomorrow.toLocaleDateString('en-CA');
+            }
+            setDataCorteTransicao(defaultDate);
+            setPendingSplit({ payload, mudancas });
+            return;
         }
-      } else {
-        // Aula totalmente nova
-        await addDoc(collection(db, "aulas"), { ...payload, createdAt: serverTimestamp() });
-        await registrarLogAuditoria('NOVA', 'Aula adicionada na grade.', payload, `Dias: ${formData.dias.join(', ')} | Hora: ${formData.hora} | Valor: R$ ${formData.valor}`);
+
+        // Se não houver mudanças estruturais, apenas checa se mudou limite de validade
+        let isVigencia = false;
+        if (editingClass.dataInicio !== formData.dataInicio || editingClass.dataFim !== formData.dataFim) {
+            isVigencia = true;
+        }
+        executeDirectSave(payload, isVigencia);
+    } else {
+        // Aula nova
+        executeDirectSave(payload, false);
+    }
+  };
+
+  // 🟢 EXECUTA A CORREÇÃO SIMPLES (SOBRESCREVE O PASSADO)
+  const executeDirectSave = async (payload, isVigencia = false) => {
+      setSaving(true);
+      try {
+          if (editingClass) {
+              const estadoAnt = buildEstadoCompleto(editingClass);
+              const estadoNov = buildEstadoCompleto(payload);
+              await updateDoc(doc(db, "aulas", editingClass.id), { ...payload, updatedAt: serverTimestamp() });
+              const acao = isVigencia ? 'VIGÊNCIA' : 'ALTERADA';
+              const desc = isVigencia ? 'Datas limite atualizadas.' : 'Aula editada (Correção Direta).';
+              await registrarLogAuditoria(acao, desc, "Atualização de dados sem quebra de histórico.", estadoAnt, estadoNov);
+          } else {
+              const estadoNov = buildEstadoCompleto(payload);
+              await addDoc(collection(db, "aulas"), { ...payload, createdAt: serverTimestamp() });
+              await registrarLogAuditoria('NOVA', 'Aula adicionada na grade.', `Dias: ${payload.dias.join(', ')} | Hora: ${payload.hora}`, null, estadoNov);
+          }
+          closeModal();
+      } catch (e) {
+          alert("Erro ao salvar.");
+      } finally {
+          setSaving(false);
       }
-      setShowModal(false);
-    } catch (error) { 
-        console.error(error); alert("Erro ao salvar."); 
-    } finally { setSaving(false); }
+  };
+
+  // 🟢 EXECUTA A TRANSIÇÃO ESTRUTURAL (PRESERVA O PASSADO, RESOLVE O PARADOXO)
+  const executeSplitSave = async () => {
+      if (!dataCorteTransicao) return alert("Selecione a data exata em que a nova configuração começa a valer.");
+      
+      setSaving(true);
+      try {
+          const { payload, mudancas } = pendingSplit;
+          const diffString = mudancas.join('\n'); 
+          
+          // O corte da aula velha é D-1 da data que a nova começa
+          const dataInicioObj = new Date(dataCorteTransicao + 'T12:00:00');
+          dataInicioObj.setDate(dataInicioObj.getDate() - 1);
+          const dataFimAntiga = dataInicioObj.toISOString().split('T')[0];
+
+          const payloadNova = { ...payload, dataInicio: dataCorteTransicao };
+
+          // Fotografia do DE -> PARA
+          const estadoAnt = buildEstadoCompleto(editingClass);
+          estadoAnt.dataFim = dataFimAntiga; // Atualiza para mostrar o corte exato no log
+          const estadoNov = buildEstadoCompleto(payloadNova);
+
+          // 1. Encerra a aula velha protegendo o passado
+          await updateDoc(doc(db, "aulas", editingClass.id), { dataFim: dataFimAntiga, updatedAt: serverTimestamp() });
+          
+          // 2. Cria a aula nova protegendo o futuro
+          await addDoc(collection(db, "aulas"), { ...payloadNova, createdAt: serverTimestamp() });
+          
+          await registrarLogAuditoria('ALTERADA', 'Transição estrutural gravada.', `[A PARTIR DE ${dataCorteTransicao.split('-').reverse().join('/')}]\n${diffString}`, estadoAnt, estadoNov);
+          
+          closeModal();
+      } catch (e) {
+          alert("Erro ao executar a transição da grade.");
+      } finally {
+          setSaving(false);
+      }
   };
 
   const handleDelete = async () => {
     if (isReadOnly) return;
     
-    if (confirm("🚨 ATENÇÃO: Excluir esta aula apaga ela da grade e pode afetar relatórios do passado.\n\n👉 Se houve apenas troca de professor, NÃO EXCLUA. Apenas edite e preencha a 'Data de Encerramento', e crie uma aula nova para o novo professor.\n\nTem certeza que deseja EXCLUIR DEFINITIVAMENTE esta aula?")) {
+    if (confirm("🚨 ATENÇÃO: Excluir esta aula apaga ela da grade e DESTROI os relatórios do passado.\n\n👉 Se houve apenas troca de professor ou dia, NÃO EXCLUA. Apenas EDITE a aula, o sistema cuidará da transição.\n\nTem certeza absoluta que deseja EXCLUIR DEFINITIVAMENTE esta aula?")) {
       try {
         setSaving(true);
+        const estadoAnt = buildEstadoCompleto(editingClass);
         await deleteDoc(doc(db, "aulas", editingClass.id));
-        await registrarLogAuditoria('EXCLUÍDA', 'Aula apagada do banco de dados.', editingClass, 'Ação definitiva de exclusão.');
-        setShowModal(false);
+        await registrarLogAuditoria('EXCLUÍDA', 'Aula apagada do banco de dados.', 'Ação definitiva de exclusão.', estadoAnt, null);
+        closeModal();
       } catch (error) { 
           alert("Erro ao excluir do banco de dados."); 
       } finally { 
@@ -483,6 +540,7 @@ export default function CronogramaPage() {
     if (isReadOnly) return;
     setFormData({ unidadeId: selectedUnit || '', modalidadeId: '', professorId: '', hora: '07:00', valor: '', dias: [], dataInicio: getTodayStr(), dataFim: '' });
     setEditingClass(null);
+    setPendingSplit(null);
     setShowModal(true);
   };
 
@@ -495,8 +553,14 @@ export default function CronogramaPage() {
         dataInicio: cls.dataInicio || `${new Date().getFullYear()}-01-01`, 
         dataFim: cls.dataFim || ''
     });
+    setPendingSplit(null);
     setShowModal(true);
   };
+
+  const closeModal = () => {
+      setShowModal(false);
+      setPendingSplit(null);
+  }
 
   const professoresDoModal = useMemo(() => {
     if (!formData.unidadeId) return [];
@@ -520,7 +584,7 @@ export default function CronogramaPage() {
             Agenda de Coletivas
           </h1>
           <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium">
-            {isReadOnly ? "Consulte os horários de todas as unidades" : "Gerenciamento de Grade e Horário"}
+            {isReadOnly ? "Consulte os horários de todas as unidades" : "Gerenciamento Inteligente de Grade e Horário"}
           </p>
         </div>
       </div>
@@ -687,105 +751,169 @@ export default function CronogramaPage() {
         )}
       </div>
 
-      {/* MODAL */}
+      {/* MODAL PRINCIPAL DE EDIÇÃO E CÉREBRO DE TRANSIÇÃO */}
       {showModal && !isReadOnly && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in zoom-in duration-200">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden border border-slate-100 dark:border-slate-700 max-h-[90vh] flex flex-col">
-            <div className="px-8 py-5 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50 shrink-0">
-              <h3 className="font-bold text-xl text-slate-800 dark:text-white">{editingClass ? 'Editar Aula' : 'Criar Nova Aula'}</h3>
-              <button onClick={() => setShowModal(false)}><X className="w-5 h-5 text-slate-400 hover:text-red-500" /></button>
-            </div>
+          <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden border border-slate-100 dark:border-slate-700 flex flex-col max-h-[90vh]">
             
-            <form onSubmit={handleSave} className="p-8 space-y-5 overflow-y-auto custom-scrollbar">
-              
-              <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-200 dark:border-blue-800">
-                 <h4 className="text-blue-800 dark:text-blue-300 font-bold text-sm mb-1 flex items-center gap-2">
-                    <CalendarDays className="w-4 h-4"/> Regra de Vigência (Auditoria)
-                 </h4>
-                 <p className="text-blue-600 dark:text-blue-400 text-xs">
-                    <strong>Troca de Professor, Dia ou Valor:</strong> O sistema fechará a aula antiga e criará uma nova para proteger seu histórico financeiro, detalhando cada mudança na Auditoria Geral.
-                 </p>
-              </div>
+            {/* ESTADO 1: FORMULÁRIO NORMAL DE AULA */}
+            {!pendingSplit ? (
+                <>
+                    <div className="px-8 py-6 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50 shrink-0">
+                        <h3 className="font-black text-xl text-slate-800 dark:text-white uppercase tracking-tight">{editingClass ? 'EDITAR AULA' : 'CRIAR NOVA AULA'}</h3>
+                        <button onClick={closeModal} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-200 dark:bg-slate-800 text-slate-500 hover:text-rose-500 hover:bg-rose-50 transition-colors"><X className="w-5 h-5" /></button>
+                    </div>
+                    
+                    <form onSubmit={handleFirstSaveClick} className="p-8 space-y-6 overflow-y-auto custom-scrollbar">
+                    
+                        <div>
+                            <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 block">Unidade</label>
+                            <select className="w-full p-3.5 bg-slate-100 dark:bg-slate-900 border-transparent rounded-xl text-sm font-bold text-slate-600 dark:text-slate-300 outline-none" value={formData.unidadeId} onChange={e => setFormData({...formData, unidadeId: e.target.value})} disabled={userData?.role === 'unidade'}>
+                                <option value="">Selecione...</option>
+                                {availableUnits.map(u => <option key={u.id} value={u.id}>{u.nome}</option>)}
+                            </select>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-5">
+                            <div>
+                                <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 block">Modalidade</label>
+                                <select className="w-full p-3.5 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-700 dark:text-white rounded-xl text-sm focus:border-red-500 outline-none font-bold" value={formData.modalidadeId} onChange={e => setFormData({...formData, modalidadeId: e.target.value})} required>
+                                    <option value="">Selecione...</option>
+                                    {catalogs.modalidades.map(m => <option key={m.id} value={m.id}>{m.nome}</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 block">Professor Titular</label>
+                                <select className="w-full p-3.5 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-700 dark:text-white rounded-xl text-sm focus:border-red-500 outline-none font-bold" value={formData.professorId} onChange={e => setFormData({...formData,professorId: e.target.value})} required disabled={!formData.unidadeId}>
+                                    <option value="">{!formData.unidadeId ? "Selecione a unidade" : (professoresDoModal.length === 0 ? "Nenhum vinculado" : "Selecione...")}</option>
+                                    {professoresDoModal.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-5">
+                            <div>
+                                <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 flex items-center gap-1"><Clock className="w-3 h-3"/> Horário</label>
+                                <input type="time" className="w-full p-3.5 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-700 dark:text-white rounded-xl text-sm focus:border-red-500 outline-none font-bold" value={formData.hora} onChange={e => setFormData({...formData, hora: e.target.value})} required />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1.5 flex items-center gap-1"><DollarSign className="w-3 h-3 text-green-600"/> Valor Hora/Aula</label>
+                                <input type="number" step="0.01" min="0" className="w-full p-3.5 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 rounded-xl text-sm focus:border-green-500 outline-none font-black text-slate-700 dark:text-white" value={formData.valor} onChange={e => setFormData({...formData, valor: e.target.value})} placeholder="0.00" />
+                            </div>
+                        </div>
 
-              <div>
-                <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 block">Unidade</label>
-                <select className="w-full p-3 bg-slate-100 dark:bg-slate-900 border-transparent rounded-xl text-sm font-bold text-slate-600 dark:text-slate-300 outline-none" value={formData.unidadeId} onChange={e => setFormData({...formData, unidadeId: e.target.value})} disabled={userData?.role === 'unidade'}>
-                  <option value="">Selecione...</option>
-                  {availableUnits.map(u => <option key={u.id} value={u.id}>{u.nome}</option>)}
-                </select>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-5">
-                <div>
-                  <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 block">Modalidade</label>
-                  <select className="w-full p-3 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-700 dark:text-white rounded-xl text-sm focus:border-red-500 outline-none" value={formData.modalidadeId} onChange={e => setFormData({...formData, modalidadeId: e.target.value})} required>
-                    <option value="">Selecione...</option>
-                    {catalogs.modalidades.map(m => <option key={m.id} value={m.id}>{m.nome}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 block">Professor Titular</label>
-                  <select className="w-full p-3 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-700 dark:text-white rounded-xl text-sm focus:border-red-500 outline-none" value={formData.professorId} onChange={e => setFormData({...formData,professorId: e.target.value})} required disabled={!formData.unidadeId}>
-                    <option value="">{!formData.unidadeId ? "Selecione a unidade" : (professoresDoModal.length === 0 ? "Nenhum vinculado" : "Selecione...")}</option>
-                    {professoresDoModal.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
-                  </select>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-5">
-                <div>
-                  <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 flex items-center gap-1"><Clock className="w-3 h-3"/> Horário</label>
-                  <input type="time" className="w-full p-3 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-700 dark:text-white rounded-xl text-sm focus:border-red-500 outline-none" value={formData.hora} onChange={e => setFormData({...formData, hora: e.target.value})} required />
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1.5 flex items-center gap-1"><DollarSign className="w-3 h-3 text-green-600"/> Valor Hora/Aula</label>
-                  <input type="number" step="0.01" min="0" className="w-full p-3 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 rounded-xl text-sm focus:border-green-500 outline-none font-bold text-slate-700 dark:text-white" value={formData.valor} onChange={e => setFormData({...formData, valor: e.target.value})} placeholder="0.00" />
-                </div>
-              </div>
+                        <div>
+                            <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2 block">Dias da Semana</label>
+                            <div className="flex flex-wrap gap-2">
+                                {allDays.map(day => (
+                                    <button key={day} type="button" onClick={() => toggleDay(day)} className={`flex-1 min-w-[65px] py-3 rounded-xl text-[10px] font-black uppercase tracking-wider border-2 transition-all ${formData.dias.includes(day) ? 'bg-red-600 text-white border-red-600 shadow-md shadow-red-200 dark:shadow-none transform scale-105' : 'bg-white dark:bg-slate-900 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-slate-700 hover:border-red-300 hover:text-red-500'}`}>{day.substring(0, 3)}</button>
+                                ))}
+                            </div>
+                        </div>
 
-              <div className="grid grid-cols-2 gap-5 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700">
-                <div>
-                  <label className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase mb-1.5 block">Válida A partir de *</label>
-                  <input 
-                    type="date" 
-                    required 
-                    className="w-full p-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-white rounded-lg text-sm focus:border-blue-500 outline-none" 
-                    value={formData.dataInicio} 
-                    onChange={e => setFormData({...formData, dataInicio: e.target.value})} 
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 block">Encerrada em (Opcional)</label>
-                  <input 
-                    type="date" 
-                    className="w-full p-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-white rounded-lg text-sm focus:border-rose-500 outline-none" 
-                    value={formData.dataFim} 
-                    onChange={e => setFormData({...formData, dataFim: e.target.value})} 
-                  />
-                </div>
-              </div>
+                        {/* DATAS DA CONFIGURAÇÃO (Mais discretas, pois o cérebro fará o trabalho duro) */}
+                        <div className="grid grid-cols-2 gap-5 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-800">
+                            <div>
+                                <label className="text-[10px] font-bold text-slate-800 dark:text-slate-200 uppercase mb-1.5 block">Aula Registrada a partir de</label>
+                                <input type="date" required className="w-full p-2.5 bg-transparent border-b-2 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-white text-sm focus:border-blue-500 outline-none font-bold" value={formData.dataInicio} onChange={e => setFormData({...formData, dataInicio: e.target.value})} />
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 block">Encerrar Permanentemente em</label>
+                                <input type="date" className="w-full p-2.5 bg-transparent border-b-2 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-white text-sm focus:border-rose-500 outline-none font-bold" value={formData.dataFim} onChange={e => setFormData({...formData, dataFim: e.target.value})} />
+                            </div>
+                        </div>
 
-              <div>
-                <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2 block">Dias da Semana</label>
-                <div className="flex flex-wrap gap-2">
-                  {allDays.map(day => (
-                    <button key={day} type="button" onClick={() => toggleDay(day)} className={`flex-1 min-w-[70px] py-2.5 rounded-lg text-[10px] font-black uppercase tracking-wide border transition-all ${formData.dias.includes(day) ? 'bg-red-600 text-white border-red-600 shadow-md shadow-red-200 dark:shadow-none transform scale-105' : 'bg-white dark:bg-slate-900 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-slate-700 hover:border-red-300 hover:text-red-500'}`}>{day.substring(0, 3)}</button>
-                  ))}
-                </div>
-              </div>
+                        <div className="pt-4 flex justify-end gap-3 shrink-0">
+                            {editingClass && (
+                                <button type="button" onClick={handleDelete} disabled={saving} className="mr-auto text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 px-4 py-3.5 rounded-xl text-xs font-black uppercase flex items-center gap-2 disabled:opacity-50 transition-colors">
+                                    <Trash2 className="w-4 h-4"/> Excluir
+                                </button>
+                            )}
+                            <button type="button" onClick={closeModal} disabled={saving} className="px-6 py-3.5 text-slate-500 dark:text-slate-400 font-bold uppercase text-xs hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl disabled:opacity-50 transition-colors">Cancelar</button>
+                            <button type="submit" disabled={saving} className="px-8 py-3.5 bg-red-600 text-white rounded-xl font-black uppercase text-xs hover:bg-red-700 shadow-lg shadow-red-200 dark:shadow-none flex items-center gap-2 disabled:opacity-70 transition-all active:scale-95">
+                                {saving ? <Loader2 className="w-4 h-4 animate-spin"/> : <Check className="w-4 h-4" />} Salvar
+                            </button>
+                        </div>
+                    </form>
+                </>
+            ) : (
+                /* ESTADO 2: CÉREBRO TEMPORAL (PERGUNTA AO USUÁRIO COMO CORTAR A AULA) */
+                <div className="flex flex-col h-full animate-in slide-in-from-right-4 duration-300">
+                    <div className="p-8 pb-0 text-center shrink-0">
+                        <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4 border border-amber-200">
+                            <ArrowRightLeft className="w-8 h-8" />
+                        </div>
+                        <h3 className="font-black text-2xl text-slate-800 dark:text-white uppercase tracking-tight">Alteração de Grade</h3>
+                        <p className="text-slate-500 text-sm font-bold mt-2">Você alterou dados importantes da aula. Como deseja que o sistema aplique essas mudanças no banco de dados?</p>
+                    </div>
 
-              <div className="pt-6 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-3 shrink-0">
-                {editingClass && (
-                    <button type="button" onClick={handleDelete} disabled={saving} className="mr-auto text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 px-4 py-3 rounded-xl text-xs font-bold uppercase flex items-center gap-2 disabled:opacity-50">
-                        <Trash2 className="w-4 h-4"/> Excluir
-                    </button>
-                )}
-                <button type="button" onClick={() => setShowModal(false)} disabled={saving} className="px-6 py-3 text-slate-500 dark:text-slate-400 font-bold uppercase text-xs hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl disabled:opacity-50">Cancelar</button>
-                <button type="submit" disabled={saving} className="px-8 py-3 bg-red-600 text-white rounded-xl font-bold uppercase text-xs hover:bg-red-700 shadow-lg shadow-red-200 dark:shadow-none flex items-center gap-2 disabled:opacity-70">
-                    {saving ? <Loader2 className="w-4 h-4 animate-spin"/> : <Check className="w-4 h-4" />} Salvar
-                </button>
-              </div>
-            </form>
+                    <div className="p-8 space-y-6 overflow-y-auto">
+                        
+                        {/* OPÇÃO 1: TRANSIÇÃO SEGURA (CRIAR FASE) */}
+                        <div className="border-2 border-emerald-500 rounded-2xl p-5 bg-emerald-50/50 dark:bg-emerald-900/10 relative">
+                            <div className="absolute -top-3 left-6 bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full shadow-sm">
+                                RECOMENDADO (Preserva o Passado)
+                            </div>
+                            <h4 className="font-black text-emerald-800 dark:text-emerald-400 text-lg mb-2 flex items-center gap-2">
+                                Criar Nova Fase <Check className="w-5 h-5"/>
+                            </h4>
+                            <p className="text-emerald-700/80 dark:text-emerald-500/80 text-xs font-bold leading-relaxed mb-4">
+                                Encerra a aula antiga de forma invisível e cria a nova. <strong>Nenhum relatório ou presença passada será perdida.</strong> Ideal para troca de horários, dias ou professores.
+                            </p>
+                            
+                            <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-emerald-200 dark:border-emerald-800 shadow-sm flex flex-col sm:flex-row sm:items-center gap-4">
+                                <div className="flex-1">
+                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">A NOVA CONFIGURAÇÃO PASSA A VALER NO DIA:</label>
+                                    <div className="relative mt-1">
+                                        <Calendar className="absolute left-3 top-3 w-4 h-4 text-emerald-600"/>
+                                        <input 
+                                            type="date" 
+                                            className="w-full pl-10 pr-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-emerald-200 dark:border-emerald-800 rounded-lg text-emerald-700 dark:text-emerald-400 font-black focus:ring-2 focus:ring-emerald-500 outline-none uppercase" 
+                                            value={dataCorteTransicao} 
+                                            onChange={e => setDataCorteTransicao(e.target.value)} 
+                                        />
+                                    </div>
+                                </div>
+                                <button 
+                                    onClick={executeSplitSave} 
+                                    disabled={saving || !dataCorteTransicao}
+                                    className="w-full sm:w-auto px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase rounded-xl transition-all shadow-md active:scale-95 flex items-center justify-center disabled:opacity-50"
+                                >
+                                    {saving ? <Loader2 className="w-4 h-4 animate-spin"/> : 'Aplicar Troca'}
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-4 opacity-50">
+                            <div className="h-px bg-slate-300 flex-1"></div>
+                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">OU</span>
+                            <div className="h-px bg-slate-300 flex-1"></div>
+                        </div>
+
+                        {/* OPÇÃO 2: CORREÇÃO DIRETA (SOBRESCREVER) */}
+                        <div className="border border-slate-200 dark:border-slate-700 rounded-2xl p-5 hover:border-rose-300 transition-colors">
+                            <h4 className="font-black text-slate-700 dark:text-slate-300 text-base mb-2 flex items-center gap-2">
+                                Corrigir Erro de Digitação <Edit2 className="w-4 h-4 text-slate-400"/>
+                            </h4>
+                            <p className="text-slate-500 text-xs font-bold leading-relaxed mb-4">
+                                Substitui os dados diretamente. <strong className="text-rose-500">Atenção:</strong> Isso altera o nome do professor e horários no passado. Use apenas se a aula foi cadastrada errada agora mesmo.
+                            </p>
+                            <button 
+                                onClick={() => executeDirectSave(pendingSplit.payload, false)} 
+                                disabled={saving}
+                                className="w-full py-3 bg-slate-100 hover:bg-rose-50 dark:bg-slate-800 dark:hover:bg-rose-900/20 text-slate-600 hover:text-rose-600 border border-slate-200 dark:border-slate-700 hover:border-rose-200 font-black text-xs uppercase rounded-xl transition-all flex items-center justify-center disabled:opacity-50"
+                            >
+                                {saving ? <Loader2 className="w-4 h-4 animate-spin"/> : 'Apenas Substituir Dados'}
+                            </button>
+                        </div>
+
+                    </div>
+
+                    <div className="px-8 py-4 border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 shrink-0 text-center">
+                        <button onClick={() => setPendingSplit(null)} className="text-slate-400 hover:text-slate-600 font-bold text-xs uppercase tracking-wider underline">Voltar para o formulário</button>
+                    </div>
+                </div>
+            )}
           </div>
         </div>
       )}
