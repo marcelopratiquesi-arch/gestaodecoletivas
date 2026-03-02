@@ -1,8 +1,13 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
-import { getStorage } from "firebase/storage"; // 🟢 IMPORTAÇÃO DO STORAGE (NOVO)
+import { getStorage } from "firebase/storage";
+import { 
+  initializeFirestore, 
+  persistentLocalCache, 
+  persistentMultipleTabManager 
+} from "firebase/firestore";
 
+// ⚠️ ATENÇÃO COMANDANTE: MANTENHA AS SUAS CHAVES REAIS AQUI DENTRO!
 const firebaseConfig = {
   apiKey: "AIzaSyDT0zOAzIoUGm5XZ4yw34Fxuhh2Gbd9iZw",
   authDomain: "gestaopratiquecoletivas.firebaseapp.com",
@@ -13,7 +18,16 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const storage = getStorage(app);
 
-export const auth = getAuth(app);
-export const db = getFirestore(app);
-export const storage = getStorage(app); // 🟢 EXPORTAÇÃO DO STORAGE (NOVO)
+// 🟢 A MÁGICA DA PERSISTÊNCIA OFFLINE MODERNA (CACHE DE DISCO)
+// Esta é a API mais recente do Firebase v9+. Ela faz cache no HD do usuário 
+// e gerencia perfeitamente se ele abrir várias abas do sistema ao mesmo tempo.
+const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({
+    tabManager: persistentMultipleTabManager()
+  })
+});
+
+export { app, auth, db, storage };

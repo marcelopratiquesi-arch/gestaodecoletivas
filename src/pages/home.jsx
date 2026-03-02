@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "../contexts/AuthContext";
+import { useCatalogs } from "../contexts/CatalogContext"; 
 import { db } from "../services/firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { 
@@ -9,7 +10,16 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-// --- RELÓGIO COM SEGUNDOS (VISUAL MANTIDO) ---
+// 🟢 CACHE GLOBAL DA HOME (Fica fora do componente para não ser destruído ao trocar de aba)
+let homeDashboardCache = {
+    timestamp: 0,
+    todayStr: "", // 🟢 CORREÇÃO: Trava para resetar o cache caso vire a meia-noite
+    validacoesRealizadasOntem: 0,
+    validacoesRealizadasHoje: 0
+};
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutos em milissegundos
+
+// --- RELÓGIO COM SEGUNDOS ---
 const CorporateClock = () => {
     const [date, setDate] = useState(new Date());
     useEffect(() => {
@@ -34,7 +44,7 @@ const CorporateClock = () => {
     );
 };
 
-// --- AVATAR PROFESSOR (VISUAL MANTIDO) ---
+// --- AVATAR PROFESSOR ---
 const ProfessorAvatar = ({ name }) => {
     const initials = name ? name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : "PF";
     return (
@@ -44,49 +54,17 @@ const ProfessorAvatar = ({ name }) => {
     );
 };
 
-// --- CARD DASHBOARD (VISUAL MANTIDO - 260px) ---
+// --- CARD DASHBOARD ---
 const DashboardCard = ({ title, subtitle, icon: Icon, theme, onClick, footerText, children, activeEffect, className }) => {
     const themes = {
-        blue: {
-            iconBox: "bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400",
-            hover: "hover:border-blue-400 group-hover:text-blue-700",
-            accent: "text-blue-600"
-        },
-        purple: {
-            iconBox: "bg-purple-50 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400",
-            hover: "hover:border-purple-400 group-hover:text-purple-700",
-            accent: "text-purple-600"
-        },
-        green: {
-            iconBox: "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400",
-            hover: "hover:border-emerald-400 group-hover:text-emerald-700",
-            accent: "text-emerald-600"
-        },
-        red: { 
-            iconBox: "bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400",
-            hover: "hover:border-red-400 group-hover:text-red-700",
-            accent: "text-red-600"
-        },
-        orange: {
-            iconBox: "bg-orange-50 text-orange-600 dark:bg-orange-900/20 dark:text-orange-400",
-            hover: "hover:border-orange-400 group-hover:text-orange-700",
-            accent: "text-orange-600"
-        },
-        pink: {
-            iconBox: "bg-pink-50 text-pink-600 dark:bg-pink-900/20 dark:text-pink-400",
-            hover: "hover:border-pink-400 group-hover:text-pink-700",
-            accent: "text-pink-600"
-        },
-        cyan: {
-            iconBox: "bg-cyan-50 text-cyan-600 dark:bg-cyan-900/20 dark:text-cyan-400",
-            hover: "hover:border-cyan-400 group-hover:text-cyan-700",
-            accent: "text-cyan-600"
-        },
-        slate: {
-            iconBox: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400",
-            hover: "hover:border-slate-400 group-hover:text-slate-700",
-            accent: "text-slate-500"
-        }
+        blue: { iconBox: "bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400", hover: "hover:border-blue-400 group-hover:text-blue-700", accent: "text-blue-600" },
+        purple: { iconBox: "bg-purple-50 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400", hover: "hover:border-purple-400 group-hover:text-purple-700", accent: "text-purple-600" },
+        green: { iconBox: "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400", hover: "hover:border-emerald-400 group-hover:text-emerald-700", accent: "text-emerald-600" },
+        red: { iconBox: "bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400", hover: "hover:border-red-400 group-hover:text-red-700", accent: "text-red-600" },
+        orange: { iconBox: "bg-orange-50 text-orange-600 dark:bg-orange-900/20 dark:text-orange-400", hover: "hover:border-orange-400 group-hover:text-orange-700", accent: "text-orange-600" },
+        pink: { iconBox: "bg-pink-50 text-pink-600 dark:bg-pink-900/20 dark:text-pink-400", hover: "hover:border-pink-400 group-hover:text-pink-700", accent: "text-pink-600" },
+        cyan: { iconBox: "bg-cyan-50 text-cyan-600 dark:bg-cyan-900/20 dark:text-cyan-400", hover: "hover:border-cyan-400 group-hover:text-cyan-700", accent: "text-cyan-600" },
+        slate: { iconBox: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400", hover: "hover:border-slate-400 group-hover:text-slate-700", accent: "text-slate-500" }
     };
 
     const style = themes[theme] || themes.slate;
@@ -138,6 +116,10 @@ const DashboardCard = ({ title, subtitle, icon: Icon, theme, onClick, footerText
 export default function Home() {
   const { userData } = useAuth();
   const navigate = useNavigate();
+  
+  // 🟢 INJEÇÃO DA MEMÓRIA GLOBAL (ECONOMIA MASSIVA)
+  const { catalogs, loadingCatalogs } = useCatalogs();
+
   const [loading, setLoading] = useState(true);
   
   const [resumoRelatorio, setResumoRelatorio] = useState({ valor: 0, label: "RECEITA DE ONTEM" });
@@ -155,7 +137,6 @@ export default function Home() {
   const role = String(userData?.role || "").toLowerCase();
   const userId = userData?.id || userData?.uid;
 
-  // Permissões Visuais (Quais cards aparecem)
   const permissions = useMemo(() => ({
       relatorio: ['admin', 'mentor', 'unidade', 'professor'].includes(role),
       cronograma: true, 
@@ -166,8 +147,9 @@ export default function Home() {
       linkAluno: ['admin', 'mentor', 'unidade', 'professor'].includes(role),
   }), [role]);
 
-  // --- LÓGICA DE DADOS REAIS E OTIMIZAÇÃO MISTA (D-0 e D-1) ---
   useEffect(() => {
+    if (loadingCatalogs) return;
+
     async function fetchDashboardData() {
       if (!userData) return;
       setLoading(true);
@@ -175,19 +157,17 @@ export default function Home() {
       try {
         const weekDayMap = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
         
-        // 1. CONSTRUÇÃO DO TEMPO LOCAL (D-0 e D-1)
         const d = new Date();
         const y = d.getFullYear();
         const m = String(d.getMonth() + 1).padStart(2, '0');
         const day = String(d.getDate()).padStart(2, '0');
         
-        const todayStr = `${y}-${m}-${day}`; // String local exata (D-0)
+        const todayStr = `${y}-${m}-${day}`;
         const todayWeekDay = weekDayMap[d.getDay()];
         const nowTime = d.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
 
-        // Regra de Ouro do D-1 (Se Hoje for Segunda, Ontem é Sábado)
         const ontemData = new Date(d);
-        if (d.getDay() === 1) { // 1 = Segunda-feira
+        if (d.getDay() === 1) { 
             ontemData.setDate(d.getDate() - 2); 
         } else {
             ontemData.setDate(d.getDate() - 1);
@@ -197,84 +177,37 @@ export default function Home() {
         const mO = String(ontemData.getMonth() + 1).padStart(2, '0');
         const dayO = String(ontemData.getDate()).padStart(2, '0');
         
-        const ontemStr = `${yO}-${mO}-${dayO}`; // String do dia anterior (D-1)
+        const ontemStr = `${yO}-${mO}-${dayO}`;
         const ontemWeekDay = weekDayMap[ontemData.getDay()];
-
-        // 2. CARREGAR CATÁLOGOS NECESSÁRIOS E RESOLVER BIND DO PROFESSOR
-        const [uniSnap, modSnap, profSnap] = await Promise.all([
-            getDocs(collection(db, "unidades")),
-            getDocs(collection(db, "modalidades")),
-            getDocs(collection(db, "professores"))
-        ]);
 
         const unidadesMap = {};
         const unidadesMentorIds = []; 
-
-        uniSnap.forEach(doc => {
-            const uData = doc.data();
-            unidadesMap[doc.id] = uData.nome;
-            if (role === 'mentor' && uData.mentorId === userId) {
-                unidadesMentorIds.push(doc.id);
-            }
+        (catalogs.unidades || []).forEach(u => {
+            unidadesMap[u.id] = u.nome;
+            if (role === 'mentor' && u.mentorId === userId) unidadesMentorIds.push(u.id);
         });
 
         const modalidadesMap = {};
-        modSnap.forEach(doc => modalidadesMap[doc.id] = doc.data());
+        (catalogs.modalidades || []).forEach(m => modalidadesMap[m.id] = m);
 
         const professoresMap = {};
         let meuProfId = null;
-
-        profSnap.forEach(doc => {
-            const pData = doc.data();
-            professoresMap[doc.id] = pData.nome;
-            // 🟢 VÍNCULO CORRETO: Encontra o doc do professor logado pelo uidLogin
-            if (role === 'professor' && (pData.uidLogin === userId || pData.uid === userId)) {
-                meuProfId = doc.id;
-            }
+        (catalogs.professores || []).forEach(p => {
+            professoresMap[p.id] = p.nome;
+            if (role === 'professor' && (p.uidLogin === userId || p.uid === userId)) meuProfId = p.id;
         });
 
-        // 3. QUERIES OTIMIZADAS NO SERVIDOR
-        let aulasSnapDocs = [];
+        let aulasSnapDocs = catalogs.aulas || [];
         
-        if (role === 'admin') {
-            const snap = await getDocs(collection(db, "aulas"));
-            aulasSnapDocs = snap.docs;
-        } else if (role === 'mentor') {
-            if (unidadesMentorIds.length > 0) {
-                for (let i = 0; i < unidadesMentorIds.length; i += 10) {
-                    const chunk = unidadesMentorIds.slice(i, i + 10);
-                    const qAulas = query(collection(db, "aulas"), where("unidadeId", "in", chunk));
-                    const snap = await getDocs(qAulas);
-                    aulasSnapDocs.push(...snap.docs);
-                }
-            }
-        } else if (role === 'unidade' && userData?.unidadeId) {
-            const qAulas = query(collection(db, "aulas"), where("unidadeId", "==", String(userData.unidadeId)));
-            const snap = await getDocs(qAulas);
-            aulasSnapDocs = snap.docs;
-        } else if (role === 'professor' && meuProfId) {
-            // 🟢 Usa o ID mestre real (meuProfId) para a query no servidor
-            const qAulas = query(collection(db, "aulas"), where("professorId", "==", String(meuProfId)));
-            const snap = await getDocs(qAulas);
-            aulasSnapDocs = snap.docs;
-        }
-        
-        // Acumuladores D-1 (Ontem) e Professor (Mês)
         let totalValorOntem = 0;
         let totalValorMesProf = 0;
         let totalAulasOntem = 0; 
         let idsAulasOntem = []; 
-        
-        // Acumuladores D-0 (Hoje)
         let totalAulasHoje = 0;
         let idsAulasHoje = [];
         let nextClass = null; 
         
-        aulasSnapDocs.forEach(doc => {
-            const aula = doc.data();
-            const aulaId = doc.id;
-
-            // --- 🔒 FILTRO DE PERMISSÃO DE DADOS ---
+        aulasSnapDocs.forEach(aula => {
             let hasAccess = false;
             if (role === 'admin') {
                 hasAccess = true;
@@ -288,26 +221,22 @@ export default function Home() {
 
             if (!hasAccess) return;
 
-            // --- ACUMULADOR HÍBRIDO (MENSAL PROFESSOR) ---
             if (role === 'professor') {
                 const diasCount = aula.dias ? aula.dias.length : 0;
-                totalValorMesProf += (parseFloat(aula.valor) || 0) * diasCount * 4; // Média de 4 semanas no mês
+                totalValorMesProf += (parseFloat(aula.valor) || 0) * diasCount * 4; 
             }
 
-            // --- PROCESSAMENTO D-1 (ONTEM) ---
             if (aula.dias && aula.dias.includes(ontemWeekDay)) {
                 totalAulasOntem++;
-                idsAulasOntem.push(aulaId);
-                // Se não for professor, acumula a receita de ontem normalmente
+                idsAulasOntem.push(aula.id);
                 if (role !== 'professor') {
                     totalValorOntem += (parseFloat(aula.valor) || 0); 
                 }
             }
 
-            // --- PROCESSAMENTO D-0 (HOJE) ---
             if (aula.dias && aula.dias.includes(todayWeekDay)) {
                 totalAulasHoje++;
-                idsAulasHoje.push(aulaId);
+                idsAulasHoje.push(aula.id);
                 
                 if (aula.hora >= nowTime) {
                     if (!nextClass || aula.hora < nextClass.hora) {
@@ -324,7 +253,6 @@ export default function Home() {
             }
         });
 
-        // 🟢 Seta o Card de Relatório Híbrido (Mês x Dia)
         if (role === 'professor') {
             setResumoRelatorio({ valor: totalValorMesProf, label: "PREVISÃO MENSAL" });
         } else {
@@ -333,31 +261,41 @@ export default function Home() {
         
         setResumoCronograma({ proximaAula: nextClass });
 
-        // 4. BUSCAR VALIDAÇÕES SIMULTÂNEAS DE D-0 E D-1 PARA MÁXIMA ECONOMIA
-        const qVal = query(collection(db, "validacoes"), where("data", "in", [todayStr, ontemStr]));
-        const valSnap = await getDocs(qVal);
-        
+        // 🟢 CÉREBRO DE CACHE (TTL DE 5 MINUTOS + TRAVA DE MEIA-NOITE)
         let validacoesRealizadasOntem = 0;
         let validacoesRealizadasHoje = 0;
+        
+        const cacheDoMesmoDia = homeDashboardCache.todayStr === todayStr;
 
-        valSnap.forEach(doc => {
-            const val = doc.data();
-            // Contabiliza se for de Ontem
-            if (val.data === ontemStr && idsAulasOntem.includes(val.aulaId)) {
-                validacoesRealizadasOntem++;
-            }
-            // Contabiliza se for de Hoje
-            if (val.data === todayStr && idsAulasHoje.includes(val.aulaId)) {
-                validacoesRealizadasHoje++;
-            }
-        });
+        if (Date.now() - homeDashboardCache.timestamp < CACHE_TTL && cacheDoMesmoDia) {
+             // CACHE HIT: Puxa da memória instantaneamente
+             validacoesRealizadasOntem = homeDashboardCache.validacoesRealizadasOntem;
+             validacoesRealizadasHoje = homeDashboardCache.validacoesRealizadasHoje;
+        } else {
+             // CACHE MISS: Vai no banco de dados
+             if (idsAulasOntem.length > 0 || idsAulasHoje.length > 0) {
+                 const qVal = query(collection(db, "validacoes"), where("data", "in", [todayStr, ontemStr]));
+                 const valSnap = await getDocs(qVal);
+                 
+                 valSnap.forEach(doc => {
+                     const val = doc.data();
+                     if (val.data === ontemStr && idsAulasOntem.includes(val.aulaId)) validacoesRealizadasOntem++;
+                     if (val.data === todayStr && idsAulasHoje.includes(val.aulaId)) validacoesRealizadasHoje++;
+                 });
 
-        // --- CÁLCULOS FINAIS ---
-        // Validação Diária usa o D-0 (HOJE)
+                 // Salva no Cache para as próximas vezes, incluindo a data de hoje (todayStr)
+                 homeDashboardCache = {
+                     timestamp: Date.now(),
+                     todayStr: todayStr,
+                     validacoesRealizadasOntem,
+                     validacoesRealizadasHoje
+                 };
+             }
+        }
+
         const pendentesHoje = Math.max(0, totalAulasHoje - validacoesRealizadasHoje);
         setResumoValidacao({ pendentes: pendentesHoje });
 
-        // Coletiva usa o D-1 (ONTEM)
         const pctColetiva = totalAulasOntem > 0 ? Math.round((validacoesRealizadasOntem / totalAulasOntem) * 100) : 100;
         setResumoColetiva({ percentual: pctColetiva, total: totalAulasOntem, validadas: validacoesRealizadasOntem });
 
@@ -369,11 +307,10 @@ export default function Home() {
     }
 
     fetchDashboardData();
-  }, [userData, role, userId]);
+  }, [userData, role, userId, catalogs, loadingCatalogs]);
 
   if (!userData) return null;
 
-  // --- REGRAS DE CORES E STATUS DA COLETIVA ATUALIZADAS ---
   const getColetivaStatus = (pct) => {
       if (pct === 100) return { color: "text-emerald-500", theme: "green", label: "EXCELENTE", bar: "bg-emerald-500" };
       if (pct >= 80) return { color: "text-blue-500", theme: "blue", label: "EM ANDAMENTO", bar: "bg-blue-500" };
@@ -387,7 +324,6 @@ export default function Home() {
   return (
     <div className="p-6 md:p-8 max-w-[1920px] mx-auto animate-fade-in min-h-screen bg-slate-50 dark:bg-[#0b1120]">
       
-      {/* HEADER */}
       <div className="mb-8 flex flex-col md:flex-row justify-between items-end pb-6 border-b border-slate-200 dark:border-slate-800">
         <div>
             <h1 className="text-4xl font-light text-slate-700 dark:text-slate-300 tracking-tight">
@@ -412,10 +348,8 @@ export default function Home() {
         <CorporateClock />
       </div>
 
-      {/* 1. GRID SUPERIOR */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
         
-        {/* RELATÓRIO HÍBRIDO (D-1 ou Mês) */}
         {permissions.relatorio && (
             <DashboardCard 
                 title="Relatório Gerencial"
@@ -427,7 +361,7 @@ export default function Home() {
             >
                 <div className="bg-blue-50 dark:bg-blue-900/10 p-4 rounded-2xl border border-blue-100 dark:border-blue-800/50 mt-2">
                     <p className="text-[10px] font-bold text-blue-400 uppercase mb-1">{resumoRelatorio.label}</p>
-                    {loading ? <Loader2 className="w-6 h-6 animate-spin text-blue-500"/> : (
+                    {loading || loadingCatalogs ? <Loader2 className="w-6 h-6 animate-spin text-blue-500"/> : (
                         <h4 className="text-3xl font-black text-blue-700 dark:text-blue-300 tracking-tight">
                             {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(resumoRelatorio.valor)}
                         </h4>
@@ -436,7 +370,6 @@ export default function Home() {
             </DashboardCard>
         )}
 
-        {/* CRONOGRAMA (D-0) */}
         {permissions.cronograma && (
             <DashboardCard 
                 title="Cronograma"
@@ -448,7 +381,7 @@ export default function Home() {
                 activeEffect={!!resumoCronograma.proximaAula} 
             >
                 <div className="flex flex-col justify-center h-full">
-                    {loading ? <Loader2 className="w-6 h-6 animate-spin text-purple-500 mx-auto"/> : (
+                    {loading || loadingCatalogs ? <Loader2 className="w-6 h-6 animate-spin text-purple-500 mx-auto"/> : (
                         resumoCronograma.proximaAula ? (
                             <>
                                 <div className="flex justify-between items-start">
@@ -491,7 +424,6 @@ export default function Home() {
             </DashboardCard>
         )}
 
-        {/* VALIDAÇÃO DIÁRIA (D-0) */}
         {permissions.validacaoDiaria && (
             <DashboardCard 
                 title="Validação Diária"
@@ -502,7 +434,7 @@ export default function Home() {
                 onClick={() => navigate('/app/validacao-diaria')}
             >
                 <div className="flex flex-col justify-center h-full">
-                    {loading ? <Loader2 className="w-6 h-6 animate-spin"/> : (
+                    {loading || loadingCatalogs ? <Loader2 className="w-6 h-6 animate-spin"/> : (
                         resumoValidacao.pendentes > 0 ? (
                             <div className="flex items-center gap-3">
                                 <span className="text-6xl font-black text-red-600 tracking-tighter">{resumoValidacao.pendentes}</span>
@@ -524,10 +456,8 @@ export default function Home() {
 
       </div>
 
-      {/* 2. GRID INFERIOR */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         
-        {/* VALIDAÇÃO COLETIVA (D-1) */}
         {permissions.validacaoColetiva && (
             <DashboardCard 
                 title="Monitoramento de Validação"
@@ -538,28 +468,31 @@ export default function Home() {
                 onClick={() => navigate('/app/validacao-coletiva')}
             >
                 <div className="flex flex-col justify-center h-full">
-                    <div className="flex items-baseline justify-between mb-2">
-                        <span className={`text-5xl font-black tracking-tighter ${coletivaStatus.color}`}>
-                            {resumoColetiva.percentual}%
-                        </span>
-                        <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded bg-white border shadow-sm ${coletivaStatus.color.replace('text-', 'border-')}`}>
-                            {coletivaStatus.label}
-                        </span>
-                    </div>
-                    <div className="w-full h-3 bg-slate-100 dark:bg-slate-700 rounded-full mt-2 overflow-hidden">
-                        <div 
-                            className={`h-full ${coletivaStatus.bar} transition-all duration-1000 ease-out`} 
-                            style={{ width: `${resumoColetiva.percentual}%` }}
-                        ></div>
-                    </div>
-                    <p className="text-[10px] text-slate-400 mt-2 text-right font-bold uppercase">
-                        {resumoColetiva.validadas} de {resumoColetiva.total} validadas
-                    </p>
+                    {loading || loadingCatalogs ? <Loader2 className="w-6 h-6 animate-spin"/> : (
+                        <>
+                            <div className="flex items-baseline justify-between mb-2">
+                                <span className={`text-5xl font-black tracking-tighter ${coletivaStatus.color}`}>
+                                    {resumoColetiva.percentual}%
+                                </span>
+                                <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded bg-white border shadow-sm ${coletivaStatus.color.replace('text-', 'border-')}`}>
+                                    {coletivaStatus.label}
+                                </span>
+                            </div>
+                            <div className="w-full h-3 bg-slate-100 dark:bg-slate-700 rounded-full mt-2 overflow-hidden">
+                                <div 
+                                    className={`h-full ${coletivaStatus.bar} transition-all duration-1000 ease-out`} 
+                                    style={{ width: `${resumoColetiva.percentual}%` }}
+                                ></div>
+                            </div>
+                            <p className="text-[10px] text-slate-400 mt-2 text-right font-bold uppercase">
+                                {resumoColetiva.validadas} de {resumoColetiva.total} validadas
+                            </p>
+                        </>
+                    )}
                 </div>
             </DashboardCard>
         )}
 
-        {/* PRATIQUE PLAY (NOVO CARD DE MÚSICAS) */}
         {permissions.pratiquePlay && (
             <DashboardCard 
                 title="PRATIQUE PLAY"
@@ -578,7 +511,6 @@ export default function Home() {
             </DashboardCard>
         )}
 
-        {/* LINK DO ALUNO (NOVO CARD PORTAL EXTERNO) */}
         {permissions.linkAluno && (
             <DashboardCard 
                 title="LINK DO ALUNO"
@@ -597,7 +529,6 @@ export default function Home() {
             </DashboardCard>
         )}
 
-        {/* CONFIGURAÇÕES */}
         {permissions.configuracoes && (
             <DashboardCard 
                 title="Configurações"
