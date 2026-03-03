@@ -136,7 +136,6 @@ export default function ValidacaoColetiva() {
                     if (fIdx !== -1) {
                         totalVal++;
                         const v = pool[fIdx];
-                        // 🟢 FIX FOR VALIDATOR NAME: Protegido contra "undefined" e fallbacks cravados
                         const validadoPorUid = v.userId || v.validadoPor || v.user_id || v.uid;
                         const uL = usuariosMap[validadoPorUid];
                         
@@ -159,7 +158,6 @@ export default function ValidacaoColetiva() {
                             horaValidacao = v.hora || '-';
                         }
 
-                        // Extração pesada e blindada para sempre exibir o nome de quem validou
                         const extractedName = uL?.nome || v.userName || v.validadoPorNome || v.nome_usuario || 'RECEPCAO / SISTEMA';
 
                         hist.push({ 
@@ -361,42 +359,65 @@ export default function ValidacaoColetiva() {
 
   return (
     <div className="p-6 md:p-8 max-w-[1920px] mx-auto animate-fade-in space-y-8 uppercase">
-      <div className="flex flex-col md:flex-row justify-between items-center border-b border-slate-200 dark:border-slate-700 pb-6 gap-4">
-        <div>
-          <h1 className="text-3xl font-black text-slate-800 dark:text-white tracking-tight flex items-center gap-3">
-            <span className="bg-gradient-to-tr from-blue-600 to-indigo-600 text-white p-2 rounded-lg shadow-lg shadow-blue-500/20"><ShieldCheck className="w-7 h-7" /></span>
-            VALIDAÇÃO COLETIVA
-          </h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium text-sm">MONITORAMENTO DE ADESÃO E AUDITORIA EM TEMPO REAL</p>
-        </div>
-        
-        <div className="flex flex-col gap-3 w-full md:w-auto">
-            <div className="flex items-center gap-3 bg-white dark:bg-slate-800 p-2 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-                <div className="flex bg-slate-100 dark:bg-slate-700 rounded-lg p-1">
-                    <button onClick={() => handleDateChange('dia')} className={`px-4 py-2 text-xs font-bold rounded-md uppercase transition-all ${modoFiltro === 'dia' ? 'bg-white dark:bg-slate-600 shadow-sm text-slate-900 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}>DIA</button>
-                    <button onClick={() => setModoFiltro('periodo')} className={`px-4 py-2 text-xs font-bold rounded-md uppercase transition-all ${modoFiltro === 'periodo' ? 'bg-white dark:bg-slate-600 shadow-sm text-slate-900 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}>PERÍODO</button>
-                    <button onClick={() => handleDateChange('mes')} className={`px-4 py-2 text-xs font-bold rounded-md uppercase transition-all ${modoFiltro === 'mes' ? 'bg-white dark:bg-slate-600 shadow-sm text-slate-900 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}>MÊS</button>
-                </div>
-                <div className="h-8 w-px bg-slate-200 dark:bg-slate-600 mx-1"></div>
-                <div className="flex items-center gap-2">
-                    {modoFiltro === 'mes' ? (
-                        <input type="month" value={dataInicio.substring(0, 7)} onChange={handleMonthChange} className="bg-transparent text-sm font-bold text-slate-700 dark:text-white outline-none cursor-pointer"/>
-                    ) : (
-                        <input type="date" value={dataInicio} onChange={e => { setDataInicio(e.target.value); if(modoFiltro==='dia') setDataFim(e.target.value); }} className="bg-transparent text-sm font-bold text-slate-700 dark:text-white outline-none cursor-pointer"/>
-                    )}
-                    {modoFiltro === 'periodo' && <><span className="text-slate-400">-</span><input type="date" value={dataFim} onChange={e => setDataFim(e.target.value)} className="bg-transparent text-sm font-bold text-slate-700 dark:text-white outline-none cursor-pointer"/></>}
-                </div>
-                <button onClick={exportarCSV} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 transition-colors tooltip" title="EXPORTAR CSV"><Download className="w-5 h-5"/></button>
+      
+      {/* HEADER E PAINEL DE CONTROLE UNIFICADO (FIM DA SALSICHA) */}
+      <div className="flex flex-col gap-5 border-b border-slate-200 dark:border-slate-700 pb-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+              <h1 className="text-3xl font-black text-slate-800 dark:text-white tracking-tight flex items-center gap-3">
+                <span className="bg-gradient-to-tr from-blue-600 to-indigo-600 text-white p-2 rounded-lg shadow-lg shadow-blue-500/20"><ShieldCheck className="w-7 h-7" /></span>
+                VALIDAÇÃO COLETIVA
+              </h1>
+              <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium text-sm">MONITORAMENTO DE ADESÃO E AUDITORIA EM TEMPO REAL</p>
             </div>
+            
+            <button onClick={exportarCSV} className="hidden md:flex h-11 px-5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-600 dark:text-slate-300 font-bold text-xs items-center gap-2 transition-all shadow-sm tooltip uppercase">
+                <Download className="w-4 h-4"/> Exportar CSV
+            </button>
+        </div>
+
+        <div className="bg-white dark:bg-slate-800 p-3 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm w-full flex flex-wrap items-center gap-3">
+            {/* DATAS (IGUAL VALIDAÇÃO DIÁRIA) */}
+            <div className="flex bg-slate-100 dark:bg-slate-700 rounded-xl p-1 h-11 shrink-0">
+                <button onClick={() => handleDateChange('dia')} className={`px-4 text-xs font-bold rounded-lg uppercase transition-all ${modoFiltro === 'dia' ? 'bg-white dark:bg-slate-600 shadow-sm text-blue-600 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}>DIA</button>
+                <button onClick={() => setModoFiltro('periodo')} className={`px-4 text-xs font-bold rounded-lg uppercase transition-all ${modoFiltro === 'periodo' ? 'bg-white dark:bg-slate-600 shadow-sm text-blue-600 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}>PERÍODO</button>
+                <button onClick={() => handleDateChange('mes')} className={`px-4 text-xs font-bold rounded-lg uppercase transition-all ${modoFiltro === 'mes' ? 'bg-white dark:bg-slate-600 shadow-sm text-blue-600 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}>MÊS</button>
+            </div>
+
+            <div className="h-11 px-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-700 flex items-center gap-2 shrink-0">
+                <Calendar className="w-4 h-4 text-blue-500"/>
+                {modoFiltro === 'mes' ? (
+                    <input type="month" value={dataInicio.substring(0, 7)} onChange={handleMonthChange} className="bg-transparent text-xs font-bold text-slate-700 dark:text-white outline-none cursor-pointer uppercase"/>
+                ) : (
+                    <input type="date" value={dataInicio} onChange={e => { setDataInicio(e.target.value); if(modoFiltro==='dia') setDataFim(e.target.value); }} className="bg-transparent text-xs font-bold text-slate-700 dark:text-white outline-none cursor-pointer uppercase"/>
+                )}
+                {modoFiltro === 'periodo' && <><span className="text-slate-400">-</span><input type="date" value={dataFim} onChange={e => setDataFim(e.target.value)} className="bg-transparent text-xs font-bold text-slate-700 dark:text-white outline-none cursor-pointer uppercase"/></>}
+            </div>
+
+            <div className="w-px h-8 bg-slate-200 dark:bg-slate-700 mx-1 hidden lg:block"></div>
+
+            {/* SELETORES COMPACTOS COM LIMITADOR DE LARGURA (MAX-W) */}
+            {role === 'admin' && (
+                <div className="w-full sm:w-auto sm:flex-1 max-w-[200px]">
+                    <MultiSelectDropdown options={estadosOptions} selectedValues={estadoFiltro} onChange={(v) => { setEstadoFiltro(v); setMentorFiltro([]); setUnidadeFiltro([]); }} placeholder="ESTADOS" icon={MapPin} />
+                </div>
+            )}
+            {!isMentor && (
+                <div className="w-full sm:w-auto sm:flex-1 max-w-[240px]">
+                    <MultiSelectDropdown options={mentoresOptions} selectedValues={mentorFiltro} onChange={(v) => { setMentorFiltro(v); setUnidadeFiltro([]); }} placeholder="MENTORES" icon={UserCog} />
+                </div>
+            )}
+            <div className="w-full sm:w-auto sm:flex-1 max-w-[280px]">
+                <MultiSelectDropdown options={unidadesOptions} selectedValues={unidadeFiltro} onChange={setUnidadeFiltro} placeholder="UNIDADES" icon={Building2} />
+            </div>
+
+            <button onClick={exportarCSV} className="md:hidden w-full h-11 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 rounded-xl text-slate-600 dark:text-white font-bold text-xs flex justify-center items-center gap-2 uppercase">
+                <Download className="w-4 h-4"/> Exportar CSV
+            </button>
         </div>
       </div>
 
-      <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-wrap items-center gap-3">
-          {role === 'admin' && <MultiSelectDropdown options={estadosOptions} selectedValues={estadoFiltro} onChange={(v) => { setEstadoFiltro(v); setMentorFiltro([]); setUnidadeFiltro([]); }} placeholder="NENHUM ESTADO" icon={MapPin} />}
-          {!isMentor && <MultiSelectDropdown options={mentoresOptions} selectedValues={mentorFiltro} onChange={(v) => { setMentorFiltro(v); setUnidadeFiltro([]); }} placeholder="NENHUM MENTOR" icon={UserCog} />}
-          <MultiSelectDropdown options={unidadesOptions} selectedValues={unidadeFiltro} onChange={setUnidadeFiltro} placeholder="NENHUMA UNIDADE" icon={Building2} />
-      </div>
-
+      {/* TELA DE BLOQUEIO */}
       {isCofreGlobalFechado ? (
           <div className="py-24 text-center bg-white dark:bg-slate-800 border-dashed border-2 border-slate-300 dark:border-slate-700 shadow-sm animate-in fade-in zoom-in duration-300 m-4 rounded-2xl">
               <div className="bg-blue-50 dark:bg-slate-900 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 border border-blue-100 dark:border-slate-800 shadow-inner">
@@ -407,12 +428,14 @@ export default function ValidacaoColetiva() {
           </div>
       ) : (
           <>
+            {/* CARDS DE RESUMO */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <KPICard title="AULAS ESPERADAS" value={dadosProcessados.kpis.totalAulas} icon={Calendar} colorClass="border-l-4 border-l-blue-500" iconBg="bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400"/>
                 <KPICard title="UNIDADES 100%" value={dadosProcessados.kpis.unidadesValidadas} icon={CheckCircle2} colorClass="border-l-4 border-l-emerald-500" iconBg="bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400" subTitle={`DE ${dadosProcessados.unidades.length} UNIDADES`}/>
                 <KPICard title="UNIDADES PENDENTES" value={dadosProcessados.kpis.unidadesPendentes} icon={AlertCircle} colorClass="border-l-4 border-l-rose-500" iconBg="bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400"/>
             </div>
 
+            {/* NAVEGAÇÃO ENTRE ABAS */}
             <div className="flex gap-8 border-b border-slate-200 dark:border-slate-700">
                 {[{ id: 'ranking', label: 'RANKING', icon: Trophy }, { id: 'status', label: 'STATUS DETALHADO', icon: List }, { id: 'cobranca', label: 'CENTRAL DE COBRANÇA', icon: MessageSquare }].map(tab => (
                     <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`pb-4 text-sm font-bold uppercase flex items-center gap-2 transition-all relative ${activeTab === tab.id ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300'}`}>
@@ -422,8 +445,8 @@ export default function ValidacaoColetiva() {
                 ))}
             </div>
 
+            {/* CONTEÚDO DAS ABAS */}
             <div className="min-h-[400px]">
-                {/* 🟢 CORREÇÃO: Variável de rankingMentores passada corretamente */}
                 {activeTab === 'ranking' && <RankingTab isMentor={isMentor} rankingMentores={mentoresRelGeral} rankingUnidades={rankingUnidades} />}
                 {activeTab === 'status' && <StatusTab showOnlyIssues={showOnlyIssues} setShowOnlyIssues={setShowOnlyIssues} sortConfig={sortConfig} requestSort={requestSort} statusExibicao={statusExibicao} toggleUnit={toggleUnit} expandedUnitId={expandedUnitId} itensVisiveisStatus={itensVisiveisStatus} sortedUnidades={sortedUnidades} setItensVisiveisStatus={setItensVisiveisStatus} msgMentorToUnit={msgMentorToUnit} />}
                 {activeTab === 'cobranca' && <CobrancaTab isMentor={isMentor} mentoresRelatorioGeral={mentoresRelGeral} unidadesRelatorioGeral={unidadesRelGeral} msgAdminToMentor={msgAdminToMentor} msgMentorToUnit={msgMentorToUnit} msgAdminGeneralReport={msgAdminGeneralReport} msgMentorGeneralReport={msgMentorGeneralReport} />}
