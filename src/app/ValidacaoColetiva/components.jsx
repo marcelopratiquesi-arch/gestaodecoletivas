@@ -54,6 +54,7 @@ export const sendWhatsApp = (telefone, mensagem) => {
     window.open(`https://api.whatsapp.com/send?phone=${numeroLimpo}&text=${encodeURIComponent(mensagem)}`, '_blank');
 };
 
+// 🟢 CORREÇÃO: Função exportada corretamente para não dar erro SyntaxError
 export const getEmojiByPercent = (percent) => {
     if (percent === 100) return '✅';
     if (percent >= 90) return '🟢'; 

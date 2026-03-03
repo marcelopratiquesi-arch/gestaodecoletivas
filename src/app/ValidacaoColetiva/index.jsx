@@ -88,7 +88,6 @@ export default function ValidacaoColetiva() {
   const dadosProcessados = useMemo(() => {
     if (unidadesBase.length === 0 || isCofreGlobalFechado) return { mentores: [], unidades: [], kpis: { totalAulas: 0, unidadesValidadas: 0, unidadesPendentes: 0 } };
     
-    // 🟢 TRADUTOR DE USUÁRIOS (AGORA PEGA O TELEFONE)
     const usuariosMap = {};
     usuariosBase.forEach(u => { 
         const userData = { nome: u.nome, role: u.role, telefone: u.telefone || u.phone || "" };
@@ -137,7 +136,9 @@ export default function ValidacaoColetiva() {
                     if (fIdx !== -1) {
                         totalVal++;
                         const v = pool[fIdx];
-                        const uL = usuariosMap[v.userId || v.validadoPor || v.user_id || v.uid];
+                        // 🟢 FIX FOR VALIDATOR NAME: Protegido contra "undefined" e fallbacks cravados
+                        const validadoPorUid = v.userId || v.validadoPor || v.user_id || v.uid;
+                        const uL = usuariosMap[validadoPorUid];
                         
                         let dataValidacao = '-';
                         let horaValidacao = '-';
@@ -158,6 +159,9 @@ export default function ValidacaoColetiva() {
                             horaValidacao = v.hora || '-';
                         }
 
+                        // Extração pesada e blindada para sempre exibir o nome de quem validou
+                        const extractedName = uL?.nome || v.userName || v.validadoPorNome || v.nome_usuario || 'RECEPCAO / SISTEMA';
+
                         hist.push({ 
                             key: aula.id + dStr, 
                             data: new Date(dStr + 'T00:00:00').toLocaleDateString('pt-BR'), 
@@ -167,7 +171,7 @@ export default function ValidacaoColetiva() {
                             professor: profMap[aula.professorId] || 'SEM PROF', 
                             status: String(v.status || 'REALIZADA').toUpperCase(), 
                             alunos: v.alunos || v.fluxo || v.quantidadeAlunos || 0,
-                            responsavelNome: uL?.nome || v.userName || v.validadoPorNome || v.nome_usuario || 'SISTEMA', 
+                            responsavelNome: extractedName, 
                             dataValidacao: dataValidacao, 
                             horaValidacao: horaValidacao, 
                             diffDays: diffDays,
@@ -188,8 +192,9 @@ export default function ValidacaoColetiva() {
         
         let responsavelInfo = { nome: '-', role: '-', data: '-', horaValidacao: '-' };
         if (lastV) {
-            const uL = usuariosMap[lastV.userId || lastV.uid || lastV.validadoPor];
-            responsavelInfo.nome = uL?.nome || lastV.userName || lastV.validadoPorNome || 'SISTEMA';
+            const validadoPorUid = lastV.userId || lastV.uid || lastV.validadoPor;
+            const uL = usuariosMap[validadoPorUid];
+            responsavelInfo.nome = uL?.nome || lastV.userName || lastV.validadoPorNome || 'RECEPCAO / SISTEMA';
             responsavelInfo.role = uL?.role || lastV.userRole || lastV.validadoPorRole || 'SISTEMA';
             responsavelInfo.data = normalizeDate(lastV.data).split('-').reverse().join('/');
             
@@ -216,7 +221,7 @@ export default function ValidacaoColetiva() {
             acc[u.mentorId] = { 
                 id: u.mentorId, 
                 nome: u.mentorNome, 
-                telefone: mentorData?.telefone || "", // 🟢 CORREÇÃO: TELEFONE DO MENTOR RESGATADO!
+                telefone: mentorData?.telefone || "", 
                 totalUnidades: 0, 
                 somaPercentuais: 0, 
                 totalPendencias: 0, 
@@ -319,7 +324,6 @@ export default function ValidacaoColetiva() {
     link.click();
   };
 
-  // 🟢 MENSAGEM DO ADMIN PARA MENTOR (A TÉCNICA SANDUÍCHE COM DATAS EXATAS)
   const msgAdminToMentor = (m) => {
       const u100 = m.unidadesList.filter(u => u.percentual === 100).map(u => `✅ *${u.nome.toUpperCase()}*`);
       const uPendentes = m.unidadesList.filter(u => u.percentual < 100).map(u => {
@@ -419,6 +423,7 @@ export default function ValidacaoColetiva() {
             </div>
 
             <div className="min-h-[400px]">
+                {/* 🟢 CORREÇÃO: Variável de rankingMentores passada corretamente */}
                 {activeTab === 'ranking' && <RankingTab isMentor={isMentor} rankingMentores={mentoresRelGeral} rankingUnidades={rankingUnidades} />}
                 {activeTab === 'status' && <StatusTab showOnlyIssues={showOnlyIssues} setShowOnlyIssues={setShowOnlyIssues} sortConfig={sortConfig} requestSort={requestSort} statusExibicao={statusExibicao} toggleUnit={toggleUnit} expandedUnitId={expandedUnitId} itensVisiveisStatus={itensVisiveisStatus} sortedUnidades={sortedUnidades} setItensVisiveisStatus={setItensVisiveisStatus} msgMentorToUnit={msgMentorToUnit} />}
                 {activeTab === 'cobranca' && <CobrancaTab isMentor={isMentor} mentoresRelatorioGeral={mentoresRelGeral} unidadesRelatorioGeral={unidadesRelGeral} msgAdminToMentor={msgAdminToMentor} msgMentorToUnit={msgMentorToUnit} msgAdminGeneralReport={msgAdminGeneralReport} msgMentorGeneralReport={msgMentorGeneralReport} />}

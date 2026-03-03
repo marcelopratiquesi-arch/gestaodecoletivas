@@ -1,9 +1,13 @@
 import React from 'react';
-import { ChevronDown, ChevronRight, User, Calendar, Clock as ClockIcon, Copy, Smartphone, ArrowDown, Eye, EyeOff, FileText, MessageSquare, CheckCircle2, Users } from 'lucide-react';
+import { ChevronDown, ChevronRight, User, Calendar, Clock as ClockIcon, Copy, Smartphone, ArrowDown, Eye, EyeOff, FileText, MessageSquare, CheckCircle2, Users, ShieldCheck } from 'lucide-react';
 import { StatusBadge, getColorClassByPercent, getFirstLast, getRowColor, copyToClipboard, sendWhatsApp, filterPendingDates, formatDateShort, SortableHeader } from './components';
 
+// =========================================================
+// 1. ABA RANKING (CARDS DE PLACAR AO VIVO)
+// =========================================================
 export function RankingTab({ isMentor, rankingMentores, rankingUnidades }) {
-    const list = isMentor ? rankingUnidades : rankingMentores;
+    // 🟢 CORREÇÃO: Trava de segurança (|| []) para evitar o erro "undefined" no map
+    const list = (isMentor ? rankingUnidades : rankingMentores) || [];
     
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 uppercase">
@@ -66,10 +70,18 @@ export function RankingTab({ isMentor, rankingMentores, rankingUnidades }) {
                     </div>
                 );
             })}
+            {list.length === 0 && (
+                <div className="col-span-full py-8 text-center text-slate-400 font-bold uppercase tracking-widest">
+                    Aguardando dados...
+                </div>
+            )}
         </div>
     );
 }
 
+// =========================================================
+// 2. ABA STATUS DETALHADO
+// =========================================================
 export function StatusTab({ showOnlyIssues, setShowOnlyIssues, sortConfig, requestSort, statusExibicao, toggleUnit, expandedUnitId, itensVisiveisStatus, sortedUnidades, setItensVisiveisStatus, msgMentorToUnit }) {
     return (
         <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm uppercase">
@@ -98,7 +110,7 @@ export function StatusTab({ showOnlyIssues, setShowOnlyIssues, sortConfig, reque
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                        {statusExibicao.map(u => (
+                        {(statusExibicao || []).map(u => (
                             <React.Fragment key={u.id}>
                                 <tr className={`hover:bg-slate-50 transition-colors cursor-pointer group ${expandedUnitId === u.id ? 'bg-blue-50/40' : ''}`} onClick={() => toggleUnit(u.id)}>
                                     <td className="p-4 text-slate-400 group-hover:text-blue-500 transition-colors">
@@ -118,8 +130,8 @@ export function StatusTab({ showOnlyIssues, setShowOnlyIssues, sortConfig, reque
                                                         <div className={`h-full rounded-full transition-all duration-500 ${getColorClassByPercent(u.percentual)}`} style={{width: `${u.percentual}%`}}></div>
                                                     </div>
                                                 </div>
-                                                <span className={`text-[9px] font-black uppercase tracking-widest ${u.pendencias.length === 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                                    {u.pendencias.length === 0 ? '100% OK' : `${u.pendencias.length} PENDÊNCIA(S)`}
+                                                <span className={`text-[9px] font-black uppercase tracking-widest ${(u.pendencias || []).length === 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                                    {(u.pendencias || []).length === 0 ? '100% OK' : `${u.pendencias.length} PENDÊNCIA(S)`}
                                                 </span>
                                             </div>
                                         )}
@@ -166,7 +178,7 @@ export function StatusTab({ showOnlyIssues, setShowOnlyIssues, sortConfig, reque
                                                         </tr>
                                                     </thead>
                                                     <tbody className="divide-y divide-slate-100">
-                                                        {u.historicoDetalhado.map((h) => {
+                                                        {(u.historicoDetalhado || []).map((h) => {
                                                             const statusAjustado = String(h.status || '').trim().toUpperCase();
                                                             const isRealizada = ['REALIZADA', 'CANCELADA', 'VALIDADA'].includes(statusAjustado);
                                                             const isFeriado = statusAjustado === 'FERIADO';
@@ -212,13 +224,13 @@ export function StatusTab({ showOnlyIssues, setShowOnlyIssues, sortConfig, reque
                                 )}
                             </React.Fragment>
                         ))}
-                        {statusExibicao.length === 0 && (
+                        {(statusExibicao || []).length === 0 && (
                             <tr><td colSpan="7" className="p-8 text-center text-slate-400 font-bold uppercase tracking-widest">NENHUMA UNIDADE ENCONTRADA.</td></tr>
                         )}
                     </tbody>
                 </table>
                 
-                {itensVisiveisStatus < sortedUnidades.length && (
+                {itensVisiveisStatus < (sortedUnidades || []).length && (
                     <div className="p-6 bg-slate-50 border-t border-slate-200 flex justify-center">
                         <button onClick={() => setItensVisiveisStatus(prev => prev + 12)} className="flex items-center gap-2 bg-white px-6 py-2.5 rounded-xl text-[10px] font-black uppercase text-slate-600 border border-slate-200 hover:border-blue-500 hover:text-blue-600 transition-all shadow-sm">
                             <ArrowDown className="w-4 h-4"/> CARREGAR MAIS DADOS
@@ -235,12 +247,10 @@ export function StatusTab({ showOnlyIssues, setShowOnlyIssues, sortConfig, reque
 // =========================================================
 export function CobrancaTab({ isMentor, mentoresRelatorioGeral, unidadesRelatorioGeral, msgAdminToMentor, msgMentorToUnit, msgAdminGeneralReport, msgMentorGeneralReport }) {
     
-    // 🟢 O NOVO FILTRO INTELIGENTE: Pega apenas quem DEVE cobrança (Não cobra de quem está 100%)
     const listaParaCobrar = !isMentor 
         ? (mentoresRelatorioGeral || []).filter(m => m.totalPendencias > 0)
         : (unidadesRelatorioGeral || []).filter(u => u.pendencias && u.pendencias.length > 0);
 
-    // 🟢 ORDENA OS PIORES DEVEDORES NO TOPO DA LISTA DE COBRANÇA
     const listaOrdenada = [...listaParaCobrar].sort((a, b) => {
         const scoreA = a.mediaGeral !== undefined ? a.mediaGeral : a.percentual;
         const scoreB = b.mediaGeral !== undefined ? b.mediaGeral : b.percentual;
@@ -291,13 +301,12 @@ export function CobrancaTab({ isMentor, mentoresRelatorioGeral, unidadesRelatori
                                         </span>
                                     </td>
                                     
-                                    {/* 🟢 DETALHAMENTO RICO NA TABELA COM NOMES DAS UNIDADES E DATAS */}
                                     <td className="p-4 text-[10px] font-bold text-slate-500 uppercase leading-relaxed border-r border-slate-100">
                                         {isMentor 
-                                            ? filterPendingDates(item.pendencias).map(d => formatDateShort(d)).join(', ') 
-                                            : item.unidadesList
+                                            ? filterPendingDates(item.pendencias || []).map(d => formatDateShort(d)).join(', ') 
+                                            : (item.unidadesList || [])
                                                 .filter(u => u.percentual < 100)
-                                                .map(u => `${u.nome} (${filterPendingDates(u.pendencias).map(d => formatDateShort(d)).join(', ')})`)
+                                                .map(u => `${u.nome} (${filterPendingDates(u.pendencias || []).map(d => formatDateShort(d)).join(', ')})`)
                                                 .join(' | ')
                                         }
                                     </td>
@@ -316,11 +325,11 @@ export function CobrancaTab({ isMentor, mentoresRelatorioGeral, unidadesRelatori
                             )
                         })}
 
-                        {/* Placa de Sucesso se não houver devedores */}
+                        {/* 🟢 CORREÇÃO: Uso de ShieldCheck importado corretamente na linha 299 */}
                         {listaOrdenada.length === 0 && (
                             <tr>
                                 <td colSpan="4" className="p-10 text-center text-slate-400 font-bold tracking-widest uppercase">
-                                    <CheckCircle2 className="w-10 h-10 mx-auto mb-3 opacity-30 text-emerald-500"/>
+                                    <ShieldCheck className="w-10 h-10 mx-auto mb-3 opacity-30 text-emerald-500"/>
                                     NENHUMA PENDÊNCIA ENCONTRADA. A REDE ESTÁ 100%!
                                 </td>
                             </tr>
