@@ -13,7 +13,7 @@ import { useNavigate } from "react-router-dom";
 // 🟢 CACHE GLOBAL DA HOME (Fica fora do componente para não ser destruído ao trocar de aba)
 let homeDashboardCache = {
     timestamp: 0,
-    todayStr: "", // 🟢 CORREÇÃO: Trava para resetar o cache caso vire a meia-noite
+    todayStr: "", 
     validacoesRealizadasOntem: 0,
     validacoesRealizadasHoje: 0
 };
@@ -117,7 +117,6 @@ export default function Home() {
   const { userData } = useAuth();
   const navigate = useNavigate();
   
-  // 🟢 INJEÇÃO DA MEMÓRIA GLOBAL (ECONOMIA MASSIVA)
   const { catalogs, loadingCatalogs } = useCatalogs();
 
   const [loading, setLoading] = useState(true);
@@ -261,18 +260,15 @@ export default function Home() {
         
         setResumoCronograma({ proximaAula: nextClass });
 
-        // 🟢 CÉREBRO DE CACHE (TTL DE 5 MINUTOS + TRAVA DE MEIA-NOITE)
         let validacoesRealizadasOntem = 0;
         let validacoesRealizadasHoje = 0;
         
         const cacheDoMesmoDia = homeDashboardCache.todayStr === todayStr;
 
         if (Date.now() - homeDashboardCache.timestamp < CACHE_TTL && cacheDoMesmoDia) {
-             // CACHE HIT: Puxa da memória instantaneamente
              validacoesRealizadasOntem = homeDashboardCache.validacoesRealizadasOntem;
              validacoesRealizadasHoje = homeDashboardCache.validacoesRealizadasHoje;
         } else {
-             // CACHE MISS: Vai no banco de dados
              if (idsAulasOntem.length > 0 || idsAulasHoje.length > 0) {
                  const qVal = query(collection(db, "validacoes"), where("data", "in", [todayStr, ontemStr]));
                  const valSnap = await getDocs(qVal);
@@ -283,7 +279,6 @@ export default function Home() {
                      if (val.data === todayStr && idsAulasHoje.includes(val.aulaId)) validacoesRealizadasHoje++;
                  });
 
-                 // Salva no Cache para as próximas vezes, incluindo a data de hoje (todayStr)
                  homeDashboardCache = {
                      timestamp: Date.now(),
                      todayStr: todayStr,

@@ -2,7 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCatalogs } from '../../contexts/CatalogContext'; 
 import { db } from '../../services/firebase';
-import { collection, query, where, onSnapshot, getDocs } from 'firebase/firestore';
+// 🟢 Importamos o addDoc e serverTimestamp para o X-9 da LGPD
+import { collection, query, where, onSnapshot, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
 import { ShieldCheck, LayoutDashboard, Download, MapPin, UserCog, Building2, Lock, Calendar, CheckCircle2, AlertCircle, Trophy, List, MessageSquare } from 'lucide-react';
 
 import { KPICard, MultiSelectDropdown, getTodayStr, normalizeDate, getDatesInRange, diasSemanaMap, formatHeaderPeriodo, formatDateShort, filterPendingDates, getFirstLast, getEmojiByPercent } from './components';
@@ -312,7 +313,9 @@ export default function ValidacaoColetiva() {
       setDataFim(new Date(y, m, 0).toISOString().split('T')[0]);
   };
 
-  const exportarCSV = () => {
+  // 🟢 NOVA FUNÇÃO EXPORTAR CSV BLINDADA (X-9)
+  const exportarCSV = async () => {
+    // 1. Lógica original de criação e download do CSV
     const headers = "UNIDADE,MENTOR,REALIZADO,ESPERADO,STATUS,PROGRESSO,PENDENCIAS\n";
     const rows = sortedUnidades.map(u => `${u.nome.toUpperCase()},${u.mentorNome.toUpperCase()},${u.totalValidado},${u.totalEsperado},${u.statusTexto.toUpperCase()},${u.percentual}%,${u.pendencias.length}`).join("\n");
     const link = document.createElement('a');
@@ -320,6 +323,22 @@ export default function ValidacaoColetiva() {
     link.setAttribute('download', `validacao_coletiva_${dataInicio}.csv`);
     document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link); // Limpeza
+
+    // 2. 🟢 Motor do X-9 (Auditoria LGPD)
+    try {
+        await addDoc(collection(db, "auditoria_configuracoes"), {
+            tipoAcao: "EXPORTACAO",
+            descricao: "Download de Dados Exportados (CSV).",
+            modulo: "VALIDACAO",
+            diffExtras: `Período Exportado: ${formatHeaderPeriodo(dataInicio, dataFim)}\nTotal de Unidades na Planilha: ${sortedUnidades.length}`,
+            usuarioAcaoNome: userData?.nome || "ADMINISTRADOR",
+            usuarioAcaoId: userId,
+            dataAcao: serverTimestamp()
+        });
+    } catch (logError) {
+        console.error("Falha ao registrar log LGPD de exportação:", logError);
+    }
   };
 
   const msgAdminToMentor = (m) => {
@@ -360,7 +379,7 @@ export default function ValidacaoColetiva() {
   return (
     <div className="p-6 md:p-8 max-w-[1920px] mx-auto animate-fade-in space-y-8 uppercase">
       
-      {/* HEADER E PAINEL DE CONTROLE UNIFICADO (FIM DA SALSICHA) */}
+      {/* HEADER E PAINEL DE CONTROLE UNIFICADO */}
       <div className="flex flex-col gap-5 border-b border-slate-200 dark:border-slate-700 pb-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>

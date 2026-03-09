@@ -59,7 +59,11 @@ export const CatalogProvider = ({ children }) => {
                 modalidades: modsSnap.docs.map(d => ({ id: d.id, ...d.data() })),
                 professores: profsSnap.docs.map(d => ({ id: d.id, ...d.data() })),
                 feriados: feriadosSnap.docs.map(d => ({ id: d.id, ...d.data() })),
-                aulas: aulasSnap.docs.map(d => ({ id: d.id, ...d.data() })),
+                
+                // 🟢 A BLINDAGEM DA LIXEIRA (SOFT DELETE) ACONTECE AQUI:
+                // Filtramos a matriz inteira. Se tiver a tag 'excluido: true', não entra na Memória Global!
+                aulas: aulasSnap.docs.map(d => ({ id: d.id, ...d.data() })).filter(aula => aula.excluido !== true),
+                
                 vinculos: linksSnap.docs.map(d => ({ id: d.id, ...d.data() })),
                 mentores: usersSnap.docs.map(d => ({ id: d.id, ...d.data() }))
             });

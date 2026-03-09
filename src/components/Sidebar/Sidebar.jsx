@@ -3,13 +3,13 @@ import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { useTheme } from "../../contexts/ThemeContext";
 import { db } from "../../services/firebase";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { collection, query, where, getDocs, onSnapshot } from "firebase/firestore"; // 🟢 Adicionado onSnapshot
 
-// 🟢 Adicionei o ícone 'Activity' para a Auditoria!
 import { 
   LayoutDashboard, BarChart3, Calendar, CircleCheck, 
   Users, Settings, LogOut, Moon, Sun, ShieldCheck, 
-  ChevronRight, TrendingUp, Globe, Megaphone, Headphones, Activity
+  ChevronRight, TrendingUp, Globe, Megaphone, Headphones, Activity,
+  Bell, Download, Trash2 // 🟢 Ícones da Central de Alertas
 } from "lucide-react";
 
 export default function Sidebar({ collapsed }) { 
@@ -17,6 +17,11 @@ export default function Sidebar({ collapsed }) {
   const { theme, toggleTheme } = useTheme();
   const location = useLocation();
   const [pendencias, setPendencias] = useState(0);
+
+  // 🟢 ESTADOS DO SINO DE NOTIFICAÇÕES (X-9 ATIVO)
+  const [alertas, setAlertas] = useState([]);
+  const [unreadAlerts, setUnreadAlerts] = useState(0);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   if (!userData) return null;
 
@@ -73,26 +78,139 @@ export default function Sidebar({ collapsed }) {
     return () => clearInterval(interval);
   }, [role, userData]);
 
+  // 🟢 O CÃO DE GUARDA EM TEMPO REAL (Só acorda se for Master/Admin)
+  useEffect(() => {
+    if (role !== 'admin') return;
+
+    const lastSeen = parseInt(localStorage.getItem('pratique_last_seen_alerts') || '0');
+
+    // Fica escutando as duas ações mais perigosas do sistema
+    const qConf = query(collection(db, 'auditoria_configuracoes'), where('tipoAcao', '==', 'EXPORTACAO'));
+    const qCrono = query(collection(db, 'auditoria_cronograma'), where('tipoAcao', '==', 'EXCLUÍDA'));
+
+    let confLogs = [];
+    let cronoLogs = [];
+
+    const processLogs = () => {
+        const combined = [...confLogs, ...cronoLogs];
+        combined.sort((a, b) => b.timestamp - a.timestamp);
+        const topAlerts = combined.slice(0, 15); // Exibe os 15 mais recentes
+        setAlertas(topAlerts);
+
+        const unread = topAlerts.filter(a => a.timestamp > lastSeen).length;
+        setUnreadAlerts(unread);
+    };
+
+    const getTimestamp = (val) => {
+        if (!val) return Date.now();
+        if (val.toMillis) return val.toMillis();
+        if (val.seconds) return val.seconds * 1000;
+        return new Date(val).getTime();
+    };
+
+    const unsubConf = onSnapshot(qConf, (snap) => {
+        confLogs = snap.docs.map(d => {
+            const data = d.data();
+            return { id: d.id, type: 'EXPORT', title: 'Planilha LGPD Baixada', desc: `Por: ${data.usuarioAcaoNome}`, timestamp: getTimestamp(data.dataAcao) };
+        });
+        processLogs();
+    });
+
+    const unsubCrono = onSnapshot(qCrono, (snap) => {
+        cronoLogs = snap.docs.map(d => {
+            const data = d.data();
+            return { id: d.id, type: 'Aula Ocultada (Lixeira)', desc: `Por: ${data.usuarioAcaoNome}`, timestamp: getTimestamp(data.dataAcao) };
+        });
+        processLogs();
+    });
+
+    return () => { unsubConf(); unsubCrono(); };
+  }, [role]);
+
+  // Função de abrir o painel de alertas e "limpar" a notificação visual
+  const toggleNotifications = () => {
+      setShowNotifications(!showNotifications);
+      if (!showNotifications) {
+          localStorage.setItem('pratique_last_seen_alerts', Date.now().toString());
+          setUnreadAlerts(0);
+      }
+  };
+
   return (
     <div className={`flex flex-col h-full bg-white dark:bg-[#0f172a] border-r border-slate-200 dark:border-slate-800 transition-all duration-300 relative z-30 ${collapsed ? "w-[88px]" : "w-[280px]"}`}>
       
-      {/* HEADER */}
-      <div className={`h-24 flex items-center ${collapsed ? "justify-center" : "px-8"} transition-all`}>
+      {/* HEADER DA SIDEBAR COM O NOVO SINO */}
+      <div className={`h-24 flex items-center ${collapsed ? "justify-center" : "px-6 justify-between"} transition-all relative z-50`}>
         <div className="flex items-center gap-4">
-            <div className="w-10 h-10 bg-gradient-to-br from-red-600 to-rose-600 rounded-xl flex items-center justify-center shadow-lg shadow-red-500/30">
+            <div className="w-10 h-10 bg-gradient-to-br from-red-600 to-rose-600 rounded-xl flex items-center justify-center shadow-lg shadow-red-500/30 shrink-0">
                 <span className="text-white font-black text-xl italic">P</span>
             </div>
             {!collapsed && (
-              <div className="animate-in fade-in slide-in-from-left-4">
+              <div className="animate-in fade-in slide-in-from-left-4 shrink-0">
                 <h2 className="text-xl font-black text-slate-800 dark:text-white italic leading-none">PRATIQUE</h2>
                 <p className="text-[9px] text-slate-400 font-bold uppercase tracking-[0.2em]">Gestão Coletivas</p>
               </div>
             )}
         </div>
+
+        {/* 🟢 O SINO DE NOTIFICAÇÕES (SÓ ADMIN E SE NÃO ESTIVER RECOLHIDO) */}
+        {!collapsed && role === 'admin' && (
+            <div className="relative shrink-0">
+                <button 
+                    onClick={toggleNotifications} 
+                    className={`p-2 rounded-full transition-all relative ${showNotifications ? 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400' : 'hover:bg-slate-100 text-slate-500 dark:hover:bg-slate-800 dark:text-slate-400'}`}
+                >
+                    <Bell className="w-5 h-5" />
+                    {unreadAlerts > 0 && (
+                        <span className="absolute top-1 right-1 flex h-2.5 w-2.5">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-600 border-2 border-white dark:border-[#0f172a]"></span>
+                        </span>
+                    )}
+                </button>
+
+                {/* DROPDOWN DO SINO */}
+                {showNotifications && (
+                    <div className="absolute top-12 -right-2 w-80 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-4">
+                        <div className="p-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 flex justify-between items-center">
+                            <span className="font-black text-slate-800 dark:text-white text-xs uppercase tracking-widest">Alertas Críticos</span>
+                            <span className="bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 text-[9px] font-black px-2 py-0.5 rounded-full uppercase">
+                                {alertas.length} Ações
+                            </span>
+                        </div>
+                        <div className="max-h-[50vh] overflow-y-auto custom-scrollbar p-2">
+                            {alertas.length === 0 ? (
+                                <div className="p-6 text-center text-xs font-bold text-slate-400 uppercase tracking-widest">Nenhum alerta recente.</div>
+                            ) : (
+                                alertas.map(alerta => (
+                                    <div key={alerta.id} className="p-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-xl transition-colors mb-1 cursor-default group flex gap-3 items-start">
+                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${alerta.type === 'EXPORT' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400'}`}>
+                                            {alerta.type === 'EXPORT' ? <Download className="w-4 h-4"/> : <Trash2 className="w-4 h-4"/>}
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <p className="text-xs font-black text-slate-800 dark:text-white uppercase truncate">{alerta.title}</p>
+                                            <p className="text-[10px] font-bold text-slate-500 uppercase truncate mt-0.5">{alerta.desc}</p>
+                                            <p className="mt-1.5 text-[9px] font-bold text-slate-400 tracking-wider">
+                                                {new Date(alerta.timestamp).toLocaleString('pt-BR')}
+                                            </p>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                        <div className="p-3 border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-center">
+                            <Link to="/app/auditoria" onClick={() => setShowNotifications(false)} className="text-[10px] font-black text-blue-600 dark:text-blue-400 hover:underline uppercase tracking-widest flex items-center justify-center gap-1">
+                                <Activity className="w-3 h-3"/> Abrir Auditoria Completa
+                            </Link>
+                        </div>
+                    </div>
+                )}
+            </div>
+        )}
       </div>
 
       {/* NAV */}
-      <nav className="flex-1 overflow-y-auto px-4 space-y-6 custom-scrollbar py-4">
+      <nav className="flex-1 overflow-y-auto px-4 space-y-6 custom-scrollbar py-4" onClick={() => setShowNotifications(false)}>
         
         {/* BLOCO PRINCIPAL */}
         <div className="space-y-1.5">
@@ -140,7 +258,7 @@ export default function Sidebar({ collapsed }) {
                 {/* Nova Central de Comunicação (Gestão) */}
                 {["admin", "mentor"].includes(role) && <NavItem to="/app/comunicacao" icon={Megaphone} label="Comunicados" collapsed={collapsed} active={isActive("/app/comunicacao")} />}
 
-                {/* 🟢 NOVO: ABA DE AUDITORIA (Só para Admin) */}
+                {/* 🟢 ABA DE AUDITORIA (Só para Admin) */}
                 {["admin"].includes(role) && <NavItem to="/app/auditoria" icon={Activity} label="Auditoria" collapsed={collapsed} active={isActive("/app/auditoria")} />}
                 
                 {["admin", "mentor", "unidade"].includes(role) && <NavItem to="/app/configuracoes" icon={Settings} label="Configurações" collapsed={collapsed} active={isActive("/app/configuracoes")} />}

@@ -237,7 +237,7 @@ export default function CronogramaPage() {
     fetchCatalogs();
   }, [role, userId, userData]); 
 
-  // 2. MOTOR DE TEMPO REAL DAS AULAS
+  // 2. MOTOR DE TEMPO REAL DAS AULAS (COM FILTRO DA LIXEIRA OCULTA)
   useEffect(() => {
     let qAulas;
     
@@ -258,7 +258,11 @@ export default function CronogramaPage() {
     }
 
     const unsubscribe = onSnapshot(qAulas, (snap) => {
-        const aulasData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        // 🟢 A MÁGICA: Ignora qualquer aula que tenha a tag { excluido: true }
+        const aulasData = snap.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .filter(aula => aula.excluido !== true); 
+          
         setAulas(aulasData);
     });
 
@@ -334,7 +338,6 @@ export default function CronogramaPage() {
   // 4. AÇÕES DO MODAL E MOTOR DE AUDITORIA X-9 ("DE -> PARA")
   // ==========================================
 
-  // 🟢 HELPER: Constrói a FOTOGRAFIA COMPLETA do card para a auditoria
   const buildEstadoCompleto = (aulaData) => {
       if (!aulaData) return null;
       const uni = catalogs.unidades.find(u => u.id === aulaData.unidadeId)?.nome || 'Unidade Desconhecida';
@@ -353,7 +356,7 @@ export default function CronogramaPage() {
       };
   };
 
-  // O Motor Invisível Enriquecido
+  // 🟢 O Motor Invisível Enriquecido e Blindado com o módulo 'CRONOGRAMA'
   const registrarLogAuditoria = async (tipoAcao, descricao, diffExtras = "", estadoAnterior = null, estadoNovo = null) => {
     try {
         const nomeUsuario = userData?.nome || userData?.email || 'Administrador do Sistema';
@@ -365,12 +368,13 @@ export default function CronogramaPage() {
             diffExtras,
             estadoAnterior, // Fotografia DE
             estadoNovo,     // Fotografia PARA
+            modulo: 'CRONOGRAMA', // 🟢 A PEÇA QUE FALTAVA (O Carimbo Oficial)
             
             // Retrocompatibilidade
             unidadeNome: ref.unidade || 'Unidade Desconhecida',
             modalidadeNome: ref.modalidade || 'Modalidade Desconhecida',
             professorNome: ref.professor || 'Professor Desconhecido',
-            dias: ref.dias ? ref.dias.split(', ') : [],
+            dias: ref.dias ? (typeof ref.dias === 'string' ? ref.dias.split(', ') : ref.dias) : [],
             hora: ref.hora || '',
             valor: ref.valor || 0,
             
@@ -395,7 +399,8 @@ export default function CronogramaPage() {
     const payload = {
         unidadeId: formData.unidadeId, modalidadeId: formData.modalidadeId, professorId: formData.professorId,
         hora: formData.hora, valor: formData.valor ? parseFloat(formData.valor) : 0, 
-        dias: formData.dias, dataInicio: formData.dataInicio, dataFim: formData.dataFim || null 
+        dias: formData.dias, dataInicio: formData.dataInicio, dataFim: formData.dataFim || null,
+        excluido: false // 🟢 Garante que aulas novas nascem visíveis
     };
 
     if (editingClass) {
@@ -454,7 +459,6 @@ export default function CronogramaPage() {
     }
   };
 
-  // 🟢 EXECUTA A CORREÇÃO SIMPLES (SOBRESCREVE O PASSADO)
   const executeDirectSave = async (payload, isVigencia = false) => {
       setSaving(true);
       try {
@@ -478,7 +482,6 @@ export default function CronogramaPage() {
       }
   };
 
-  // 🟢 EXECUTA A TRANSIÇÃO ESTRUTURAL (PRESERVA O PASSADO, RESOLVE O PARADOXO)
   const executeSplitSave = async () => {
       if (!dataCorteTransicao) return alert("Selecione a data exata em que a nova configuração começa a valer.");
       
@@ -515,29 +518,38 @@ export default function CronogramaPage() {
       }
   };
 
+  // 🟢 A OPERAÇÃO SOFT DELETE: Troca deleteDoc por updateDoc(excluido: true)
   const handleDelete = async () => {
     if (isReadOnly) return;
     
-    if (confirm("🚨 ATENÇÃO: Excluir esta aula apaga ela da grade e DESTROI os relatórios do passado.\n\n👉 Se houve apenas troca de professor ou dia, NÃO EXCLUA. Apenas EDITE a aula, o sistema cuidará da transição.\n\nTem certeza absoluta que deseja EXCLUIR DEFINITIVAMENTE esta aula?")) {
+    if (confirm("🗑️ LIXEIRA INTELIGENTE:\n\nDeseja ocultar esta aula da grade? Ela será removida da visualização de todos, mas o histórico e o banco de dados serão preservados (Soft Delete).")) {
       try {
         setSaving(true);
         const estadoAnt = buildEstadoCompleto(editingClass);
-        await deleteDoc(doc(db, "aulas", editingClass.id));
-        await registrarLogAuditoria('EXCLUÍDA', 'Aula apagada do banco de dados.', 'Ação definitiva de exclusão.', estadoAnt, null);
+        
+        // Em vez de deleteDoc, nós atualizamos o documento colocando a tag "excluido: true"
+        await updateDoc(doc(db, "aulas", editingClass.id), { 
+            excluido: true,
+            deletedAt: serverTimestamp(),
+            deletedBy: userId
+        });
+        
+        await registrarLogAuditoria('EXCLUÍDA', 'Aula enviada para a Lixeira (Soft Delete).', 'Ação de ocultar ativada. Relatórios antigos preservados.', estadoAnt, null);
         closeModal();
       } catch (error) { 
-          alert("Erro ao excluir do banco de dados."); 
+          console.error(error);
+          alert("Erro ao enviar a aula para a lixeira."); 
       } finally { 
           setSaving(false); 
       }
     }
   };
 
-  // --- HELPERS DE INTERFACE ---
   const toggleDay = (day) => setFormData(prev => ({ ...prev, dias: prev.dias.includes(day) ? prev.dias.filter(d => d !== day) : [...prev.dias, day] }));
 
   const openNewModal = () => {
     if (isReadOnly) return;
+    // 🟢 SEMPRE PUXA A DATA DE HOJE CORRETA!
     setFormData({ unidadeId: selectedUnit || '', modalidadeId: '', professorId: '', hora: '07:00', valor: '', dias: [], dataInicio: getTodayStr(), dataFim: '' });
     setEditingClass(null);
     setPendingSplit(null);
@@ -550,7 +562,8 @@ export default function CronogramaPage() {
     setFormData({ 
         ...cls, 
         dias: cls.dias || [],
-        dataInicio: cls.dataInicio || `${new Date().getFullYear()}-01-01`, 
+        // 🟢 FIX: Se o passado era nulo, assume a data de HOJE em vez de 1º de Janeiro!
+        dataInicio: cls.dataInicio || getTodayStr(), 
         dataFim: cls.dataFim || ''
     });
     setPendingSplit(null);
@@ -811,7 +824,7 @@ export default function CronogramaPage() {
                             </div>
                         </div>
 
-                        {/* DATAS DA CONFIGURAÇÃO (Mais discretas, pois o cérebro fará o trabalho duro) */}
+                        {/* DATAS DA CONFIGURAÇÃO */}
                         <div className="grid grid-cols-2 gap-5 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-800">
                             <div>
                                 <label className="text-[10px] font-bold text-slate-800 dark:text-slate-200 uppercase mb-1.5 block">Aula Registrada a partir de</label>

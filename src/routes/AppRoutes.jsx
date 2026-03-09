@@ -15,9 +15,10 @@ import PerformanceFinanceiraPage from "../app/Financeiro";
 import CentralComunicacao from "../app/Comunicacao";
 import PublicSchedule from "../pages/Publico/PublicSchedule"; 
 import PratiquePlay from "../app/PratiquePlay";
-
-// 🟢 NOVA IMPORTAÇÃO: Auditoria do Sistema
 import AuditoriaPage from "../app/Auditoria"; 
+
+// 🟢 NOVA IMPORTAÇÃO: Controle de Acessos
+import ControleAcessosPage from "../app/ControleAcessos"; 
 
 export default function AppRoutes() {
   return (
@@ -95,10 +96,20 @@ export default function AppRoutes() {
             } 
           />
           
-          {/* 🟢 NOVA ROTA: Auditoria (Ajustada sem o bloqueio do RoleRoute) */}
+          {/* Auditoria */}
           <Route 
             path="auditoria" 
             element={<AuditoriaPage />} 
+          />
+
+          {/* 🟢 NOVA ROTA: Controle de Acessos (Fica restrito ao Admin) */}
+          <Route 
+            path="acessos" 
+            element={
+              <RoleRoute pageKey="configuracoes">
+                <ControleAcessosPage />
+              </RoleRoute>
+            } 
           />
           
           {/* Configurações */}
