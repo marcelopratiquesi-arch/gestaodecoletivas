@@ -17,8 +17,9 @@ import PublicSchedule from "../pages/Publico/PublicSchedule";
 import PratiquePlay from "../app/PratiquePlay";
 import AuditoriaPage from "../app/Auditoria"; 
 
-// 🟢 NOVA IMPORTAÇÃO: Controle de Acessos
+// 🟢 NOVAS IMPORTAÇÕES
 import ControleAcessosPage from "../app/ControleAcessos"; 
+import OciosidadePage from "../app/Ociosidade"; // Importação do Radar de Grade
 
 export default function AppRoutes() {
   return (
@@ -88,6 +89,16 @@ export default function AppRoutes() {
             } 
           />
 
+          {/* 🟢 NOVA ROTA: Radar de Ociosidade (Liberada para Admin/Mentor) */}
+          <Route 
+            path="ociosidade" 
+            element={
+              <RoleRoute pageKey="validacao_coletiva">
+                <OciosidadePage />
+              </RoleRoute>
+            } 
+          />
+
           {/* Central de Comunicação */}
           <Route 
             path="comunicacao" 
@@ -102,7 +113,7 @@ export default function AppRoutes() {
             element={<AuditoriaPage />} 
           />
 
-          {/* 🟢 NOVA ROTA: Controle de Acessos (Fica restrito ao Admin) */}
+          {/* Controle de Acessos */}
           <Route 
             path="acessos" 
             element={
