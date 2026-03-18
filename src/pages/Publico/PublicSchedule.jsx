@@ -3,17 +3,34 @@ import { db } from '../../services/firebase';
 import { collection, getDocs, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 import { 
   Search, Clock, ChevronRight, Loader2, 
-  Printer, ArrowLeft, Dumbbell, Sun, Moon, ChevronDown, MapPin, Navigation, LocateFixed
+  Printer, ArrowLeft, Dumbbell, Sun, Moon, ChevronDown, MapPin, Navigation, LocateFixed, Map, List
 } from 'lucide-react';
+
+// 🟢 IMPORTS DO MOTOR DE MAPAS (LEAFLET)
+import { MapContainer, TileLayer, Marker, Popup, Circle } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+
+// 🟢 CORREÇÃO DOS ÍCONES DO LEAFLET NO REACT
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
+
+// Ícone Vermelho para o Utilizador
+const userIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
 
 // --- CONFIGURAÇÃO DAS IMAGENS ---
 const LOGOS = {
-  'jump': '/logos/energyjump.png', 
-  'dance': '/logos/powerdance.png',
-  'bumbum': '/logos/powerbumbum.png',
-  'training': '/logos/powertraining.png',
-  'core': '/logos/powercore.png',
-  'fight': '/logos/powerfight.png',
   'pratique': '/logos/pratique.png'
 };
 
@@ -26,38 +43,25 @@ const formatProfessorName = (name) => {
   return `${parts[0]} ${parts[parts.length - 1]}`;
 };
 
-// 🟢 FUNÇÃO PARA REMOVER ACENTOS E CARACTERES ESPECIAIS
 const removerAcentos = (str) => {
     if (!str) return "";
     return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 };
 
-// 🟢 INTERCEPTADOR E LIMPADOR DE LINKS DO GOOGLE MAPS
 const cleanGoogleMapsLink = (url) => {
     if (!url) return "";
-    // Conserta links "googleusercontent" bugados gerados por CSVs antigos
     if (url.includes('googleusercontent.com')) {
         const match = url.match(/(?:q=|query=|@)([-.\d]+),([-.\d]+)/);
-        if (match) {
-            return `https://www.google.com/maps/search/?api=1&query=${match[1]},${match[2]}`;
-        }
+        if (match) return `https://www.google.com/maps/search/?api=1&query=${match[1]},${match[2]}`;
     }
     return url;
 };
 
-// 🟢 MOTOR INTELIGENTE DE ROTEAMENTO MAPS 
 const getMapsLink = (unidade) => {
     if (!unidade) return '#';
-    
     let linkOficial = unidade.linkGoogleMaps || unidade.localizacao;
-    if (linkOficial && linkOficial.startsWith('http')) {
-        return cleanGoogleMapsLink(linkOficial);
-    }
-    
-    if (unidade.enderecoCompleto) {
-        return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(unidade.enderecoCompleto)}`;
-    }
-    
+    if (linkOficial && linkOficial.startsWith('http')) return cleanGoogleMapsLink(linkOficial);
+    if (unidade.enderecoCompleto) return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(unidade.enderecoCompleto)}`;
     const queryBackup = `${unidade.nome} ${unidade.cidade || ''} ${unidade.estado || ''}`.trim();
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(queryBackup)}`;
 };
@@ -67,18 +71,15 @@ const displayAddress = (unidade) => {
     return "Endereço não informado. Toque para ver no mapa.";
 };
 
-// 🟢 EXTRAI LATITUDE E LONGITUDE DA URL (Buscando nos 3 formatos do Google)
 const extractCoords = (unidade) => {
     const url = unidade.linkGoogleMaps || unidade.localizacao || "";
-    // O regex procura por q=-19.9,-43.9 ou query=-19.9,-43.9 ou @-19.9,-43.9
     const match = url.match(/(?:q=|query=|@)([-.\d]+),([-.\d]+)/);
     if (match) return { lat: parseFloat(match[1]), lng: parseFloat(match[2]) };
     return null;
 };
 
-// 🟢 FÓRMULA MATEMÁTICA DE HAVERSINE PARA CALCULAR DISTÂNCIA EM KM
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
-    const R = 6371; // Raio da Terra em km
+    const R = 6371; 
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
     const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
@@ -89,26 +90,24 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
 };
 
 export default function PublicSchedule() {
-  // CATÁLOGOS BASE
   const [unidades, setUnidades] = useState([]);
   const [modalidadesMap, setModalidadesMap] = useState({});
   const [professoresMap, setProfessoresMap] = useState({});
   
-  // ESTADOS DE TELA
   const [loading, setLoading] = useState(true);
   const [loadingGrade, setLoadingGrade] = useState(false);
   const [unidadeSelecionada, setUnidadeSelecionada] = useState(null);
   const [gradeUnidade, setGradeUnidade] = useState([]);
   const [isDarkMode, setIsDarkMode] = useState(true);
   
-  // FILTROS
   const [busca, setBusca] = useState("");
   const [termoDebounce, setTermoDebounce] = useState(""); 
   const [filtroEstado, setFiltroEstado] = useState(""); 
   
-  // ESTADOS DO GPS
+  // 🟢 ESTADOS DO GPS E VISTA DE MAPA
   const [userCoords, setUserCoords] = useState(null);
   const [isLocating, setIsLocating] = useState(false);
+  const [viewMode, setViewMode] = useState('list'); // 'list' | 'map'
   
   const [resultadosUnidade, setResultadosUnidade] = useState([]);
   const [resultadosModalidade, setResultadosModalidade] = useState(null);
@@ -151,7 +150,7 @@ export default function PublicSchedule() {
   // 🟢 ACIONADOR DO GPS
   const ativarRadarGPS = () => {
       if (!navigator.geolocation) {
-          alert("Seu navegador ou dispositivo não suporta GPS.");
+          alert("O seu navegador ou dispositivo não suporta GPS.");
           return;
       }
       
@@ -163,35 +162,35 @@ export default function PublicSchedule() {
           setBusca(""); 
           setFiltroEstado(""); 
           setTermoDebounce("");
+          setViewMode('map'); // Abre automaticamente o mapa quando ativa o GPS
           setIsLocating(false);
       }, (error) => {
-          alert("Não foi possível acessar seu GPS. Verifique as permissões de localização.");
+          alert("Não foi possível aceder ao seu GPS. Verifique as permissões de localização.");
           setIsLocating(false);
       });
   };
 
   const limparGPS = () => {
       setUserCoords(null);
+      setViewMode('list');
   };
 
-  // Busca e Filtragem Principal
   useEffect(() => {
       let unidadesFiltradas = unidades;
 
-      // 🟢 FILTRO DO RADAR DE GPS (15km)
       if (userCoords) {
           const unidadesComDistancia = unidades.map(u => {
               const coords = extractCoords(u);
               if (coords) {
                   const dist = calculateDistance(userCoords.lat, userCoords.lng, coords.lat, coords.lng);
-                  return { ...u, distance: dist };
+                  return { ...u, distance: dist, coords };
               }
-              return { ...u, distance: 9999 }; // Sem coordenada vai pro final da fila e não aparece no radar de 15km
+              return { ...u, distance: 9999, coords: null };
           });
 
           const raioKm = 15;
           const unidadesProximas = unidadesComDistancia
-              .filter(u => u.distance <= raioKm)
+              .filter(u => u.distance <= raioKm && u.coords !== null)
               .sort((a, b) => a.distance - b.distance);
 
           setResultadosUnidade(unidadesProximas);
@@ -279,7 +278,7 @@ export default function PublicSchedule() {
           setGradeUnidade(data);
           setLoadingGrade(false);
       }, (error) => {
-          console.error("Erro na grade tempo real:", error);
+          console.error("Erro na grelha tempo real:", error);
           setLoadingGrade(false);
       });
 
@@ -338,7 +337,7 @@ export default function PublicSchedule() {
                 {isDarkMode ? <Sun className="w-5 h-5"/> : <Moon className="w-5 h-5"/>}
             </button>
             
-            <div className={`w-full max-w-2xl relative z-10 rounded-3xl p-8 md:p-10 border ${cardGlass} transition-all duration-500 animate-in fade-in slide-in-from-bottom-8`}>
+            <div className={`w-full max-w-4xl relative z-10 rounded-3xl p-6 md:p-10 border ${cardGlass} transition-all duration-500 animate-in fade-in slide-in-from-bottom-8`}>
                 
                 <div className="flex flex-col items-center mb-8">
                     <div className="relative mb-2 group">
@@ -359,7 +358,7 @@ export default function PublicSchedule() {
                     </div>
                 </div>
 
-                <div className="space-y-6">
+                <div className="space-y-6 max-w-2xl mx-auto">
                     
                     <div className="space-y-3">
                         <div className="flex items-center justify-between px-1">
@@ -419,115 +418,168 @@ export default function PublicSchedule() {
                             {busca && busca !== termoDebounce && <Loader2 className="absolute right-4 top-4 w-6 h-6 animate-spin text-red-500"/>}
                         </div>
                     </div>
+                </div>
 
-                    <div className={`max-h-[400px] overflow-y-auto custom-scrollbar pr-2 transition-all duration-500 ${(busca || filtroEstado || userCoords) ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
-                        
-                        {userCoords && (
-                             <div className="mb-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                                 <h3 className="text-xs font-bold text-emerald-500 uppercase tracking-wider flex items-center gap-2 mb-3 px-1">
-                                     <span className="p-1 bg-emerald-500/10 rounded"><LocateFixed className="w-3 h-3"/></span>
-                                     No seu Radar (Raio de 15km)
-                                 </h3>
+                {/* 🟢 ÁREA DE RESULTADOS (LISTA OU MAPA) */}
+                <div className={`mt-8 transition-all duration-500 ${(busca || filtroEstado || userCoords) ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
+                    
+                    {userCoords && (
+                         <div className="mb-6 flex flex-col sm:flex-row items-center justify-between gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-2xl mx-auto">
+                             <h3 className="text-xs font-bold text-emerald-500 uppercase tracking-wider flex items-center gap-2 px-1">
+                                 <span className="p-1 bg-emerald-500/10 rounded"><LocateFixed className="w-3 h-3"/></span>
+                                 No seu Radar (Raio de 15km)
+                             </h3>
+                             
+                             {/* TOGGLE VISTA LISTA / MAPA */}
+                             <div className="flex p-1 bg-black/10 dark:bg-white/5 rounded-xl border border-gray-200 dark:border-white/10">
+                                 <button onClick={() => setViewMode('list')} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${viewMode === 'list' ? 'bg-white dark:bg-slate-700 shadow text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}>
+                                     <List className="w-3 h-3"/> Lista
+                                 </button>
+                                 <button onClick={() => setViewMode('map')} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${viewMode === 'map' ? 'bg-white dark:bg-slate-700 shadow text-emerald-600 dark:text-emerald-400' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}>
+                                     <Map className="w-3 h-3"/> Mapa
+                                 </button>
                              </div>
-                        )}
+                         </div>
+                    )}
 
-                        {/* AULAS ENCONTRADAS */}
-                        {termoDebounce.length > 0 && resultadosModalidade && resultadosModalidade.length > 0 && !userCoords && (
-                            <div className="mb-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                                <h3 className="text-xs font-bold text-blue-500 uppercase tracking-wider flex items-center gap-2 mb-3 px-1">
-                                    <span className="p-1 bg-blue-500/10 rounded"><Dumbbell className="w-3 h-3"/></span> 
-                                    Aulas Encontradas
-                                </h3>
-                                <div className="grid gap-3">
-                                    {resultadosModalidade.map((item) => (
-                                        <div key={item.unidade.id} className={`p-4 rounded-2xl border flex flex-col gap-3 transition-all hover:shadow-md ${isDarkMode ? 'bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/20' : 'bg-white border-gray-200 hover:border-blue-300'}`}>
-                                            
-                                            <div className="flex justify-between items-start gap-4">
-                                                <div className="flex flex-col flex-1 min-w-0">
-                                                    <span className={`font-black text-sm uppercase truncate ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>{item.unidade.nome}</span>
-                                                    
-                                                    <a href={getMapsLink(item.unidade)} target="_blank" rel="noopener noreferrer" className={`mt-1 flex items-start gap-1 text-[10px] font-medium leading-snug group/map w-fit ${isDarkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'}`}>
-                                                        <Navigation className="w-3 h-3 shrink-0 mt-0.5 group-hover/map:scale-110 transition-transform"/>
-                                                        <span className="group-hover/map:underline">{displayAddress(item.unidade)}</span>
-                                                    </a>
+                    {/* 🟢 VISUALIZAÇÃO EM MAPA (ECRÃ NÍVEL UBER) */}
+                    {userCoords && viewMode === 'map' && (
+                        <div className="w-full h-[500px] rounded-3xl overflow-hidden border border-white/10 shadow-2xl animate-in zoom-in-95 duration-500 relative z-0">
+                            <MapContainer center={[userCoords.lat, userCoords.lng]} zoom={13} style={{ height: '100%', width: '100%' }}>
+                                <TileLayer 
+                                    url={isDarkMode ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"}
+                                    attribution='&copy; OpenStreetMap contributors'
+                                />
+                                
+                                {/* Pino do Utilizador */}
+                                <Marker position={[userCoords.lat, userCoords.lng]} icon={userIcon}>
+                                    <Popup className="custom-popup">
+                                        <div className="text-center font-bold text-sm text-slate-800">📍 Você está aqui!</div>
+                                    </Popup>
+                                </Marker>
+                                <Circle center={[userCoords.lat, userCoords.lng]} pathOptions={{ fillColor: '#10b981', color: '#10b981' }} radius={1500} />
+
+                                {/* Pinos das Academias */}
+                                {resultadosUnidade.map(u => {
+                                    if (!u.coords) return null;
+                                    return (
+                                        <Marker key={u.id} position={[u.coords.lat, u.coords.lng]}>
+                                            <Popup>
+                                                <div className="flex flex-col gap-2 min-w-[200px]">
+                                                    <span className="font-black text-sm uppercase text-slate-800">{u.nome}</span>
+                                                    <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-1 rounded w-fit uppercase">🚗 {u.distance.toFixed(1)} km</span>
+                                                    <span className="text-[10px] text-slate-500 leading-tight">{displayAddress(u)}</span>
+                                                    <button onClick={() => setUnidadeSelecionada(u)} className="mt-2 w-full py-2 bg-blue-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-blue-700">Ver Horários</button>
                                                 </div>
-                                                
-                                                <button onClick={() => setUnidadeSelecionada(item.unidade)} className="shrink-0 text-[10px] font-bold text-white bg-blue-600 hover:bg-blue-500 px-3 py-2 rounded-lg transition-colors flex items-center shadow-md active:scale-95">
-                                                    VER GRADE <ChevronRight className="w-3 h-3 ml-1"/>
-                                                </button>
-                                            </div>
+                                            </Popup>
+                                        </Marker>
+                                    )
+                                })}
+                            </MapContainer>
+                        </div>
+                    )}
 
-                                            <div className={`h-px w-full ${isDarkMode ? 'bg-white/10' : 'bg-gray-100'}`}></div>
-                                            
-                                            <div className="flex flex-wrap gap-1.5">
-                                                {item.aulas.slice(0, 4).map((aula, idx) => (
-                                                    <span key={idx} className={`text-[10px] font-bold px-2 py-1 rounded-md border ${isDarkMode ? 'bg-black/30 border-white/10 text-gray-300' : 'bg-gray-50 border-gray-200 text-gray-600'}`}>
-                                                        {aula.dias[0]?.substring(0,3)} {aula.hora}
-                                                    </span>
-                                                ))}
-                                                {item.aulas.length > 4 && (
-                                                    <span className={`text-[10px] font-bold px-2 py-1 rounded-md border italic ${isDarkMode ? 'bg-black/30 border-transparent text-gray-500' : 'bg-gray-50 border-transparent text-gray-400'}`}>
-                                                        +{item.aulas.length - 4} horários
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* UNIDADES ENCONTRADAS */}
-                        {resultadosUnidade.length > 0 && (
-                            <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
-                                {!userCoords && (
-                                    <h3 className="text-xs font-bold text-red-500 uppercase tracking-wider flex items-center gap-2 mb-3 px-1">
-                                        <span className="p-1 bg-red-500/10 rounded"><MapPin className="w-3 h-3"/></span>
-                                        Unidades Disponíveis
+                    {/* 🟢 VISUALIZAÇÃO EM LISTA */}
+                    {(!userCoords || viewMode === 'list') && (
+                        <div className="max-h-[400px] overflow-y-auto custom-scrollbar pr-2 max-w-2xl mx-auto">
+                            
+                            {/* AULAS ENCONTRADAS */}
+                            {termoDebounce.length > 0 && resultadosModalidade && resultadosModalidade.length > 0 && !userCoords && (
+                                <div className="mb-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                    <h3 className="text-xs font-bold text-blue-500 uppercase tracking-wider flex items-center gap-2 mb-3 px-1">
+                                        <span className="p-1 bg-blue-500/10 rounded"><Dumbbell className="w-3 h-3"/></span> 
+                                        Aulas Encontradas
                                     </h3>
-                                )}
-                                <div className="grid gap-3">
-                                    {resultadosUnidade.map(u => (
-                                        <div key={u.id} className={`p-4 rounded-2xl border flex flex-col gap-3 transition-all hover:shadow-md ${isDarkMode ? 'bg-white/5 border-white/5 hover:bg-white/10 hover:border-red-500/30' : 'bg-white border-gray-200 hover:border-red-200'}`}>
-                                            
-                                            <div className="flex justify-between items-start gap-4">
-                                                <div className="flex flex-col flex-1 min-w-0">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className={`block font-black text-sm md:text-base uppercase truncate ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>{u.nome}</span>
-                                                        
-                                                        {userCoords && u.distance < 9999 && (
-                                                            <span className="px-2 py-1 bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 border border-emerald-500/20 rounded-md text-[9px] font-black tracking-widest uppercase flex items-center gap-1 shrink-0">
-                                                                🚗 {u.distance.toFixed(1)} KM
-                                                            </span>
-                                                        )}
-                                                    </div>
-
-                                                    <a href={getMapsLink(u)} target="_blank" rel="noopener noreferrer" className={`mt-1.5 flex items-start gap-1.5 text-[10px] font-medium leading-snug group/map w-fit ${isDarkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'}`}>
-                                                        <Navigation className="w-3.5 h-3.5 shrink-0 mt-0.5 group-hover/map:scale-110 transition-transform"/>
-                                                        <span className="group-hover/map:underline">{displayAddress(u)}</span>
-                                                    </a>
-                                                </div>
+                                    <div className="grid gap-3">
+                                        {resultadosModalidade.map((item) => (
+                                            <div key={item.unidade.id} className={`p-4 rounded-2xl border flex flex-col gap-3 transition-all hover:shadow-md ${isDarkMode ? 'bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/20' : 'bg-white border-gray-200 hover:border-blue-300'}`}>
                                                 
-                                                <button onClick={() => setUnidadeSelecionada(u)} className={`shrink-0 p-3 rounded-xl transition-colors active:scale-95 ${isDarkMode ? 'bg-white/5 hover:bg-red-600 hover:text-white text-gray-400' : 'bg-gray-50 hover:bg-red-100 hover:text-red-600 text-gray-500 border border-gray-200'}`}>
-                                                    <ChevronRight className="w-5 h-5"/>
-                                                </button>
+                                                <div className="flex justify-between items-start gap-4">
+                                                    <div className="flex flex-col flex-1 min-w-0">
+                                                        <span className={`font-black text-sm uppercase truncate ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>{item.unidade.nome}</span>
+                                                        
+                                                        <a href={getMapsLink(item.unidade)} target="_blank" rel="noopener noreferrer" className={`mt-1 flex items-start gap-1 text-[10px] font-medium leading-snug group/map w-fit ${isDarkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'}`}>
+                                                            <Navigation className="w-3 h-3 shrink-0 mt-0.5 group-hover/map:scale-110 transition-transform"/>
+                                                            <span className="group-hover/map:underline">{displayAddress(item.unidade)}</span>
+                                                        </a>
+                                                    </div>
+                                                    
+                                                    <button onClick={() => setUnidadeSelecionada(item.unidade)} className="shrink-0 text-[10px] font-bold text-white bg-blue-600 hover:bg-blue-500 px-3 py-2 rounded-lg transition-colors flex items-center shadow-md active:scale-95">
+                                                        VER GRADE <ChevronRight className="w-3 h-3 ml-1"/>
+                                                    </button>
+                                                </div>
+
+                                                <div className={`h-px w-full ${isDarkMode ? 'bg-white/10' : 'bg-gray-100'}`}></div>
+                                                
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    {item.aulas.slice(0, 4).map((aula, idx) => (
+                                                        <span key={idx} className={`text-[10px] font-bold px-2 py-1 rounded-md border ${isDarkMode ? 'bg-black/30 border-white/10 text-gray-300' : 'bg-gray-50 border-gray-200 text-gray-600'}`}>
+                                                            {aula.dias[0]?.substring(0,3)} {aula.hora}
+                                                        </span>
+                                                    ))}
+                                                    {item.aulas.length > 4 && (
+                                                        <span className={`text-[10px] font-bold px-2 py-1 rounded-md border italic ${isDarkMode ? 'bg-black/30 border-transparent text-gray-500' : 'bg-gray-50 border-transparent text-gray-400'}`}>
+                                                            +{item.aulas.length - 4} horários
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
-
-                                        </div>
-                                    ))}
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
-                        )}
+                            )}
 
-                        {/* EMPTY STATE */}
-                        {((termoDebounce.length > 0 || filtroEstado || userCoords) && !resultadosUnidade.length && !resultadosModalidade) && (
-                            <div className="text-center py-12 opacity-50 animate-in fade-in zoom-in-95">
-                                <div className="mb-3 inline-flex p-4 rounded-full bg-white/5"><Search className="w-6 h-6"/></div>
-                                <p className="text-sm font-medium">Nenhuma unidade ou aula encontrada.</p>
-                                <p className="text-xs mt-1">Tente expandir o raio de busca ou mudar o termo.</p>
-                            </div>
-                        )}
-                    </div>
+                            {/* UNIDADES ENCONTRADAS */}
+                            {resultadosUnidade.length > 0 && (
+                                <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+                                    {!userCoords && (
+                                        <h3 className="text-xs font-bold text-red-500 uppercase tracking-wider flex items-center gap-2 mb-3 px-1">
+                                            <span className="p-1 bg-red-500/10 rounded"><MapPin className="w-3 h-3"/></span>
+                                            Unidades Disponíveis
+                                        </h3>
+                                    )}
+                                    <div className="grid gap-3">
+                                        {resultadosUnidade.map(u => (
+                                            <div key={u.id} className={`p-4 rounded-2xl border flex flex-col gap-3 transition-all hover:shadow-md ${isDarkMode ? 'bg-white/5 border-white/5 hover:bg-white/10 hover:border-red-500/30' : 'bg-white border-gray-200 hover:border-red-200'}`}>
+                                                
+                                                <div className="flex justify-between items-start gap-4">
+                                                    <div className="flex flex-col flex-1 min-w-0">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className={`block font-black text-sm md:text-base uppercase truncate ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>{u.nome}</span>
+                                                            
+                                                            {userCoords && u.distance < 9999 && (
+                                                                <span className="px-2 py-1 bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 border border-emerald-500/20 rounded-md text-[9px] font-black tracking-widest uppercase flex items-center gap-1 shrink-0">
+                                                                    🚗 {u.distance.toFixed(1)} KM
+                                                                </span>
+                                                            )}
+                                                        </div>
+
+                                                        <a href={getMapsLink(u)} target="_blank" rel="noopener noreferrer" className={`mt-1.5 flex items-start gap-1.5 text-[10px] font-medium leading-snug group/map w-fit ${isDarkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'}`}>
+                                                            <Navigation className="w-3.5 h-3.5 shrink-0 mt-0.5 group-hover/map:scale-110 transition-transform"/>
+                                                            <span className="group-hover/map:underline">{displayAddress(u)}</span>
+                                                        </a>
+                                                    </div>
+                                                    
+                                                    <button onClick={() => setUnidadeSelecionada(u)} className={`shrink-0 p-3 rounded-xl transition-colors active:scale-95 ${isDarkMode ? 'bg-white/5 hover:bg-red-600 hover:text-white text-gray-400' : 'bg-gray-50 hover:bg-red-100 hover:text-red-600 text-gray-500 border border-gray-200'}`}>
+                                                        <ChevronRight className="w-5 h-5"/>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* EMPTY STATE */}
+                            {((termoDebounce.length > 0 || filtroEstado || userCoords) && !resultadosUnidade.length && !resultadosModalidade) && (
+                                <div className="text-center py-12 opacity-50 animate-in fade-in zoom-in-95">
+                                    <div className="mb-3 inline-flex p-4 rounded-full bg-white/5"><Search className="w-6 h-6"/></div>
+                                    <p className="text-sm font-medium">Nenhuma unidade ou aula encontrada.</p>
+                                    <p className="text-xs mt-1">Tente expandir o raio de busca ou mudar o termo.</p>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             </div>
             
@@ -538,6 +590,7 @@ export default function PublicSchedule() {
       );
   }
 
+  // 🟢 TELA 2: GRADE COM IMPRESSÃO 
   return (
     <div className={`min-h-screen ${isDarkMode ? "bg-[#101010] text-white" : "bg-[#f5f5f5] text-[#1f1f1f]"} pb-10 print:bg-black print:text-white print:p-0 print:h-screen print:overflow-hidden`}>
         
