@@ -3,27 +3,89 @@ import { db } from '../../services/firebase';
 import { collection, getDocs, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 import { 
   Search, Clock, ChevronRight, Loader2, 
-  Printer, ArrowLeft, Dumbbell, Sun, Moon, ChevronDown, MapPin
+  Printer, ArrowLeft, Dumbbell, Sun, Moon, ChevronDown, MapPin, Navigation, LocateFixed
 } from 'lucide-react';
 
 // --- CONFIGURAÇÃO DAS IMAGENS ---
 const LOGOS = {
-    'jump': '/logos/energyjump.png', 
-    'dance': '/logos/powerdance.png',
-    'bumbum': '/logos/powerbumbum.png',
-    'training': '/logos/powertraining.png',
-    'core': '/logos/powercore.png',
-    'fight': '/logos/powerfight.png',
-    'pratique': '/logos/pratique.png'
+  'jump': '/logos/energyjump.png', 
+  'dance': '/logos/powerdance.png',
+  'bumbum': '/logos/powerbumbum.png',
+  'training': '/logos/powertraining.png',
+  'core': '/logos/powercore.png',
+  'fight': '/logos/powerfight.png',
+  'pratique': '/logos/pratique.png'
 };
 
 const getTodayStr = () => new Date().toLocaleDateString('en-CA');
 
 const formatProfessorName = (name) => {
-    if (!name) return "Instrutor";
-    const parts = name.trim().split(' ');
-    if (parts.length === 1) return parts[0];
-    return `${parts[0]} ${parts[parts.length - 1]}`;
+  if (!name) return "Instrutor";
+  const parts = name.trim().split(' ');
+  if (parts.length === 1) return parts[0];
+  return `${parts[0]} ${parts[parts.length - 1]}`;
+};
+
+// 🟢 FUNÇÃO PARA REMOVER ACENTOS E CARACTERES ESPECIAIS
+const removerAcentos = (str) => {
+    if (!str) return "";
+    return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+};
+
+// 🟢 INTERCEPTADOR E LIMPADOR DE LINKS DO GOOGLE MAPS
+const cleanGoogleMapsLink = (url) => {
+    if (!url) return "";
+    // Conserta links "googleusercontent" bugados gerados por CSVs antigos
+    if (url.includes('googleusercontent.com')) {
+        const match = url.match(/(?:q=|query=|@)([-.\d]+),([-.\d]+)/);
+        if (match) {
+            return `https://www.google.com/maps/search/?api=1&query=${match[1]},${match[2]}`;
+        }
+    }
+    return url;
+};
+
+// 🟢 MOTOR INTELIGENTE DE ROTEAMENTO MAPS 
+const getMapsLink = (unidade) => {
+    if (!unidade) return '#';
+    
+    let linkOficial = unidade.linkGoogleMaps || unidade.localizacao;
+    if (linkOficial && linkOficial.startsWith('http')) {
+        return cleanGoogleMapsLink(linkOficial);
+    }
+    
+    if (unidade.enderecoCompleto) {
+        return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(unidade.enderecoCompleto)}`;
+    }
+    
+    const queryBackup = `${unidade.nome} ${unidade.cidade || ''} ${unidade.estado || ''}`.trim();
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(queryBackup)}`;
+};
+
+const displayAddress = (unidade) => {
+    if (unidade.enderecoCompleto) return unidade.enderecoCompleto;
+    return "Endereço não informado. Toque para ver no mapa.";
+};
+
+// 🟢 EXTRAI LATITUDE E LONGITUDE DA URL (Buscando nos 3 formatos do Google)
+const extractCoords = (unidade) => {
+    const url = unidade.linkGoogleMaps || unidade.localizacao || "";
+    // O regex procura por q=-19.9,-43.9 ou query=-19.9,-43.9 ou @-19.9,-43.9
+    const match = url.match(/(?:q=|query=|@)([-.\d]+),([-.\d]+)/);
+    if (match) return { lat: parseFloat(match[1]), lng: parseFloat(match[2]) };
+    return null;
+};
+
+// 🟢 FÓRMULA MATEMÁTICA DE HAVERSINE PARA CALCULAR DISTÂNCIA EM KM
+const calculateDistance = (lat1, lon1, lat2, lon2) => {
+    const R = 6371; // Raio da Terra em km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
 };
 
 export default function PublicSchedule() {
@@ -44,14 +106,16 @@ export default function PublicSchedule() {
   const [termoDebounce, setTermoDebounce] = useState(""); 
   const [filtroEstado, setFiltroEstado] = useState(""); 
   
+  // ESTADOS DO GPS
+  const [userCoords, setUserCoords] = useState(null);
+  const [isLocating, setIsLocating] = useState(false);
+  
   const [resultadosUnidade, setResultadosUnidade] = useState([]);
   const [resultadosModalidade, setResultadosModalidade] = useState(null);
 
-  // CONTROLE DE IMPRESSÃO
   const [printDensity, setPrintDensity] = useState('auto');
   const [showPrintMenu, setShowPrintMenu] = useState(false);
 
-  // 1. Inicialização (Catálogos Fixos)
   useEffect(() => {
     const init = async () => {
         setLoading(true);
@@ -79,60 +143,104 @@ export default function PublicSchedule() {
       return [...new Set(estados)].sort(); 
   }, [unidades]);
 
-  // 2. Debounce para a busca
   useEffect(() => {
       const timer = setTimeout(() => { setTermoDebounce(busca); }, 300); 
       return () => clearTimeout(timer);
   }, [busca]);
 
-  // 3. Busca e Filtragem (Tela 1)
+  // 🟢 ACIONADOR DO GPS
+  const ativarRadarGPS = () => {
+      if (!navigator.geolocation) {
+          alert("Seu navegador ou dispositivo não suporta GPS.");
+          return;
+      }
+      
+      setIsLocating(true);
+      setUserCoords(null); 
+      
+      navigator.geolocation.getCurrentPosition((position) => {
+          setUserCoords({ lat: position.coords.latitude, lng: position.coords.longitude });
+          setBusca(""); 
+          setFiltroEstado(""); 
+          setTermoDebounce("");
+          setIsLocating(false);
+      }, (error) => {
+          alert("Não foi possível acessar seu GPS. Verifique as permissões de localização.");
+          setIsLocating(false);
+      });
+  };
+
+  const limparGPS = () => {
+      setUserCoords(null);
+  };
+
+  // Busca e Filtragem Principal
   useEffect(() => {
       let unidadesFiltradas = unidades;
+
+      // 🟢 FILTRO DO RADAR DE GPS (15km)
+      if (userCoords) {
+          const unidadesComDistancia = unidades.map(u => {
+              const coords = extractCoords(u);
+              if (coords) {
+                  const dist = calculateDistance(userCoords.lat, userCoords.lng, coords.lat, coords.lng);
+                  return { ...u, distance: dist };
+              }
+              return { ...u, distance: 9999 }; // Sem coordenada vai pro final da fila e não aparece no radar de 15km
+          });
+
+          const raioKm = 15;
+          const unidadesProximas = unidadesComDistancia
+              .filter(u => u.distance <= raioKm)
+              .sort((a, b) => a.distance - b.distance);
+
+          setResultadosUnidade(unidadesProximas);
+          setResultadosModalidade(null);
+          return;
+      }
+
       if (filtroEstado) {
           unidadesFiltradas = unidades.filter(u => u.estado === filtroEstado);
       }
 
       if (!termoDebounce.trim()) { 
-          if (filtroEstado) {
-              setResultadosUnidade(unidadesFiltradas);
-          } else {
-              setResultadosUnidade([]); 
-          }
+          if (filtroEstado) setResultadosUnidade(unidadesFiltradas);
+          else setResultadosUnidade([]); 
           setResultadosModalidade(null); 
           return; 
       }
 
-      const termo = termoDebounce.toLowerCase();
-      setResultadosUnidade(unidadesFiltradas.filter(u => u.nome.toLowerCase().includes(termo) || u.cidade?.toLowerCase().includes(termo)));
+      const termoNormalizado = removerAcentos(termoDebounce);
       
-      const modIds = Object.keys(modalidadesMap).filter(id => modalidadesMap[id].nome.toLowerCase().includes(termo));
+      setResultadosUnidade(unidadesFiltradas.filter(u => 
+          removerAcentos(u.nome).includes(termoNormalizado) || 
+          removerAcentos(u.cidade).includes(termoNormalizado) ||
+          removerAcentos(u.enderecoCompleto).includes(termoNormalizado)
+      ));
+      
+      const modIds = Object.keys(modalidadesMap).filter(id => removerAcentos(modalidadesMap[id].nome).includes(termoNormalizado));
       if (modIds.length > 0) { 
           buscarOndeTemModalidade(modIds, filtroEstado); 
       } else { 
           setResultadosModalidade(null); 
       }
-  }, [termoDebounce, unidades, modalidadesMap, filtroEstado]);
+  }, [termoDebounce, unidades, modalidadesMap, filtroEstado, userCoords]);
 
   const buscarOndeTemModalidade = async (modIds, estadoFilter) => {
       try {
           const q = query(collection(db, 'aulas'), where('modalidadeId', 'in', modIds.slice(0, 10)));
           const snap = await getDocs(q);
           const agrupado = {};
-          const todayStr = getTodayStr(); // Trava de tempo para a busca geral
+          const todayStr = getTodayStr(); 
           
           snap.docs.forEach(doc => {
               const aula = doc.data();
-              
-              // MÁGICA 1: BLINDAGEM DO PASSADO NA BUSCA DA TELA INICIAL
               if (aula.dataFim && aula.dataFim < todayStr) return;
               if (aula.dataInicio && aula.dataInicio > todayStr) return;
 
               const unit = unidades.find(u => u.id === aula.unidadeId);
-              
               if (unit && (!estadoFilter || unit.estado === estadoFilter)) {
-                  if (!agrupado[aula.unidadeId]) {
-                      agrupado[aula.unidadeId] = { unidade: unit, aulas: [] };
-                  }
+                  if (!agrupado[aula.unidadeId]) agrupado[aula.unidadeId] = { unidade: unit, aulas: [] };
                   agrupado[aula.unidadeId].aulas.push({
                       ...aula,
                       modalidadeNome: modalidadesMap[aula.modalidadeId]?.nome,
@@ -144,7 +252,6 @@ export default function PublicSchedule() {
       } catch (e) { console.error(e); }
   };
 
-  // 4. Carregar Grade ao Vivo (MÁGICA DA VELOCIDADE DA LUZ E VIGÊNCIA)
   useEffect(() => {
       if (!unidadeSelecionada) return;
       setLoadingGrade(true);
@@ -153,11 +260,8 @@ export default function PublicSchedule() {
       
       const unsubscribe = onSnapshot(q, (snap) => {
           const todayStr = getTodayStr();
-
           const data = snap.docs.map(d => {
               const a = d.data();
-              
-              // MÁGICA 2: BLOQUEIO DE AULAS OCULTAS/ENCERRADAS/FUTURAS
               if (a.dataFim && a.dataFim < todayStr) return null; 
               if (a.dataInicio && a.dataInicio > todayStr) return null;
 
@@ -170,7 +274,7 @@ export default function PublicSchedule() {
                   modalidadeCor: mod.cor || '#333',
                   professorNome: formatProfessorName(professoresMap[a.professorId])
               };
-          }).filter(Boolean); // Remove os nulls (aulas ocultas)
+          }).filter(Boolean); 
           
           setGradeUnidade(data);
           setLoadingGrade(false);
@@ -182,7 +286,6 @@ export default function PublicSchedule() {
       return () => unsubscribe();
   }, [unidadeSelecionada, modalidadesMap, professoresMap]);
 
-  // --- LÓGICA DE MÚLTIPLAS AULAS NO MESMO HORÁRIO ---
   const gradeOrganizada = useMemo(() => {
       if (!gradeUnidade.length) return { dias: [], horarios: [] };
       const diasFinais = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta'];
@@ -194,10 +297,8 @@ export default function PublicSchedule() {
       return { dias: diasFinais, horarios };
   }, [gradeUnidade]);
 
-  // MÁGICA 3: AO INVÉS DE .FIND, USAMOS .FILTER PARA EMPILHAR AULAS
   const getAulasCell = (dia, hora) => gradeUnidade.filter(a => a.hora === hora && a.dias?.includes(dia));
 
-  // --- CÁLCULO DE DENSIDADE (IMPRESSÃO) ---
   const appliedDensity = useMemo(() => {
       if (printDensity !== 'auto') return printDensity;
       const linhas = gradeOrganizada.horarios.length;
@@ -212,7 +313,6 @@ export default function PublicSchedule() {
       setTimeout(() => window.print(), 100);
   };
 
-  // ESTILOS DINÂMICOS (BACKGROUND PREMIUM)
   const bgGradient = isDarkMode 
     ? "bg-gradient-to-br from-[#0f0f0f] via-[#1a1a1a] to-[#0f0f0f]" 
     : "bg-gradient-to-br from-gray-50 via-white to-gray-100";
@@ -225,12 +325,10 @@ export default function PublicSchedule() {
     ? "bg-black/30 border-white/10 text-white placeholder:text-white/30 focus:border-red-500/50 focus:bg-black/50"
     : "bg-gray-50 border-gray-200 text-gray-800 placeholder:text-gray-400 focus:border-red-500/50 focus:bg-white";
 
-  // TELA 1: BUSCA E FILTROS (DESIGN PREMIUM REDESENHADO)
   if (!unidadeSelecionada) {
       return (
         <div className={`min-h-screen ${bgGradient} transition-colors duration-500 p-4 flex flex-col items-center justify-start pt-8 relative overflow-hidden`}>
             
-            {/* ELEMENTOS DE FUNDO (DECORAÇÃO) */}
             <div className={`absolute top-0 left-0 w-full h-96 ${isDarkMode ? 'opacity-20' : 'opacity-10'} pointer-events-none`}>
                 <div className="absolute top-[-50%] left-[-10%] w-[50%] h-[100%] rounded-full bg-red-600 blur-[120px]"></div>
                 <div className="absolute top-[-50%] right-[-10%] w-[50%] h-[100%] rounded-full bg-blue-600 blur-[120px]"></div>
@@ -240,10 +338,8 @@ export default function PublicSchedule() {
                 {isDarkMode ? <Sun className="w-5 h-5"/> : <Moon className="w-5 h-5"/>}
             </button>
             
-            {/* CARD PRINCIPAL FLUTUANTE */}
             <div className={`w-full max-w-2xl relative z-10 rounded-3xl p-8 md:p-10 border ${cardGlass} transition-all duration-500 animate-in fade-in slide-in-from-bottom-8`}>
                 
-                {/* CABEÇALHO DA MARCA */}
                 <div className="flex flex-col items-center mb-8">
                     <div className="relative mb-2 group">
                         <img src={LOGOS['pratique']} alt="Pratique" className={`h-24 md:h-32 object-contain transition-transform duration-500 group-hover:scale-105 ${isDarkMode ? 'brightness-0 invert' : ''}`} />
@@ -265,32 +361,42 @@ export default function PublicSchedule() {
 
                 <div className="space-y-6">
                     
-                    {/* FILTRO DE ESTADOS */}
                     <div className="space-y-3">
                         <div className="flex items-center justify-between px-1">
                             <span className={`text-[10px] font-bold uppercase tracking-widest ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                                 <MapPin className="w-3 h-3 inline mr-1 mb-0.5"/> Localização
                             </span>
                             {filtroEstado && (
-                                <button onClick={() => setFiltroEstado("")} className="text-[10px] font-bold text-red-500 hover:underline">Limpar Filtro</button>
+                                <button onClick={() => setFiltroEstado("")} className="text-[10px] font-bold text-red-500 hover:underline">Limpar Estado</button>
                             )}
                         </div>
                         
                         <div className="flex gap-2 overflow-x-auto pb-4 no-scrollbar mask-gradient-right">
+                            
                             <button 
-                                onClick={() => setFiltroEstado("")}
-                                className={`px-5 py-2.5 rounded-2xl font-bold text-xs uppercase whitespace-nowrap transition-all duration-300 transform active:scale-95 border ${!filtroEstado 
+                                onClick={userCoords ? limparGPS : ativarRadarGPS}
+                                className={`px-5 py-2.5 rounded-2xl font-black text-xs uppercase whitespace-nowrap transition-all duration-300 transform active:scale-95 border flex items-center gap-2 shadow-lg ${userCoords 
+                                    ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 text-white border-transparent shadow-emerald-500/30 ring-2 ring-emerald-400' 
+                                    : 'bg-gradient-to-r from-blue-600 to-blue-500 text-white border-transparent shadow-blue-500/20'}`}
+                            >
+                                {isLocating ? <Loader2 className="w-4 h-4 animate-spin"/> : <LocateFixed className="w-4 h-4"/>}
+                                {userCoords ? "GPS Ativado (Limpar)" : "Perto de Mim"}
+                            </button>
+
+                            <button 
+                                onClick={() => { setFiltroEstado(""); limparGPS(); }}
+                                className={`px-5 py-2.5 rounded-2xl font-bold text-xs uppercase whitespace-nowrap transition-all duration-300 transform active:scale-95 border ${!filtroEstado && !userCoords
                                     ? 'bg-gradient-to-r from-red-600 to-red-500 text-white border-transparent shadow-lg shadow-red-500/20 translate-y-[-2px]' 
                                     : `${isDarkMode ? 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:text-white' : 'bg-gray-100 border-transparent text-gray-500 hover:bg-gray-200 hover:text-gray-800'}`}`}
                             >
-                                Todas
+                                Brasil Todo
                             </button>
                             {estadosDisponiveis.map(uf => (
                                 <button 
                                     key={uf}
-                                    onClick={() => setFiltroEstado(uf)}
+                                    onClick={() => { setFiltroEstado(uf); limparGPS(); }}
                                     className={`px-5 py-2.5 rounded-2xl font-bold text-xs uppercase whitespace-nowrap transition-all duration-300 transform active:scale-95 border ${filtroEstado === uf 
-                                        ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white border-transparent shadow-lg shadow-blue-500/20 translate-y-[-2px]' 
+                                        ? 'bg-gradient-to-r from-red-600 to-red-500 text-white border-transparent shadow-lg shadow-red-500/20 translate-y-[-2px]' 
                                         : `${isDarkMode ? 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:text-white' : 'bg-gray-100 border-transparent text-gray-500 hover:bg-gray-200 hover:text-gray-800'}`}`}
                                 >
                                     {uf}
@@ -299,51 +405,71 @@ export default function PublicSchedule() {
                         </div>
                     </div>
 
-                    {/* CAMPO DE BUSCA */}
                     <div className="relative group">
                         <div className={`absolute -inset-0.5 rounded-2xl bg-gradient-to-r from-red-500 to-blue-500 opacity-0 group-focus-within:opacity-50 blur transition duration-500`}></div>
                         <div className="relative">
                             <input 
                                 type="text" 
-                                placeholder={filtroEstado ? `Buscar em ${filtroEstado}...` : "Buscar unidade ou modalidade..."} 
+                                placeholder={filtroEstado ? `Buscar em ${filtroEstado}...` : "Buscar unidade, endereço ou modalidade..."} 
                                 className={`w-full h-14 pl-12 pr-4 rounded-2xl border outline-none font-semibold text-sm shadow-inner transition-all ${inputGlass}`} 
                                 value={busca} 
-                                onChange={e => setBusca(e.target.value)} 
-                                autoFocus 
+                                onChange={e => { setBusca(e.target.value); limparGPS(); }} 
                             />
                             <Search className={`absolute left-4 top-4 w-6 h-6 transition-colors ${isDarkMode ? 'text-white/30 group-focus-within:text-white' : 'text-gray-400 group-focus-within:text-gray-600'}`}/>
                             {busca && busca !== termoDebounce && <Loader2 className="absolute right-4 top-4 w-6 h-6 animate-spin text-red-500"/>}
                         </div>
                     </div>
 
-                    {/* ÁREA DE RESULTADOS */}
-                    <div className={`max-h-[350px] overflow-y-auto custom-scrollbar pr-2 transition-all duration-500 ${(busca || filtroEstado) ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
+                    <div className={`max-h-[400px] overflow-y-auto custom-scrollbar pr-2 transition-all duration-500 ${(busca || filtroEstado || userCoords) ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
                         
+                        {userCoords && (
+                             <div className="mb-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                 <h3 className="text-xs font-bold text-emerald-500 uppercase tracking-wider flex items-center gap-2 mb-3 px-1">
+                                     <span className="p-1 bg-emerald-500/10 rounded"><LocateFixed className="w-3 h-3"/></span>
+                                     No seu Radar (Raio de 15km)
+                                 </h3>
+                             </div>
+                        )}
+
                         {/* AULAS ENCONTRADAS */}
-                        {termoDebounce.length > 0 && resultadosModalidade && resultadosModalidade.length > 0 && (
+                        {termoDebounce.length > 0 && resultadosModalidade && resultadosModalidade.length > 0 && !userCoords && (
                             <div className="mb-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                                 <h3 className="text-xs font-bold text-blue-500 uppercase tracking-wider flex items-center gap-2 mb-3 px-1">
                                     <span className="p-1 bg-blue-500/10 rounded"><Dumbbell className="w-3 h-3"/></span> 
                                     Aulas Encontradas
                                 </h3>
-                                <div className="grid gap-2">
+                                <div className="grid gap-3">
                                     {resultadosModalidade.map((item) => (
-                                        <div key={item.unidade.id} className={`p-4 rounded-2xl border flex flex-col gap-3 group transition-all hover:scale-[1.01] ${isDarkMode ? 'bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/20' : 'bg-gray-50 border-gray-100 hover:bg-white hover:shadow-md'}`}>
-                                            <div className="flex justify-between items-center">
-                                                <div className="flex flex-col">
-                                                    <span className={`font-black text-sm uppercase ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>{item.unidade.nome}</span>
-                                                    <span className={`text-[10px] font-bold ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>{item.unidade.cidade} • {item.unidade.estado}</span>
+                                        <div key={item.unidade.id} className={`p-4 rounded-2xl border flex flex-col gap-3 transition-all hover:shadow-md ${isDarkMode ? 'bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/20' : 'bg-white border-gray-200 hover:border-blue-300'}`}>
+                                            
+                                            <div className="flex justify-between items-start gap-4">
+                                                <div className="flex flex-col flex-1 min-w-0">
+                                                    <span className={`font-black text-sm uppercase truncate ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>{item.unidade.nome}</span>
+                                                    
+                                                    <a href={getMapsLink(item.unidade)} target="_blank" rel="noopener noreferrer" className={`mt-1 flex items-start gap-1 text-[10px] font-medium leading-snug group/map w-fit ${isDarkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'}`}>
+                                                        <Navigation className="w-3 h-3 shrink-0 mt-0.5 group-hover/map:scale-110 transition-transform"/>
+                                                        <span className="group-hover/map:underline">{displayAddress(item.unidade)}</span>
+                                                    </a>
                                                 </div>
-                                                <button onClick={() => setUnidadeSelecionada(item.unidade)} className="text-[10px] font-bold text-white bg-blue-600 hover:bg-blue-500 px-3 py-1.5 rounded-lg transition-colors flex items-center shadow-lg shadow-blue-900/20">
+                                                
+                                                <button onClick={() => setUnidadeSelecionada(item.unidade)} className="shrink-0 text-[10px] font-bold text-white bg-blue-600 hover:bg-blue-500 px-3 py-2 rounded-lg transition-colors flex items-center shadow-md active:scale-95">
                                                     VER GRADE <ChevronRight className="w-3 h-3 ml-1"/>
                                                 </button>
                                             </div>
+
+                                            <div className={`h-px w-full ${isDarkMode ? 'bg-white/10' : 'bg-gray-100'}`}></div>
+                                            
                                             <div className="flex flex-wrap gap-1.5">
                                                 {item.aulas.slice(0, 4).map((aula, idx) => (
-                                                    <span key={idx} className={`text-[10px] font-bold px-2 py-1 rounded-md border ${isDarkMode ? 'bg-black/20 border-white/10 text-gray-300' : 'bg-white border-gray-200 text-gray-600'}`}>
+                                                    <span key={idx} className={`text-[10px] font-bold px-2 py-1 rounded-md border ${isDarkMode ? 'bg-black/30 border-white/10 text-gray-300' : 'bg-gray-50 border-gray-200 text-gray-600'}`}>
                                                         {aula.dias[0]?.substring(0,3)} {aula.hora}
                                                     </span>
                                                 ))}
+                                                {item.aulas.length > 4 && (
+                                                    <span className={`text-[10px] font-bold px-2 py-1 rounded-md border italic ${isDarkMode ? 'bg-black/30 border-transparent text-gray-500' : 'bg-gray-50 border-transparent text-gray-400'}`}>
+                                                        +{item.aulas.length - 4} horários
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
                                     ))}
@@ -354,34 +480,51 @@ export default function PublicSchedule() {
                         {/* UNIDADES ENCONTRADAS */}
                         {resultadosUnidade.length > 0 && (
                             <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
-                                <h3 className="text-xs font-bold text-red-500 uppercase tracking-wider flex items-center gap-2 mb-3 px-1">
-                                    <span className="p-1 bg-red-500/10 rounded"><MapPin className="w-3 h-3"/></span>
-                                    Unidades Disponíveis
-                                </h3>
-                                <div className="grid gap-2">
+                                {!userCoords && (
+                                    <h3 className="text-xs font-bold text-red-500 uppercase tracking-wider flex items-center gap-2 mb-3 px-1">
+                                        <span className="p-1 bg-red-500/10 rounded"><MapPin className="w-3 h-3"/></span>
+                                        Unidades Disponíveis
+                                    </h3>
+                                )}
+                                <div className="grid gap-3">
                                     {resultadosUnidade.map(u => (
-                                        <button key={u.id} onClick={() => setUnidadeSelecionada(u)} className={`w-full p-4 rounded-2xl border flex justify-between items-center group transition-all text-left hover:scale-[1.01] ${isDarkMode ? 'bg-white/5 border-white/5 hover:bg-white/10 hover:border-red-500/30' : 'bg-gray-50 border-gray-100 hover:bg-white hover:shadow-md hover:border-red-100'}`}>
-                                            <div>
-                                                <span className={`block font-black text-sm uppercase ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>{u.nome}</span>
-                                                <span className={`text-[10px] font-bold flex items-center gap-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                                                    {u.cidade} <span className="w-1 h-1 rounded-full bg-gray-600"></span> {u.estado}
-                                                </span>
+                                        <div key={u.id} className={`p-4 rounded-2xl border flex flex-col gap-3 transition-all hover:shadow-md ${isDarkMode ? 'bg-white/5 border-white/5 hover:bg-white/10 hover:border-red-500/30' : 'bg-white border-gray-200 hover:border-red-200'}`}>
+                                            
+                                            <div className="flex justify-between items-start gap-4">
+                                                <div className="flex flex-col flex-1 min-w-0">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className={`block font-black text-sm md:text-base uppercase truncate ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>{u.nome}</span>
+                                                        
+                                                        {userCoords && u.distance < 9999 && (
+                                                            <span className="px-2 py-1 bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 border border-emerald-500/20 rounded-md text-[9px] font-black tracking-widest uppercase flex items-center gap-1 shrink-0">
+                                                                🚗 {u.distance.toFixed(1)} KM
+                                                            </span>
+                                                        )}
+                                                    </div>
+
+                                                    <a href={getMapsLink(u)} target="_blank" rel="noopener noreferrer" className={`mt-1.5 flex items-start gap-1.5 text-[10px] font-medium leading-snug group/map w-fit ${isDarkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'}`}>
+                                                        <Navigation className="w-3.5 h-3.5 shrink-0 mt-0.5 group-hover/map:scale-110 transition-transform"/>
+                                                        <span className="group-hover/map:underline">{displayAddress(u)}</span>
+                                                    </a>
+                                                </div>
+                                                
+                                                <button onClick={() => setUnidadeSelecionada(u)} className={`shrink-0 p-3 rounded-xl transition-colors active:scale-95 ${isDarkMode ? 'bg-white/5 hover:bg-red-600 hover:text-white text-gray-400' : 'bg-gray-50 hover:bg-red-100 hover:text-red-600 text-gray-500 border border-gray-200'}`}>
+                                                    <ChevronRight className="w-5 h-5"/>
+                                                </button>
                                             </div>
-                                            <div className={`p-2 rounded-full transition-colors ${isDarkMode ? 'bg-white/5 group-hover:bg-red-600 group-hover:text-white text-gray-500' : 'bg-white group-hover:bg-red-100 group-hover:text-red-600 text-gray-300'}`}>
-                                                <ChevronRight className="w-4 h-4"/>
-                                            </div>
-                                        </button>
+
+                                        </div>
                                     ))}
                                 </div>
                             </div>
                         )}
 
                         {/* EMPTY STATE */}
-                        {(termoDebounce.length > 0 || filtroEstado) && !resultadosUnidade.length && !resultadosModalidade && (
+                        {((termoDebounce.length > 0 || filtroEstado || userCoords) && !resultadosUnidade.length && !resultadosModalidade) && (
                             <div className="text-center py-12 opacity-50 animate-in fade-in zoom-in-95">
                                 <div className="mb-3 inline-flex p-4 rounded-full bg-white/5"><Search className="w-6 h-6"/></div>
                                 <p className="text-sm font-medium">Nenhuma unidade ou aula encontrada.</p>
-                                <p className="text-xs mt-1">Tente mudar o termo de busca.</p>
+                                <p className="text-xs mt-1">Tente expandir o raio de busca ou mudar o termo.</p>
                             </div>
                         )}
                     </div>
@@ -395,88 +538,44 @@ export default function PublicSchedule() {
       );
   }
 
-  // TELA 2: GRADE COM IMPRESSÃO
   return (
     <div className={`min-h-screen ${isDarkMode ? "bg-[#101010] text-white" : "bg-[#f5f5f5] text-[#1f1f1f]"} pb-10 print:bg-black print:text-white print:p-0 print:h-screen print:overflow-hidden`}>
         
         <style>{`
-            /* ESTILOS DE IMPRESSÃO PROFISSIONAL (MELHORADOS) */
             @media print {
                 @page { size: landscape; margin: 0; }
-                
-                body, #root, html {
-                    background-color: #000000 !important;
-                    color: white !important;
-                    -webkit-print-color-adjust: exact !important;
-                    print-color-adjust: exact !important;
-                    width: 100vw; height: 100vh; margin: 0; padding: 0;
-                    overflow: hidden;
-                }
-                
+                body, #root, html { background-color: #000000 !important; color: white !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; width: 100vw; height: 100vh; margin: 0; padding: 0; overflow: hidden; }
                 body > *:not(#root) { display: none; }
-
-                .print-container {
-                    width: 100vw !important; height: 100vh !important;
-                    display: flex !important; flex-direction: column !important;
-                    padding: 10px !important; box-sizing: border-box !important;
-                }
-
-                /* MÁGICA 2: FONTE MAIOR NA IMPRESSÃO PORQUE O NOME DO PROFESSOR SOME */
+                .print-container { width: 100vw !important; height: 100vh !important; display: flex !important; flex-direction: column !important; padding: 10px !important; box-sizing: border-box !important; }
                 .density-ultra-compact .print-header { height: 60px !important; margin-bottom: 5px !important; }
                 .density-ultra-compact .ph-title { font-size: 24px !important; }
                 .density-ultra-compact .print-card-title { font-size: 11px !important; line-height: 1.1 !important; }
                 .density-ultra-compact .print-card { padding: 1px !important; border-radius: 4px !important; }
                 .density-ultra-compact .print-cell-header { font-size: 10px !important; padding: 2px !important; }
                 .density-ultra-compact .print-time { font-size: 12px !important; }
-
                 .density-compact .print-header { height: 80px !important; margin-bottom: 10px !important; }
                 .density-compact .ph-title { font-size: 30px !important; }
                 .density-compact .print-card-title { font-size: 14px !important; }
                 .density-compact .print-card { padding: 3px !important; }
-
                 .density-comfortable .print-header { height: 100px !important; margin-bottom: 15px !important; }
                 .density-comfortable .ph-title { font-size: 36px !important; }
                 .density-comfortable .print-card-title { font-size: 18px !important; }
                 .density-comfortable .print-card { padding: 6px !important; }
-
-                /* ESTRUTURA GERAL */
-                .print-header {
-                    display: flex !important; justify-content: space-between !important;
-                    align-items: center !important; width: 100% !important;
-                    border-bottom: 2px solid rgba(255,255,255,0.3) !important; flex-shrink: 0;
-                }
+                .print-header { display: flex !important; justify-content: space-between !important; align-items: center !important; width: 100% !important; border-bottom: 2px solid rgba(255,255,255,0.3) !important; flex-shrink: 0; }
                 .ph-left { width: 25%; display: flex; justify-content: flex-start; }
                 .ph-center { width: 50%; text-align: center; }
                 .ph-right { width: 25%; display: flex; justify-content: flex-end; }
                 .ph-title { font-weight: 900; text-transform: uppercase; margin: 0; line-height: 1; font-style: italic; color: white; }
                 .ph-sub { font-weight: bold; text-transform: uppercase; color: #ccc; margin-top: 5px; }
-
-                .print-grid-wrapper {
-                    flex: 1; width: 100% !important; display: flex !important;
-                    flex-direction: column !important; border: 1px solid rgba(255,255,255,0.3) !important;
-                    overflow: visible !important;
-                }
-                .print-grid-header, .print-grid-body {
-                    display: grid; grid-template-columns: 80px repeat(${gradeOrganizada.dias.length}, 1fr);
-                }
+                .print-grid-wrapper { flex: 1; width: 100% !important; display: flex !important; flex-direction: column !important; border: 1px solid rgba(255,255,255,0.3) !important; overflow: visible !important; }
+                .print-grid-header, .print-grid-body { display: grid; grid-template-columns: 80px repeat(${gradeOrganizada.dias.length}, 1fr); }
                 .print-grid-header { border-bottom: 1px solid rgba(255,255,255,0.3); background-color: #111 !important; }
                 .print-grid-body { grid-auto-rows: 1fr; height: 100%; }
-                .print-cell {
-                    border-right: 1px solid rgba(255,255,255,0.2) !important;
-                    border-bottom: 1px solid rgba(255,255,255,0.2) !important;
-                    display: flex; align-items: stretch; justify-content: center; padding: 2px !important;
-                }
-                .print-card {
-                    width: 100% !important; display: flex; flex: 1;
-                    flex-direction: column; justify-content: center; align-items: center;
-                    -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important;
-                    background-blend-mode: normal !important; box-shadow: none !important;
-                }
+                .print-cell { border-right: 1px solid rgba(255,255,255,0.2) !important; border-bottom: 1px solid rgba(255,255,255,0.2) !important; display: flex; align-items: stretch; justify-content: center; padding: 2px !important; }
+                .print-card { width: 100% !important; display: flex; flex: 1; flex-direction: column; justify-content: center; align-items: center; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; background-blend-mode: normal !important; box-shadow: none !important; }
                 .print-card-title { color: white !important; font-weight: 900 !important; text-transform: uppercase; text-align: center; text-shadow: 1px 1px 1px rgba(0,0,0,0.8); }
                 .screen-only { display: none !important; }
             }
-
-            /* ESTILOS DE TELA */
             @media screen {
                 .screen-grid { display: grid; grid-template-columns: 80px repeat(${gradeOrganizada.dias.length}, minmax(180px, 1fr)); }
                 .print-header { display: none; }
@@ -485,25 +584,31 @@ export default function PublicSchedule() {
             }
         `}</style>
 
-        {/* HEADER TELA */}
+        {/* HEADER TELA DA GRADE */}
         <div className="sticky top-0 z-50 shadow-md print:hidden bg-[#111] border-b border-white/10">
-            <div className="max-w-[1920px] mx-auto px-6 py-4 flex items-center justify-between">
-                <div className="flex items-center gap-6">
-                    <button onClick={() => setUnidadeSelecionada(null)} className="flex items-center gap-2 text-gray-500 hover:text-red-600 transition-colors">
+            <div className="max-w-[1920px] mx-auto px-4 md:px-6 py-4 flex items-center justify-between">
+                <div className="flex items-center gap-4 md:gap-6 flex-1 min-w-0 pr-4">
+                    <button onClick={() => setUnidadeSelecionada(null)} className="shrink-0 flex items-center gap-2 text-gray-500 hover:text-blue-500 transition-colors">
                         <ArrowLeft className="w-6 h-6"/> <span className="text-sm font-bold uppercase hidden md:inline">Voltar</span>
                     </button>
-                    <div>
-                        <h2 className="text-2xl md:text-3xl font-black italic tracking-tighter uppercase text-white">{unidadeSelecionada.nome}</h2>
-                        <p className="text-xs font-bold uppercase tracking-widest text-gray-500">{unidadeSelecionada.cidade}</p>
+                    <div className="flex flex-col min-w-0">
+                        <h2 className="text-xl md:text-3xl font-black italic tracking-tighter uppercase text-white truncate">{unidadeSelecionada.nome}</h2>
+                        
+                        <div className="flex flex-col mt-0.5">
+                            <a href={getMapsLink(unidadeSelecionada)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-[10px] md:text-[11px] font-bold uppercase tracking-widest text-blue-400 hover:text-blue-300 transition-colors group mt-1 w-fit">
+                                <MapPin className="w-3.5 h-3.5 shrink-0 group-hover:scale-110 transition-transform"/>
+                                <span className="truncate max-w-[250px] md:max-w-md group-hover:underline">{displayAddress(unidadeSelecionada)}</span>
+                            </a>
+                        </div>
                     </div>
                 </div>
                 
-                <div className="flex gap-3 relative">
-                    <button onClick={() => setIsDarkMode(!isDarkMode)} className={`p-3 rounded-full border transition-all ${isDarkMode ? 'bg-[#222] border-white/10 text-yellow-400' : 'bg-gray-100 border-gray-200 text-gray-600'}`}>{isDarkMode ? <Sun className="w-5 h-5"/> : <Moon className="w-5 h-5"/>}</button>
+                <div className="flex gap-2 md:gap-3 relative shrink-0">
+                    <button onClick={() => setIsDarkMode(!isDarkMode)} className={`p-2.5 md:p-3 rounded-full border transition-all ${isDarkMode ? 'bg-[#222] border-white/10 text-yellow-400' : 'bg-gray-100 border-gray-200 text-gray-600'}`}>{isDarkMode ? <Sun className="w-4 h-4 md:w-5 md:h-5"/> : <Moon className="w-4 h-4 md:w-5 md:h-5"/>}</button>
                     
                     <div className="relative">
-                        <button onClick={() => setShowPrintMenu(!showPrintMenu)} className="p-3 bg-red-600 text-white rounded-full hover:bg-red-700 shadow-lg shadow-red-500/30 transition-all flex items-center gap-2">
-                            <Printer className="w-5 h-5"/> <ChevronDown className="w-3 h-3"/>
+                        <button onClick={() => setShowPrintMenu(!showPrintMenu)} className="p-2.5 md:p-3 bg-blue-600 text-white rounded-full hover:bg-blue-500 shadow-lg shadow-blue-500/30 transition-all flex items-center gap-2">
+                            <Printer className="w-4 h-4 md:w-5 md:h-5"/> <ChevronDown className="w-3 h-3 hidden md:block"/>
                         </button>
                         
                         {showPrintMenu && (
@@ -538,7 +643,7 @@ export default function PublicSchedule() {
                 <div className="ph-right"><div className="bg-white p-1 rounded"><img src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent("https://gestaodecoletivas.vercel.app/horarios")}`} alt="QR" className="w-16 h-16"/></div></div>
             </div>
 
-            {loadingGrade ? <div className="flex justify-center h-[50vh] items-center screen-only"><Loader2 className="w-12 h-12 animate-spin text-red-600"/></div> : 
+            {loadingGrade ? <div className="flex justify-center h-[50vh] items-center screen-only"><Loader2 className="w-12 h-12 animate-spin text-blue-600"/></div> : 
             gradeUnidade.length === 0 ? <div className="text-center py-20 opacity-50 screen-only"><p className="font-bold text-xl">Grade vazia.</p></div> : 
             (
                 <div className={`print-grid-wrapper overflow-x-auto rounded-2xl border ${isDarkMode ? 'bg-[#111] border-white/10' : 'bg-white border-gray-200'} print:bg-black print:border-0 print:rounded-none`}>
@@ -560,7 +665,6 @@ export default function PublicSchedule() {
                                     {hora}
                                 </div>
                                 {gradeOrganizada.dias.map(dia => {
-                                    // MÁGICA 3: Usar FILTER ao invés de FIND. Traz todas as aulas do mesmo dia e hora.
                                     const aulasNoHorario = getAulasCell(dia, hora);
                                     const borderClass = `border-r border-b ${isDarkMode ? 'border-white/10' : 'border-gray-200'} print:border-[#222]`;
                                     
@@ -568,7 +672,6 @@ export default function PublicSchedule() {
                                     
                                     return (
                                         <div key={`${dia}-${hora}`} className={`print-cell ${borderClass} p-1 flex flex-col gap-1`}>
-                                            {/* Faz um map para renderizar cada aula em um card próprio dentro da mesma célula */}
                                             {aulasNoHorario.map((aula, i) => {
                                                 const cor = aula.modalidadeCor || '#333';
                                                 return (
@@ -580,7 +683,6 @@ export default function PublicSchedule() {
                                                         <p className="print-card-title font-black text-[13px] md:text-[15px] uppercase leading-tight line-clamp-2 text-white drop-shadow-md">
                                                             {aula.modalidadeNome}
                                                         </p>
-                                                        {/* print:hidden oculta o nome do professor no PDF/Papel */}
                                                         <p className="print-card-sub text-[10px] md:text-[11px] font-bold uppercase opacity-90 truncate w-full text-white drop-shadow-md print:hidden mt-1">
                                                             {aula.professorNome}
                                                         </p>

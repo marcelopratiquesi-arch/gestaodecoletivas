@@ -8,19 +8,22 @@ import {
   Loader2, Flame, LayoutGrid, CalendarDays, Sun, Sunset, Moon, X, 
   Calendar as CalendarIcon, ArrowRight, BookOpen, User, GripHorizontal, 
   BarChart, Activity, Zap, Lock, Save, CalendarPlus, ChevronDown, Search, CheckSquare, Square,
-  TrendingUp, CheckCircle2, AlertOctagon, ArrowUpRight, PieChart, Users, Siren
+  TrendingUp, CheckCircle2, AlertOctagon, PieChart, Users, Siren, Maximize
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+
+// 🟢 IMPORTANDO AS VISÕES (Os arquivos que você já separou)
+import VisaoGlobal from './VisaoGlobal';
+import VisaoPerformance from './VisaoPerformance';
 
 // ============================================================================
 // 1. HELPERS & CONFIGURAÇÕES GLOBAIS
 // ============================================================================
 const ALL_DAYS = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
 const DIAS_UTEIS = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta']; 
-const HORARIO_ABERTURA = "06:00"; 
-const HORARIO_FECHAMENTO = "22:00"; 
 const DURACAO_AULA_PADRAO = 40; 
 const GAP_MINIMO_OCIOSO = 60; 
+const MAX_AULAS_MES = 480;
 
 const getTodayStr = () => new Date().toLocaleDateString('en-CA');
 const timeToMins = (timeStr) => { if (!timeStr) return 0; const [h, m] = timeStr.split(':').map(Number); return h * 60 + m; };
@@ -43,7 +46,7 @@ const getDisciplinaColor = (nome) => {
 };
 
 // ============================================================================
-// 2. COMPONENTES ESTRATÉGICOS (UX AVANÇADA)
+// 2. COMPONENTES ESTRATÉGICOS REUTILIZÁVEIS (MODAIS)
 // ============================================================================
 const MultiSelectDropdown = ({ label, options, selected, onChange, placeholder = "SELECIONAR..." }) => {
     const [isOpen, setIsOpen] = useState(false);
@@ -65,40 +68,23 @@ const MultiSelectDropdown = ({ label, options, selected, onChange, placeholder =
     return (
         <div className="relative w-full">
             <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase mb-1.5 block tracking-widest">{label}</label>
-            <div 
-                onClick={() => setIsOpen(!isOpen)}
-                className={`w-full p-3 bg-slate-50 dark:bg-slate-900 border ${isOpen ? 'border-blue-500 ring-2 ring-blue-100 dark:ring-blue-900/30' : 'border-slate-200 dark:border-slate-700'} rounded-xl text-[10px] font-black outline-none cursor-pointer flex justify-between items-center transition-all uppercase shadow-sm`}
-            >
-                <span className="truncate text-slate-700 dark:text-slate-300">
-                    {selected.length === 0 ? placeholder : selected.length === 1 ? options.find(o => o.id === selected[0])?.label : `${selected.length} SELECIONADOS`}
-                </span>
+            <div onClick={() => setIsOpen(!isOpen)} className={`w-full p-3 bg-slate-50 dark:bg-slate-900 border ${isOpen ? 'border-blue-500 ring-2 ring-blue-100 dark:ring-blue-900/30' : 'border-slate-200 dark:border-slate-700'} rounded-xl text-[10px] font-black outline-none cursor-pointer flex justify-between items-center transition-all uppercase shadow-sm`}>
+                <span className="truncate text-slate-700 dark:text-slate-300">{selected.length === 0 ? placeholder : selected.length === 1 ? options.find(o => o.id === selected[0])?.label : `${selected.length} SELECIONADOS`}</span>
                 <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180 text-blue-500' : ''}`} />
             </div>
-
             {isOpen && (
                 <>
                     <div className="fixed inset-0 z-[40]" onClick={() => setIsOpen(false)} />
                     <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl z-[50] overflow-hidden flex flex-col max-h-[350px]">
                         <div className="p-2 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 shrink-0">
-                            <div className="relative">
-                                <Search className="w-3 h-3 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                                <input 
-                                    type="text" placeholder="BUSCAR..." value={search} onChange={(e) => setSearch(e.target.value)}
-                                    className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg pl-8 pr-3 py-2 text-[10px] font-black uppercase outline-none focus:border-blue-500 dark:text-white placeholder-slate-300 dark:placeholder-slate-600"
-                                />
-                            </div>
+                            <div className="relative"><Search className="w-3 h-3 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" /><input type="text" placeholder="BUSCAR..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg pl-8 pr-3 py-2 text-[10px] font-black uppercase outline-none focus:border-blue-500 dark:text-white placeholder-slate-300 dark:placeholder-slate-600"/></div>
                         </div>
                         <div className="overflow-y-auto custom-scrollbar p-2 flex-1 space-y-1">
-                            {filteredOptions.length === 0 ? (
-                                <div className="p-3 text-center text-[10px] font-bold text-slate-400 uppercase">NENHUM RESULTADO</div>
-                            ) : (
-                                filteredOptions.map(opt => (
-                                    <div key={opt.id} onClick={() => toggle(opt.id)} className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors ${selected.includes(opt.id) ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-600 dark:text-slate-300'}`}>
-                                        {selected.includes(opt.id) ? <CheckSquare className="w-4 h-4 text-blue-500 shrink-0" /> : <Square className="w-4 h-4 text-slate-300 dark:text-slate-600 shrink-0" />}
-                                        <span className="text-[10px] font-black uppercase truncate">{opt.label}</span>
-                                    </div>
-                                ))
-                            )}
+                            {filteredOptions.length === 0 ? <div className="p-3 text-center text-[10px] font-bold text-slate-400 uppercase">NENHUM RESULTADO</div> : filteredOptions.map(opt => (
+                                <div key={opt.id} onClick={() => toggle(opt.id)} className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors ${selected.includes(opt.id) ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-600 dark:text-slate-300'}`}>
+                                    {selected.includes(opt.id) ? <CheckSquare className="w-4 h-4 text-blue-500 shrink-0" /> : <Square className="w-4 h-4 text-slate-300 dark:text-slate-600 shrink-0" />}<span className="text-[10px] font-black uppercase truncate">{opt.label}</span>
+                                </div>
+                            ))}
                         </div>
                         <div className="p-2 border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 shrink-0 flex gap-2">
                             <button onClick={handleSelectAll} className="flex-1 py-2 text-[9px] font-black text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded uppercase transition-colors">TODOS</button>
@@ -113,23 +99,19 @@ const MultiSelectDropdown = ({ label, options, selected, onChange, placeholder =
 
 const ResizableModal = ({ isOpen, onClose, title, icon: Icon, pos, setPos, size, setSize, children, minW = 320, minH = 300, headerColor = "bg-[#1e293b] text-white border-slate-800", headerButtons }) => {
     if (!isOpen) return null;
-
     const startTransform = (e, dir) => {
         e.stopPropagation(); e.preventDefault();
         const startX = e.clientX || e.touches?.[0].clientX;
         const startY = e.clientY || e.touches?.[0].clientY;
         const startW = size.w; const startH = size.h;
         const startPosX = pos.x; const startPosY = pos.y;
-
         const onMove = (moveEvent) => {
             const currentX = moveEvent.clientX || moveEvent.touches?.[0].clientX;
             const currentY = moveEvent.clientY || moveEvent.touches?.[0].clientY;
             const dx = currentX - startX; const dy = currentY - startY;
             let newW = startW, newH = startH, newX = startPosX, newY = startPosY;
-
-            if (dir === 'drag') {
-                newX = startPosX + dx; newY = Math.max(0, startPosY + dy); 
-            } else {
+            if (dir === 'drag') { newX = startPosX + dx; newY = Math.max(0, startPosY + dy); }
+            else {
                 if (dir.includes('e')) newW = startW + dx;
                 if (dir.includes('s')) newH = startH + dy;
                 if (dir.includes('w')) { newW = startW - dx; newX = startPosX + dx; }
@@ -140,12 +122,10 @@ const ResizableModal = ({ isOpen, onClose, title, icon: Icon, pos, setPos, size,
             setPos({ x: newX, y: newY });
             if (dir !== 'drag') setSize({ w: newW, h: newH });
         };
-
         const onUp = () => {
             window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp);
             window.removeEventListener('touchmove', onMove); window.removeEventListener('touchend', onUp);
         };
-
         window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp);
         window.addEventListener('touchmove', onMove, { passive: false }); window.addEventListener('touchend', onUp);
     };
@@ -178,227 +158,7 @@ const ResizableModal = ({ isOpen, onClose, title, icon: Icon, pos, setPos, size,
 };
 
 // ============================================================================
-// 3. COMPONENTE: VISÃO GLOBAL (CEO)
-// ============================================================================
-const VisaoGlobal = ({ resumoCEO, executeDrillDown }) => {
-    const [showAll1, setShowAll1] = useState(false);
-    const [showAll2, setShowAll2] = useState(false);
-    const [showAll3, setShowAll3] = useState(false);
-
-    if (!resumoCEO) return <div className="p-20 text-center font-black text-slate-400 dark:text-slate-500">CALCULANDO DADOS...</div>;
-
-    const list1 = showAll1 ? resumoCEO.ranking : resumoCEO.ranking.slice(0, 5);
-    const list2 = showAll2 ? resumoCEO.ranking : resumoCEO.ranking.slice(0, 5);
-    const list3 = showAll3 ? resumoCEO.otimizadas : resumoCEO.otimizadas.slice(0, 5);
-
-    return (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-fade-in uppercase items-start">
-            {/* CARD 1: HORAS OCIOSAS */}
-            <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border-t-4 border-t-[#c69c6d] shadow-sm flex flex-col">
-                <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-2">
-                    <div className="w-4 h-4 bg-[#c69c6d]/20 rounded flex items-center justify-center"><TrendingUp className="w-3 h-3 text-[#c69c6d]" /></div>
-                    <h3 className="text-[10px] font-black tracking-widest text-[#9c7a52]">HORAS OCIOSAS NA REDE</h3>
-                </div>
-                <div className="mb-2">
-                    <span className="text-5xl font-black text-slate-800 dark:text-white tracking-tighter">{resumoCEO.totalHoras}H</span>
-                    <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 mt-1">ESTA SEMANA • <span className="text-slate-800 dark:text-white font-black">{resumoCEO.ranking.length} UNIDADES</span></p>
-                </div>
-                <div className="flex items-end h-8 gap-1 mb-4 mt-2">
-                    {resumoCEO.sparkline.map((val, idx) => (
-                        <div key={idx} className={`flex-1 rounded-sm transition-all hover:opacity-80 ${idx === 4 ? 'bg-[#7a5c37]' : 'bg-[#c6cbce] dark:bg-slate-600'}`} style={{ height: `${Math.max(10, (val / resumoCEO.maxSpark) * 100)}%` }} title={`${resumoCEO.diasSparkline[idx]}: ${val} aulas vazias`}></div>
-                    ))}
-                </div>
-                <div className="border-t border-slate-100 dark:border-slate-700 mb-3"></div>
-                <div className="flex-1 space-y-3 mb-2">
-                    {list1.map((u) => (
-                        <div key={u.id} className="flex justify-between items-center text-xs font-bold border-b border-slate-50 dark:border-slate-700/50 pb-2">
-                            <span className="text-slate-600 dark:text-slate-300 truncate pr-2 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer" onClick={() => executeDrillDown(u.id)}>{u.nome}</span>
-                            <span className="text-[#a06842] dark:text-[#c69c6d] font-black shrink-0">{u.aulasPerdidas} JANELAS</span>
-                        </div>
-                    ))}
-                </div>
-                {resumoCEO.ranking.length > 5 && (
-                    <button onClick={() => setShowAll1(!showAll1)} className="text-[9px] font-black text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 flex items-center justify-center gap-1 py-2 uppercase">
-                        {showAll1 ? 'VER MENOS' : 'VER MAIS...'} <ChevronDown className={`w-3 h-3 transition-transform ${showAll1 ? 'rotate-180' : ''}`}/>
-                    </button>
-                )}
-            </div>
-
-            {/* CARD 2: MAIOR OCIOSIDADE */}
-            <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border-t-4 border-t-rose-800 shadow-sm flex flex-col">
-                <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-2">
-                    <div className="w-4 h-4 bg-rose-100 dark:bg-rose-900/30 rounded flex items-center justify-center"><AlertOctagon className="w-3 h-3 text-rose-700 dark:text-rose-400" /></div>
-                    <h3 className="text-[10px] font-black tracking-widest text-slate-500 dark:text-slate-400">MAIOR OCIOSIDADE</h3>
-                </div>
-                <div className="mb-6">
-                    <span className="text-3xl font-black text-slate-800 dark:text-white leading-tight block truncate mb-1">{resumoCEO.maiorOciosidade?.nome || 'N/A'}</span>
-                    <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400"><span className="text-slate-800 dark:text-white font-black">{resumoCEO.maiorOciosidade?.aulasPerdidas || 0} JANELAS</span> ABERTAS ESTA SEMANA</p>
-                </div>
-                <div className="border-t border-slate-100 dark:border-slate-700 mb-3"></div>
-                <div className="flex-1 space-y-3 mb-2">
-                    {list2.map((u) => (
-                        <div key={u.id} className="flex justify-between items-center text-xs font-bold border-b border-slate-50 dark:border-slate-700/50 pb-2">
-                            <span className="text-slate-600 dark:text-slate-300 truncate pr-2 hover:text-rose-600 cursor-pointer" onClick={() => executeDrillDown(u.id)}>{u.nome}</span>
-                            <span className="text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/20 px-2 py-0.5 rounded font-black shrink-0">{u.aulasPerdidas} JANELAS</span>
-                        </div>
-                    ))}
-                </div>
-                {resumoCEO.ranking.length > 5 && (
-                    <button onClick={() => setShowAll2(!showAll2)} className="text-[9px] font-black text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 flex items-center justify-center gap-1 py-2 uppercase">
-                        {showAll2 ? 'VER MENOS' : 'VER MAIS...'} <ChevronDown className={`w-3 h-3 transition-transform ${showAll2 ? 'rotate-180' : ''}`}/>
-                    </button>
-                )}
-            </div>
-
-            {/* CARD 3: UNIDADES OTIMIZADAS */}
-            <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border-t-4 border-t-emerald-700 shadow-sm flex flex-col">
-                <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-2">
-                    <div className="w-4 h-4 bg-emerald-100 dark:bg-emerald-900/30 rounded flex items-center justify-center"><CheckCircle2 className="w-3 h-3 text-emerald-700 dark:text-emerald-400" /></div>
-                    <h3 className="text-[10px] font-black tracking-widest text-slate-500 dark:text-slate-400">UNIDADES OTIMIZADAS</h3>
-                </div>
-                <div className="mb-6">
-                    <span className="text-5xl font-black text-slate-800 dark:text-white tracking-tighter">{resumoCEO.otimizadas.length}</span>
-                    <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mt-1">COM ALTO VOLUME DE AULAS E GRADE CHEIA</p>
-                </div>
-                <div className="border-t border-slate-100 dark:border-slate-700 mb-3"></div>
-                <div className="flex-1 space-y-3 mb-2">
-                    {list3.length === 0 ? <div className="text-xs font-bold text-slate-400 text-center py-4">Nenhuma unidade 100% cheia.</div> : list3.map((u) => (
-                        <div key={u.id} className="flex justify-between items-center text-xs font-bold border-b border-slate-50 dark:border-slate-700/50 pb-2">
-                            <span className="text-slate-600 dark:text-slate-300 truncate pr-2 hover:text-emerald-600 cursor-pointer" onClick={() => executeDrillDown(u.id)}>{u.nome}</span>
-                            <span className="text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 rounded font-black shrink-0">{u.totalAulas} AULAS</span>
-                        </div>
-                    ))}
-                </div>
-                {resumoCEO.otimizadas.length > 5 && (
-                    <button onClick={() => setShowAll3(!showAll3)} className="text-[9px] font-black text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 flex items-center justify-center gap-1 py-2 uppercase">
-                        {showAll3 ? 'VER MENOS' : 'VER MAIS...'} <ChevronDown className={`w-3 h-3 transition-transform ${showAll3 ? 'rotate-180' : ''}`}/>
-                    </button>
-                )}
-            </div>
-        </div>
-    );
-};
-
-// ============================================================================
-// 4. COMPONENTE: VISÃO DE PERFORMANCE (O Pulo do Gato)
-// ============================================================================
-const VisaoPerformance = ({ resumoPerformance, executeDrillDown }) => {
-    const [showAll1, setShowAll1] = useState(false);
-    const [showAll2, setShowAll2] = useState(false);
-
-    if (!resumoPerformance) return <div className="p-20 text-center font-black text-slate-400 dark:text-slate-500">Mapeando dados de ocupação...</div>;
-
-    const listOcupacao = showAll1 ? resumoPerformance.rankingOcupacao : resumoPerformance.rankingOcupacao.slice(0, 5);
-    const listVacancia = showAll2 ? resumoPerformance.rankingVacancia : resumoPerformance.rankingVacancia.slice(0, 5);
-
-    return (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-fade-in uppercase items-start">
-            
-            {/* CARD 1: RANKING DE OCUPAÇÃO (Eficiência da Sala) */}
-            <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border-t-4 border-t-purple-600 shadow-sm flex flex-col">
-                <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-2">
-                    <div className="w-4 h-4 bg-purple-100 dark:bg-purple-900/30 rounded flex items-center justify-center"><Users className="w-3 h-3 text-purple-600 dark:text-purple-400" /></div>
-                    <h3 className="text-[10px] font-black tracking-widest text-purple-700 dark:text-purple-400">TAXA DE OCUPAÇÃO (MÉDIA)</h3>
-                </div>
-                <div className="mb-2">
-                    <span className="text-5xl font-black text-slate-800 dark:text-white tracking-tighter">
-                        {resumoPerformance.rankingOcupacao[0]?.taxaOcupacao.toFixed(1) || 0}%
-                    </span>
-                    <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 mt-1">LÍDER: <span className="text-slate-800 dark:text-white font-black">{resumoPerformance.rankingOcupacao[0]?.nome || 'N/A'}</span></p>
-                </div>
-                <p className="text-[9px] font-bold text-slate-400 mb-4 lowercase normal-case italic">(Alunos Presentes vs Capacidade m² da Sala)</p>
-                <div className="border-t border-slate-100 dark:border-slate-700 mb-3"></div>
-
-                <div className="flex-1 space-y-3 mb-2">
-                    {listOcupacao.map((u) => (
-                        <div key={u.id} className="flex justify-between items-center text-xs font-bold border-b border-slate-50 dark:border-slate-700/50 pb-2">
-                            <span className="text-slate-600 dark:text-slate-300 truncate pr-2 hover:text-purple-600 cursor-pointer" onClick={() => executeDrillDown(u.id)}>{u.nome}</span>
-                            <span className={`px-2 py-0.5 rounded font-black shrink-0 ${u.taxaOcupacao >= 100 ? 'bg-rose-100 text-rose-700' : 'bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-400'}`}>
-                                {u.taxaOcupacao.toFixed(1)}%
-                            </span>
-                        </div>
-                    ))}
-                </div>
-                {resumoPerformance.rankingOcupacao.length > 5 && (
-                    <button onClick={() => setShowAll1(!showAll1)} className="text-[9px] font-black text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 flex items-center justify-center gap-1 py-2 uppercase">
-                        {showAll1 ? 'VER MENOS' : 'VER MAIS...'} <ChevronDown className={`w-3 h-3 transition-transform ${showAll1 ? 'rotate-180' : ''}`}/>
-                    </button>
-                )}
-            </div>
-
-            {/* CARD 2: RANKING DE VACÂNCIA (Tempo Ocioso Absoluto) */}
-            <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border-t-4 border-t-amber-500 shadow-sm flex flex-col">
-                <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-2">
-                    <div className="w-4 h-4 bg-amber-100 dark:bg-amber-900/30 rounded flex items-center justify-center"><PieChart className="w-3 h-3 text-amber-600 dark:text-amber-400" /></div>
-                    <h3 className="text-[10px] font-black tracking-widest text-amber-700 dark:text-amber-400">TAXA DE VACÂNCIA</h3>
-                </div>
-                <div className="mb-2">
-                    <span className="text-5xl font-black text-slate-800 dark:text-white tracking-tighter">
-                        {resumoPerformance.rankingVacancia[0]?.taxaVacancia.toFixed(1) || 0}%
-                    </span>
-                    <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 mt-1">PIOR CASO: <span className="text-slate-800 dark:text-white font-black">{resumoPerformance.rankingVacancia[0]?.nome || 'N/A'}</span></p>
-                </div>
-                <p className="text-[9px] font-bold text-slate-400 mb-4 lowercase normal-case italic">(% do horário útil da semana sem nenhuma aula)</p>
-                <div className="border-t border-slate-100 dark:border-slate-700 mb-3"></div>
-
-                <div className="flex-1 space-y-3 mb-2">
-                    {listVacancia.map((u) => (
-                        <div key={u.id} className="flex justify-between items-center text-xs font-bold border-b border-slate-50 dark:border-slate-700/50 pb-2">
-                            <span className="text-slate-600 dark:text-slate-300 truncate pr-2 hover:text-amber-600 cursor-pointer" onClick={() => executeDrillDown(u.id)}>{u.nome}</span>
-                            <span className="bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 px-2 py-0.5 rounded font-black shrink-0">
-                                {u.taxaVacancia.toFixed(1)}%
-                            </span>
-                        </div>
-                    ))}
-                </div>
-                {resumoPerformance.rankingVacancia.length > 5 && (
-                    <button onClick={() => setShowAll2(!showAll2)} className="text-[9px] font-black text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 flex items-center justify-center gap-1 py-2 uppercase">
-                        {showAll2 ? 'VER MENOS' : 'VER MAIS...'} <ChevronDown className={`w-3 h-3 transition-transform ${showAll2 ? 'rotate-180' : ''}`}/>
-                    </button>
-                )}
-            </div>
-
-            {/* CARD 3: ALERTA DE GARGALO (A Mágica do Cruzamento) */}
-            <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border-t-4 border-t-rose-600 shadow-sm flex flex-col">
-                <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-2">
-                    <div className="w-4 h-4 bg-rose-100 dark:bg-rose-900/30 rounded flex items-center justify-center"><Siren className="w-3 h-3 text-rose-600 dark:text-rose-400" /></div>
-                    <h3 className="text-[10px] font-black tracking-widest text-rose-700 dark:text-rose-400">GARGALOS (RISCO DE RECEITA)</h3>
-                </div>
-                <div className="mb-2">
-                    <span className="text-5xl font-black text-slate-800 dark:text-white tracking-tighter">
-                        {resumoPerformance.alertas.length}
-                    </span>
-                    <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 mt-1">UNIDADES PRECISANDO DE AÇÃO IMEDIATA</p>
-                </div>
-                <p className="text-[9px] font-bold text-slate-400 mb-4 lowercase normal-case italic">(Alta Ocupação nas salas + Muito horário livre na semana)</p>
-                <div className="border-t border-slate-100 dark:border-slate-700 mb-3"></div>
-
-                <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-3">
-                    {resumoPerformance.alertas.length === 0 ? (
-                        <div className="text-center py-6">
-                            <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2 opacity-50"/>
-                            <p className="text-xs font-bold text-slate-400 uppercase">Rede Saudável.<br/>Nenhum Gargalo Detectado.</p>
-                        </div>
-                    ) : (
-                        resumoPerformance.alertas.map((u) => (
-                            <div key={u.id} className="bg-rose-50 dark:bg-rose-900/10 p-3 rounded-xl border border-rose-100 dark:border-rose-900/50">
-                                <h4 className="text-xs font-black text-rose-800 dark:text-rose-400 mb-1 cursor-pointer hover:underline" onClick={() => executeDrillDown(u.id)}>{u.nome}</h4>
-                                <p className="text-[9px] font-bold text-slate-600 dark:text-slate-400 leading-relaxed uppercase">
-                                    Tem <span className="text-rose-600 dark:text-rose-400 font-black">{u.taxaOcupacao.toFixed(0)}%</span> de Ocupação Média nas aulas, mas ainda tem <span className="text-amber-600 dark:text-amber-400 font-black">{u.taxaVacancia.toFixed(0)}%</span> de horários ociosos. <br/><span className="text-rose-700 font-black underline mt-1 inline-block">Solução: Abra novas turmas urgente!</span>
-                                </p>
-                            </div>
-                        ))
-                    )}
-                </div>
-            </div>
-
-        </div>
-    );
-};
-
-
-// ============================================================================
-// 5. O CORAÇÃO DO SISTEMA (RADAR DE GRADE)
+// 3. O CORAÇÃO DO SISTEMA E CONSTRUÇÃO MATEMÁTICA OTIMIZADA
 // ============================================================================
 export default function RadarDeGrade() {
     const { userData } = useAuth();
@@ -410,8 +170,7 @@ export default function RadarDeGrade() {
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     
-    // 🟢 ESTADOS DE VISÃO E FILTROS
-    const [modoVisao, setModoVisao] = useState('matriz'); // matriz | cartoes | global | performance
+    const [modoVisao, setModoVisao] = useState('matriz'); 
     const [estadosFiltro, setEstadosFiltro] = useState([]);
     const [mentoresFiltro, setMentoresFiltro] = useState([]);
     const [unidadesFiltro, setUnidadesFiltro] = useState([]);
@@ -421,12 +180,17 @@ export default function RadarDeGrade() {
     const [mentoresList, setMentoresList] = useState([]);
     const [vinculosList, setVinculosList] = useState([]); 
 
-    // --- ESTADOS DOS MODAIS FLUTUANTES ---
     const [previewModal, setPreviewModal] = useState({ isOpen: false, unidadeNome: '', unidadeId: '', dia: '', aulas: [], buracos: [], pos: { x: 0, y: 0 }, size: { w: 450, h: 500 } });
     const [floatingSchedule, setFloatingSchedule] = useState({ isOpen: false, unidadeId: null, unidadeNome: '', pos: { x: 0, y: 0 }, size: { w: 480, h: 600 } });
     const [flowPreview, setFlowPreview] = useState({ isOpen: false, unidadeId: null, unidadeNome: '', media: 0, saude: null, ultimasAulas: [], pos: { x: 0, y: 0 }, size: { w: 380, h: 550 } });
     const [addAulaModal, setAddAulaModal] = useState({ isOpen: false, pos: { x: 0, y: 0 }, size: { w: 400, h: 650 } });
     
+    // 🟢 MODAL 1: DETALHAMENTO DE OCIOSIDADE (O RAIO-X DO CEO MENSAL)
+    const [ociosidadeModal, setOciosidadeModal] = useState({ isOpen: false, unidade: null, pos: { x: 0, y: 0 }, size: { w: 550, h: 650 } });
+    
+    // 🟢 MODAL 2: DETALHAMENTO DE PERFORMANCE (AULAS INDIVIDUAIS)
+    const [performanceModal, setPerformanceModal] = useState({ isOpen: false, unidade: null, pos: { x: 0, y: 0 }, size: { w: 600, h: 650 } });
+
     const [formData, setFormData] = useState({ modalidadeId: '', professorId: '', hora: '', valor: '', dias: [], dataInicio: getTodayStr() });
 
     if (role === 'professor' || role === 'unidade') {
@@ -458,7 +222,40 @@ export default function RadarDeGrade() {
         fetchInitialData();
     }, [role]);
 
-    // 🟢 MATEMÁTICA DE OCIOSIDADE CORRIGIDA PARA O TURNO (PAREDES DE TEMPO)
+    // MÁQUINA DE INDEXAÇÃO (HASH MAPS)
+    const aulasPorUnidade = useMemo(() => {
+        const map = {};
+        (catalogs.aulas || []).forEach(a => {
+            if (!map[a.unidadeId]) map[a.unidadeId] = [];
+            map[a.unidadeId].push(a);
+        });
+        return map;
+    }, [catalogs.aulas]);
+
+    const modMap = useMemo(() => {
+        const map = {};
+        (catalogs.modalidades || []).forEach(m => { map[m.id] = m; });
+        return map;
+    }, [catalogs.modalidades]);
+
+    const validacoesPorAula = useMemo(() => {
+        const map = {};
+        validacoesRecentes.forEach(v => {
+            if (!map[v.aulaId]) map[v.aulaId] = [];
+            map[v.aulaId].push(v);
+        });
+        return map;
+    }, [validacoesRecentes]);
+
+    const validacoesPorUnidade = useMemo(() => {
+        const map = {};
+        validacoesRecentes.forEach(v => {
+            if (!map[v.unidadeId]) map[v.unidadeId] = [];
+            map[v.unidadeId].push(v);
+        });
+        return map;
+    }, [validacoesRecentes]);
+
     const processarBuracos = (aulasDoDia, turno) => {
         let abertura = timeToMins("06:00");
         let fechamento = timeToMins("22:00");
@@ -468,7 +265,6 @@ export default function RadarDeGrade() {
         else if (turno === 'noite') { abertura = timeToMins("18:00"); fechamento = timeToMins("22:00"); }
 
         const janelas = [];
-        
         const aulasNoTurno = aulasDoDia.filter(a => {
             const inicioAula = timeToMins(a.hora);
             return inicioAula >= abertura && inicioAula < fechamento;
@@ -502,8 +298,8 @@ export default function RadarDeGrade() {
 
         return unidades.map(u => {
             const diasData = {};
+            let aulasDaUnidade = aulasPorUnidade[u.id] || [];
             
-            let aulasDaUnidade = (catalogs.aulas || []).filter(a => a.unidadeId === u.id);
             if (turnoFiltro) {
                 aulasDaUnidade = aulasDaUnidade.filter(a => {
                     const mins = timeToMins(a.hora);
@@ -521,19 +317,17 @@ export default function RadarDeGrade() {
                 diasData[dia] = processarBuracos(aulasNoDia, turnoFiltro);
             });
 
-            // Calcula o Fluxo de Alunos respeitando o turno filtrado
-            const valsUnidade = validacoesRecentes.filter(v => {
-                if (v.unidadeId !== u.id) return false;
-                if (turnoFiltro && v.hora) {
-                    const mins = timeToMins(v.hora);
-                    if (turnoFiltro === 'manha' && !(mins >= timeToMins("06:00") && mins < timeToMins("12:00"))) return false;
-                    if (turnoFiltro === 'tarde' && !(mins >= timeToMins("12:00") && mins < timeToMins("18:00"))) return false;
-                    if (turnoFiltro === 'noite' && !(mins >= timeToMins("18:00") && mins <= timeToMins("22:00"))) return false;
-                }
+            const valsUnidade = validacoesPorUnidade[u.id] || [];
+            const filteredVals = turnoFiltro ? valsUnidade.filter(v => {
+                if (!v.hora) return true;
+                const mins = timeToMins(v.hora);
+                if (turnoFiltro === 'manha') return mins >= timeToMins("06:00") && mins < timeToMins("12:00");
+                if (turnoFiltro === 'tarde') return mins >= timeToMins("12:00") && mins < timeToMins("18:00");
+                if (turnoFiltro === 'noite') return mins >= timeToMins("18:00") && mins <= timeToMins("22:00");
                 return true;
-            });
+            }) : valsUnidade;
 
-            const media = valsUnidade.length > 0 ? Math.round(valsUnidade.reduce((acc, v) => acc + (Number(v.alunos) || 0), 0) / valsUnidade.length) : 0;
+            const media = filteredVals.length > 0 ? Math.round(filteredVals.reduce((acc, v) => acc + (Number(v.alunos) || 0), 0) / filteredVals.length) : 0;
             
             let saude = { label: 'MÉDIA', color: 'text-amber-500', bg: 'bg-amber-50 dark:bg-amber-900/20', border: 'border-amber-200 dark:border-amber-800', icon: <Activity className="w-3 h-3"/> };
             if (media >= 20) saude = { label: 'ALTA DEMANDA', color: 'text-rose-500', bg: 'bg-rose-50 dark:bg-rose-900/20', border: 'border-rose-200 dark:border-rose-800', icon: <Flame className="w-3 h-3"/> };
@@ -541,108 +335,163 @@ export default function RadarDeGrade() {
             
             return { ...u, dias: diasData, mediaAlunos: media, saude, totalAulas };
         }).filter(Boolean).sort((a, b) => b.mediaAlunos - a.mediaAlunos);
-    }, [catalogs, validacoesRecentes, estadosFiltro, mentoresFiltro, unidadesFiltro, turnoFiltro, role, userId, isCofreFechado]);
+    }, [catalogs.unidades, aulasPorUnidade, validacoesPorUnidade, estadosFiltro, mentoresFiltro, unidadesFiltro, turnoFiltro, role, userId, isCofreFechado]);
 
-    // O CÉREBRO DO DASHBOARD CEO
+    // 🟢 MATEMÁTICA: OCIOSIDADE MENSAL GLOBAL
     const resumoCEO = useMemo(() => {
         if (!dadosRadar.length) return null;
-
-        let totalAulasPerdidas = 0;
+        let totalAulasPerdidasMesGlobal = 0;
+        
         const ranking = dadosRadar.map(u => {
-            let aulasPerdidasUnidade = 0;
+            let aulasPerdidasUnidadeSemana = 0;
+            let breakdownDiario = {}; 
+
             Object.entries(u.dias).forEach(([dia, janelasDia]) => {
                 if (!DIAS_UTEIS.includes(dia)) return;
+                
+                let janelasNoDiaSemana = 0;
+                let minsNoDiaSemana = 0;
+
                 janelasDia.forEach(j => {
                     const [inicio, fim] = j.split(' - ');
                     const duracaoMins = timeToMins(fim) - timeToMins(inicio);
-                    aulasPerdidasUnidade += Math.floor(duracaoMins / DURACAO_AULA_PADRAO);
+                    const blocos = Math.floor(duracaoMins / DURACAO_AULA_PADRAO);
+                    aulasPerdidasUnidadeSemana += blocos;
+                    janelasNoDiaSemana += blocos;
+                    minsNoDiaSemana += duracaoMins;
                 });
+                
+                breakdownDiario[dia] = { 
+                    janelasSemana: janelasNoDiaSemana, 
+                    janelasMes: janelasNoDiaSemana * 4,
+                    horasSemana: Math.round(minsNoDiaSemana / 60),
+                    horasMes: Math.round(minsNoDiaSemana / 60) * 4
+                };
             });
-            totalAulasPerdidas += aulasPerdidasUnidade;
-            return { ...u, aulasPerdidas: aulasPerdidasUnidade };
-        }).sort((a, b) => b.aulasPerdidas - a.aulasPerdidas);
+            
+            const aulasPerdidasUnidadeMes = aulasPerdidasUnidadeSemana * 4;
+            const totalAulasMes = u.totalAulas * 4;
+            const taxaVacancia = Math.min((aulasPerdidasUnidadeMes / MAX_AULAS_MES) * 100, 100);
 
-        const totalHoras = Math.round((totalAulasPerdidas * DURACAO_AULA_PADRAO) / 60);
+            totalAulasPerdidasMesGlobal += aulasPerdidasUnidadeMes;
+            
+            return { ...u, aulasPerdidasMes: aulasPerdidasUnidadeMes, totalAulasMes, taxaVacancia, breakdownDiario };
+        }).sort((a, b) => b.aulasPerdidasMes - a.aulasPerdidasMes);
+
+        const totalHorasMes = Math.round((totalAulasPerdidasMesGlobal * DURACAO_AULA_PADRAO) / 60);
         const maiorOciosidade = ranking[0];
-        const otimizadas = [...ranking].filter(u => u.totalAulas > 0).sort((a, b) => b.totalAulas - a.totalAulas);
+        const otimizadas = [...ranking].filter(u => u.aulasPerdidasMes === 0 && u.totalAulas > 0).map(u => ({...u, totalAulasMes: u.totalAulas * 4})).sort((a, b) => b.totalAulasMes - a.totalAulasMes);
 
-        const sparkline = DIAS_UTEIS.map(dia => {
-            let perdidasDoDia = 0;
+        const sparklineMes = DIAS_UTEIS.map(dia => {
+            let perdidasDoDiaSemana = 0;
             dadosRadar.forEach(u => {
                 const janelas = u.dias[dia] || [];
                 janelas.forEach(j => {
                     const [inicio, fim] = j.split(' - ');
-                    perdidasDoDia += Math.floor((timeToMins(fim) - timeToMins(inicio)) / DURACAO_AULA_PADRAO);
+                    perdidasDoDiaSemana += Math.floor((timeToMins(fim) - timeToMins(inicio)) / DURACAO_AULA_PADRAO);
                 });
             });
-            return perdidasDoDia;
+            return perdidasDoDiaSemana * 4;
         });
-        const maxSpark = Math.max(...sparkline) || 1;
+        const maxSparkMes = Math.max(...sparklineMes) || 1;
 
-        return { totalAulasPerdidas, totalHoras, ranking, maiorOciosidade, otimizadas, sparkline, maxSpark, diasSparkline: DIAS_UTEIS };
+        return { totalAulasPerdidasMesGlobal, totalHorasMes, ranking, maiorOciosidade, otimizadas, sparklineMes, maxSparkMes, diasSparkline: DIAS_UTEIS };
     }, [dadosRadar]);
 
-    // 🟢 O NOVO CÉREBRO DE PERFORMANCE (OCUPAÇÃO E VACÂNCIA)
+    // 🟢 MATEMÁTICA: PERFORMANCE DE OCUPAÇÃO E AULAS DETALHADAS
     const resumoPerformance = useMemo(() => {
         if (!dadosRadar.length || !catalogs.aulas || !catalogs.modalidades) return null;
 
-        // Limite da semana útil: 5 dias, 16 horas/dia = 960 mins/dia = 24 aulas/dia = 120 aulas/semana.
-        const MAX_AULAS_SEMANA = 120; 
-
         const dados = dadosRadar.map(u => {
-            // 1. Taxa de Vacância (%)
-            let aulasPerdidas = 0;
+            let aulasPerdidasSemana = 0;
             DIAS_UTEIS.forEach(dia => {
                 const janelas = u.dias[dia] || [];
                 janelas.forEach(j => {
                     const [inicio, fim] = j.split(' - ');
-                    aulasPerdidas += Math.floor((timeToMins(fim) - timeToMins(inicio)) / DURACAO_AULA_PADRAO);
+                    aulasPerdidasSemana += Math.floor((timeToMins(fim) - timeToMins(inicio)) / DURACAO_AULA_PADRAO);
                 });
             });
-            const taxaVacancia = Math.min((aulasPerdidas / MAX_AULAS_SEMANA) * 100, 100);
+            
+            const aulasPerdidasMes = aulasPerdidasSemana * 4;
+            const taxaVacancia = Math.min((aulasPerdidasMes / MAX_AULAS_MES) * 100, 100);
 
-            // 2. Taxa de Ocupação (%)
-            const aulasDaUnidade = catalogs.aulas.filter(a => a.unidadeId === u.id);
+            const aulasDaUnidade = aulasPorUnidade[u.id] || [];
             let sumOcupacao = 0;
             let countOcupadas = 0;
-            const metragem = Number(u.metragemSalaColetiva) || 60; // Se a unidade não cadastrou m², assume 60 para não quebrar a matemática
+            const metragem = Number(u.metragemSalaColetiva) || 0; 
+            
+            let aulasDetalhadas = [];
 
             aulasDaUnidade.forEach(aula => {
-                const mod = catalogs.modalidades.find(m => m.id === aula.modalidadeId);
+                const mod = modMap[aula.modalidadeId];
                 const indice = Number(mod?.indiceOcupacao) || 3;
-                const capacidadeMaxima = Math.floor(metragem / indice) || 1; // Nunca divide por zero
+                const capacidadeMaxima = metragem > 0 ? Math.floor(metragem / indice) : 0; 
                 
-                // Média de alunos reais que frequentam essa aula específica
-                const validacoesDaAula = validacoesRecentes.filter(v => v.aulaId === aula.id);
-                const mediaAlunos = validacoesDaAula.length > 0 
-                    ? validacoesDaAula.reduce((acc, v) => acc + (Number(v.alunos) || 0), 0) / validacoesDaAula.length 
-                    : 0;
+                const validacoesDaAula = validacoesPorAula[aula.id] || [];
+                const mediaAlunos = validacoesDaAula.length > 0 ? validacoesDaAula.reduce((acc, v) => acc + (Number(v.alunos) || 0), 0) / validacoesDaAula.length : 0;
+                
+                let ocupacaoDaAula = 0;
+                if (capacidadeMaxima > 0) {
+                    ocupacaoDaAula = (mediaAlunos / capacidadeMaxima) * 100;
+                    sumOcupacao += ocupacaoDaAula;
+                    countOcupadas++;
+                }
 
-                const ocupacaoDaAula = (mediaAlunos / capacidadeMaxima) * 100;
-                sumOcupacao += ocupacaoDaAula;
-                countOcupadas++;
+                // Gravando os dados da aula para exibir no Raio-X
+                aulasDetalhadas.push({
+                    id: aula.id,
+                    hora: aula.hora,
+                    dias: aula.dias?.join(', '),
+                    nome: mod?.nome || 'AULA',
+                    cor: mod?.cor || '#3b82f6',
+                    mediaAlunos: Math.round(mediaAlunos),
+                    capacidade: capacidadeMaxima,
+                    ocupacao: ocupacaoDaAula
+                });
             });
 
-            const taxaOcupacao = countOcupadas > 0 ? (sumOcupacao / countOcupadas) : 0;
-            
-            // 3. Gargalo de Receita (O Alarme de Risco)
-            // Regra: Salas muito cheias (>70%) mas com muitos horários vazios na academia (>30%)
-            const gargalo = taxaOcupacao > 70 && taxaVacancia > 30;
+            // Ordena as aulas da mais cheia para a mais vazia
+            aulasDetalhadas.sort((a,b) => b.ocupacao - a.ocupacao);
 
-            return { ...u, taxaVacancia, taxaOcupacao, gargalo };
+            const taxaOcupacao = (countOcupadas > 0 && metragem > 0) ? (sumOcupacao / countOcupadas) : 0;
+            const gargalo = taxaOcupacao > 70 && taxaVacancia > 30 && metragem > 0;
+
+            const validacoesUnidade = validacoesPorUnidade[u.id] || [];
+            const mediaGlobal = validacoesUnidade.length > 0 ? Math.round(validacoesUnidade.reduce((a,b) => a + Number(b.alunos||0), 0) / validacoesUnidade.length) : 0;
+
+            return { ...u, taxaVacancia, taxaOcupacao, gargalo, metragem, mediaGlobal, aulasDetalhadas, aulasPerdidasMes };
         });
 
-        const rankingOcupacao = [...dados].sort((a, b) => b.taxaOcupacao - a.taxaOcupacao);
+        const rankingOcupacao = [...dados].filter(d => d.metragem > 0).sort((a, b) => b.taxaOcupacao - a.taxaOcupacao);
         const rankingVacancia = [...dados].sort((a, b) => b.taxaVacancia - a.taxaVacancia);
         const alertas = dados.filter(d => d.gargalo).sort((a, b) => b.taxaOcupacao - a.taxaOcupacao);
 
         return { rankingOcupacao, rankingVacancia, alertas };
-    }, [dadosRadar, catalogs.aulas, catalogs.modalidades, validacoesRecentes]);
+    }, [dadosRadar, aulasPorUnidade, modMap, validacoesPorAula, validacoesPorUnidade, catalogs.aulas, catalogs.modalidades]);
 
+    // ==========================================
+    // 🟢 FUNCÕES DE APOIO (ABERTURA DE MODAIS)
+    // ==========================================
+    const openOciosidadeDetails = (unidadeId) => {
+        if (!unidadeId || !resumoCEO) return;
+        const unitData = resumoCEO.ranking.find(u => u.id === unidadeId) || resumoCEO.otimizadas.find(u => u.id === unidadeId);
+        if(unitData) {
+            setOciosidadeModal({ isOpen: true, unidade: unitData, pos: getCenterPos(500, 600), size: ociosidadeModal.size });
+        }
+    };
+
+    // 🟢 NOVA FUNÇÃO PARA ABRIR O RAIO-X DE PERFORMANCE
+    const openPerformanceDetails = (unidadeId) => {
+        if (!unidadeId || !resumoPerformance) return;
+        const unitData = resumoPerformance.rankingOcupacao.find(u => u.id === unidadeId) || resumoPerformance.rankingVacancia.find(u => u.id === unidadeId);
+        if(unitData) {
+            setPerformanceModal({ isOpen: true, unidade: unitData, pos: getCenterPos(600, 650), size: performanceModal.size });
+        }
+    };
 
     const getMediaAula = (aulaId) => {
         if (!aulaId) return 0;
-        const validacoesDaAula = validacoesRecentes.filter(v => v.aulaId === aulaId);
+        const validacoesDaAula = validacoesPorAula[aulaId] || [];
         if (validacoesDaAula.length === 0) return 0;
         return Math.round(validacoesDaAula.reduce((acc, v) => acc + (Number(v.alunos) || 0), 0) / validacoesDaAula.length);
     };
@@ -654,7 +503,7 @@ export default function RadarDeGrade() {
 
     const handleModalidadeChange = (e) => {
         const mId = e.target.value;
-        const mod = catalogs.modalidades?.find(m => m.id === mId);
+        const mod = modMap[mId];
         setFormData(prev => ({ ...prev, modalidadeId: mId, professorId: '', valor: mod?.valorBase || '' }));
     };
 
@@ -698,11 +547,11 @@ export default function RadarDeGrade() {
 
     const aulasDaUnidadeFlutuante = useMemo(() => {
         if (!floatingSchedule.isOpen || !floatingSchedule.unidadeId) return [];
-        return (catalogs.aulas || []).filter(a => a.unidadeId === floatingSchedule.unidadeId);
-    }, [floatingSchedule.isOpen, floatingSchedule.unidadeId, catalogs.aulas]);
+        return aulasPorUnidade[floatingSchedule.unidadeId] || [];
+    }, [floatingSchedule.isOpen, floatingSchedule.unidadeId, aulasPorUnidade]);
 
     // ============================================================================
-    // RENDERIZAÇÃO PRINCIPAL
+    // RENDERIZAÇÃO PRINCIPAL DO COMPONENTE
     // ============================================================================
     return (
         <div className="p-6 md:p-8 w-full min-h-screen max-w-[1920px] mx-auto animate-fade-in space-y-6 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 relative uppercase transition-colors">
@@ -715,12 +564,12 @@ export default function RadarDeGrade() {
                     </h1>
                 </div>
                 
-                {/* 🟢 O BOTÃO DE PERFORMANCE FOI ADICIONADO AQUI NO PAINEL DE NAVEGAÇÃO */}
+                {/* MENU DE NAVEGAÇÃO SUPERIOR */}
                 <div className="flex bg-slate-200 dark:bg-slate-800 p-1 rounded-xl shadow-inner shrink-0 overflow-x-auto max-w-full border border-slate-200 dark:border-slate-700">
                     <button onClick={() => setModoVisao('matriz')} className={`px-5 py-2.5 rounded-lg text-[11px] font-black transition-all flex items-center whitespace-nowrap gap-2 ${modoVisao === 'matriz' ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><LayoutGrid className="w-4 h-4"/> MATRIZ GLOBAL</button>
                     <button onClick={() => setModoVisao('cartoes')} className={`px-5 py-2.5 rounded-lg text-[11px] font-black transition-all flex items-center whitespace-nowrap gap-2 ${modoVisao === 'cartoes' ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><CalendarDays className="w-4 h-4"/> VISÃO POR UNIDADE</button>
                     <button onClick={() => setModoVisao('global')} className={`px-5 py-2.5 rounded-lg text-[11px] font-black transition-all flex items-center whitespace-nowrap gap-2 ${modoVisao === 'global' ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm border dark:border-slate-700' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><BarChart className="w-4 h-4"/> RELATÓRIO GLOBAL</button>
-                    <button onClick={() => setModoVisao('performance')} className={`px-5 py-2.5 rounded-lg text-[11px] font-black transition-all flex items-center whitespace-nowrap gap-2 ${modoVisao === 'performance' ? 'bg-slate-900 dark:bg-slate-950 text-white dark:text-blue-400 shadow-sm border dark:border-slate-700' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><Activity className="w-4 h-4"/> PERFORMANCE (OCUPAÇÃO E VACÂNCIA)</button>
+                    <button onClick={() => setModoVisao('performance')} className={`px-5 py-2.5 rounded-lg text-[11px] font-black transition-all flex items-center whitespace-nowrap gap-2 ${modoVisao === 'performance' ? 'bg-slate-900 dark:bg-slate-950 text-white dark:text-blue-400 shadow-sm border dark:border-slate-700' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><Activity className="w-4 h-4"/> PERFORMANCE DA GRADE</button>
                 </div>
             </div>
 
@@ -747,15 +596,14 @@ export default function RadarDeGrade() {
                     </div>
                     <h3 className="text-2xl font-black text-slate-700 dark:text-slate-200 mb-3">COFRE DO RADAR ATIVADO</h3>
                     <p className="text-slate-500 dark:text-slate-400 text-xs font-bold max-w-lg mx-auto leading-relaxed">
-                        SELECIONE PELO MENOS UM FILTRO AVANÇADO ACIMA PARA RASTREAR OS BURACOS DE OCIOSIDADE.
+                        SELECIONE PELO MENOS UM FILTRO AVANÇADO ACIMA PARA RASTREAR OS BURACOS DE OCIOSIDADE E INDICADORES DE PERFORMANCE.
                     </p>
                 </div>
             ) : (
                 <>
-                    {modoVisao === 'global' && <VisaoGlobal resumoCEO={resumoCEO} executeDrillDown={executeDrillDown} />}
-                    
-                    {/* 🟢 NOVA ABA DE PERFORMANCE RENDERIZADA AQUI */}
-                    {modoVisao === 'performance' && <VisaoPerformance resumoPerformance={resumoPerformance} executeDrillDown={executeDrillDown} />}
+                    {/* RENDERS DAS ABAS EXTERNAS (COMPONENTIZADAS) */}
+                    {modoVisao === 'global' && <VisaoGlobal resumoCEO={resumoCEO} openOciosidadeDetails={openOciosidadeDetails} executeDrillDown={executeDrillDown} />}
+                    {modoVisao === 'performance' && <VisaoPerformance resumoPerformance={resumoPerformance} executeDrillDown={executeDrillDown} openPerformanceDetails={openPerformanceDetails} />}
 
                     {modoVisao === 'matriz' && (
                         <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden relative">
@@ -773,7 +621,7 @@ export default function RadarDeGrade() {
                                                 <td className="p-5 sticky left-0 z-20 bg-white dark:bg-slate-800 group-hover:bg-slate-50 dark:group-hover:bg-slate-800/90 border-r border-slate-200 dark:border-slate-700 shadow-[4px_0_10px_-4px_rgba(0,0,0,0.05)]">
                                                     <div className="font-black text-slate-800 dark:text-slate-100 text-sm mb-1">{u.nome}</div>
                                                     <button 
-                                                        onClick={() => setFlowPreview({ isOpen: true, unidadeId: u.id, unidadeNome: u.nome, media: u.mediaAlunos, saude: u.saude, ultimasAulas: validacoesRecentes.filter(v => v.unidadeId === u.id).sort((a,b) => new Date(b.data) - new Date(a.data)), pos: getCenterPos(380, 550), size: flowPreview.size })} 
+                                                        onClick={() => setFlowPreview({ isOpen: true, unidadeId: u.id, unidadeNome: u.nome, media: u.mediaAlunos, saude: u.saude, ultimasAulas: validacoesPorUnidade[u.id]?.sort((a,b) => new Date(b.data) - new Date(a.data)) || [], pos: getCenterPos(380, 550), size: flowPreview.size })} 
                                                         className={`inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-[10px] font-black w-full shadow-sm hover:scale-105 transition-transform ${u.saude.bg} ${u.saude.color} ${u.saude.border}`}
                                                     >
                                                         {u.saude.icon} {u.mediaAlunos > 0 ? `${u.mediaAlunos} AL/AULA` : 'SEM DADOS'}
@@ -786,7 +634,7 @@ export default function RadarDeGrade() {
                                                     </button>
                                                 </td>
                                                 {ALL_DAYS.map(dia => (
-                                                    <td key={dia} onClick={() => setPreviewModal({ isOpen: true, unidadeNome: u.nome, unidadeId: u.id, dia, aulas: (catalogs.aulas || []).filter(a => a.unidadeId === u.id && a.dias?.includes(dia)).sort((a,b) => timeToMins(a.hora) - timeToMins(b.hora)), buracos: u.dias[dia], pos: getCenterPos(450, 500), size: previewModal.size })} className="p-3 border-r border-slate-100 dark:border-slate-700/50 align-top cursor-pointer group/cell hover:bg-blue-100/40 dark:hover:bg-blue-900/20 transition-colors">
+                                                    <td key={dia} onClick={() => setPreviewModal({ isOpen: true, unidadeNome: u.nome, unidadeId: u.id, dia, aulas: (aulasPorUnidade[u.id] || []).filter(a => a.dias?.includes(dia)).sort((a,b) => timeToMins(a.hora) - timeToMins(b.hora)), buracos: u.dias[dia], pos: getCenterPos(450, 500), size: previewModal.size })} className="p-3 border-r border-slate-100 dark:border-slate-700/50 align-top cursor-pointer group/cell hover:bg-blue-100/40 dark:hover:bg-blue-900/20 transition-colors">
                                                         <div className="flex flex-col gap-1.5 h-full text-center">
                                                             {u.dias[dia].length === 0 ? <span className="text-[9px] font-bold text-slate-400 dark:text-slate-600 py-4 opacity-30">CHEIA</span> : u.dias[dia].map((j, i) => (
                                                                 <div key={i} className="text-[10px] font-bold px-2 py-1 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-blue-600 dark:text-blue-400 shadow-sm flex items-center gap-1"><Clock className="w-3 h-3 opacity-60"/> {j}</div>
@@ -809,7 +657,7 @@ export default function RadarDeGrade() {
                                 const u = dadosRadar.find(x => x.id === unidadesFiltro[0]);
                                 if (!u) return null;
                                 return (
-                                    <div key={dia} className="bg-white dark:bg-slate-800 rounded-3xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-xl cursor-pointer" onClick={() => setPreviewModal({ isOpen: true, unidadeNome: u.nome, unidadeId: u.id, dia, aulas: (catalogs.aulas || []).filter(a => a.unidadeId === u.id && a.dias?.includes(dia)).sort((a,b) => timeToMins(a.hora) - timeToMins(b.hora)), buracos: u.dias[dia], pos: getCenterPos(450, 500), size: previewModal.size })}>
+                                    <div key={dia} className="bg-white dark:bg-slate-800 rounded-3xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-xl cursor-pointer" onClick={() => setPreviewModal({ isOpen: true, unidadeNome: u.nome, unidadeId: u.id, dia, aulas: (aulasPorUnidade[u.id] || []).filter(a => a.dias?.includes(dia)).sort((a,b) => timeToMins(a.hora) - timeToMins(b.hora)), buracos: u.dias[dia], pos: getCenterPos(450, 500), size: previewModal.size })}>
                                         <h3 className="font-black text-lg text-blue-600 dark:text-blue-400 mb-4">{dia}</h3>
                                         <div className="space-y-3">
                                             {u.dias[dia].length === 0 ? <p className="text-xs font-bold text-slate-300 dark:text-slate-600 italic text-center py-4">GRADE TOTALMENTE OCUPADA</p> : u.dias[dia].map((j, i) => (
@@ -825,8 +673,136 @@ export default function RadarDeGrade() {
             )}
 
             {/* =====================================================================
-                🟢 MODAIS FLUTUANTES (MOTOR DE 8 ALÇAS - FREE TRANSFORM)
+                🟢 MODAIS FLUTUANTES GLOBAIS (DRILL-DOWN, CRIAÇÃO DE AULAS, ETC)
                 ===================================================================== */}
+            
+            {/* 🟢 MODAL 1: RAIO-X DO CEO (OCIOSIDADE GLOBAL) COM METRAGEM INCLUSA */}
+            <ResizableModal 
+                isOpen={ociosidadeModal.isOpen} onClose={() => setOciosidadeModal({...ociosidadeModal, isOpen: false})} 
+                title={`RAIO-X DE OCIOSIDADE: ${ociosidadeModal.unidade?.nome}`} icon={Target} headerColor="bg-slate-900 text-white border-slate-800"
+                pos={ociosidadeModal.pos} setPos={(pos) => setOciosidadeModal({...ociosidadeModal, pos})} size={ociosidadeModal.size} setSize={(size) => setOciosidadeModal({...ociosidadeModal, size})} minW={450} minH={550}
+            >
+                <div className="p-6 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 shrink-0 flex flex-col items-center">
+                    <h4 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4">RAIO-X EXECUTIVO (PERÍODO: 1 MÊS)</h4>
+                    
+                    <div className="flex items-center justify-center gap-4 w-full mb-4">
+                        <div className="flex flex-col items-center">
+                            <span className="text-3xl font-black text-rose-600 dark:text-rose-500 tracking-tighter">{ociosidadeModal.unidade?.aulasPerdidasMes || 0}</span>
+                            <span className="text-[9px] font-bold text-slate-500 uppercase mt-1">Janelas Vazias</span>
+                        </div>
+                        <div className="h-10 w-px bg-slate-200 dark:bg-slate-700"></div>
+                        
+                        <div className="flex flex-col items-center">
+                            <span className="text-3xl font-black text-emerald-600 dark:text-emerald-500 tracking-tighter">{ociosidadeModal.unidade?.totalAulasMes || 0}</span>
+                            <span className="text-[9px] font-bold text-slate-500 uppercase mt-1">Aulas Ativas</span>
+                        </div>
+                        <div className="h-10 w-px bg-slate-200 dark:bg-slate-700"></div>
+
+                        <div className="flex flex-col items-center">
+                            <span className="text-3xl font-black text-amber-600 dark:text-amber-500 tracking-tighter">{ociosidadeModal.unidade?.taxaVacancia?.toFixed(1) || 0}%</span>
+                            <span className="text-[9px] font-bold text-slate-500 uppercase mt-1">Ociosidade</span>
+                        </div>
+                        <div className="h-10 w-px bg-slate-200 dark:bg-slate-700"></div>
+
+                        {/* 🟢 ADICIONADO A METRAGEM DA SALA AQUI NO TOPO */}
+                        <div className="flex flex-col items-center">
+                            <span className="text-3xl font-black text-blue-600 dark:text-blue-500 tracking-tighter">{ociosidadeModal.unidade?.metragemSalaColetiva || 0}m²</span>
+                            <span className="text-[9px] font-bold text-slate-500 uppercase mt-1">Sala Coletiva</span>
+                        </div>
+                    </div>
+
+                    <div className="text-[9px] font-black bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 w-full text-center">
+                        BASE DE CÁLCULO MÁXIMA: 480 JANELAS DE OPORTUNIDADE POR MÊS
+                    </div>
+                </div>
+
+                <div className="p-6 flex-1 overflow-y-auto custom-scrollbar bg-white dark:bg-slate-800 space-y-3">
+                    <h4 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">Vazamento Diário (Projeção Mensal)</h4>
+                    {DIAS_UTEIS.map(dia => {
+                        const breakdown = ociosidadeModal.unidade?.breakdownDiario?.[dia] || { janelasSemana: 0, janelasMes: 0, horasSemana: 0, horasMes: 0 };
+                        return (
+                            <div key={dia} className="flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm transition-transform hover:-translate-y-0.5">
+                                <div className="flex items-center gap-3">
+                                    <div className={`w-2 h-2 rounded-full ${breakdown.janelasMes > 0 ? 'bg-rose-500 shadow-[0_0_5px_rgba(244,63,94,0.5)]' : 'bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)]'}`}></div>
+                                    <span className="font-black text-slate-700 dark:text-slate-200 text-sm uppercase tracking-wide">{dia}</span>
+                                </div>
+                                <div className="text-right">
+                                    <div className={`text-sm font-black ${breakdown.janelasMes > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                                        {breakdown.janelasMes} AULAS VAZIAS
+                                    </div>
+                                    <div className="text-[9px] font-bold text-slate-400 mt-0.5 uppercase tracking-widest">
+                                        (No mês | {breakdown.janelasSemana} por semana)
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+                <div className="p-5 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 shrink-0">
+                    <button onClick={() => { setOciosidadeModal({...ociosidadeModal, isOpen: false}); executeDrillDown(ociosidadeModal.unidade?.id); }} className="w-full py-3.5 bg-slate-900 dark:bg-blue-600 text-white rounded-xl font-black text-[10px] tracking-widest uppercase shadow-lg hover:bg-slate-800 transition-all flex items-center justify-center gap-2">VER HORÁRIOS NA MATRIZ DA UNIDADE <ArrowRight className="w-4 h-4"/></button>
+                </div>
+            </ResizableModal>
+
+            {/* 🟢 MODAL 2: RAIO-X DE PERFORMANCE (O DRILL-DOWN DAS AULAS ESPECÍFICAS) */}
+            <ResizableModal 
+                isOpen={performanceModal.isOpen} onClose={() => setPerformanceModal({...performanceModal, isOpen: false})} 
+                title={`RAIO-X DE PERFORMANCE: ${performanceModal.unidade?.nome}`} icon={Activity} headerColor="bg-slate-900 text-white border-slate-800"
+                pos={performanceModal.pos} setPos={(pos) => setPerformanceModal({...performanceModal, pos})} size={performanceModal.size} setSize={(size) => setPerformanceModal({...performanceModal, size})} minW={500} minH={550}
+            >
+                <div className="p-6 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 shrink-0 flex flex-col items-center">
+                    <h4 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4">DESEMPENHO DAS AULAS (ALUNOS vs ESTRUTURA)</h4>
+                    
+                    <div className="flex items-center justify-center gap-4 w-full mb-4">
+                        <div className="flex flex-col items-center">
+                            <span className="text-3xl font-black text-purple-600 dark:text-purple-400 tracking-tighter">{performanceModal.unidade?.taxaOcupacao?.toFixed(1) || 0}%</span>
+                            <span className="text-[9px] font-bold text-slate-500 uppercase mt-1">Ocupação (Média)</span>
+                        </div>
+                        <div className="h-10 w-px bg-slate-200 dark:bg-slate-700"></div>
+
+                        <div className="flex flex-col items-center">
+                            <span className="text-3xl font-black text-amber-600 dark:text-amber-500 tracking-tighter">{performanceModal.unidade?.taxaVacancia?.toFixed(1) || 0}%</span>
+                            <span className="text-[9px] font-bold text-slate-500 uppercase mt-1">Vacância (Mês)</span>
+                        </div>
+                        <div className="h-10 w-px bg-slate-200 dark:bg-slate-700"></div>
+
+                        <div className="flex flex-col items-center">
+                            <span className="text-3xl font-black text-blue-600 dark:text-blue-500 tracking-tighter">{performanceModal.unidade?.metragem || 0}m²</span>
+                            <span className="text-[9px] font-bold text-slate-500 uppercase mt-1">Sala Coletiva</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="p-6 flex-1 overflow-y-auto custom-scrollbar bg-white dark:bg-slate-800 space-y-3">
+                    <h4 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">Quais aulas estão lotando a academia?</h4>
+                    {performanceModal.unidade?.aulasDetalhadas?.length === 0 ? (
+                        <div className="text-center py-10 text-slate-400 text-xs font-bold uppercase">NENHUMA AULA CADASTRADA.</div>
+                    ) : (
+                        performanceModal.unidade?.aulasDetalhadas?.map((aula, i) => (
+                            <div key={i} className="flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm transition-transform hover:-translate-y-0.5">
+                                <div className="flex flex-col min-w-0 pr-4 flex-1">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: aula.cor }}></div>
+                                        <span className="font-black text-slate-700 dark:text-slate-200 text-sm uppercase tracking-wide truncate" style={{ color: aula.cor }}>{aula.hora} - {aula.nome}</span>
+                                    </div>
+                                    <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase ml-4">{aula.dias}</span>
+                                </div>
+                                <div className="flex flex-col items-end shrink-0 w-32">
+                                    <div className="text-xs font-black mb-1">
+                                        <span className={aula.ocupacao > 80 ? 'text-rose-500' : 'text-slate-700 dark:text-slate-200'}>{aula.mediaAlunos}</span> 
+                                        <span className="text-slate-400"> / {aula.capacidade} AL</span>
+                                    </div>
+                                    <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                                        <div className={`h-full rounded-full ${aula.ocupacao > 80 ? 'bg-rose-500' : 'bg-purple-500'}`} style={{ width: `${Math.min(aula.ocupacao, 100)}%` }}></div>
+                                    </div>
+                                    <div className="text-[8px] font-black text-slate-400 mt-1 uppercase text-right w-full">{aula.ocupacao.toFixed(0)}% Lotação</div>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+            </ResizableModal>
+
+            {/* OUTROS MODAIS EXISTENTES */}
             <ResizableModal 
                 isOpen={previewModal.isOpen} onClose={() => setPreviewModal({...previewModal, isOpen: false})} 
                 title={`PRÉVIA: ${previewModal.dia} (${previewModal.unidadeNome})`} icon={CalendarIcon} headerColor="bg-blue-50 dark:bg-slate-900 text-blue-800 dark:text-blue-400 border-blue-100 dark:border-slate-800"
@@ -836,7 +812,7 @@ export default function RadarDeGrade() {
                     {previewModal.aulas.length === 0 ? <div className="p-6 bg-slate-50 dark:bg-slate-900 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl text-center text-slate-400 text-xs font-bold uppercase">NENHUMA AULA NESTE DIA.</div> : (
                         <div className="space-y-3">
                             {previewModal.aulas.map((a, i) => {
-                                const mod = catalogs.modalidades?.find(m => m.id === a.modalidadeId);
+                                const mod = modMap[a.modalidadeId];
                                 const cor = mod?.cor || '#3b82f6';
                                 const mediaAula = getMediaAula(a.id); 
                                 
@@ -945,7 +921,7 @@ export default function RadarDeGrade() {
                                     <div className="p-3 bg-slate-50/50 dark:bg-slate-800/50">
                                         <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-3">
                                             {aulasDoDia.map((aula, idx) => {
-                                                const mod = catalogs.modalidades?.find(m => m.id === aula.modalidadeId);
+                                                const mod = modMap[aula.modalidadeId];
                                                 const prof = catalogs.professores?.find(p => p.id === aula.professorId);
                                                 const mediaAula = getMediaAula(aula.id);
                                                 return (
@@ -993,7 +969,7 @@ export default function RadarDeGrade() {
                             <p className="text-xs text-slate-400 dark:text-slate-500 text-center font-bold py-4 uppercase">Nenhum registro encontrado.</p>
                         ) : (
                             flowPreview.ultimasAulas.map((v, i) => {
-                                const mod = catalogs.modalidades?.find(m => m.id === v.modalidadeId);
+                                const mod = modMap[v.modalidadeId];
                                 return (
                                     <div key={i} className="flex justify-between items-center bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm shrink-0 hover:border-blue-200 dark:hover:border-blue-800 transition-colors uppercase">
                                         <div className="flex flex-col min-w-0 flex-1 pr-2">
