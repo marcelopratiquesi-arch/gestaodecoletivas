@@ -8,7 +8,9 @@ const PAGE_RULES = {
   financeiro: ["admin", "mentor"],
   configuracoes: ["admin", "mentor", "unidade"], 
   // 🟢 REGRA NOVA: Todo mundo pode ouvir música!
-  pratique_play: ["admin", "mentor", "unidade", "professor"]
+  pratique_play: ["admin", "mentor", "unidade", "professor"],
+  // 🟢 REGRA NOVA: Acesso à Loja e Workshops (Gestão Financeira e Stock)
+  workshops: ["admin", "mentor"] 
 };
 
 export function canAccessPage(userData, pageKey) {

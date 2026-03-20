@@ -21,6 +21,9 @@ import AuditoriaPage from "../app/Auditoria";
 import ControleAcessosPage from "../app/ControleAcessos"; 
 import OciosidadePage from "../app/Ociosidade"; // Importação do Radar de Grade
 
+// 🟢 IMPORTAÇÃO DA LOJA E WORKSHOPS
+import WorkshopsPage from "../app/Workshops"; 
+
 export default function AppRoutes() {
   return (
     <BrowserRouter>
@@ -89,7 +92,7 @@ export default function AppRoutes() {
             } 
           />
 
-          {/* 🟢 NOVA ROTA: Radar de Ociosidade (Liberada para Admin/Mentor) */}
+          {/* 🟢 Radar de Ociosidade (Liberada para Admin/Mentor) */}
           <Route 
             path="ociosidade" 
             element={
@@ -119,6 +122,16 @@ export default function AppRoutes() {
             element={
               <RoleRoute pageKey="configuracoes">
                 <ControleAcessosPage />
+              </RoleRoute>
+            } 
+          />
+
+          {/* 🟢 NOVA ROTA: LOJA & WORKSHOPS */}
+          <Route 
+            path="workshops" 
+            element={
+              <RoleRoute pageKey="workshops">
+                <WorkshopsPage />
               </RoleRoute>
             } 
           />
