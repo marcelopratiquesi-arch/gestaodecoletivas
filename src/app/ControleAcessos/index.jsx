@@ -5,6 +5,9 @@ import { sendPasswordResetEmail } from 'firebase/auth';
 import { useAuth } from '../../contexts/AuthContext';
 import { ShieldAlert, Users, Key, ShieldCheck, Mail, Loader2, Search, Edit } from 'lucide-react';
 
+// 🟢 IMPORTANDO O NOSSO ESCUDO DE SENHA
+import SecurePanel from '../../components/SecurePanel';
+
 export default function ControleAcessosPage() {
     const { userData, user } = useAuth();
     const [usuarios, setUsuarios] = useState([]);
@@ -122,120 +125,123 @@ export default function ControleAcessosPage() {
     );
 
     return (
-        <div className="p-8 max-w-[1600px] mx-auto animate-fade-in space-y-6">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-slate-200 dark:border-slate-800 pb-6">
-                <div>
-                    <h1 className="text-3xl font-black text-slate-800 dark:text-white tracking-tight flex items-center gap-3 uppercase">
-                        <span className="bg-slate-900 text-white p-2.5 rounded-xl shadow-lg">
-                            <Key className="w-7 h-7" />
-                        </span>
-                        Controle de Acessos
-                    </h1>
-                    <p className="text-slate-500 dark:text-slate-400 mt-2 font-bold text-sm uppercase">
-                        Gerencie hierarquias, permissões e senhas de todos os usuários da rede.
-                    </p>
-                </div>
-                
-                <div className="relative w-full md:w-96">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <input 
-                        type="text" 
-                        placeholder="BUSCAR USUÁRIO OU E-MAIL..." 
-                        className="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-black outline-none focus:border-blue-500 transition-colors shadow-sm uppercase"
-                        value={busca}
-                        onChange={e => setBusca(e.target.value)}
-                    />
-                </div>
-            </div>
-
-            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-                {loading ? (
-                    <div className="p-20 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-slate-400"/></div>
-                ) : (
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left text-sm">
-                            <thead className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700 text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                                <tr>
-                                    <th className="p-5">Nome do Usuário</th>
-                                    <th className="p-5">E-mail de Login</th>
-                                    <th className="p-5">Nível de Acesso (Cargo)</th>
-                                    <th className="p-5 text-right">Ações de Segurança</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
-                                {usuariosFiltrados.map(u => {
-                                    const roleAtual = String(u.role || 'SEM ACESSO').toLowerCase();
-                                    
-                                    return (
-                                        <tr key={u.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/20 transition-colors group">
-                                            <td className="p-5">
-                                                <div className="flex items-center gap-3">
-                                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-white shrink-0 shadow-sm
-                                                        ${roleAtual === 'admin' ? 'bg-rose-600' : roleAtual === 'mentor' ? 'bg-blue-600' : 'bg-slate-400'}`}>
-                                                        {roleAtual === 'admin' ? <ShieldCheck className="w-5 h-5"/> : <Users className="w-5 h-5"/>}
-                                                    </div>
-                                                    <div>
-                                                        <span className="font-black text-slate-800 dark:text-slate-200 text-sm uppercase block">{u.nome || 'NOME NÃO CADASTRADO'}</span>
-                                                        <span className="text-[10px] font-mono text-slate-400 font-bold block mt-0.5">ID: {u.id}</span>
-                                                    </div>
-                                                </div>
-                                            </td>
-
-                                            <td className="p-5">
-                                                <span className="font-bold text-slate-600 dark:text-slate-400 text-xs">
-                                                    {u.emailAuth || u.email || 'NÃO ENCONTRADO'}
-                                                </span>
-                                            </td>
-
-                                            <td className="p-5">
-                                                <div className="relative w-48">
-                                                    <select 
-                                                        className={`w-full p-2.5 rounded-lg text-xs font-black uppercase outline-none border transition-all cursor-pointer appearance-none shadow-sm
-                                                            ${roleAtual === 'admin' ? 'bg-rose-50 border-rose-200 text-rose-700' : 
-                                                              roleAtual === 'mentor' ? 'bg-blue-50 border-blue-200 text-blue-700' : 
-                                                              roleAtual === 'unidade' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 
-                                                              'bg-slate-50 border-slate-200 text-slate-700'}
-                                                        `}
-                                                        value={roleAtual}
-                                                        onChange={(e) => alterarRole(u.id, u.nome, roleAtual, e.target.value)}
-                                                        disabled={processando === u.id}
-                                                    >
-                                                        <option value="admin">Admin (Master)</option>
-                                                        <option value="mentor">Mentor</option>
-                                                        <option value="unidade">Unidade (Líder)</option>
-                                                        <option value="professor">Professor</option>
-                                                        <option value="bloqueado">Sem Acesso (Bloqueado)</option>
-                                                    </select>
-                                                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                                                        {processando === u.id ? <Loader2 className="w-3 h-3 animate-spin text-slate-400"/> : <Edit className="w-3 h-3 opacity-50"/>}
-                                                    </div>
-                                                </div>
-                                            </td>
-
-                                            <td className="p-5 text-right">
-                                                <button 
-                                                    onClick={() => dispararResetSenha(u.emailAuth || u.email, u.nome)}
-                                                    disabled={processando === (u.emailAuth || u.email)}
-                                                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-[10px] font-black uppercase transition-all shadow-sm disabled:opacity-50"
-                                                >
-                                                    {processando === (u.emailAuth || u.email) ? <Loader2 className="w-3.5 h-3.5 animate-spin"/> : <Mail className="w-3.5 h-3.5"/>}
-                                                    Resetar Senha
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                        
-                        {usuariosFiltrados.length === 0 && (
-                            <div className="p-10 text-center font-bold text-slate-400 uppercase text-xs tracking-widest">
-                                NENHUM USUÁRIO ENCONTRADO NA BASE DE DADOS.
-                            </div>
-                        )}
+        // 🟢 ENVELOPANDO A PÁGINA COM O ESCUDO
+        <SecurePanel pinCorreto="7788" titulo="Controle de Acessos">
+            <div className="p-8 max-w-[1600px] mx-auto animate-fade-in space-y-6">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-slate-200 dark:border-slate-800 pb-6">
+                    <div>
+                        <h1 className="text-3xl font-black text-slate-800 dark:text-white tracking-tight flex items-center gap-3 uppercase">
+                            <span className="bg-slate-900 text-white p-2.5 rounded-xl shadow-lg">
+                                <Key className="w-7 h-7" />
+                            </span>
+                            Controle de Acessos
+                        </h1>
+                        <p className="text-slate-500 dark:text-slate-400 mt-2 font-bold text-sm uppercase">
+                            Gerencie hierarquias, permissões e senhas de todos os usuários da rede.
+                        </p>
                     </div>
-                )}
+                    
+                    <div className="relative w-full md:w-96">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <input 
+                            type="text" 
+                            placeholder="BUSCAR USUÁRIO OU E-MAIL..." 
+                            className="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-black outline-none focus:border-blue-500 transition-colors shadow-sm uppercase"
+                            value={busca}
+                            onChange={e => setBusca(e.target.value)}
+                        />
+                    </div>
+                </div>
+
+                <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+                    {loading ? (
+                        <div className="p-20 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-slate-400"/></div>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left text-sm">
+                                <thead className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700 text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                                    <tr>
+                                        <th className="p-5">Nome do Usuário</th>
+                                        <th className="p-5">E-mail de Login</th>
+                                        <th className="p-5">Nível de Acesso (Cargo)</th>
+                                        <th className="p-5 text-right">Ações de Segurança</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
+                                    {usuariosFiltrados.map(u => {
+                                        const roleAtual = String(u.role || 'SEM ACESSO').toLowerCase();
+                                        
+                                        return (
+                                            <tr key={u.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/20 transition-colors group">
+                                                <td className="p-5">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-white shrink-0 shadow-sm
+                                                            ${roleAtual === 'admin' ? 'bg-rose-600' : roleAtual === 'mentor' ? 'bg-blue-600' : 'bg-slate-400'}`}>
+                                                            {roleAtual === 'admin' ? <ShieldCheck className="w-5 h-5"/> : <Users className="w-5 h-5"/>}
+                                                        </div>
+                                                        <div>
+                                                            <span className="font-black text-slate-800 dark:text-slate-200 text-sm uppercase block">{u.nome || 'NOME NÃO CADASTRADO'}</span>
+                                                            <span className="text-[10px] font-mono text-slate-400 font-bold block mt-0.5">ID: {u.id}</span>
+                                                        </div>
+                                                    </div>
+                                                </td>
+
+                                                <td className="p-5">
+                                                    <span className="font-bold text-slate-600 dark:text-slate-400 text-xs">
+                                                        {u.emailAuth || u.email || 'NÃO ENCONTRADO'}
+                                                    </span>
+                                                </td>
+
+                                                <td className="p-5">
+                                                    <div className="relative w-48">
+                                                        <select 
+                                                            className={`w-full p-2.5 rounded-lg text-xs font-black uppercase outline-none border transition-all cursor-pointer appearance-none shadow-sm
+                                                                ${roleAtual === 'admin' ? 'bg-rose-50 border-rose-200 text-rose-700' : 
+                                                                roleAtual === 'mentor' ? 'bg-blue-50 border-blue-200 text-blue-700' : 
+                                                                roleAtual === 'unidade' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 
+                                                                'bg-slate-50 border-slate-200 text-slate-700'}
+                                                            `}
+                                                            value={roleAtual}
+                                                            onChange={(e) => alterarRole(u.id, u.nome, roleAtual, e.target.value)}
+                                                            disabled={processando === u.id}
+                                                        >
+                                                            <option value="admin">Admin (Master)</option>
+                                                            <option value="mentor">Mentor</option>
+                                                            <option value="unidade">Unidade (Líder)</option>
+                                                            <option value="professor">Professor</option>
+                                                            <option value="bloqueado">Sem Acesso (Bloqueado)</option>
+                                                        </select>
+                                                        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                                                            {processando === u.id ? <Loader2 className="w-3 h-3 animate-spin text-slate-400"/> : <Edit className="w-3 h-3 opacity-50"/>}
+                                                        </div>
+                                                    </div>
+                                                </td>
+
+                                                <td className="p-5 text-right">
+                                                    <button 
+                                                        onClick={() => dispararResetSenha(u.emailAuth || u.email, u.nome)}
+                                                        disabled={processando === (u.emailAuth || u.email)}
+                                                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-[10px] font-black uppercase transition-all shadow-sm disabled:opacity-50"
+                                                    >
+                                                        {processando === (u.emailAuth || u.email) ? <Loader2 className="w-3.5 h-3.5 animate-spin"/> : <Mail className="w-3.5 h-3.5"/>}
+                                                        Resetar Senha
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                            
+                            {usuariosFiltrados.length === 0 && (
+                                <div className="p-10 text-center font-bold text-slate-400 uppercase text-xs tracking-widest">
+                                    NENHUM USUÁRIO ENCONTRADO NA BASE DE DADOS.
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
             </div>
-        </div>
+        </SecurePanel>
     );
 }
