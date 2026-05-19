@@ -11,7 +11,7 @@ import { MapContainer, TileLayer, Marker, Popup, Circle } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
-// 🟢 CORREÇÃO DOS ÍCONES DO LEAFLET NO REACT
+// 🟢 CORREÇÃO DOS ÍCONES DO LEAFLET NO REACT E NOVOS ÍCONES PERSONALIZADOS
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
@@ -19,9 +19,27 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
-// Ícone Vermelho para o Utilizador
-const userIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+const userIcon = new L.divIcon({
+  className: 'custom-user-marker',
+  html: `<div style="background-color: #ef4444; width: 36px; height: 36px; border-radius: 50%; border: 3px solid white; box-shadow: 0 4px 6px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; overflow: hidden;">
+           <img src="/logos/pratique.png" style="width: 24px; height: auto; filter: brightness(0) invert(1);" />
+         </div>`,
+  iconSize: [36, 36],
+  iconAnchor: [18, 18],
+  popupAnchor: [0, -18]
+});
+
+const greenIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
+
+const blueIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
   iconSize: [25, 41],
   iconAnchor: [12, 41],
@@ -35,6 +53,48 @@ const LOGOS = {
 };
 
 const getTodayStr = () => new Date().toLocaleDateString('en-CA');
+
+// 🟢 SUPER FILTRO CAÇA-FANTASMAS (Lógica de Abate de Aulas Antigas)
+const isAulaAtiva = (a) => {
+    // 1. Blindagem de Status e Campos Booleanos
+    if (
+        a.ativo === false || 
+        a.encerrada === true || a.encerrado === true || 
+        a.excluida === true || a.excluido === true || 
+        a.lixeira === true || a.oculta === true || 
+        a.inativa === true || a.inativo === true ||
+        a.status === false || a.status === 0
+    ) return false;
+
+    if (a.status && typeof a.status === 'string') {
+        const s = a.status.toLowerCase();
+        if (s.includes('encerra') || s.includes('inativ') || s.includes('exclui') || s.includes('lixeira')) {
+            return false;
+        }
+    }
+
+    // 2. Blindagem de Datas (String e Timestamps do Firebase)
+    const todayStr = getTodayStr(); // 'YYYY-MM-DD'
+    let fim = a.dataFim;
+    let inicio = a.dataInicio;
+
+    if (fim && typeof fim.toDate === 'function') fim = fim.toDate().toLocaleDateString('en-CA');
+    if (inicio && typeof inicio.toDate === 'function') inicio = inicio.toDate().toLocaleDateString('en-CA');
+
+    if (typeof fim === 'string' && fim.includes('/')) {
+        const [d, m, y] = fim.split('/');
+        if (y && m && d) fim = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+    }
+    if (typeof inicio === 'string' && inicio.includes('/')) {
+        const [d, m, y] = inicio.split('/');
+        if (y && m && d) inicio = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+    }
+
+    if (fim && fim < todayStr) return false;
+    if (inicio && inicio > todayStr) return false;
+
+    return true; // Passou em todos os testes, está ATIVA!
+};
 
 const formatProfessorName = (name) => {
   if (!name) return "Instrutor";
@@ -52,7 +112,7 @@ const cleanGoogleMapsLink = (url) => {
     if (!url) return "";
     if (url.includes('googleusercontent.com')) {
         const match = url.match(/(?:q=|query=|@)([-.\d]+),([-.\d]+)/);
-        if (match) return `https://www.google.com/maps/search/?api=1&query=${match[1]},${match[2]}`;
+        if (match) return `http://googleusercontent.com/maps.google.com/?q=${match[1]},${match[2]}`;
     }
     return url;
 };
@@ -61,9 +121,9 @@ const getMapsLink = (unidade) => {
     if (!unidade) return '#';
     let linkOficial = unidade.linkGoogleMaps || unidade.localizacao;
     if (linkOficial && linkOficial.startsWith('http')) return cleanGoogleMapsLink(linkOficial);
-    if (unidade.enderecoCompleto) return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(unidade.enderecoCompleto)}`;
+    if (unidade.enderecoCompleto) return `http://googleusercontent.com/maps.google.com/?q=${encodeURIComponent(unidade.enderecoCompleto)}`;
     const queryBackup = `${unidade.nome} ${unidade.cidade || ''} ${unidade.estado || ''}`.trim();
-    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(queryBackup)}`;
+    return `http://googleusercontent.com/maps.google.com/?q=${encodeURIComponent(queryBackup)}`;
 };
 
 const displayAddress = (unidade) => {
@@ -104,10 +164,9 @@ export default function PublicSchedule() {
   const [termoDebounce, setTermoDebounce] = useState(""); 
   const [filtroEstado, setFiltroEstado] = useState(""); 
   
-  // 🟢 ESTADOS DO GPS E VISTA DE MAPA
   const [userCoords, setUserCoords] = useState(null);
   const [isLocating, setIsLocating] = useState(false);
-  const [viewMode, setViewMode] = useState('list'); // 'list' | 'map'
+  const [viewMode, setViewMode] = useState('list'); 
   
   const [resultadosUnidade, setResultadosUnidade] = useState([]);
   const [resultadosModalidade, setResultadosModalidade] = useState(null);
@@ -147,22 +206,17 @@ export default function PublicSchedule() {
       return () => clearTimeout(timer);
   }, [busca]);
 
-  // 🟢 ACIONADOR DO GPS
   const ativarRadarGPS = () => {
       if (!navigator.geolocation) {
           alert("O seu navegador ou dispositivo não suporta GPS.");
           return;
       }
-      
       setIsLocating(true);
       setUserCoords(null); 
-      
       navigator.geolocation.getCurrentPosition((position) => {
           setUserCoords({ lat: position.coords.latitude, lng: position.coords.longitude });
-          setBusca(""); 
-          setFiltroEstado(""); 
-          setTermoDebounce("");
-          setViewMode('map'); // Abre automaticamente o mapa quando ativa o GPS
+          setBusca(""); setFiltroEstado(""); setTermoDebounce("");
+          setViewMode('map'); 
           setIsLocating(false);
       }, (error) => {
           alert("Não foi possível aceder ao seu GPS. Verifique as permissões de localização.");
@@ -188,9 +242,8 @@ export default function PublicSchedule() {
               return { ...u, distance: 9999, coords: null };
           });
 
-          const raioKm = 15;
           const unidadesProximas = unidadesComDistancia
-              .filter(u => u.distance <= raioKm && u.coords !== null)
+              .filter(u => u.distance <= 15 && u.coords !== null)
               .sort((a, b) => a.distance - b.distance);
 
           setResultadosUnidade(unidadesProximas);
@@ -198,19 +251,15 @@ export default function PublicSchedule() {
           return;
       }
 
-      if (filtroEstado) {
-          unidadesFiltradas = unidades.filter(u => u.estado === filtroEstado);
-      }
+      if (filtroEstado) unidadesFiltradas = unidades.filter(u => u.estado === filtroEstado);
 
       if (!termoDebounce.trim()) { 
-          if (filtroEstado) setResultadosUnidade(unidadesFiltradas);
-          else setResultadosUnidade([]); 
+          setResultadosUnidade(filtroEstado ? unidadesFiltradas : []); 
           setResultadosModalidade(null); 
           return; 
       }
 
       const termoNormalizado = removerAcentos(termoDebounce);
-      
       setResultadosUnidade(unidadesFiltradas.filter(u => 
           removerAcentos(u.nome).includes(termoNormalizado) || 
           removerAcentos(u.cidade).includes(termoNormalizado) ||
@@ -218,11 +267,8 @@ export default function PublicSchedule() {
       ));
       
       const modIds = Object.keys(modalidadesMap).filter(id => removerAcentos(modalidadesMap[id].nome).includes(termoNormalizado));
-      if (modIds.length > 0) { 
-          buscarOndeTemModalidade(modIds, filtroEstado); 
-      } else { 
-          setResultadosModalidade(null); 
-      }
+      if (modIds.length > 0) buscarOndeTemModalidade(modIds, filtroEstado); 
+      else setResultadosModalidade(null); 
   }, [termoDebounce, unidades, modalidadesMap, filtroEstado, userCoords]);
 
   const buscarOndeTemModalidade = async (modIds, estadoFilter) => {
@@ -230,12 +276,10 @@ export default function PublicSchedule() {
           const q = query(collection(db, 'aulas'), where('modalidadeId', 'in', modIds.slice(0, 10)));
           const snap = await getDocs(q);
           const agrupado = {};
-          const todayStr = getTodayStr(); 
           
           snap.docs.forEach(doc => {
               const aula = doc.data();
-              if (aula.dataFim && aula.dataFim < todayStr) return;
-              if (aula.dataInicio && aula.dataInicio > todayStr) return;
+              if (!isAulaAtiva(aula)) return; // 🟢 EXORCISMO NA LUPA DE BUSCA
 
               const unit = unidades.find(u => u.id === aula.unidadeId);
               if (unit && (!estadoFilter || unit.estado === estadoFilter)) {
@@ -258,11 +302,9 @@ export default function PublicSchedule() {
       const q = query(collection(db, 'aulas'), where('unidadeId', '==', unidadeSelecionada.id));
       
       const unsubscribe = onSnapshot(q, (snap) => {
-          const todayStr = getTodayStr();
           const data = snap.docs.map(d => {
               const a = d.data();
-              if (a.dataFim && a.dataFim < todayStr) return null; 
-              if (a.dataInicio && a.dataInicio > todayStr) return null;
+              if (!isAulaAtiva(a)) return null; // 🟢 EXORCISMO NA GRADE PRINCIPAL
 
               const mod = modalidadesMap[a.modalidadeId];
               if(!mod) return null;
@@ -312,17 +354,9 @@ export default function PublicSchedule() {
       setTimeout(() => window.print(), 100);
   };
 
-  const bgGradient = isDarkMode 
-    ? "bg-gradient-to-br from-[#0f0f0f] via-[#1a1a1a] to-[#0f0f0f]" 
-    : "bg-gradient-to-br from-gray-50 via-white to-gray-100";
-    
-  const cardGlass = isDarkMode 
-    ? "bg-[#1a1a1a]/80 backdrop-blur-xl border-white/10 shadow-2xl shadow-black/50" 
-    : "bg-white/80 backdrop-blur-xl border-white/40 shadow-2xl shadow-gray-200/50";
-
-  const inputGlass = isDarkMode
-    ? "bg-black/30 border-white/10 text-white placeholder:text-white/30 focus:border-red-500/50 focus:bg-black/50"
-    : "bg-gray-50 border-gray-200 text-gray-800 placeholder:text-gray-400 focus:border-red-500/50 focus:bg-white";
+  const bgGradient = isDarkMode ? "bg-gradient-to-br from-[#0f0f0f] via-[#1a1a1a] to-[#0f0f0f]" : "bg-gradient-to-br from-gray-50 via-white to-gray-100";
+  const cardGlass = isDarkMode ? "bg-[#1a1a1a]/80 backdrop-blur-xl border-white/10 shadow-2xl shadow-black/50" : "bg-white/80 backdrop-blur-xl border-white/40 shadow-2xl shadow-gray-200/50";
+  const inputGlass = isDarkMode ? "bg-black/30 border-white/10 text-white placeholder:text-white/30 focus:border-red-500/50 focus:bg-black/50" : "bg-gray-50 border-gray-200 text-gray-800 placeholder:text-gray-400 focus:border-red-500/50 focus:bg-white";
 
   if (!unidadeSelecionada) {
       return (
@@ -371,7 +405,6 @@ export default function PublicSchedule() {
                         </div>
                         
                         <div className="flex gap-2 overflow-x-auto pb-4 no-scrollbar mask-gradient-right">
-                            
                             <button 
                                 onClick={userCoords ? limparGPS : ativarRadarGPS}
                                 className={`px-5 py-2.5 rounded-2xl font-black text-xs uppercase whitespace-nowrap transition-all duration-300 transform active:scale-95 border flex items-center gap-2 shadow-lg ${userCoords 
@@ -420,7 +453,6 @@ export default function PublicSchedule() {
                     </div>
                 </div>
 
-                {/* 🟢 ÁREA DE RESULTADOS (LISTA OU MAPA) */}
                 <div className={`mt-8 transition-all duration-500 ${(busca || filtroEstado || userCoords) ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
                     
                     {userCoords && (
@@ -430,7 +462,6 @@ export default function PublicSchedule() {
                                  No seu Radar (Raio de 15km)
                              </h3>
                              
-                             {/* TOGGLE VISTA LISTA / MAPA */}
                              <div className="flex p-1 bg-black/10 dark:bg-white/5 rounded-xl border border-gray-200 dark:border-white/10">
                                  <button onClick={() => setViewMode('list')} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${viewMode === 'list' ? 'bg-white dark:bg-slate-700 shadow text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}>
                                      <List className="w-3 h-3"/> Lista
@@ -442,16 +473,14 @@ export default function PublicSchedule() {
                          </div>
                     )}
 
-                    {/* 🟢 VISUALIZAÇÃO EM MAPA (ECRÃ NÍVEL UBER) */}
                     {userCoords && viewMode === 'map' && (
                         <div className="w-full h-[500px] rounded-3xl overflow-hidden border border-white/10 shadow-2xl animate-in zoom-in-95 duration-500 relative z-0">
                             <MapContainer center={[userCoords.lat, userCoords.lng]} zoom={13} style={{ height: '100%', width: '100%' }}>
                                 <TileLayer 
                                     url={isDarkMode ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"}
-                                    attribution='&copy; OpenStreetMap contributors'
+                                    attribution='© OpenStreetMap contributors'
                                 />
                                 
-                                {/* Pino do Utilizador */}
                                 <Marker position={[userCoords.lat, userCoords.lng]} icon={userIcon}>
                                     <Popup className="custom-popup">
                                         <div className="text-center font-bold text-sm text-slate-800">📍 Você está aqui!</div>
@@ -459,11 +488,17 @@ export default function PublicSchedule() {
                                 </Marker>
                                 <Circle center={[userCoords.lat, userCoords.lng]} pathOptions={{ fillColor: '#10b981', color: '#10b981' }} radius={1500} />
 
-                                {/* Pinos das Academias */}
                                 {resultadosUnidade.map(u => {
                                     if (!u.coords) return null;
+                                    const isSelected = unidadeSelecionada?.id === u.id;
+                                    
                                     return (
-                                        <Marker key={u.id} position={[u.coords.lat, u.coords.lng]}>
+                                        <Marker 
+                                            key={u.id} 
+                                            position={[u.coords.lat, u.coords.lng]}
+                                            icon={isSelected ? greenIcon : blueIcon}
+                                            zIndexOffset={isSelected ? 1000 : 0}
+                                        >
                                             <Popup>
                                                 <div className="flex flex-col gap-2 min-w-[200px]">
                                                     <span className="font-black text-sm uppercase text-slate-800">{u.nome}</span>
@@ -479,11 +514,9 @@ export default function PublicSchedule() {
                         </div>
                     )}
 
-                    {/* 🟢 VISUALIZAÇÃO EM LISTA */}
                     {(!userCoords || viewMode === 'list') && (
                         <div className="max-h-[400px] overflow-y-auto custom-scrollbar pr-2 max-w-2xl mx-auto">
                             
-                            {/* AULAS ENCONTRADAS */}
                             {termoDebounce.length > 0 && resultadosModalidade && resultadosModalidade.length > 0 && !userCoords && (
                                 <div className="mb-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                                     <h3 className="text-xs font-bold text-blue-500 uppercase tracking-wider flex items-center gap-2 mb-3 px-1">
@@ -529,7 +562,6 @@ export default function PublicSchedule() {
                                 </div>
                             )}
 
-                            {/* UNIDADES ENCONTRADAS */}
                             {resultadosUnidade.length > 0 && (
                                 <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
                                     {!userCoords && (
@@ -570,7 +602,6 @@ export default function PublicSchedule() {
                                 </div>
                             )}
 
-                            {/* EMPTY STATE */}
                             {((termoDebounce.length > 0 || filtroEstado || userCoords) && !resultadosUnidade.length && !resultadosModalidade) && (
                                 <div className="text-center py-12 opacity-50 animate-in fade-in zoom-in-95">
                                     <div className="mb-3 inline-flex p-4 rounded-full bg-white/5"><Search className="w-6 h-6"/></div>
@@ -590,7 +621,6 @@ export default function PublicSchedule() {
       );
   }
 
-  // 🟢 TELA 2: GRADE COM IMPRESSÃO 
   return (
     <div className={`min-h-screen ${isDarkMode ? "bg-[#101010] text-white" : "bg-[#f5f5f5] text-[#1f1f1f]"} pb-10 print:bg-black print:text-white print:p-0 print:h-screen print:overflow-hidden`}>
         
@@ -637,7 +667,6 @@ export default function PublicSchedule() {
             }
         `}</style>
 
-        {/* HEADER TELA DA GRADE */}
         <div className="sticky top-0 z-50 shadow-md print:hidden bg-[#111] border-b border-white/10">
             <div className="max-w-[1920px] mx-auto px-4 md:px-6 py-4 flex items-center justify-between">
                 <div className="flex items-center gap-4 md:gap-6 flex-1 min-w-0 pr-4">
@@ -646,7 +675,6 @@ export default function PublicSchedule() {
                     </button>
                     <div className="flex flex-col min-w-0">
                         <h2 className="text-xl md:text-3xl font-black italic tracking-tighter uppercase text-white truncate">{unidadeSelecionada.nome}</h2>
-                        
                         <div className="flex flex-col mt-0.5">
                             <a href={getMapsLink(unidadeSelecionada)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-[10px] md:text-[11px] font-bold uppercase tracking-widest text-blue-400 hover:text-blue-300 transition-colors group mt-1 w-fit">
                                 <MapPin className="w-3.5 h-3.5 shrink-0 group-hover:scale-110 transition-transform"/>
@@ -686,10 +714,7 @@ export default function PublicSchedule() {
             </div>
         </div>
 
-        {/* CONTAINER GERAL */}
         <div className={`print-container max-w-[1920px] mx-auto p-4 md:p-8 print:p-0 density-${appliedDensity}`}>
-            
-            {/* HEADER DE IMPRESSÃO */}
             <div className="hidden print:flex print-header">
                 <div className="ph-left"><img src={LOGOS['pratique']} alt="Logo" className="h-16 brightness-0 invert object-contain"/></div>
                 <div className="ph-center"><h1 className="ph-title">{unidadeSelecionada.nome}</h1><p className="ph-sub">Quadro Happy Zone</p></div>
