@@ -6,38 +6,134 @@ import {
 import { createUserWithEmailAndPassword, getAuth, signOut, signInWithEmailAndPassword, updateEmail } from "firebase/auth";
 import { initializeApp, getApp, deleteApp } from "firebase/app"; 
 import { db } from "../../../services/firebase";
+import { useTranslation } from "react-i18next"; 
 
 import { 
     Building2, MapPin, Edit2, Trash2, AlertTriangle, CheckCircle2, 
     Loader2, User, Search, Mail, Lock, Globe, Key, ChevronDown, ChevronUp, Ban, PowerOff, Plus, X, Phone, Check,
-    Map, Maximize, GripHorizontal, Eye, EyeOff, Upload, FileSpreadsheet, ShieldAlert
+    Map, Maximize, GripHorizontal, Upload, FileSpreadsheet, ShieldAlert
 } from "lucide-react";
 
-/* ================= LOCALIZAÇÕES ================= */
+// 🌍 PADRÃO OURO INTERNACIONAL
+const PAIS_CONFIG = {
+  BR: {
+    id: "BR", nome: "Brasil", ddi: "+55",
+    badgeClass: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800"
+  },
+  AR: {
+    id: "AR", nome: "Argentina", ddi: "+54",
+    badgeClass: "bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-900/20 dark:text-sky-400 dark:border-sky-800"
+  },
+  US: {
+    id: "US", nome: "Estados Unidos", ddi: "+1",
+    badgeClass: "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-900/20 dark:text-rose-400 dark:border-rose-800"
+  },
+};
+
+const PAISES = Object.values(PAIS_CONFIG);
+const DDI_MAP = Object.fromEntries(PAISES.map(p => [p.id, p.ddi]));
+const PAIS_DEFAULT = "BR";
+
+/* ================= LOCALIZAÇÕES (Mapeadas para as Siglas) ================= */
 const LOCATIONS = {
-  Brasil: [
+  "BR": [
     "Acre", "Alagoas", "Amapá", "Amazonas", "Bahia", "Ceará", "Distrito Federal",
     "Espírito Santo", "Goiás", "Maranhão", "Mato Grosso", "Mato Grosso do Sul",
     "Minas Gerais", "Pará", "Paraíba", "Paraná", "Pernambuco", "Piauí",
     "Rio de Janeiro", "Rio Grande do Norte", "Rio Grande do Sul", "Rondônia",
     "Roraima", "Santa Catarina", "São Paulo", "Sergipe", "Tocantins"
+  ],
+  "AR": [
+    "Buenos Aires", "Catamarca", "Chaco", "Chubut", "Córdoba", "Corrientes", 
+    "Entre Ríos", "Formosa", "Jujuy", "La Pampa", "La Rioja", "Mendoza", 
+    "Misiones", "Neuquén", "Río Negro", "Salta", "San Juan", "San Luis", 
+    "Santa Cruz", "Santa Fe", "Santiago del Estero", "Tierra del Fuego", "Tucumán"
+  ],
+  "US": [
+    "Florida (Miami)", "California", "New York", "Texas", "Nevada", "Illinois", 
+    "Pennsylvania", "Ohio", "Georgia", "North Carolina", "Michigan", "New Jersey"
   ]
 };
 
+// 🟢 ÍCONES DE BANDEIRA EM SVG PURO
+function FlagIcon({ pais, className = "w-4 h-3" }) {
+  const wrapClass = `${className} rounded-[2px] ring-1 ring-black/10 shrink-0 overflow-hidden inline-block align-middle`;
+
+  if (pais === "BR") {
+    return (
+      <svg viewBox="0 0 20 14" className={wrapClass} preserveAspectRatio="xMidYMid slice">
+        <rect width="20" height="14" fill="#009739"/>
+        <polygon points="10,2 18,7 10,12 2,7" fill="#FEDD00"/>
+        <circle cx="10" cy="7" r="3.1" fill="#012169"/>
+      </svg>
+    );
+  }
+  if (pais === "AR") {
+    return (
+      <svg viewBox="0 0 20 14" className={wrapClass} preserveAspectRatio="xMidYMid slice">
+        <rect width="20" height="14" fill="#ffffff"/>
+        <rect width="20" height="4.66" y="0" fill="#75AADB"/>
+        <rect width="20" height="4.66" y="9.34" fill="#75AADB"/>
+        <circle cx="10" cy="7" r="1.5" fill="#F6B40E" stroke="#85340A" strokeWidth="0.15"/>
+      </svg>
+    );
+  }
+  if (pais === "US") {
+    return (
+      <svg viewBox="0 0 20 14" className={wrapClass} preserveAspectRatio="xMidYMid slice">
+        <rect width="20" height="14" fill="#B22234"/>
+        <rect y="1.077" width="20" height="1.077" fill="#fff"/>
+        <rect y="3.231" width="20" height="1.077" fill="#fff"/>
+        <rect y="5.385" width="20" height="1.077" fill="#fff"/>
+        <rect y="7.538" width="20" height="1.077" fill="#fff"/>
+        <rect y="9.692" width="20" height="1.077" fill="#fff"/>
+        <rect y="11.846" width="20" height="1.077" fill="#fff"/>
+        <rect width="8" height="7.538" fill="#3C3B6E"/>
+      </svg>
+    );
+  }
+  return null;
+}
+
 // ==========================================
-// MÁSCARA E HELPERS
+// 🟢 MÁSCARAS INTELIGENTES DE TELEFONE
 // ==========================================
-const formatarTelefone = (valor, pais) => {
+const formatarTelefone = (valor, pais = PAIS_DEFAULT) => {
     if (!valor) return "";
     let v = valor.replace(/\D/g, ''); 
-    if (pais === 'Brasil') {
+    
+    if (pais === 'BR') {
         if (v.startsWith('55')) v = v.slice(2);
         v = v.slice(0, 11); 
         if (v.length > 2) v = v.replace(/^(\d{2})(\d)/g, '($1) $2');
         if (v.length > 7) v = v.replace(/(\d{5})(\d)/, '$1-$2');
-        return v ? `+55 ${v}` : '';
+        return v;
     } 
-    return valor;
+    
+    if (pais === 'US') {
+        if (v.startsWith('1') && v.length > 10) v = v.slice(1);
+        v = v.slice(0, 10);
+        if (v.length > 3) v = v.replace(/^(\d{3})(\d)/, '($1) $2');
+        if (v.length > 6) v = v.replace(/^(\(\d{3}\)\s\d{3})(\d)/, '$1-$2');
+        return v;
+    }
+
+    if (pais === 'AR') {
+        if (v.startsWith('54')) v = v.slice(2);
+        v = v.slice(0, 11); 
+        if (v.length > 1) v = v.replace(/^(\d{1})(\d)/, '$1 $2');
+        if (v.length > 3) v = v.replace(/^(\d{1})\s(\d{2})(\d)/, '$1 $2 $3');
+        if (v.length > 7) v = v.replace(/^(\d{1})\s(\d{2})\s(\d{4})(\d)/, '$1 $2 $3-$4');
+        return v;
+    }
+
+    return v;
+};
+
+const getPhonePlaceholder = (pais = PAIS_DEFAULT) => {
+    if (pais === 'US') return "(000) 000-0000";
+    if (pais === 'AR') return "9 11 0000-0000";
+    return "(00) 00000-0000";
 };
 
 const getCenterPos = (modalWidth, modalHeight) => {
@@ -55,7 +151,7 @@ const getValidUrl = (url) => {
 };
 
 // ==========================================
-// 🟢 MOTOR DE JANELA FLUTUANTE
+// JANELA FLUTUANTE
 // ==========================================
 const ResizableModal = ({ isOpen, onClose, title, icon: Icon, pos, setPos, size, setSize, children, minW = 400, minH = 400, headerColor = "bg-[#1e293b] text-white border-slate-800" }) => {
     if (!isOpen) return null;
@@ -135,10 +231,11 @@ const ResizableModal = ({ isOpen, onClose, title, icon: Icon, pos, setPos, size,
 // ==========================================
 export function UnidadesTab() {
   const { userData } = useAuth();
+  const { t } = useTranslation(); 
   
   const role = useMemo(() => String(userData?.role || "").trim().toLowerCase(), [userData?.role]);
   const userId = useMemo(() => userData?.id || userData?.uid, [userData]);
-  const userName = useMemo(() => userData?.nome || "Mentor", [userData]);
+  const userName = useMemo(() => userData?.nome || t('home.roles.mentor', 'Mentor'), [userData, t]);
   const podeAcessar = role === "admin" || role === "mentor";
 
   const [unidadesBase, setUnidadesBase] = useState([]);
@@ -148,23 +245,29 @@ export function UnidadesTab() {
   const [busca, setBusca] = useState("");
   const [estadoFiltro, setEstadoFiltro] = useState("");
   const [mentorFiltro, setMentorFiltro] = useState("");
+  const [paisFiltro, setPaisFiltro] = useState("");
   const [sortConfig, setSortConfig] = useState({ field: 'nome', direction: 'asc' });
   
   const [modalUnidadeAberto, setModalUnidadeAberto] = useState(false);
   const [modalPos, setModalPos] = useState({ x: 0, y: 0 });
-  const [modalSize, setModalSize] = useState({ w: 800, h: 600 });
+  const [modalSize, setModalSize] = useState({ w: 800, h: 720 }); // Aumentado um pouco para comportar os 3 cards
   
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState("");
   const [sucesso, setSucesso] = useState("");
 
   const [editando, setEditando] = useState(null);
-  const [pais, setPais] = useState("Brasil");
+  const [pais, setPais] = useState(PAIS_DEFAULT);
   const [estado, setEstado] = useState("");
   const [mentorId, setMentorId] = useState("");
   const [nome, setNome] = useState("");
   const [telefone, setTelefone] = useState("");
   const [status, setStatus] = useState("ativa");
+  
+  // 🟢 NOVOS ESTADOS PARA O MODAL DE ESTRUTURA
+  const [linkMaps, setLinkMaps] = useState("");
+  const [metragem, setMetragem] = useState("");
+  const [endereco, setEndereco] = useState(""); 
 
   const [editandoTelefoneId, setEditandoTelefoneId] = useState(null);
   const [telefoneInline, setTelefoneInline] = useState("");
@@ -174,14 +277,10 @@ export function UnidadesTab() {
   const [enderecoInline, setEnderecoInline] = useState("");
   const [editandoMapaId, setEditandoMapaId] = useState(null);
   const [mapaInline, setMapaInline] = useState("");
-  const [editandoSenhaId, setEditandoSenhaId] = useState(null);
-  const [senhaInline, setSenhaInline] = useState("");
-  const [mostrarSenhaId, setMostrarSenhaId] = useState(null);
 
   const [emailLogin, setEmailLogin] = useState("");
   const [senhaLogin, setSenhaLogin] = useState("123456");
 
-  // ESTADOS DO MOTOR DE RECONCILIAÇÃO CSV
   const fileInputRef = useRef(null);
   const [importModalAberto, setImportModalAberto] = useState(false);
   const [importData, setImportData] = useState({ matches: [], unmatches: [] });
@@ -238,6 +337,17 @@ export function UnidadesTab() {
       let resultado = unidadesBase;
       if (estadoFiltro) resultado = resultado.filter(u => u.estado === estadoFiltro);
       if (mentorFiltro) resultado = resultado.filter(u => u.mentorId === mentorFiltro);
+      
+      if (paisFiltro) {
+          resultado = resultado.filter(u => {
+              const uPais = u.pais || PAIS_DEFAULT;
+              if (uPais === "Brasil" && paisFiltro === "BR") return true;
+              if (uPais === "Argentina" && paisFiltro === "AR") return true;
+              if (uPais === "Estados Unidos" && paisFiltro === "US") return true;
+              return uPais === paisFiltro;
+          });
+      }
+
       if (busca.trim()) {
           const termo = busca.toLowerCase();
           resultado = resultado.filter(u => 
@@ -251,7 +361,7 @@ export function UnidadesTab() {
           if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
           return 0;
       });
-  }, [unidadesBase, busca, estadoFiltro, mentorFiltro, sortConfig]);
+  }, [unidadesBase, busca, estadoFiltro, mentorFiltro, paisFiltro, sortConfig]);
 
   const handleSort = (field) => { setSortConfig(prev => ({ field, direction: prev.field === field && prev.direction === 'asc' ? 'desc' : 'asc' })); };
   const SortIcon = ({ field }) => {
@@ -279,9 +389,6 @@ export function UnidadesTab() {
       } catch (error) { alert(`Erro ao salvar ${labelAuditoria}.`); return false; }
   }
 
-  // ==========================================
-  // 🟢 MOTOR DE LEITURA E RECONCILIAÇÃO DE CSV (MAPS CORRIGIDO)
-  // ==========================================
   const normalizarNome = (str) => {
       if (!str) return "";
       return str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "").trim();
@@ -321,7 +428,6 @@ export function UnidadesTab() {
 
               let linkMaps = "";
               if (lat && lng && lat !== 'NULL' && lng !== 'NULL') {
-                  // 🟢 CORREÇÃO: URL OFICIAL E UNIVERSAL DO GOOGLE MAPS
                   linkMaps = `http://googleusercontent.com/maps.google.com/?q=${lat},${lng}`; 
               }
               
@@ -418,26 +524,32 @@ export function UnidadesTab() {
       } catch (e) { alert("Erro ao processar lote."); } finally { setImportando(false); }
   };
 
-  // ==========================================
-  // 5. AÇÕES DE BANCO DE DADOS (CRUD MODAL) E E-MAIL BLINDADO
-  // ==========================================
   function abrirNovaUnidade() {
-    setEditando(null); setPais("Brasil"); setEstado(""); setNome(""); setTelefone(""); setStatus("ativa");
+    setEditando(null); setPais(PAIS_DEFAULT); setEstado(""); setNome(""); setTelefone(""); setStatus("ativa");
+    setLinkMaps(""); setMetragem(""); setEndereco(""); 
     setEmailLogin(""); setSenhaLogin("123456");
     if (role === 'mentor') setMentorId(userId); else setMentorId("");
     setErro(""); setSucesso("");
-    setModalPos(getCenterPos(700, 600)); setModalSize({ w: 700, h: 600 });
+    setModalPos(getCenterPos(800, 700)); setModalSize({ w: 800, h: 700 }); 
     setModalUnidadeAberto(true);
   }
 
   function abrirEditarUnidade(u) {
-    setEditando(u); setPais(u.pais || "Brasil"); setEstado(u.estado || ""); setNome(u.nome || ""); 
-    setTelefone(u.telefone || ""); setStatus(u.status || "ativa"); setMentorId(u.mentorId || "");
+    let uPaisCorrigido = u.pais || PAIS_DEFAULT;
+    if (uPaisCorrigido === "Brasil") uPaisCorrigido = "BR";
+    if (uPaisCorrigido === "Argentina") uPaisCorrigido = "AR";
+    if (uPaisCorrigido === "Estados Unidos") uPaisCorrigido = "US";
+
+    setEditando(u); setPais(uPaisCorrigido); setEstado(u.estado || ""); setNome(u.nome || ""); 
+    setTelefone(formatarTelefone(u.telefone || "", uPaisCorrigido)); setStatus(u.status || "ativa"); setMentorId(u.mentorId || "");
+    setLinkMaps(u.linkGoogleMaps || ""); 
+    setMetragem(u.metragemSalaColetiva || ""); 
+    setEndereco(u.enderecoCompleto || ""); 
     
     setEmailLogin(u.email || ""); setSenhaLogin("");
     
     setErro(""); setSucesso("");
-    setModalPos(getCenterPos(700, 600)); setModalSize({ w: 700, h: 600 });
+    setModalPos(getCenterPos(800, 700)); setModalSize({ w: 800, h: 700 }); 
     setModalUnidadeAberto(true);
   }
 
@@ -446,14 +558,19 @@ export function UnidadesTab() {
     setErro(""); setSucesso(""); setSalvando(true);
 
     if (!nome.trim() || !telefone.trim() || !estado || !mentorId) { 
-        setSalvando(false); return setErro("Preencha os campos obrigatórios."); 
+        setSalvando(false); return setErro(t('unitsTab.messages.nameRequired', 'Preencha os campos obrigatórios.')); 
     }
     if (!emailLogin.includes("@")) { 
-        setSalvando(false); return setErro("E-mail inválido."); 
+        setSalvando(false); return setErro(t('unitsTab.messages.invalidEmail', 'E-mail inválido.')); 
     }
     if (!editando && senhaLogin.length < 6) { 
-        setSalvando(false); return setErro("Senha mín. 6 dígitos."); 
+        setSalvando(false); return setErro(t('unitsTab.messages.weakPassword', 'Senha mín. 6 dígitos.')); 
     }
+
+    let telParaSalvar = telefone.trim();
+    if (pais === 'BR' && !telParaSalvar.startsWith('+')) telParaSalvar = `+55 ${telParaSalvar}`;
+    if (pais === 'AR' && !telParaSalvar.startsWith('+')) telParaSalvar = `+54 ${telParaSalvar}`;
+    if (pais === 'US' && !telParaSalvar.startsWith('+')) telParaSalvar = `+1 ${telParaSalvar}`;
 
     let secondaryApp = null;
     try {
@@ -463,14 +580,11 @@ export function UnidadesTab() {
         const novoEmail = emailLogin.trim().toLowerCase();
         const emailAntigo = editando.email || "";
 
-        // 🟢 CÓDIGO DE TROCA DE E-MAIL SEGURO NO FIREBASE AUTH (Sem precisar de senha)
-        // Alteração apenas no Banco (Firestore). A unidade passará a usar o novo e-mail para acesso.
         if (novoEmail !== emailAntigo) {
             try {
                 if (editando.uidLogin && editando.senhaPainel) {
                     secondaryApp = initializeApp(getApp().options, "SecondaryAppEmailUpdate");
                     const secondaryAuth = getAuth(secondaryApp);
-                    // Faz login em bg só se tiver a senha pra trocar no motor Auth da Google
                     await signInWithEmailAndPassword(secondaryAuth, emailAntigo, editando.senhaPainel);
                     await updateEmail(secondaryAuth.currentUser, novoEmail);
                     await signOut(secondaryAuth);
@@ -479,16 +593,20 @@ export function UnidadesTab() {
                 mudancas.push(`Login E-mail: ${emailAntigo} ➔ ${novoEmail}`);
             } catch (authErr) {
                 console.error(authErr);
-                // Mesmo se falhar a troca no Auth (por falta de senha gravada), atualizamos no Banco de Dados para manter a base limpa
                 mudancas.push(`Aviso: E-mail alterado só no BD. Erro Auth: ${authErr.message}`);
             }
         }
 
         if (editando.nome !== nome.trim()) mudancas.push(`Nome: ${editando.nome} ➔ ${nome.trim()}`);
-        if (editando.telefone !== telefone.trim()) mudancas.push(`WhatsApp: ${editando.telefone || 'Sem tel'} ➔ ${telefone.trim()}`);
+        if (editando.telefone !== telParaSalvar) mudancas.push(`WhatsApp: ${editando.telefone || 'Sem tel'} ➔ ${telParaSalvar}`);
         if (editando.estado !== estado) mudancas.push(`Estado: ${editando.estado || '-'} ➔ ${estado}`);
+        if (editando.pais !== pais) mudancas.push(`País: ${editando.pais || '-'} ➔ ${pais}`);
         if (editando.status !== status) mudancas.push(`Status: ${editando.status} ➔ ${status}`);
         
+        if ((editando.linkGoogleMaps || "") !== linkMaps.trim()) mudancas.push(`Link Maps: ${editando.linkGoogleMaps || 'Vazio'} ➔ ${linkMaps.trim() || 'Vazio'}`);
+        if (String(editando.metragemSalaColetiva || '') !== String(metragem).trim()) mudancas.push(`Metragem: ${editando.metragemSalaColetiva || 'Vazia'} ➔ ${metragem || 'Vazia'}`);
+        if ((editando.enderecoCompleto || "") !== endereco.trim()) mudancas.push(`Endereço: ${editando.enderecoCompleto || 'Vazio'} ➔ ${endereco.trim() || 'Vazio'}`);
+
         if (editando.mentorId !== mentorId) {
             const mAntigo = mentores.find(m => m.id === editando.mentorId)?.nome || 'Sem Mentor';
             const mNovo = mentores.find(m => m.id === mentorId)?.nome || 'Sem Mentor';
@@ -496,15 +614,18 @@ export function UnidadesTab() {
         }
 
         await updateDoc(doc(db, "unidades", editando.id), { 
-            pais, estado, nome: nome.trim(), telefone: telefone.trim(), status, mentorId, 
+            pais, estado, nome: nome.trim(), telefone: telParaSalvar, status, mentorId, 
             email: novoEmail, 
+            linkGoogleMaps: linkMaps.trim(), 
+            metragemSalaColetiva: metragem ? Number(metragem) : null,
+            enderecoCompleto: endereco.trim(),
             atualizadoEm: serverTimestamp() 
         });
         
         if(editando.uidLogin) { 
             try { 
                 await updateDoc(doc(db, "usuarios", editando.uidLogin), { 
-                    telefone: telefone.trim(),
+                    telefone: telParaSalvar,
                     email: novoEmail 
                 }); 
             } catch(err){} 
@@ -512,7 +633,7 @@ export function UnidadesTab() {
         
         if (mudancas.length > 0) await registrarLogAuditoria('ALTERADA', 'Dados cadastrais atualizados.', nome.trim(), mudancas.join('\n'));
         
-        setSucesso(emailAlteradoFirebase ? "Unidade e Login Google Atualizados!" : "Unidade atualizada!");
+        setSucesso(emailAlteradoFirebase ? "Unidade e Login Google Atualizados!" : t('unitsTab.messages.updated', "Unidade atualizada!"));
 
       } else {
         secondaryApp = initializeApp(getApp().options, "SecondaryAppUnitCreate");
@@ -522,25 +643,28 @@ export function UnidadesTab() {
         const newUid = userCred.user.uid;
 
         const unidadeRef = await addDoc(collection(db, "unidades"), {
-          pais, estado, nome: nome.trim(), telefone: telefone.trim(), status, mentorId, 
+          pais, estado, nome: nome.trim(), telefone: telParaSalvar, status, mentorId, 
           uidLogin: newUid, email: emailLogin.trim().toLowerCase(), 
+          linkGoogleMaps: linkMaps.trim(), 
+          metragemSalaColetiva: metragem ? Number(metragem) : null, 
+          enderecoCompleto: endereco.trim(), 
           senhaPainel: senhaLogin, 
           criadoPor: userId, criadoEm: serverTimestamp()
         });
 
         await setDoc(doc(db, "usuarios", newUid), {
-          nome: nome.trim(), email: emailLogin.trim().toLowerCase(), telefone: telefone.trim(),
+          nome: nome.trim(), email: emailLogin.trim().toLowerCase(), telefone: telParaSalvar,
           role: "unidade", unidadeId: unidadeRef.id, status: "ativo", criadoPor: userId, criadoEm: serverTimestamp()
         });
 
         await signOut(secondaryAuth);
         const mNome = mentores.find(m => m.id === mentorId)?.nome || 'Sem Mentor';
         await registrarLogAuditoria('NOVA', 'Nova unidade e credenciais criadas.', nome.trim(), `Local: ${estado} | Mentor: ${mNome}`);
-        setSucesso("Unidade e Acesso criados!");
+        setSucesso(t('unitsTab.messages.created', "Unidade e Acesso criados!"));
       }
       setTimeout(() => { setModalUnidadeAberto(false); setSucesso(""); }, 1500);
     } catch (e) { 
-      if (e.code === 'auth/email-already-in-use') setErro("Este e-mail de login já está em uso por outra conta.");
+      if (e.code === 'auth/email-already-in-use') setErro(t('unitsTab.messages.emailExists', "E-mail já existe."));
       else setErro("Erro: " + e.message); 
     } finally { 
       if (secondaryApp) await deleteApp(secondaryApp).catch(() => {});
@@ -554,7 +678,7 @@ export function UnidadesTab() {
   }
 
   async function excluir(u) {
-    if(!window.confirm(`ATENÇÃO: Excluir a unidade "${u.nome}" apagará permanentemente o painel e o login dela.\nConfirmar exclusão?`)) return;
+    if(!window.confirm(t('unitsTab.messages.deleteWarning', { name: u.nome }))) return;
     try {
         setSalvando(true);
         const qVinculos = query(collection(db, "vinculos"), where("unidadeId", "==", u.id));
@@ -569,7 +693,7 @@ export function UnidadesTab() {
         
         await batch.commit();
         await registrarLogAuditoria('EXCLUÍDA', 'Unidade excluída do sistema.', u.nome, `Auditoria: ${snapVinculos.size} vínculo(s) invalidados.`);
-    } catch (e) { alert("Erro ao excluir: " + e.message); } finally { setSalvando(false); }
+    } catch (e) { alert(t('unitsTab.messages.deleteError', "Erro ao excluir:") + " " + e.message); } finally { setSalvando(false); }
   }
 
   if (!podeAcessar) return <div className="p-8 text-center text-slate-500 font-bold">Acesso Restrito.</div>;
@@ -582,9 +706,9 @@ export function UnidadesTab() {
           <div>
             <h2 className="text-2xl font-black text-slate-800 dark:text-white flex items-center gap-3">
               <span className="p-2 bg-red-600 text-white rounded-lg shadow-md shadow-red-500/20"><Building2 className="w-6 h-6"/></span>
-              Gestão de Unidades
+              {t('unitsTab.title', 'Gestão de Unidades')}
             </h2>
-            <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-2">Gerenciamento de filiais e logins regionais.</p>
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-2">{t('unitsTab.subtitle', { count: kpis.total })}</p>
           </div>
 
           <div className="flex gap-3 w-full md:w-auto h-[48px]">
@@ -615,7 +739,7 @@ export function UnidadesTab() {
               )}
 
               <button onClick={abrirNovaUnidade} className="px-5 h-full bg-red-600 text-white rounded-xl font-bold text-xs uppercase tracking-wide hover:bg-red-700 shadow-lg shadow-red-500/20 flex items-center justify-center gap-2 transition-transform active:scale-95 whitespace-nowrap">
-                  <Plus className="w-4 h-4"/> Nova Unidade
+                  <Plus className="w-4 h-4"/> {t('unitsTab.newUnit', 'Nova Unidade')}
               </button>
           </div>
         </div>
@@ -624,7 +748,7 @@ export function UnidadesTab() {
             <div className="relative w-full lg:w-96 group">
                 <Search className="absolute left-4 top-3.5 w-5 h-5 text-slate-400 group-focus-within:text-red-500 transition-colors"/>
                 <input 
-                    type="text" placeholder="Buscar unidade, telefone ou local..." 
+                    type="text" placeholder={t('unitsTab.searchPlaceholder', "Buscar unidade, estado...")} 
                     className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-red-500/50 shadow-sm transition-all dark:text-white"
                     value={busca} onChange={(e) => setBusca(e.target.value)}
                 />
@@ -639,6 +763,19 @@ export function UnidadesTab() {
                         </select>
                         <ChevronDown className="absolute right-4 top-3.5 w-4 h-4 text-slate-400 pointer-events-none"/>
                     </div>
+                    
+                    <div className="relative w-full sm:w-56">
+                        <select 
+                            value={paisFiltro} 
+                            onChange={e => setPaisFiltro(e.target.value)} 
+                            className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold uppercase outline-none appearance-none shadow-sm dark:text-white"
+                        >
+                            <option value="">TODOS OS PAÍSES</option>
+                            {PAISES.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
+                        </select>
+                        <ChevronDown className="absolute right-4 top-3.5 w-4 h-4 text-slate-400 pointer-events-none"/>
+                    </div>
+
                     <div className="relative w-full sm:w-64">
                         <select value={mentorFiltro} onChange={e => setMentorFiltro(e.target.value)} className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold uppercase outline-none appearance-none shadow-sm dark:text-white">
                             <option value="">TODOS OS MENTORES</option>
@@ -657,36 +794,45 @@ export function UnidadesTab() {
               <thead className="bg-slate-100 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
                 <tr>
                   <th className="px-3 py-2.5 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider cursor-pointer w-24" onClick={() => handleSort('status')}>
-                      <div className="flex items-center gap-1.5">Status <SortIcon field="status"/></div>
+                      <div className="flex items-center gap-1.5">{t('unitsTab.table.status', 'Status')} <SortIcon field="status"/></div>
                   </th>
                   <th className="px-3 py-2.5 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('nome')}>
-                      <div className="flex items-center gap-1.5">Unidade e Login <SortIcon field="nome"/></div>
+                      <div className="flex items-center gap-1.5">{t('unitsTab.table.unit', 'Unidade')} <SortIcon field="nome"/></div>
                   </th>
                   <th className="px-3 py-2.5 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider w-80">
-                      Estrutura & Localização
+                      {t('unitsTab.table.location', 'Local')}
                   </th>
                   <th className="px-3 py-2.5 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('estado')}>
                       <div className="flex items-center gap-1.5">Região <SortIcon field="estado"/></div>
                   </th>
                   <th className="px-3 py-2.5 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('mentorId')}>
-                      <div className="flex items-center gap-1.5">Responsável <SortIcon field="mentorId"/></div>
+                      <div className="flex items-center gap-1.5">{t('unitsTab.table.responsible', 'Responsável')} <SortIcon field="mentorId"/></div>
                   </th>
-                  <th className="px-3 py-2.5 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-right">Ações</th>
+                  <th className="px-3 py-2.5 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-right">{t('unitsTab.table.actions', 'Ações')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
                 {loading ? (
                     <tr><td colSpan="6" className="py-8 text-center"><Loader2 className="w-6 h-6 animate-spin text-red-500 mx-auto mb-2"/><p className="text-slate-400 font-bold text-xs uppercase">Sincronizando...</p></td></tr>
                 ) : unidadesProcessadas.length === 0 ? (
-                    <tr><td colSpan="6" className="py-8 text-center text-slate-400 font-bold text-xs uppercase"><Building2 className="w-6 h-6 mx-auto mb-2 opacity-20"/> Nenhuma unidade encontrada.</td></tr>
+                    <tr><td colSpan="6" className="py-8 text-center text-slate-400 font-bold text-xs uppercase"><Building2 className="w-6 h-6 mx-auto mb-2 opacity-20"/> {t('unitsTab.emptyState', 'Nenhuma unidade encontrada.')}</td></tr>
                 ) : (
-                  unidadesProcessadas.map(u => (
+                  unidadesProcessadas.map(u => {
+                    let paisAtual = u.pais || PAIS_DEFAULT;
+                    if (paisAtual === "Brasil") paisAtual = "BR";
+                    if (paisAtual === "Argentina") paisAtual = "AR";
+                    if (paisAtual === "Estados Unidos") paisAtual = "US";
+                    
+                    const paisDDI = DDI_MAP[paisAtual]; 
+                    const telefoneExibicao = u.telefone && !u.telefone.startsWith('+') && paisDDI ? `${paisDDI} ${u.telefone}` : (u.telefone || "");
+
+                    return (
                     <tr key={u.id} className={`transition-colors group ${u.status === 'inativa' ? 'bg-slate-50 dark:bg-slate-900/30 opacity-70' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}>
                       
                       <td className="px-3 py-2">
                           <div className="flex items-center gap-1.5">
                               <div className={`w-2 h-2 rounded-full ${u.status === 'ativa' ? 'bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.5)]' : 'bg-slate-400'}`}></div>
-                              <span className={`text-[10px] font-black uppercase tracking-widest ${u.status === 'ativa' ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400'}`}>{u.status}</span>
+                              <span className={`text-[10px] font-black uppercase tracking-widest ${u.status === 'ativa' ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400'}`}>{u.status === 'ativa' ? t('unitsTab.table.active') : t('unitsTab.table.inactive')}</span>
                           </div>
                       </td>
 
@@ -699,9 +845,9 @@ export function UnidadesTab() {
                                       autoFocus 
                                       className="px-2 py-1 border border-blue-300 dark:border-blue-700 bg-white dark:bg-slate-900 rounded text-[10px] font-mono font-bold outline-none w-32 dark:text-white" 
                                       value={telefoneInline} 
-                                      onChange={(e) => setTelefoneInline(formatarTelefone(e.target.value, u.pais))} 
+                                      onChange={(e) => setTelefoneInline(formatarTelefone(e.target.value, paisAtual))} 
                                       onKeyDown={(e) => e.key === 'Enter' && salvarDadoInline(u, 'telefone', telefoneInline, 'WhatsApp').then(()=>setEditandoTelefoneId(null))} 
-                                      placeholder="Número..." 
+                                      placeholder={getPhonePlaceholder(paisAtual)} 
                                   />
                                   <button onClick={() => salvarDadoInline(u, 'telefone', telefoneInline, 'WhatsApp').then(()=>setEditandoTelefoneId(null))} className="p-1 bg-green-100 text-green-700 rounded hover:bg-green-600 hover:text-white transition-colors"><Check className="w-3 h-3"/></button>
                                   <button onClick={() => setEditandoTelefoneId(null)} className="p-1 bg-slate-200 text-slate-600 rounded hover:bg-slate-400 transition-colors"><X className="w-3 h-3"/></button>
@@ -709,8 +855,17 @@ export function UnidadesTab() {
                           ) : (
                               <div className="flex items-center gap-1 group/edit w-fit">
                                   <Phone className={`w-3 h-3 ${u.telefone ? 'text-green-500 dark:text-green-400' : 'text-slate-300 dark:text-slate-600'}`}/>
-                                  <span className={`font-mono text-xs font-bold ${u.telefone ? 'text-slate-700 dark:text-slate-300' : 'text-slate-400 dark:text-slate-500 italic text-[10px]'}`}>{u.telefone || "Add Whatsapp"}</span>
-                                  <Edit2 onClick={() => { setEditandoTelefoneId(u.id); setTelefoneInline(u.telefone || ""); }} className="w-3 h-3 text-blue-500 opacity-0 group-hover/edit:opacity-100 cursor-pointer transition-opacity ml-1"/>
+                                  <span className={`font-mono text-xs font-bold flex items-center gap-1 ${u.telefone ? 'text-slate-700 dark:text-slate-300' : 'text-slate-400 dark:text-slate-500 italic text-[10px]'}`}>
+                                    {u.telefone ? (
+                                        <>
+                                            <span className={`inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded border ${PAIS_CONFIG[paisAtual]?.badgeClass}`}>
+                                                <FlagIcon pais={paisAtual} /> {paisAtual}
+                                            </span>
+                                            {telefoneExibicao}
+                                        </>
+                                    ) : t('unitsTab.table.notInformed', "Add Whatsapp")}
+                                  </span>
+                                  <Edit2 onClick={() => { setEditandoTelefoneId(u.id); setTelefoneInline(u.telefone ? u.telefone.replace(paisDDI, '').trim() : ""); }} className="w-3 h-3 text-blue-500 opacity-0 group-hover/edit:opacity-100 cursor-pointer transition-opacity ml-1"/>
                               </div>
                           )}
                         </div>
@@ -784,31 +939,33 @@ export function UnidadesTab() {
 
                       <td className="px-3 py-2">
                         <div className="text-xs font-bold text-slate-700 dark:text-slate-200">{u.estado}</div>
-                        <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{u.pais}</div>
+                        <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5 flex items-center gap-1">
+                            <FlagIcon pais={paisAtual} className="w-3 h-2" /> {PAIS_CONFIG[paisAtual]?.nome || u.pais}
+                        </div>
                       </td>
 
                       <td className="px-3 py-2">
                         <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300 text-xs font-bold bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 px-2 py-1 rounded-md w-fit">
                           <User className="w-3 h-3 text-blue-500"/>
-                          {role === "admin" ? (mentores.find(m=>m.id===u.mentorId)?.nome?.split(' ')[0] || "N/A") : "Você"}
+                          {role === "admin" ? (mentores.find(m=>m.id===u.mentorId)?.nome?.split(' ')[0] || t('unitsTab.table.notInformed', "N/A")) : t('unitsTab.table.you', "Você")}
                         </div>
                       </td>
 
                       <td className="px-3 py-2 text-right">
                           <div className="flex gap-1 justify-end opacity-50 group-hover:opacity-100 transition-opacity">
-                              <button onClick={() => abrirEditarUnidade(u)} className="p-1.5 rounded-md bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-600 transition-colors" title="Editar Unidade">
+                              <button onClick={() => abrirEditarUnidade(u)} className="p-1.5 rounded-md bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-600 transition-colors" title={t('unitsTab.table.edit', "Editar Unidade")}>
                                   <Edit2 className="w-3.5 h-3.5"/>
                               </button>
                               <button onClick={() => alternarStatus(u)} className={`p-1.5 rounded-md transition-colors ${u.status === "ativa" ? "bg-orange-50 text-orange-600 hover:bg-orange-500 hover:text-white dark:bg-orange-900/30 dark:text-orange-400" : "bg-green-50 text-green-600 hover:bg-green-500 hover:text-white dark:bg-green-900/30 dark:text-green-400"}`} title={u.status === "ativa" ? "Suspender" : "Reativar"}>
                                   {u.status === "ativa" ? <PowerOff className="w-3.5 h-3.5"/> : <CheckCircle2 className="w-3.5 h-3.5"/>}
                               </button>
-                              <button onClick={() => excluir(u)} className="p-1.5 rounded-md bg-red-50 text-red-600 hover:bg-red-600 hover:text-white dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-600 transition-colors" title="Excluir">
+                              <button onClick={() => excluir(u)} className="p-1.5 rounded-md bg-red-50 text-red-600 hover:bg-red-600 hover:text-white dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-600 transition-colors" title={t('unitsTab.table.delete', "Excluir")}>
                                   <Trash2 className="w-3.5 h-3.5"/>
                               </button>
                           </div>
                       </td>
                     </tr>
-                  ))
+                  )})
                 )}
               </tbody>
             </table>
@@ -901,125 +1058,185 @@ export function UnidadesTab() {
         </div>
       </ResizableModal>
 
-      {/* === MODAL CADASTRAR/EDITAR UNIDADE COMPLETO === */}
+      {/* === 🟢 MODAL CADASTRAR/EDITAR UNIDADE REESTRUTURADO (3 BLOCOS VERTICAIS ESPAÇOSOS) === */}
       <ResizableModal 
           isOpen={modalUnidadeAberto} onClose={() => setModalUnidadeAberto(false)} 
-          title={editando ? "Editar Unidade" : "Nova Unidade"} icon={Building2} headerColor="bg-red-600 dark:bg-slate-900 text-white border-red-700 dark:border-slate-800"
-          pos={modalPos} setPos={setModalPos} size={modalSize} setSize={setModalSize} minW={500} minH={500}
+          title={editando ? t('unitsTab.modal.editTitle', "Editar Unidade") : t('unitsTab.modal.newTitle', "Nova Unidade")} icon={Building2} headerColor="bg-red-600 dark:bg-slate-900 text-white border-red-700 dark:border-slate-800"
+          pos={modalPos} setPos={setModalPos} size={modalSize} setSize={setModalSize} minW={600} minH={500}
       >
-        <form onSubmit={salvarUnidade} className="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6 bg-white dark:bg-slate-800">
+        <form onSubmit={salvarUnidade} className="p-6 overflow-y-auto custom-scrollbar flex-1 bg-slate-50 dark:bg-[#0b1120] flex flex-col gap-6">
           
-          {erro && <div className="p-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300 text-sm rounded-lg border border-red-100 dark:border-red-800 flex items-center gap-2"><AlertTriangle className="w-5 h-5 flex-shrink-0"/> {erro}</div>}
-          {sucesso && <div className="p-4 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-300 text-sm rounded-lg border border-green-100 dark:border-green-800 flex items-center gap-2"><CheckCircle2 className="w-5 h-5 flex-shrink-0"/> {sucesso}</div>}
+          {erro && <div className="p-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300 text-sm rounded-lg border border-red-100 dark:border-red-800 flex items-center gap-2 shadow-sm"><AlertTriangle className="w-5 h-5 flex-shrink-0"/> {erro}</div>}
+          {sucesso && <div className="p-4 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-300 text-sm rounded-lg border border-green-100 dark:border-green-800 flex items-center gap-2 shadow-sm"><CheckCircle2 className="w-5 h-5 flex-shrink-0"/> {sucesso}</div>}
 
-          <div className={`grid grid-cols-1 ${!editando ? 'md:grid-cols-2' : ''} gap-8`}>
-            
-            <div className="space-y-5">
-                <h4 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest border-b border-slate-100 dark:border-slate-700 pb-2 flex items-center gap-2">
-                  <Globe className="w-3 h-3"/> Dados Regionais
-                </h4>
-                
-                <div className={`grid ${!editando ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-2'} gap-4`}>
-                    <div>
-                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-1 block">País</label>
-                        <div className="relative">
-                            <select value={pais} onChange={e=>{setPais(e.target.value); setEstado(""); setTelefone("");}} className="w-full pl-4 pr-10 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-red-500 rounded-xl text-sm font-bold outline-none appearance-none transition-all dark:text-white">
-                                {Object.keys(LOCATIONS).map(k=><option key={k}>{k}</option>)}
-                            </select>
-                            <ChevronDown className="absolute right-4 top-3.5 w-4 h-4 text-slate-400 pointer-events-none"/>
-                        </div>
-                    </div>
-                    <div>
-                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-1 block">Estado</label>
-                        <div className="relative">
-                            <select value={estado} onChange={e=>setEstado(e.target.value)} className="w-full pl-4 pr-10 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-red-500 rounded-xl text-sm font-bold outline-none appearance-none transition-all dark:text-white">
-                                <option value="">Selecione...</option>
-                                {estadosDisponiveis.map(e=><option key={e}>{e}</option>)}
-                            </select>
-                            <ChevronDown className="absolute right-4 top-3.5 w-4 h-4 text-slate-400 pointer-events-none"/>
-                        </div>
-                    </div>
-                </div>
+          {/* CARD 1: DADOS PRINCIPAIS */}
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 space-y-5">
+              <h4 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest border-b border-slate-100 dark:border-slate-700 pb-2 flex items-center gap-2">
+                <Building2 className="w-3 h-3"/> Dados Principais
+              </h4>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-1 block">{t('unitsTab.modal.country', 'País')}</label>
+                      <div className="relative">
+                          <select value={pais} onChange={e=>{setPais(e.target.value); setEstado(""); setTelefone("");}} className="w-full pl-4 pr-10 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-red-500 rounded-xl text-sm font-bold outline-none appearance-none transition-all dark:text-white">
+                              {PAISES.map(p=><option key={p.id} value={p.id}>{p.nome}</option>)}
+                          </select>
+                          <ChevronDown className="absolute right-4 top-3.5 w-4 h-4 text-slate-400 pointer-events-none"/>
+                      </div>
+                  </div>
+                  <div>
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-1 block">{t('unitsTab.modal.state', 'Estado')}</label>
+                      <div className="relative">
+                          <select value={estado} onChange={e=>setEstado(e.target.value)} className="w-full pl-4 pr-10 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-red-500 rounded-xl text-sm font-bold outline-none appearance-none transition-all dark:text-white">
+                              <option value="">{t('unitsTab.modal.select', 'Selecione...')}</option>
+                              {estadosDisponiveis.map(e=><option key={e} value={e}>{e}</option>)}
+                          </select>
+                          <ChevronDown className="absolute right-4 top-3.5 w-4 h-4 text-slate-400 pointer-events-none"/>
+                      </div>
+                  </div>
+              </div>
 
-                <div className={`grid ${!editando ? 'grid-cols-1' : 'grid-cols-2'} gap-4`}>
-                    <div>
-                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-1 block">Nome da Unidade</label>
-                        <div className="relative">
-                            <Building2 className="absolute left-4 top-3.5 w-4 h-4 text-slate-400"/>
-                            <input value={nome} onChange={e=>setNome(e.target.value)} className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-red-500 rounded-xl text-sm font-bold outline-none transition-all dark:text-white" placeholder="Ex: Barreiro" />
-                        </div>
-                    </div>
-                    <div>
-                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-1 block">WhatsApp (Obrigatório)</label>
-                        <div className="relative">
-                            <Phone className="absolute left-4 top-3.5 w-4 h-4 text-slate-400"/>
-                            <input value={telefone} onChange={e=>setTelefone(formatarTelefone(e.target.value, pais))} className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-red-500 rounded-xl text-sm font-bold outline-none transition-all dark:text-white" placeholder="Ex: Apenas números..." />
-                        </div>
-                    </div>
-                </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-1 block">{t('unitsTab.modal.unitName', 'Nome da Unidade')}</label>
+                      <input value={nome} onChange={e=>setNome(e.target.value)} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-red-500 rounded-xl text-sm font-bold outline-none transition-all dark:text-white" placeholder={t('unitsTab.modal.unitNamePlaceholder', 'Ex: Barreiro')} />
+                  </div>
+                  <div>
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-1 flex items-center justify-between">
+                          <span>{t('unitsTab.modal.phone', 'WhatsApp')} <span className="text-red-500">*</span></span>
+                          <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border font-black ${PAIS_CONFIG[pais]?.badgeClass}`}>
+                              <FlagIcon pais={pais} /> {DDI_MAP[pais]}
+                          </span>
+                      </label>
+                      <div className="relative">
+                          <Phone className="absolute left-4 top-3.5 w-4 h-4 text-slate-400"/>
+                          <input 
+                              value={telefone} 
+                              onChange={e=>setTelefone(formatarTelefone(e.target.value, pais))} 
+                              className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-red-500 rounded-xl text-sm font-bold outline-none transition-all dark:text-white" 
+                              placeholder={getPhonePlaceholder(pais)} 
+                              maxLength={15}
+                          />
+                      </div>
+                  </div>
+              </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-1 block">Mentor Responsável</label>
-                        {role === 'admin' ? (
-                            <div className="relative">
-                                <select value={mentorId} onChange={e=>setMentorId(e.target.value)} className="w-full pl-4 pr-10 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-red-500 rounded-xl text-sm font-bold outline-none appearance-none transition-all dark:text-white">
-                                    <option value="">Selecione...</option>
-                                    {mentores.map(m=><option key={m.id} value={m.id}>{m.nome}</option>)}
-                                </select>
-                                <ChevronDown className="absolute right-4 top-3.5 w-4 h-4 text-slate-400 pointer-events-none"/>
-                            </div>
-                        ) : (
-                            <div className="w-full py-3 px-4 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-100 dark:bg-slate-900/50 text-slate-600 flex items-center gap-2 font-bold text-sm cursor-not-allowed">
-                                <User className="w-4 h-4"/> {userName}
-                            </div>
-                        )}
-                    </div>
-                    <div>
-                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-1 block">Status Inicial</label>
-                        <div className="relative">
-                            <select value={status} onChange={e=>setStatus(e.target.value)} className="w-full pl-4 pr-10 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-red-500 rounded-xl text-sm font-bold outline-none appearance-none transition-all dark:text-white">
-                                <option value="ativa">✅ ATIVA</option>
-                                <option value="inativa">🚫 INATIVA</option>
-                            </select>
-                            <ChevronDown className="absolute right-4 top-3.5 w-4 h-4 text-slate-400 pointer-events-none"/>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div className="space-y-5 border-l-0 md:border-l border-slate-100 dark:border-slate-700 pt-6 md:pt-0 md:pl-8">
-                <h4 className="text-[10px] font-black text-blue-500 dark:text-blue-400 uppercase tracking-widest border-b border-slate-100 dark:border-slate-700 pb-2 flex items-center gap-2">
-                    <Key className="w-3 h-3"/> {editando ? "Dados de Acesso" : "Geração de Acesso"}
-                </h4>
-                
-                <div className="bg-blue-50/50 dark:bg-blue-900/10 p-5 rounded-2xl border border-blue-100 dark:border-blue-800/50 space-y-4">
-                    <div className="text-xs font-medium text-slate-600 dark:text-slate-400 leading-relaxed">
-                        {editando ? "Atualize o e-mail de contato e login da unidade." : "O sistema gera automaticamente um painel de controle e login exclusivo."}
-                    </div>
-                    <div>
-                        <label className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-1 flex items-center gap-1 pl-1"><Mail className="w-3 h-3"/> Login (E-mail)</label>
-                        <input 
-                            value={emailLogin} 
-                            onChange={(e) => setEmailLogin(e.target.value)}
-                            className="w-full px-4 py-3 text-sm border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-xl text-slate-700 dark:text-slate-300 font-mono font-bold shadow-sm focus:border-blue-500 outline-none transition-colors" 
-                            placeholder="E-mail da unidade..." 
-                        />
-                    </div>
-                    {!editando && (
-                        <div>
-                            <label className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-1 flex items-center gap-1 pl-1"><Lock className="w-3 h-3"/> Senha Padrão</label>
-                            <input disabled value={senhaLogin} className="w-full px-4 py-3 text-sm border-none bg-white dark:bg-slate-800 rounded-xl text-slate-700 dark:text-slate-300 font-mono font-bold shadow-sm" />
-                        </div>
-                    )}
-                </div>
-            </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-1 block">{t('unitsTab.modal.mentor', 'Mentor Responsável')}</label>
+                      {role === 'admin' ? (
+                          <div className="relative">
+                              <select value={mentorId} onChange={e=>setMentorId(e.target.value)} className="w-full pl-4 pr-10 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-red-500 rounded-xl text-sm font-bold outline-none appearance-none transition-all dark:text-white">
+                                  <option value="">{t('unitsTab.modal.select', 'Selecione...')}</option>
+                                  {mentores.map(m=><option key={m.id} value={m.id}>{m.nome}</option>)}
+                              </select>
+                              <ChevronDown className="absolute right-4 top-3.5 w-4 h-4 text-slate-400 pointer-events-none"/>
+                          </div>
+                      ) : (
+                          <div className="w-full py-3 px-4 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-100 dark:bg-slate-900/50 text-slate-600 flex items-center gap-2 font-bold text-sm cursor-not-allowed">
+                              <User className="w-4 h-4"/> {userName}
+                          </div>
+                      )}
+                  </div>
+                  <div>
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-1 block">{t('unitsTab.modal.status', 'Status Inicial')}</label>
+                      <div className="relative">
+                          <select value={status} onChange={e=>setStatus(e.target.value)} className="w-full pl-4 pr-10 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-red-500 rounded-xl text-sm font-bold outline-none appearance-none transition-all dark:text-white">
+                              <option value="ativa">✅ {t('unitsTab.modal.statusActive', 'ATIVA')}</option>
+                              <option value="inativa">🚫 {t('unitsTab.modal.statusInactive', 'INATIVA')}</option>
+                          </select>
+                          <ChevronDown className="absolute right-4 top-3.5 w-4 h-4 text-slate-400 pointer-events-none"/>
+                      </div>
+                  </div>
+              </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-6 border-t border-slate-100 dark:border-slate-700 shrink-0 mt-6">
-            <button type="button" onClick={()=>setModalUnidadeAberto(false)} className="px-6 py-3 rounded-xl font-bold text-xs uppercase text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">Cancelar</button>
+          {/* CARD 2: DADOS DE ACESSO */}
+          <div className="space-y-4 bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
+              <h4 className="text-[10px] font-black text-blue-500 dark:text-blue-400 uppercase tracking-widest border-b border-slate-100 dark:border-slate-700 pb-2 flex items-center gap-2">
+                  <Key className="w-3 h-3"/> {editando ? t('unitsTab.modal.access', "Dados de Acesso") : t('unitsTab.modal.generatedCreds', "Geração de Acesso")}
+              </h4>
+              
+              <div className="bg-blue-50/50 dark:bg-blue-900/10 p-5 rounded-2xl border border-blue-100 dark:border-blue-800/50 space-y-4">
+                  <div className="text-xs font-medium text-slate-600 dark:text-slate-400 leading-relaxed text-center mb-2">
+                      {editando ? "Atualize o e-mail de contato e login da unidade." : t('unitsTab.modal.accessWarning', "O sistema gera automaticamente um painel de controle e login exclusivo.")}
+                  </div>
+                  <div className={`grid grid-cols-1 ${!editando ? 'md:grid-cols-2' : ''} gap-4`}>
+                      <div className="w-full">
+                          <label className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-1 flex items-center gap-1 pl-1"><Mail className="w-3 h-3"/> {t('unitsTab.modal.login', 'Login (E-mail)')}</label>
+                          <input 
+                              value={emailLogin} 
+                              onChange={(e) => setEmailLogin(e.target.value)}
+                              className="w-full px-4 py-3 text-sm border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-xl text-slate-700 dark:text-slate-300 font-mono font-bold shadow-sm focus:border-blue-500 outline-none transition-colors" 
+                              placeholder={t('unitsTab.modal.loginWaiting', "E-mail da unidade...")} 
+                          />
+                      </div>
+                      {!editando && (
+                          <div className="w-full">
+                              <label className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-1 flex items-center gap-1 pl-1"><Lock className="w-3 h-3"/> {t('unitsTab.modal.password', 'Senha Padrão')}</label>
+                              <input disabled value={senhaLogin} className="w-full px-4 py-3 text-sm border-none bg-white dark:bg-slate-800 rounded-xl text-slate-700 dark:text-slate-300 font-mono font-bold shadow-sm text-center tracking-widest" />
+                          </div>
+                      )}
+                  </div>
+              </div>
+          </div>
+
+          {/* CARD 3: ESTRUTURA E LOCALIZAÇÃO */}
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 space-y-5">
+              <h4 className="text-[10px] font-black text-emerald-500 dark:text-emerald-400 uppercase tracking-widest border-b border-slate-100 dark:border-slate-700 pb-2 flex items-center gap-2">
+                  <MapPin className="w-3 h-3"/> Estrutura e Localização
+              </h4>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* Endereço ocupa a linha inteira no mobile, ou 3 colunas no desktop */}
+                  <div className="md:col-span-3">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-1 block">Endereço Completo</label>
+                      <div className="relative">
+                          <MapPin className="absolute left-4 top-3.5 w-4 h-4 text-slate-400"/>
+                          <input 
+                              value={endereco} 
+                              onChange={e=>setEndereco(e.target.value)} 
+                              className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-emerald-500 rounded-xl text-sm font-bold outline-none transition-all dark:text-white" 
+                              placeholder="Ex: Av. Afonso Pena, 1200 - Centro, Belo Horizonte - MG, 30130-003" 
+                          />
+                      </div>
+                  </div>
+
+                  <div className="md:col-span-2">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-1 block">Link do Google Maps</label>
+                      <div className="relative">
+                          <Map className="absolute left-4 top-3.5 w-4 h-4 text-slate-400"/>
+                          <input 
+                              value={linkMaps} 
+                              onChange={e=>setLinkMaps(e.target.value)} 
+                              className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-emerald-500 rounded-xl text-sm font-bold outline-none transition-all dark:text-white" 
+                              placeholder="https://maps.app.goo.gl/..." 
+                          />
+                      </div>
+                  </div>
+                  
+                  <div className="md:col-span-1">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-1 block">Metragem da Sala (m²)</label>
+                      <div className="relative">
+                          <Maximize className="absolute left-4 top-3.5 w-4 h-4 text-slate-400"/>
+                          <input 
+                              type="number" 
+                              value={metragem} 
+                              onChange={e=>setMetragem(e.target.value)} 
+                              className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-emerald-500 rounded-xl text-sm font-bold outline-none transition-all dark:text-white" 
+                              placeholder="Ex: 80" 
+                          />
+                      </div>
+                  </div>
+              </div>
+          </div>
+
+          {/* === BOTÕES DO MODAL === */}
+          <div className="flex justify-end gap-3 shrink-0 pt-2">
+            <button type="button" onClick={()=>setModalUnidadeAberto(false)} className="px-6 py-3 rounded-xl font-bold text-xs uppercase text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors bg-slate-100 dark:bg-slate-800">{t('unitsTab.modal.cancel', 'Cancelar')}</button>
             <button type="submit" disabled={salvando} className="px-8 py-3 bg-red-600 text-white rounded-xl font-bold text-xs uppercase shadow-lg shadow-red-500/30 hover:bg-red-700 transition-all flex items-center gap-2 disabled:opacity-50 disabled:transform-none">
-              {salvando ? <Loader2 className="w-4 h-4 animate-spin" /> : (editando ? "Salvar Alterações" : <><Plus className="w-4 h-4"/> Criar Unidade</>)}
+              {salvando ? <Loader2 className="w-4 h-4 animate-spin" /> : (editando ? t('unitsTab.modal.saveEdit', "Salvar Alterações") : <><Plus className="w-4 h-4"/> {t('unitsTab.modal.saveNew', "Criar Unidade")}</>)}
             </button>
           </div>
         </form>

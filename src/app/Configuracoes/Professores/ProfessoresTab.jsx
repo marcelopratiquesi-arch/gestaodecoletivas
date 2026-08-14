@@ -14,38 +14,107 @@ import { initializeApp, getApp, deleteApp } from "firebase/app";
 import { 
   UserPlus, Edit2, Trash2, Link as LinkIcon, Loader2, Search, CheckCircle2, 
   X, Mail, Phone, PlusCircle, User, AlertTriangle, ChevronDown, 
-  ChevronUp, ArrowDown, DownloadCloud, Layers, Ban, ShieldCheck, MapPin
+  ChevronUp, ArrowDown, ArrowRight, DownloadCloud, Layers, Ban, ShieldCheck, MapPin
 } from "lucide-react";
 import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
 
-// 🌍 PADRÃO OURO INTERNACIONAL
-const PAISES = [
-  { id: "BR", nome: "Brasil", ddi: "+55" },
-  { id: "AR", nome: "Argentina", ddi: "+54" },
-  { id: "US", nome: "Estados Unidos (Miami)", ddi: "+1" },
-];
-
-const DDI_MAP = {
-  "BR": "+55",
-  "AR": "+54",
-  "US": "+1"
+// 🌍 PADRÃO OURO INTERNACIONAL — mesma identidade visual usada em MentoresTab
+const PAIS_CONFIG = {
+  BR: {
+    id: "BR", nome: "Brasil", ddi: "+55",
+    badgeClass: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800"
+  },
+  AR: {
+    id: "AR", nome: "Argentina", ddi: "+54",
+    badgeClass: "bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-900/20 dark:text-sky-400 dark:border-sky-800"
+  },
+  US: {
+    id: "US", nome: "Estados Unidos", ddi: "+1",
+    badgeClass: "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-900/20 dark:text-rose-400 dark:border-rose-800"
+  },
 };
 
-// --- MÁSCARA INTELIGENTE DE TELEFONE ---
-const mascaraTelefone = (valor) => {
+const PAISES = Object.values(PAIS_CONFIG);
+const DDI_MAP = Object.fromEntries(PAISES.map(p => [p.id, p.ddi]));
+const PAIS_DEFAULT = "BR";
+
+// 🟢 ÍCONES DE BANDEIRA EM SVG PURO (idêntico ao usado em MentoresTab — não depende de fonte de emoji)
+function FlagIcon({ pais, className = "w-4 h-3" }) {
+  const wrapClass = `${className} rounded-[2px] ring-1 ring-black/10 shrink-0 overflow-hidden inline-block align-middle`;
+
+  if (pais === "BR") {
+    return (
+      <svg viewBox="0 0 20 14" className={wrapClass} preserveAspectRatio="xMidYMid slice">
+        <rect width="20" height="14" fill="#009739"/>
+        <polygon points="10,2 18,7 10,12 2,7" fill="#FEDD00"/>
+        <circle cx="10" cy="7" r="3.1" fill="#012169"/>
+      </svg>
+    );
+  }
+  if (pais === "AR") {
+    return (
+      <svg viewBox="0 0 20 14" className={wrapClass} preserveAspectRatio="xMidYMid slice">
+        <rect width="20" height="14" fill="#ffffff"/>
+        <rect width="20" height="4.66" y="0" fill="#75AADB"/>
+        <rect width="20" height="4.66" y="9.34" fill="#75AADB"/>
+        <circle cx="10" cy="7" r="1.5" fill="#F6B40E" stroke="#85340A" strokeWidth="0.15"/>
+      </svg>
+    );
+  }
+  if (pais === "US") {
+    return (
+      <svg viewBox="0 0 20 14" className={wrapClass} preserveAspectRatio="xMidYMid slice">
+        <rect width="20" height="14" fill="#B22234"/>
+        <rect y="1.077" width="20" height="1.077" fill="#fff"/>
+        <rect y="3.231" width="20" height="1.077" fill="#fff"/>
+        <rect y="5.385" width="20" height="1.077" fill="#fff"/>
+        <rect y="7.538" width="20" height="1.077" fill="#fff"/>
+        <rect y="9.692" width="20" height="1.077" fill="#fff"/>
+        <rect y="11.846" width="20" height="1.077" fill="#fff"/>
+        <rect width="8" height="7.538" fill="#3C3B6E"/>
+      </svg>
+    );
+  }
+  return null;
+}
+
+// --- MÁSCARA INTELIGENTE DE TELEFONE POR PAÍS (mesmo padrão de MentoresTab) ---
+const formatarTelefone = (valor, pais = PAIS_DEFAULT) => {
     if (!valor) return "";
-    let v = valor.replace(/\D/g, ""); // Tira tudo que não é número
-    if (v.length > 11) v = v.substring(0, 11); // Limita a 11 dígitos
-    
-    if (v.length > 10) {
-        return v.replace(/^(\d{2})(\d{5})(\d{4}).*/, "($1) $2-$3");
-    } else if (v.length > 5) {
-        return v.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, "($1) $2-$3");
-    } else if (v.length > 2) {
-        return v.replace(/^(\d{2})(\d{0,5})/, "($1) $2");
-    } else {
-        return v.replace(/^(\d*)/, "($1");
+    let v = valor.replace(/\D/g, '');
+
+    if (pais === 'BR') {
+        if (v.startsWith('55')) v = v.slice(2);
+        v = v.slice(0, 11);
+        if (v.length > 2) v = v.replace(/^(\d{2})(\d)/g, '($1) $2');
+        if (v.length > 7) v = v.replace(/(\d{5})(\d)/, '$1-$2');
+        return v;
     }
+
+    if (pais === 'US') {
+        if (v.startsWith('1') && v.length > 10) v = v.slice(1);
+        v = v.slice(0, 10);
+        if (v.length > 3) v = v.replace(/^(\d{3})(\d)/, '($1) $2');
+        if (v.length > 6) v = v.replace(/^(\(\d{3}\)\s\d{3})(\d)/, '$1-$2');
+        return v;
+    }
+
+    if (pais === 'AR') {
+        if (v.startsWith('54')) v = v.slice(2);
+        v = v.slice(0, 11);
+        if (v.length > 1) v = v.replace(/^(\d{1})(\d)/, '$1 $2');
+        if (v.length > 3) v = v.replace(/^(\d{1})\s(\d{2})(\d)/, '$1 $2 $3');
+        if (v.length > 7) v = v.replace(/^(\d{1})\s(\d{2})\s(\d{4})(\d)/, '$1 $2 $3-$4');
+        return v;
+    }
+
+    return v;
+};
+
+const getPhonePlaceholder = (pais = PAIS_DEFAULT) => {
+    if (pais === 'US') return "(000) 000-0000";
+    if (pais === 'AR') return "9 11 0000-0000";
+    return "(00) 00000-0000";
 };
 
 export function ProfessoresTab() {
@@ -70,6 +139,7 @@ export function ProfessoresTab() {
   // UX: Paginação e Ordenação
   const [itensVisiveis, setItensVisiveis] = useState(20);
   const [busca, setBusca] = useState("");
+  const [paisFiltro, setPaisFiltro] = useState(""); // 🟢 FILTRO DE PAÍS
   const [ordenacao, setOrdenacao] = useState({ campo: 'nome', direcao: 'asc' });
 
   // Modais
@@ -84,7 +154,7 @@ export function ProfessoresTab() {
   // Forms
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
-  const [pais, setPais] = useState("BR"); // 🟢 NOVO CAMPO INTERNACIONAL
+  const [pais, setPais] = useState(PAIS_DEFAULT); // 🟢 CAMPO INTERNACIONAL
   const [telefone, setTelefone] = useState("");
   const [status, setStatus] = useState("ativo");
   const [unidadeSelecionadaId, setUnidadeSelecionadaId] = useState("");
@@ -164,7 +234,7 @@ export function ProfessoresTab() {
   }, [professoresTotais, meusVinculos, role]);
 
   // ==========================================
-  // 3. PROCESSADOR VISUAL (BUSCA E ORDENAÇÃO)
+  // 3. PROCESSADOR VISUAL (BUSCA, PAÍS E ORDENAÇÃO)
   // ==========================================
   const professoresProcessados = useMemo(() => {
     const termo = busca.toLowerCase();
@@ -174,6 +244,11 @@ export function ProfessoresTab() {
         (p.email || "").toLowerCase().includes(termo) ||
         (p.telefone || "").includes(termo)
     );
+
+    // 🟢 FILTRO POR PAÍS: Brasil só mostra Brasil, Argentina só Argentina, Estados Unidos só Estados Unidos
+    if (paisFiltro) {
+        lista = lista.filter(p => (p.pais || PAIS_DEFAULT) === paisFiltro);
+    }
 
     return lista.sort((a, b) => {
         let valA, valB;
@@ -189,7 +264,7 @@ export function ProfessoresTab() {
         if (valA > valB) return ordenacao.direcao === 'asc' ? 1 : -1;
         return 0;
     });
-  }, [meusProfessores, vinculos, busca, ordenacao]);
+  }, [meusProfessores, vinculos, busca, paisFiltro, ordenacao]);
 
   const professoresVisiveis = useMemo(() => {
       return professoresProcessados.slice(0, itensVisiveis);
@@ -209,7 +284,7 @@ export function ProfessoresTab() {
 
   const SortIcon = ({ campo }) => {
       if (ordenacao.campo !== campo) return <div className="w-4 h-4 opacity-20"><ChevronDown className="w-3 h-3"/></div>;
-      return ordenacao.direcao === 'asc' ? <ChevronUp className="w-3 h-3 text-red-500"/> : <ChevronDown className="w-3 h-3 text-red-500"/>;
+      return ordenacao.direcao === 'asc' ? <ChevronUp className="w-3 h-3 text-green-500"/> : <ChevronDown className="w-3 h-3 text-green-500"/>;
   };
 
   const kpis = useMemo(() => {
@@ -299,7 +374,7 @@ export function ProfessoresTab() {
       setProfEditando(null);
       setNome("");
       setEmail(emailPreenchido || "");
-      setPais("BR"); // 🟢 PADRÃO OURO INICIAL
+      setPais(PAIS_DEFAULT); // 🟢 PADRÃO OURO INICIAL
       setTelefone("");
       setStatus("ativo");
       setErro("");
@@ -310,8 +385,8 @@ export function ProfessoresTab() {
       setProfEditando(p);
       setNome(p.nome);
       setEmail(p.email);
-      setPais(p.pais || "BR"); // 🟢 CARREGA O PAÍS
-      setTelefone(p.pais === 'BR' || !p.pais ? mascaraTelefone(p.telefone || "") : (p.telefone || "")); 
+      setPais(p.pais || PAIS_DEFAULT); // 🟢 CARREGA O PAÍS
+      setTelefone(formatarTelefone(p.telefone || "", p.pais || PAIS_DEFAULT));
       setStatus(p.status || "ativo");
       setErro("");
       setModalFormAberto(true);
@@ -358,7 +433,7 @@ export function ProfessoresTab() {
           let mudancas = [];
           if (profEditando.nome !== nomeLimpo) mudancas.push(`Nome: ${profEditando.nome} ➔ ${nomeLimpo}`);
           if (profEditando.telefone !== telefone) mudancas.push(`Telefone: ${profEditando.telefone || 'Sem tel'} ➔ ${telefone}`);
-          if (profEditando.pais !== pais) mudancas.push(`País: ${profEditando.pais || 'BR'} ➔ ${pais}`);
+          if (profEditando.pais !== pais) mudancas.push(`País: ${profEditando.pais || PAIS_DEFAULT} ➔ ${pais}`);
           if (profEditando.status !== status) mudancas.push(`Status: ${profEditando.status} ➔ ${status}`);
           
           await updateDoc(doc(db, "professores", profEditando.id), { 
@@ -485,12 +560,12 @@ export function ProfessoresTab() {
   if (!podeVer) return null;
 
   return (
-    <div className="p-6 animate-fade-in max-w-7xl mx-auto space-y-6">
+    <div className="p-6 animate-fade-in max-w-7xl mx-auto space-y-6 uppercase">
       {/* HEADER E KPIS */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-slate-200 dark:border-slate-700 pb-6">
         <div>
           <h2 className="text-2xl font-black text-slate-800 dark:text-white flex items-center gap-3">
-            <span className="p-2 bg-red-600 text-white rounded-lg shadow-md shadow-red-500/20">
+            <span className="p-2 bg-green-600 text-white rounded-lg shadow-md shadow-green-500/20">
                 <UserPlus className="w-6 h-6"/>
             </span>
             {t('teachersTab.title', 'Gestão de Professores')}
@@ -522,7 +597,7 @@ export function ProfessoresTab() {
                 <button 
                     type="button"
                     onClick={abrirFluxoNovo} 
-                    className="px-5 py-2 h-full bg-red-600 text-white rounded-xl font-bold text-xs uppercase tracking-wide hover:bg-red-700 shadow-lg shadow-red-500/20 flex items-center justify-center gap-2 transition-transform active:scale-95 whitespace-nowrap"
+                    className="px-5 py-2 h-full bg-green-600 text-white rounded-xl font-bold text-xs uppercase tracking-wide hover:bg-green-700 shadow-lg shadow-green-500/20 flex items-center justify-center gap-2 transition-transform active:scale-95 whitespace-nowrap"
                 >
                     <PlusCircle className="w-4 h-4"/> {t('teachersTab.newLinkBtn', 'Novo Vínculo')}
                 </button>
@@ -530,17 +605,32 @@ export function ProfessoresTab() {
         </div>
       </div>
 
-      {/* BARRA DE FERRAMENTAS E BUSCA */}
-      <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-          <div className="relative w-full md:w-96 group">
-              <Search className="absolute left-4 top-3.5 w-5 h-5 text-slate-400 group-focus-within:text-red-500 transition-colors"/>
-              <input 
-                  type="text" 
-                  placeholder={t('teachersTab.searchPlaceholder', 'Buscar por nome, telefone ou e-mail...')} 
-                  className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500 shadow-sm transition-all text-slate-700 dark:text-white"
-                  value={busca}
-                  onChange={(e) => setBusca(e.target.value)}
-              />
+      {/* BARRA DE FERRAMENTAS, BUSCA E FILTRO DE PAÍS */}
+      <div className="flex flex-col lg:flex-row justify-between items-center gap-4">
+          <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
+              <div className="relative w-full sm:w-96 group">
+                  <Search className="absolute left-4 top-3.5 w-5 h-5 text-slate-400 group-focus-within:text-green-500 transition-colors"/>
+                  <input 
+                      type="text" 
+                      placeholder={t('teachersTab.searchPlaceholder', 'Buscar por nome, telefone ou e-mail...')} 
+                      className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-green-500 shadow-sm transition-all text-slate-700 dark:text-white"
+                      value={busca}
+                      onChange={(e) => setBusca(e.target.value)}
+                  />
+              </div>
+
+              {/* 🟢 FILTRO DE PAÍS — mesmo comportamento de UnidadesTab/MentoresTab */}
+              <div className="relative w-full sm:w-56">
+                  <select 
+                      value={paisFiltro} 
+                      onChange={e => setPaisFiltro(e.target.value)} 
+                      className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold uppercase outline-none appearance-none shadow-sm dark:text-white"
+                  >
+                      <option value="">{t('teachersTab.filterCountry.all', 'Todos os Países')}</option>
+                      {PAISES.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
+                  </select>
+                  <ChevronDown className="absolute right-4 top-3.5 w-4 h-4 text-slate-400 pointer-events-none"/>
+              </div>
           </div>
 
           {role === "admin" && (
@@ -548,7 +638,7 @@ export function ProfessoresTab() {
                   type="button"
                   onClick={corrigirEmailsAntigos} 
                   disabled={corrigindoBase}
-                  className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl font-bold text-xs uppercase shadow-sm transition-colors flex items-center gap-2"
+                  className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl font-bold text-xs uppercase shadow-sm transition-colors flex items-center gap-2 whitespace-nowrap"
               >
                   {corrigindoBase ? <Loader2 className="w-4 h-4 animate-spin"/> : <Layers className="w-4 h-4" />} 
                   {t('teachersTab.fixEmailsBtn', 'Corrigir E-mails')}
@@ -558,7 +648,7 @@ export function ProfessoresTab() {
 
       {/* TABELA DE DADOS */}
       <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden shadow-sm relative">
-        {loading && <div className="absolute inset-0 bg-white/80 dark:bg-slate-900/80 z-10 flex items-center justify-center backdrop-blur-sm"><Loader2 className="w-8 h-8 animate-spin text-red-600"/></div>}
+        {loading && <div className="absolute inset-0 bg-white/80 dark:bg-slate-900/80 z-10 flex items-center justify-center backdrop-blur-sm"><Loader2 className="w-8 h-8 animate-spin text-green-600"/></div>}
         
         <div className="overflow-x-auto">
             <table className="w-full text-left">
@@ -585,7 +675,8 @@ export function ProfessoresTab() {
                         
                         // LÓGICA DE AUDITORIA DE TELEFONE (Acha os errados para envio de WaSeller)
                         const isTelefoneValido = p.telefone && p.telefone.replace(/\D/g, '').length >= 10;
-                        const paisDDI = DDI_MAP[p.pais || "BR"]; // 🟢 Mapeia o DDI
+                        const paisAtual = p.pais || PAIS_DEFAULT; // 🟢 Fallback: Brasil se o professor não tiver país definido
+                        const paisDDI = DDI_MAP[paisAtual];
                         
                         return (
                             <tr key={p.id} className={`transition-colors group ${p.status === 'inativo' ? 'bg-slate-50 dark:bg-slate-900/30 opacity-75 grayscale-[0.5]' : 'hover:bg-slate-50 dark:hover:bg-slate-700/30'}`}>
@@ -601,11 +692,13 @@ export function ProfessoresTab() {
                                     <div className="flex flex-col gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400">
                                         <span className="flex items-center gap-1"><Mail className="w-3.5 h-3.5 text-blue-500"/> {p.email}</span>
                                         
-                                        {/* 🟢 A ETIQUETA VISUAL DO TELEFONE COM PAÍS E DDI */}
+                                        {/* 🟢 A ETIQUETA VISUAL DO TELEFONE COM BANDEIRA + PAÍS + DDI */}
                                         {isTelefoneValido ? (
                                             <span className="flex items-center gap-1 text-slate-600 dark:text-slate-300">
                                                 <Phone className="w-3.5 h-3.5 text-green-500"/> 
-                                                <span className="text-[9px] font-black text-slate-400 bg-slate-100 dark:bg-slate-700 px-1 rounded">{p.pais || "BR"}</span>
+                                                <span className={`inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded border ${PAIS_CONFIG[paisAtual]?.badgeClass}`}>
+                                                    <FlagIcon pais={paisAtual} /> {paisAtual}
+                                                </span>
                                                 {paisDDI} {p.telefone}
                                             </span>
                                         ) : (
@@ -639,7 +732,7 @@ export function ProfessoresTab() {
                                     <div className="flex gap-2 justify-end opacity-40 group-hover:opacity-100 transition-opacity">
                                         {podeEditar && (
                                             <>
-                                                <button type="button" onClick={() => abrirEdicao(p)} className={`p-2 rounded-lg transition-colors title="Editar Dados" ${!isTelefoneValido ? 'bg-red-50 text-red-600 animate-pulse' : 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'}`}>
+                                                <button type="button" onClick={() => abrirEdicao(p)} className={`p-2 rounded-lg transition-colors title="Editar Dados" ${!isTelefoneValido ? 'bg-red-50 text-red-600 animate-pulse' : 'bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400'}`}>
                                                     <Edit2 className="w-4 h-4"/>
                                                 </button>
                                                 <button type="button" onClick={() => alternarStatusProf(p)} className={`p-2 rounded-lg transition-colors ${p.status === "ativo" ? "bg-orange-50 text-orange-600 hover:bg-orange-500 hover:text-white dark:bg-orange-900/30 dark:text-orange-400" : "bg-green-50 text-green-600 hover:bg-green-500 hover:text-white dark:bg-green-900/30 dark:text-green-400"}`} title={p.status === "ativo" ? "Desativar Perfil" : "Ativar Perfil"}>
@@ -705,13 +798,13 @@ export function ProfessoresTab() {
                                   <div className="flex gap-2">
                                       <input 
                                           type="email" 
-                                          className="w-full pl-4 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-red-500 rounded-xl text-sm font-semibold outline-none transition-all dark:text-white" 
+                                          className="w-full pl-4 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-green-500 rounded-xl text-sm font-semibold outline-none transition-all dark:text-white" 
                                           placeholder={t('teachersTab.verifyModal.emailPlaceholder', 'exemplo@email.com')}
                                           value={emailVerificacao}
                                           onChange={e => setEmailVerificacao(e.target.value)}
                                           autoFocus
                                       />
-                                      <button type="submit" className="bg-red-600 text-white px-5 rounded-xl font-bold hover:bg-red-700 shadow-md shadow-red-500/20 transition-all active:scale-95 flex items-center justify-center">
+                                      <button type="submit" className="bg-green-600 text-white px-5 rounded-xl font-bold hover:bg-green-700 shadow-md shadow-green-500/20 transition-all active:scale-95 flex items-center justify-center">
                                           <Search className="w-5 h-5"/>
                                       </button>
                                   </div>
@@ -733,7 +826,7 @@ export function ProfessoresTab() {
                                   <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 block pl-1">{t('teachersTab.verifyModal.linkToUnit', 'Vincular a qual unidade?')}</label>
                                   <div className="relative">
                                       <select 
-                                          className="w-full pl-4 pr-10 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-red-500 rounded-xl text-sm font-bold outline-none appearance-none transition-all dark:text-white"
+                                          className="w-full pl-4 pr-10 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-green-500 rounded-xl text-sm font-bold outline-none appearance-none transition-all dark:text-white"
                                           value={unidadeSelecionadaId}
                                           onChange={e => setUnidadeSelecionadaId(e.target.value)}
                                       >
@@ -760,7 +853,7 @@ export function ProfessoresTab() {
 
                   <div className="p-4 bg-slate-50 dark:bg-slate-800 flex justify-between items-center border-t border-slate-100 dark:border-slate-700">
                       <button onClick={() => setModalVerificacaoAberto(false)} className="text-slate-500 dark:text-slate-400 font-bold text-[10px] uppercase tracking-wider hover:text-slate-800 dark:hover:text-slate-200">{t('teachersTab.verifyModal.cancel', 'Cancelar')}</button>
-                      {!professorEncontrado && emailVerificacao && !buscandoEmail && (
+                      {!professorEncontrado && emailVerificacao && (
                           <button onClick={() => abrirCadastroCompleto(emailVerificacao)} className="text-blue-600 dark:text-blue-400 font-black text-[10px] uppercase tracking-wider hover:text-blue-800 dark:hover:text-blue-300 flex items-center gap-1">
                               {t('teachersTab.verifyModal.registerNew', 'Cadastrar Novo')} <ArrowRight className="w-3 h-3"/>
                           </button>
@@ -770,14 +863,14 @@ export function ProfessoresTab() {
           </div>
       )}
 
-      {/* MODAL 2: FORMULÁRIO COMPLETO COM MÁSCARA E AUDITORIA */}
+      {/* MODAL 2: FORMULÁRIO COMPLETO COM BANDEIRA, MÁSCARA E AUDITORIA */}
       {modalFormAberto && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in zoom-in duration-200">
           <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200 dark:border-slate-700 flex flex-col max-h-[90vh]">
             <div className="p-6 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 flex justify-between items-center shrink-0">
                 <div>
                     <h3 className="font-black text-xl text-slate-800 dark:text-white flex items-center gap-2">
-                        <Edit2 className="w-5 h-5 text-red-600"/>
+                        <Edit2 className="w-5 h-5 text-green-600"/>
                         {profEditando ? t('teachersTab.formModal.editTitle', 'Editar Professor') : t('teachersTab.formModal.newTitle', 'Novo Cadastro')}
                     </h3>
                     <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">{t('teachersTab.formModal.desc', 'Preencha os dados e clique em salvar.')}</p>
@@ -803,35 +896,40 @@ export function ProfessoresTab() {
                     <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 pl-1">{t('teachersTab.formModal.fullName', 'Nome Completo')}</label>
                     <div className="relative">
                         <User className="absolute left-4 top-3.5 w-4 h-4 text-slate-400"/>
-                        <input className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-red-500 rounded-xl text-sm font-bold outline-none transition-all dark:text-white" value={nome} onChange={e => setNome(e.target.value)} autoFocus placeholder={t('teachersTab.formModal.namePlaceholder', 'Nome do Professor')} />
+                        <input className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-green-500 rounded-xl text-sm font-bold outline-none transition-all dark:text-white" value={nome} onChange={e => setNome(e.target.value)} autoFocus placeholder={t('teachersTab.formModal.namePlaceholder', 'Nome do Professor')} />
                     </div>
                 </div>
 
-                {/* 🟢 MODIFICADO PARA COMPORTAR O SELETOR DE PAÍS E O DDI */}
+                {/* 🟢 PAÍS COM NOME COMPLETO + BANDEIRA E DDI */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="flex gap-2">
-                        <div className="w-1/3">
+                        <div className="w-2/5">
                             <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 pl-1">{t('teachersTab.formModal.country', 'País')}</label>
-                            <select 
-                                value={pais} 
-                                onChange={e => setPais(e.target.value)}
-                                className="w-full pl-3 pr-8 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-red-500 rounded-xl text-sm font-bold outline-none transition-all dark:text-white appearance-none"
-                            >
-                                {PAISES.map(p => <option key={p.id} value={p.id}>{p.id}</option>)}
-                            </select>
+                            <div className="relative">
+                                <select 
+                                    value={pais} 
+                                    onChange={e => { setPais(e.target.value); setTelefone(formatarTelefone(telefone, e.target.value)); }}
+                                    className="w-full pl-3 pr-7 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-green-500 rounded-xl text-xs font-bold outline-none transition-all dark:text-white appearance-none"
+                                >
+                                    {PAISES.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
+                                </select>
+                                <ChevronDown className="absolute right-2 top-3.5 w-3.5 h-3.5 text-slate-400 pointer-events-none"/>
+                            </div>
                         </div>
-                        <div className="w-2/3">
+                        <div className="w-3/5">
                             <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 pl-1 flex items-center justify-between">
                                 <span>{t('teachersTab.formModal.whatsapp', 'WhatsApp')} <span className="text-red-500">*</span></span>
-                                <span className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-1.5 rounded">{DDI_MAP[pais]}</span>
+                                <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border font-black ${PAIS_CONFIG[pais]?.badgeClass}`}>
+                                    <FlagIcon pais={pais} /> {DDI_MAP[pais]}
+                                </span>
                             </label>
                             <div className="relative">
                                 <Phone className="absolute left-4 top-3.5 w-4 h-4 text-slate-400"/>
                                 <input 
-                                    className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-red-500 rounded-xl text-sm font-bold outline-none transition-all dark:text-white" 
+                                    className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-green-500 rounded-xl text-sm font-bold outline-none transition-all dark:text-white" 
                                     value={telefone} 
-                                    onChange={e => setTelefone(pais === 'BR' ? mascaraTelefone(e.target.value) : e.target.value.replace(/\D/g, ''))} 
-                                    placeholder={pais === 'BR' ? "(00) 00000-0000" : t('teachersTab.formModal.phonePlaceholder', 'Apenas números...')} 
+                                    onChange={e => setTelefone(formatarTelefone(e.target.value, pais))} 
+                                    placeholder={getPhonePlaceholder(pais)} 
                                     maxLength={15}
                                 />
                             </div>
@@ -840,7 +938,7 @@ export function ProfessoresTab() {
                     <div>
                         <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 pl-1">{t('teachersTab.formModal.status', 'Status')}</label>
                         <div className="relative">
-                            <select className="w-full pl-4 pr-10 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-red-500 rounded-xl text-sm font-bold outline-none appearance-none transition-all dark:text-white" value={status} onChange={e => setStatus(e.target.value)}>
+                            <select className="w-full pl-4 pr-10 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-green-500 rounded-xl text-sm font-bold outline-none appearance-none transition-all dark:text-white" value={status} onChange={e => setStatus(e.target.value)}>
                                 <option value="ativo">✅ {t('teachersTab.formModal.statusActive', 'ATIVO')}</option>
                                 <option value="inativo">🚫 {t('teachersTab.formModal.statusInactive', 'INATIVO')}</option>
                             </select>
@@ -859,7 +957,7 @@ export function ProfessoresTab() {
                                 <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 pl-1">{t('teachersTab.formModal.autoLink', 'Vincular Automaticamente a:')}</label>
                                 <div className="relative">
                                     <select 
-                                        className="w-full pl-4 pr-10 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-red-500 rounded-xl text-sm font-bold outline-none appearance-none transition-all dark:text-white"
+                                        className="w-full pl-4 pr-10 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-green-500 rounded-xl text-sm font-bold outline-none appearance-none transition-all dark:text-white"
                                         value={unidadeSelecionadaId} 
                                         onChange={e => setUnidadeSelecionadaId(e.target.value)}
                                     >
@@ -877,7 +975,7 @@ export function ProfessoresTab() {
                     <button type="button" onClick={() => setModalFormAberto(false)} className="px-6 py-3 rounded-xl font-bold text-xs uppercase text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
                         {t('teachersTab.formModal.cancel', 'Cancelar')}
                     </button>
-                    <button type="submit" disabled={salvando} className="px-8 py-3 bg-red-600 text-white rounded-xl font-bold text-xs uppercase shadow-lg shadow-red-500/30 hover:bg-red-700 hover:-translate-y-0.5 transition-all flex items-center gap-2 disabled:opacity-50 disabled:transform-none">
+                    <button type="submit" disabled={salvando} className="px-8 py-3 bg-green-600 text-white rounded-xl font-bold text-xs uppercase shadow-lg shadow-green-500/30 hover:bg-green-700 hover:-translate-y-0.5 transition-all flex items-center gap-2 disabled:opacity-50 disabled:transform-none">
                         {salvando ? <Loader2 className="w-4 h-4 animate-spin"/> : (profEditando ? t('teachersTab.formModal.saveEdit', 'Salvar Alterações') : <><CheckCircle2 className="w-4 h-4"/> {t('teachersTab.formModal.saveNew', 'Concluir Cadastro')}</>)}
                     </button>
                 </div>

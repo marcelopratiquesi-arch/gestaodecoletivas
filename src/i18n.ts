@@ -5,7 +5,7 @@ const resources = {
   'pt-BR': {
     translation: {
       login: {
-        subtitle: "Gestão de Coletivas", // 🟢 ATUALIZADO PARA O SISTEMA NOVO
+        subtitle: "Gestão de Coletivas",
         emailLabel: "Usuário / E-mail",
         emailPlaceholder: "seu@email.com",
         passwordLabel: "Senha",
@@ -194,6 +194,7 @@ const resources = {
           professores: "Professores",
           modalidades: "Modalidades",
           feriados: "Feriados",
+          pratiquePlay: "Pratique Play",
           backup: "Backup"
         }
       },
@@ -332,6 +333,9 @@ const resources = {
         newLinkBtn: "+ NOVO VÍNCULO",
         fixEmailsBtn: "CORRIGIR E-MAILS",
         searchPlaceholder: "Buscar por nome, telefone ou e-mail...",
+        filterCountry: {
+          all: "Todos os Países"
+        },
         emptyState: "Nenhum professor encontrado.",
         loadMoreData: "Carregando dados consome leituras. Use com sabedoria.",
         load10: "Carregar +10",
@@ -410,7 +414,7 @@ const resources = {
   'es-AR': {
     translation: {
       login: {
-        subtitle: "Gestión de Colectivas", // 🟢 ATUALIZADO PARA O SISTEMA NOVO
+        subtitle: "Gestión de Colectivas",
         emailLabel: "Usuario / Correo",
         emailPlaceholder: "tu@correo.com",
         passwordLabel: "Contraseña",
@@ -599,6 +603,7 @@ const resources = {
           professores: "Profesores",
           modalidades: "Modalidades",
           feriados: "Feriados",
+          pratiquePlay: "Pratique Play",
           backup: "Copia de Seguridad"
         }
       },
@@ -680,7 +685,7 @@ const resources = {
           name: "Mentor",
           email: "Correo",
           phone: "WhatsApp",
-          status: "Estado",
+          status: "Status",
           actions: "Acciones",
           active: "ACTIVO",
           inactive: "INACTIVO",
@@ -737,6 +742,9 @@ const resources = {
         newLinkBtn: "+ NUEVO VÍNCULO",
         fixEmailsBtn: "CORREGIR CORREOS",
         searchPlaceholder: "Buscar por nombre, teléfono o correo...",
+        filterCountry: {
+          all: "Todos los Países"
+        },
         emptyState: "No se encontró ningún profesor.",
         loadMoreData: "Cargar datos consume lecturas. Úsalo con sabiduría.",
         load10: "Cargar +10",
@@ -815,7 +823,7 @@ const resources = {
   'en-US': {
     translation: {
       login: {
-        subtitle: "Group Classes Management", // 🟢 ATUALIZADO PARA O SISTEMA NOVO
+        subtitle: "Group Classes Management",
         emailLabel: "Username / Email",
         emailPlaceholder: "your@email.com",
         passwordLabel: "Password",
@@ -1004,6 +1012,7 @@ const resources = {
           professores: "Teachers",
           modalidades: "Modalities",
           feriados: "Holidays",
+          pratiquePlay: "Pratique Play",
           backup: "Backup"
         }
       },
@@ -1142,6 +1151,9 @@ const resources = {
         newLinkBtn: "+ NEW LINK",
         fixEmailsBtn: "FIX EMAILS",
         searchPlaceholder: "Search by name, phone or email...",
+        filterCountry: {
+          all: "All Countries"
+        },
         emptyState: "No teachers found.",
         loadMoreData: "Loading data consumes reads. Use wisely.",
         load10: "Load +10",

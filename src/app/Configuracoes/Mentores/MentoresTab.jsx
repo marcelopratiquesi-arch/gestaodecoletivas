@@ -15,33 +15,107 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
 
-// 🌍 PADRÃO OURO INTERNACIONAL
-const PAISES = [
-  { id: "BR", nome: "Brasil", ddi: "+55" },
-  { id: "AR", nome: "Argentina", ddi: "+54" },
-  { id: "US", nome: "Estados Unidos (Miami)", ddi: "+1" },
-];
-
-const DDI_MAP = {
-  "BR": "+55",
-  "AR": "+54",
-  "US": "+1"
+// 🌍 PADRÃO OURO INTERNACIONAL — cada país com sua cor de identidade
+const PAIS_CONFIG = {
+  BR: {
+    id: "BR", nome: "Brasil", ddi: "+55",
+    badgeClass: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800"
+  },
+  AR: {
+    id: "AR", nome: "Argentina", ddi: "+54",
+    badgeClass: "bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-900/20 dark:text-sky-400 dark:border-sky-800"
+  },
+  US: {
+    id: "US", nome: "Estados Unidos", ddi: "+1",
+    badgeClass: "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-900/20 dark:text-rose-400 dark:border-rose-800"
+  },
 };
 
+const PAISES = Object.values(PAIS_CONFIG);
+const DDI_MAP = Object.fromEntries(PAISES.map(p => [p.id, p.ddi]));
+
+// 🟢 ÍCONES DE BANDEIRA EM SVG PURO (não depende de fonte de emoji — nunca vira "BR BR" no Windows)
+function FlagIcon({ pais, className = "w-4 h-3" }) {
+  const wrapClass = `${className} rounded-[2px] ring-1 ring-black/10 shrink-0 overflow-hidden inline-block align-middle`;
+
+  if (pais === "BR") {
+    return (
+      <svg viewBox="0 0 20 14" className={wrapClass} preserveAspectRatio="xMidYMid slice">
+        <rect width="20" height="14" fill="#009739"/>
+        <polygon points="10,2 18,7 10,12 2,7" fill="#FEDD00"/>
+        <circle cx="10" cy="7" r="3.1" fill="#012169"/>
+      </svg>
+    );
+  }
+  if (pais === "AR") {
+    return (
+      <svg viewBox="0 0 20 14" className={wrapClass} preserveAspectRatio="xMidYMid slice">
+        <rect width="20" height="14" fill="#ffffff"/>
+        <rect width="20" height="4.66" y="0" fill="#75AADB"/>
+        <rect width="20" height="4.66" y="9.34" fill="#75AADB"/>
+        <circle cx="10" cy="7" r="1.5" fill="#F6B40E" stroke="#85340A" strokeWidth="0.15"/>
+      </svg>
+    );
+  }
+  if (pais === "US") {
+    return (
+      <svg viewBox="0 0 20 14" className={wrapClass} preserveAspectRatio="xMidYMid slice">
+        <rect width="20" height="14" fill="#B22234"/>
+        <rect y="1.077" width="20" height="1.077" fill="#fff"/>
+        <rect y="3.231" width="20" height="1.077" fill="#fff"/>
+        <rect y="5.385" width="20" height="1.077" fill="#fff"/>
+        <rect y="7.538" width="20" height="1.077" fill="#fff"/>
+        <rect y="9.692" width="20" height="1.077" fill="#fff"/>
+        <rect y="11.846" width="20" height="1.077" fill="#fff"/>
+        <rect width="8" height="7.538" fill="#3C3B6E"/>
+      </svg>
+    );
+  }
+  return null;
+}
+
+const PAIS_DEFAULT = "BR"; // 🟢 Fallback padrão quando o mentor não tem país definido
+
 // ==========================================
-// MÁSCARA INTELIGENTE DE TELEFONE (Ajustada para o Padrão Internacional)
+// 🟢 MÁSCARAS INTELIGENTES DE TELEFONE POR PAÍS
+// (mesmo padrão usado em UnidadesTab: Brasil / Argentina / Estados Unidos)
 // ==========================================
-const formatarTelefone = (valor) => {
+const formatarTelefone = (valor, pais = PAIS_DEFAULT) => {
     if (!valor) return "";
     let v = valor.replace(/\D/g, ''); // Remove tudo que não é número
-    
-    if (v.startsWith('55')) v = v.slice(2);
-    v = v.slice(0, 11); // Max 11 digitos
-    
-    if (v.length > 2) v = v.replace(/^(\d{2})(\d)/g, '($1) $2');
-    if (v.length > 7) v = v.replace(/(\d{5})(\d)/, '$1-$2');
-    
-    return v; // 🟢 Retorna apenas o número, o DDI é gerenciado pelo País
+
+    if (pais === 'BR') {
+        if (v.startsWith('55')) v = v.slice(2);
+        v = v.slice(0, 11);
+        if (v.length > 2) v = v.replace(/^(\d{2})(\d)/g, '($1) $2');
+        if (v.length > 7) v = v.replace(/(\d{5})(\d)/, '$1-$2');
+        return v;
+    }
+
+    if (pais === 'US') {
+        if (v.startsWith('1') && v.length > 10) v = v.slice(1);
+        v = v.slice(0, 10);
+        if (v.length > 3) v = v.replace(/^(\d{3})(\d)/, '($1) $2');
+        if (v.length > 6) v = v.replace(/^(\(\d{3}\)\s\d{3})(\d)/, '$1-$2');
+        return v;
+    }
+
+    if (pais === 'AR') {
+        if (v.startsWith('54')) v = v.slice(2);
+        v = v.slice(0, 11);
+        if (v.length > 1) v = v.replace(/^(\d{1})(\d)/, '$1 $2');
+        if (v.length > 3) v = v.replace(/^(\d{1})\s(\d{2})(\d)/, '$1 $2 $3');
+        if (v.length > 7) v = v.replace(/^(\d{1})\s(\d{2})\s(\d{4})(\d)/, '$1 $2 $3-$4');
+        return v;
+    }
+
+    return v;
+};
+
+const getPhonePlaceholder = (pais = PAIS_DEFAULT) => {
+    if (pais === 'US') return "(000) 000-0000";
+    if (pais === 'AR') return "9 11 0000-0000";
+    return "(00) 00000-0000";
 };
 
 export function MentoresTab() {
@@ -60,6 +134,7 @@ export function MentoresTab() {
   
   // UX
   const [busca, setBusca] = useState("");
+  const [paisFiltro, setPaisFiltro] = useState(""); // 🟢 FILTRO DE PAÍS
   const [sortConfig, setSortConfig] = useState({ field: 'nome', direction: 'asc' });
   const [modalAberto, setModalAberto] = useState(false);
   
@@ -73,7 +148,7 @@ export function MentoresTab() {
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
-  const [pais, setPais] = useState("BR"); // 🟢 NOVO CAMPO INTERNACIONAL
+  const [pais, setPais] = useState(PAIS_DEFAULT); // 🟢 CAMPO INTERNACIONAL
   const [telefone, setTelefone] = useState("");
   const [status, setStatus] = useState("ativo");
 
@@ -128,6 +203,10 @@ export function MentoresTab() {
   const mentoresProcessados = useMemo(() => {
       let resultado = mentores;
 
+      if (paisFiltro) {
+          resultado = resultado.filter(m => (m.pais || PAIS_DEFAULT) === paisFiltro);
+      }
+
       if (busca.trim()) {
           const termo = busca.toLowerCase();
           resultado = resultado.filter(m => 
@@ -145,7 +224,7 @@ export function MentoresTab() {
           if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
           return 0;
       });
-  }, [mentores, busca, sortConfig]);
+  }, [mentores, busca, paisFiltro, sortConfig]);
 
   const handleSort = (field) => {
       setSortConfig(prev => ({ 
@@ -173,7 +252,7 @@ export function MentoresTab() {
     setNome(""); 
     setEmail(""); 
     setSenha(""); 
-    setPais("BR"); // 🟢 RESET DO PAÍS
+    setPais(PAIS_DEFAULT); // 🟢 RESET DO PAÍS
     setTelefone(""); 
     setStatus("ativo");
     setErro(""); 
@@ -186,7 +265,7 @@ export function MentoresTab() {
     setNome(m.nome || ""); 
     setEmail(m.email || ""); 
     setSenha(""); 
-    setPais(m.pais || "BR"); // 🟢 CARREGA O PAÍS
+    setPais(m.pais || PAIS_DEFAULT); // 🟢 CARREGA O PAÍS (fallback Brasil se ausente)
     setTelefone(m.telefone || ""); 
     setStatus(m.status || "ativo");
     setErro(""); 
@@ -213,7 +292,7 @@ export function MentoresTab() {
         let mudancas = [];
         if (mentorEditando.nome !== nome.trim()) mudancas.push(`Nome: ${mentorEditando.nome} ➔ ${nome.trim()}`);
         if (mentorEditando.telefone !== telefone.trim()) mudancas.push(`WhatsApp: ${mentorEditando.telefone || 'Sem tel'} ➔ ${telefone.trim()}`);
-        if (mentorEditando.pais !== pais) mudancas.push(`País: ${mentorEditando.pais || 'BR'} ➔ ${pais}`);
+        if ((mentorEditando.pais || PAIS_DEFAULT) !== pais) mudancas.push(`País: ${mentorEditando.pais || PAIS_DEFAULT} ➔ ${pais}`);
         if (mentorEditando.status !== status) mudancas.push(`Status: ${mentorEditando.status} ➔ ${status}`);
 
         await updateDoc(doc(db, "usuarios", mentorEditando.id), {
@@ -313,7 +392,7 @@ export function MentoresTab() {
   if (!podeAcessar) return <div className="p-8 text-center text-slate-500 font-bold">{t('mentorsTab.restricted', 'Acesso Restrito: Apenas Administradores.')}</div>;
 
   return (
-    <div className="p-6 animate-fade-in max-w-7xl mx-auto space-y-6">
+    <div className="p-6 animate-fade-in max-w-7xl mx-auto space-y-6 uppercase">
       
       {/* HEADER E KPIS */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-slate-200 dark:border-slate-700 pb-6">
@@ -356,23 +435,38 @@ export function MentoresTab() {
         </div>
       </div>
 
-      {/* BUSCA */}
-      <div className="relative w-full md:w-96 group">
-          <Search className="absolute left-4 top-3.5 w-5 h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors"/>
-          <input 
-              type="text" 
-              placeholder="Buscar mentor, e-mail ou telefone..." 
-              className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/50 shadow-sm transition-all dark:text-white" 
-              value={busca} 
-              onChange={(e) => setBusca(e.target.value)} 
-          />
+      {/* BUSCA + FILTROS */}
+      <div className="flex flex-col lg:flex-row gap-4 items-center">
+          <div className="relative w-full lg:w-96 group">
+              <Search className="absolute left-4 top-3.5 w-5 h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors"/>
+              <input 
+                  type="text" 
+                  placeholder={t('mentorsTab.searchPlaceholder', 'Buscar mentor, e-mail ou telefone...')} 
+                  className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/50 shadow-sm transition-all dark:text-white" 
+                  value={busca} 
+                  onChange={(e) => setBusca(e.target.value)} 
+              />
+          </div>
+
+          {/* 🟢 FILTRO DE PAÍS (sem título/label, padrão dos filtros do Unidades) */}
+          <div className="relative w-full lg:w-56">
+              <select 
+                  value={paisFiltro} 
+                  onChange={e => setPaisFiltro(e.target.value)} 
+                  className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold uppercase outline-none appearance-none shadow-sm dark:text-white"
+              >
+                  <option value="">TODOS OS PAÍSES</option>
+                  {PAISES.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
+              </select>
+              <ChevronDown className="absolute right-4 top-3.5 w-4 h-4 text-slate-400 pointer-events-none"/>
+          </div>
       </div>
 
       {/* TABELA */}
       <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
-            <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
+            <thead className="bg-slate-100 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
               <tr>
                 <th className="p-4 text-xs font-bold text-slate-500 uppercase cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors w-28" onClick={() => handleSort('status')}>
                     <div className="flex items-center gap-2">{t('mentorsTab.table.status', 'Status')} <SortIcon field="status"/></div>
@@ -386,7 +480,7 @@ export function MentoresTab() {
                 <th className="p-4 text-xs font-bold text-slate-500 uppercase text-right">{t('mentorsTab.table.actions', 'Ações')}</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50 text-sm">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
               {loading ? (
                   <tr>
                       <td colSpan="4" className="p-10 text-center">
@@ -394,11 +488,20 @@ export function MentoresTab() {
                           <p className="text-slate-400 font-bold">{t('mentorsTab.loading', 'Sincronizando...')}</p>
                       </td>
                   </tr>
+              ) : mentoresProcessados.length === 0 ? (
+                  <tr>
+                      <td colSpan="4" className="p-10 text-center text-slate-400 font-bold text-xs">
+                          <User className="w-6 h-6 mx-auto mb-2 opacity-20"/> {t('mentorsTab.emptyState', 'Nenhum mentor encontrado.')}
+                      </td>
+                  </tr>
               ) : mentoresProcessados.map(m => {
-                  const paisDDI = DDI_MAP[m.pais || "BR"]; // 🟢 MAPEAMENTO DE DDI
+                  const paisAtual = m.pais || PAIS_DEFAULT; // 🟢 FALLBACK: Brasil se o mentor não tiver país definido
+                  const paisDDI = DDI_MAP[paisAtual];
+                  // 🟢 CORREÇÃO DO BUG "+55 +55": só prefixa o DDI se o telefone salvo ainda não tiver um "+" embutido (dado legado)
+                  const telefoneExibicao = m.telefone && !m.telefone.startsWith('+') && paisDDI ? `${paisDDI} ${m.telefone}` : (m.telefone || "");
                   
                   return (
-                  <tr key={m.id} className={`transition-colors group ${m.status === 'inativo' ? 'bg-slate-50 dark:bg-slate-900/30 opacity-75 grayscale-[0.5]' : 'hover:bg-slate-50 dark:hover:bg-slate-700/30'}`}>
+                  <tr key={m.id} className={`transition-colors group ${m.status === 'inativo' ? 'bg-slate-50 dark:bg-slate-900/30 opacity-75 grayscale-[0.5]' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}>
                     
                     {/* STATUS */}
                     <td className="p-4">
@@ -409,24 +512,26 @@ export function MentoresTab() {
 
                     {/* NOME E EMAIL */}
                     <td className="p-4">
-                      <div className="font-black text-slate-800 dark:text-white text-base uppercase">{m.nome}</div>
+                      <div className="font-black text-slate-800 dark:text-white text-base">{m.nome}</div>
                       <div className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5 flex items-center gap-1">
                           <Mail className="w-3 h-3"/> {m.email}
                       </div>
                     </td>
 
-                    {/* EDIÇÃO INLINE DO TELEFONE COM DDI */}
+                    {/* EDIÇÃO INLINE DO TELEFONE COM DDI + MÁSCARA POR PAÍS */}
                     <td className="p-4">
                         {editandoTelefoneId === m.id ? (
                             <div className="flex items-center gap-1 bg-white dark:bg-slate-900 border border-blue-300 dark:border-blue-500/50 rounded-lg pl-2 pr-1 ring-2 ring-blue-500/20 w-fit animate-in fade-in zoom-in duration-200">
-                                <span className="text-[9px] font-black text-slate-400 bg-slate-100 dark:bg-slate-800 px-1 rounded">{m.pais || "BR"}</span>
+                                <span className={`inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded border ${PAIS_CONFIG[paisAtual]?.badgeClass}`}>
+                                    <FlagIcon pais={paisAtual} /> {paisAtual}
+                                </span>
                                 <input 
                                     autoFocus 
                                     className="py-1.5 w-32 text-sm font-mono font-bold outline-none bg-transparent dark:text-white ml-1" 
                                     value={telefoneInline} 
-                                    onChange={(e) => setTelefoneInline(formatarTelefone(e.target.value))} 
+                                    onChange={(e) => setTelefoneInline(formatarTelefone(e.target.value, paisAtual))} 
                                     onKeyDown={(e) => e.key === 'Enter' && salvarTelefoneInline(m)} 
-                                    placeholder="Número..." 
+                                    placeholder={getPhonePlaceholder(paisAtual)} 
                                 />
                                 <button onClick={() => salvarTelefoneInline(m)} className="p-1 bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400 rounded-md hover:bg-green-600 hover:text-white transition-colors" title="Salvar">
                                     <Check className="w-3.5 h-3.5"/>
@@ -437,7 +542,7 @@ export function MentoresTab() {
                             </div>
                         ) : (
                             <div 
-                                onClick={() => { setEditandoTelefoneId(m.id); setTelefoneInline(m.telefone || ""); }} 
+                                onClick={() => { setEditandoTelefoneId(m.id); setTelefoneInline(m.telefone ? m.telefone.replace(paisDDI, '').trim() : ""); }} 
                                 className="flex items-center gap-2 cursor-pointer p-1.5 -ml-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors group/edit w-fit" 
                                 title="Clique para editar rapidamente"
                             >
@@ -445,8 +550,10 @@ export function MentoresTab() {
                                 <span className={`font-mono text-sm font-bold flex items-center gap-1.5 ${m.telefone ? 'text-slate-700 dark:text-slate-300' : 'text-slate-400 dark:text-slate-500 italic font-normal text-xs'}`}>
                                     {m.telefone ? (
                                       <>
-                                        <span className="text-[9px] font-black text-slate-400 bg-slate-100 dark:bg-slate-700 px-1 rounded">{m.pais || "BR"}</span>
-                                        {paisDDI} {m.telefone}
+                                        <span className={`inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded border ${PAIS_CONFIG[paisAtual]?.badgeClass}`}>
+                                            <FlagIcon pais={paisAtual} /> {paisAtual}
+                                        </span>
+                                        {telefoneExibicao}
                                       </>
                                     ) : t('mentorsTab.table.notInformed', 'Adicionar nº')}
                                 </span>
@@ -461,7 +568,7 @@ export function MentoresTab() {
                             <button onClick={() => abrirModalEditar(m)} className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-600 dark:hover:text-white transition-colors" title={t('mentorsTab.table.edit', 'Editar Completo')}>
                                 <Edit2 className="w-4 h-4"/>
                             </button>
-                            <button onClick={() => alternarStatus(m)} className={`p-2 rounded-lg transition-colors ${m.status === "ativo" ? "bg-orange-50 text-orange-600 hover:bg-orange-500 hover:text-white dark:bg-orange-900/30 dark:text-orange-400" : "bg-green-50 text-green-600 hover:bg-green-500 hover:text-white dark:bg-green-900/30 dark:text-green-400"}`} title="Alternar Status">
+                            <button onClick={() => alternarStatus(m)} className={`p-2 rounded-lg transition-colors ${m.status === "ativo" ? "bg-orange-50 text-orange-600 hover:bg-orange-500 hover:text-white dark:bg-orange-900/30 dark:text-orange-400" : "bg-green-50 text-green-600 hover:bg-green-500 hover:text-white dark:bg-green-900/30 dark:text-green-400"}`} title={m.status === "ativo" ? t('mentorsTab.table.deactivate', 'Desactivar') : t('mentorsTab.table.activate', 'Ativar')}>
                                 {m.status === "ativo" ? <PowerOff className="w-4 h-4"/> : <CheckCircle2 className="w-4 h-4"/>}
                             </button>
                             <button onClick={() => excluir(m)} className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-600 hover:text-white dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-600 dark:hover:text-white transition-colors" title={t('mentorsTab.table.delete', 'Excluir Definitivamente')}>
@@ -512,49 +619,54 @@ export function MentoresTab() {
                   </div>
               </div>
               
-              {/* 🟢 MODIFICADO: PAÍS E TELEFONE */}
+              {/* 🟢 PAÍS (nome completo) E STATUS */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex gap-2">
-                    <div className="w-1/3">
-                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-1 block">{t('mentorsTab.modal.country', 'País')}</label>
-                        <select 
-                            value={pais} 
-                            onChange={e => setPais(e.target.value)}
-                            className="w-full py-3 px-2 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-blue-500 rounded-xl text-sm font-bold outline-none appearance-none dark:text-white"
-                        >
-                            {PAISES.map(p => <option key={p.id} value={p.id}>{p.id}</option>)}
-                        </select>
-                    </div>
-                    <div className="w-2/3">
-                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-1 flex items-center justify-between">
-                            <span>{t('mentorsTab.modal.phone', 'WhatsApp')}</span>
-                            <span className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-1.5 rounded">{DDI_MAP[pais]}</span>
-                        </label>
-                        <div className="relative">
-                            <Phone className="absolute left-4 top-3.5 w-4 h-4 text-slate-400"/>
-                            <input 
-                                value={telefone} 
-                                onChange={e=>setTelefone(formatarTelefone(e.target.value))} 
-                                className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-blue-500 rounded-xl text-sm font-bold outline-none dark:text-white" 
-                                placeholder={t('mentorsTab.modal.phonePlaceholder', 'Apenas números...')}
-                            />
-                        </div>
-                    </div>
-                </div>
-                <div>
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-1 block">{t('mentorsTab.modal.status', 'Status')}</label>
-                    <div className="relative">
-                        <select 
-                            value={status} 
-                            onChange={e=>setStatus(e.target.value)} 
-                            className="w-full pl-4 pr-10 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-blue-500 rounded-xl text-sm font-bold outline-none appearance-none dark:text-white"
-                        >
-                            <option value="ativo">✅ {t('mentorsTab.modal.statusActive', 'ATIVO')}</option>
-                            <option value="inativo">🚫 {t('mentorsTab.modal.statusInactive', 'INATIVO')}</option>
-                        </select>
-                        <ChevronDown className="absolute right-4 top-3.5 w-4 h-4 text-slate-400 pointer-events-none"/>
-                    </div>
-                </div>
+                  <div>
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-1 block">{t('mentorsTab.modal.country', 'País')}</label>
+                      <div className="relative">
+                          <select 
+                              value={pais} 
+                              onChange={e => { setPais(e.target.value); setTelefone(formatarTelefone(telefone, e.target.value)); }}
+                              className="w-full pl-4 pr-10 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-blue-500 rounded-xl text-sm font-bold outline-none appearance-none dark:text-white"
+                          >
+                              {PAISES.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
+                          </select>
+                          <ChevronDown className="absolute right-4 top-3.5 w-4 h-4 text-slate-400 pointer-events-none"/>
+                      </div>
+                  </div>
+                  <div>
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-1 block">{t('mentorsTab.modal.status', 'Status')}</label>
+                      <div className="relative">
+                          <select 
+                              value={status} 
+                              onChange={e=>setStatus(e.target.value)} 
+                              className="w-full pl-4 pr-10 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-blue-500 rounded-xl text-sm font-bold outline-none appearance-none dark:text-white"
+                          >
+                              <option value="ativo">✅ {t('mentorsTab.modal.statusActive', 'ATIVO')}</option>
+                              <option value="inativo">🚫 {t('mentorsTab.modal.statusInactive', 'INATIVO')}</option>
+                          </select>
+                          <ChevronDown className="absolute right-4 top-3.5 w-4 h-4 text-slate-400 pointer-events-none"/>
+                      </div>
+                  </div>
+              </div>
+
+              {/* 🟢 WHATSAPP COM MÁSCARA DINÂMICA POR PAÍS */}
+              <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-1 flex items-center justify-between">
+                      <span>{t('mentorsTab.modal.phone', 'WhatsApp')}</span>
+                      <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border font-black ${PAIS_CONFIG[pais]?.badgeClass}`}>
+                          <FlagIcon pais={pais} /> {DDI_MAP[pais]}
+                      </span>
+                  </label>
+                  <div className="relative">
+                      <Phone className="absolute left-4 top-3.5 w-4 h-4 text-slate-400"/>
+                      <input 
+                          value={telefone} 
+                          onChange={e=>setTelefone(formatarTelefone(e.target.value, pais))} 
+                          className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-blue-500 rounded-xl text-sm font-bold outline-none dark:text-white" 
+                          placeholder={getPhonePlaceholder(pais)}
+                      />
+                  </div>
               </div>
 
               <div>
@@ -598,7 +710,7 @@ export function MentoresTab() {
                   <button 
                       type="submit" 
                       disabled={salvando} 
-                      className="px-8 py-3 bg-blue-600 text-white rounded-xl font-bold text-xs uppercase hover:bg-blue-700 flex items-center gap-2 transition-transform active:scale-95"
+                      className="px-8 py-3 bg-blue-600 text-white rounded-xl font-bold text-xs uppercase hover:bg-blue-700 flex items-center gap-2 transition-transform active:scale-95 disabled:opacity-50"
                   >
                       {salvando ? <Loader2 className="w-4 h-4 animate-spin" /> : (mentorEditando ? t('mentorsTab.modal.saveEdit', 'Salvar Alterações') : t('mentorsTab.modal.saveNew', 'Concluir Cadastro'))}
                   </button>
