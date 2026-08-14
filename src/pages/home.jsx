@@ -9,6 +9,7 @@ import {
   Users, Dumbbell, Headphones, Link as LinkIcon
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
 
 // 🟢 CACHE GLOBAL DA HOME (Fica fora do componente para não ser destruído ao trocar de aba)
 let homeDashboardCache = {
@@ -19,26 +20,30 @@ let homeDashboardCache = {
 };
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutos em milissegundos
 
-// --- RELÓGIO COM SEGUNDOS ---
+// --- RELÓGIO COM SEGUNDOS (TRILÍNGUE) ---
 const CorporateClock = () => {
+    const { i18n } = useTranslation(); // 🟢 Conectado ao idioma atual
     const [date, setDate] = useState(new Date());
+    
     useEffect(() => {
         const timer = setInterval(() => setDate(new Date()), 1000);
         return () => clearInterval(timer);
     }, []);
 
+    const lang = i18n.language || 'pt-BR';
+
     return (
         <div className="flex flex-col items-end border-l-4 border-red-600 pl-4">
             <div className="flex items-baseline gap-1 text-slate-900 dark:text-white leading-none">
                 <span className="text-4xl font-black tracking-tighter">
-                    {date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                    {date.toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit' })}
                 </span>
                 <span className="text-xl font-bold opacity-50 w-[24px] text-left">
                     {date.getSeconds().toString().padStart(2, '0')}
                 </span>
             </div>
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500 mt-1">
-                {date.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                {date.toLocaleDateString(lang, { weekday: 'long', day: 'numeric', month: 'long' })}
             </p>
         </div>
     );
@@ -106,7 +111,7 @@ const DashboardCard = ({ title, subtitle, icon: Icon, theme, onClick, footerText
 
             <div className="relative z-10 pt-3 border-t border-slate-50 dark:border-slate-700/50 flex items-center justify-between">
                 <span className={`text-[10px] font-black uppercase tracking-wider flex items-center gap-1 ${style.accent} group-hover:underline whitespace-nowrap`}>
-                    {footerText || "Acessar"} <ArrowRight className="w-3 h-3 transition-transform group-hover:translate-x-1" />
+                    {footerText} <ArrowRight className="w-3 h-3 transition-transform group-hover:translate-x-1" />
                 </span>
             </div>
         </div>
@@ -116,22 +121,24 @@ const DashboardCard = ({ title, subtitle, icon: Icon, theme, onClick, footerText
 export default function Home() {
   const { userData } = useAuth();
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation(); // 🟢 MOTOR ACIONADO NA HOME
   
   const { catalogs, loadingCatalogs } = useCatalogs();
 
   const [loading, setLoading] = useState(true);
   
-  const [resumoRelatorio, setResumoRelatorio] = useState({ valor: 0, label: "RECEITA DE ONTEM" });
+  // 🟢 Substituído string fixa por Chave de Tradução
+  const [resumoRelatorio, setResumoRelatorio] = useState({ valor: 0, labelKey: "revenueYesterday" });
   const [resumoCronograma, setResumoCronograma] = useState({ proximaAula: null });
   const [resumoValidacao, setResumoValidacao] = useState({ pendentes: 0 });
   const [resumoColetiva, setResumoColetiva] = useState({ percentual: 0, validadas: 0, total: 0 });
 
   const greeting = useMemo(() => {
     const hour = new Date().getHours();
-    if (hour >= 5 && hour < 12) return "Bom dia";
-    if (hour >= 12 && hour < 18) return "Boa tarde";
-    return "Boa noite";
-  }, []);
+    if (hour >= 5 && hour < 12) return t('home.greeting.morning');
+    if (hour >= 12 && hour < 18) return t('home.greeting.afternoon');
+    return t('home.greeting.night');
+  }, [t]);
 
   const role = String(userData?.role || "").toLowerCase();
   const userId = userData?.id || userData?.uid;
@@ -242,10 +249,10 @@ export default function Home() {
                         const modData = modalidadesMap[aula.modalidadeId];
                         nextClass = { 
                             ...aula, 
-                            modalidadeNome: modData?.nome || "Coletiva",
+                            modalidadeNome: modData?.nome || t('home.cards.schedule.defaultModality', "Coletiva"),
                             modalidadeCor: modData?.cor || "#94a3b8",
-                            professorNome: professoresMap[aula.professorId] || "Instrutor",
-                            unidadeNome: unidadesMap[aula.unidadeId] || "Unidade"
+                            professorNome: professoresMap[aula.professorId] || t('home.cards.schedule.defaultTeacher', "Instrutor"),
+                            unidadeNome: unidadesMap[aula.unidadeId] || t('home.cards.schedule.unit', "Unidade")
                         };
                     }
                 }
@@ -253,9 +260,9 @@ export default function Home() {
         });
 
         if (role === 'professor') {
-            setResumoRelatorio({ valor: totalValorMesProf, label: "PREVISÃO MENSAL" });
+            setResumoRelatorio({ valor: totalValorMesProf, labelKey: "monthlyForecast" });
         } else {
-            setResumoRelatorio({ valor: totalValorOntem, label: "RECEITA DE ONTEM" });
+            setResumoRelatorio({ valor: totalValorOntem, labelKey: "revenueYesterday" });
         }
         
         setResumoCronograma({ proximaAula: nextClass });
@@ -302,19 +309,20 @@ export default function Home() {
     }
 
     fetchDashboardData();
-  }, [userData, role, userId, catalogs, loadingCatalogs]);
+  }, [userData, role, userId, catalogs, loadingCatalogs, t]);
 
   if (!userData) return null;
 
   const getColetivaStatus = (pct) => {
-      if (pct === 100) return { color: "text-emerald-500", theme: "green", label: "EXCELENTE", bar: "bg-emerald-500" };
-      if (pct >= 80) return { color: "text-blue-500", theme: "blue", label: "EM ANDAMENTO", bar: "bg-blue-500" };
-      if (pct >= 50) return { color: "text-amber-500", theme: "orange", label: "EM ANDAMENTO", bar: "bg-amber-500" };
-      return { color: "text-red-500", theme: "red", label: "ATENÇÃO", bar: "bg-red-500" };
+      if (pct === 100) return { color: "text-emerald-500", theme: "green", label: t('home.cards.monitoring.status.excellent'), bar: "bg-emerald-500" };
+      if (pct >= 80) return { color: "text-blue-500", theme: "blue", label: t('home.cards.monitoring.status.inProgress'), bar: "bg-blue-500" };
+      if (pct >= 50) return { color: "text-amber-500", theme: "orange", label: t('home.cards.monitoring.status.inProgress'), bar: "bg-amber-500" };
+      return { color: "text-red-500", theme: "red", label: t('home.cards.monitoring.status.attention'), bar: "bg-red-500" };
   };
   const coletivaStatus = getColetivaStatus(resumoColetiva.percentual);
 
-  const userContextLabel = role === 'admin' ? "Administrador" : (role === 'unidade' ? userData.unidadeNome : (role === 'professor' ? "Professor" : "Mentor"));
+  // 🟢 Role adaptada ao idioma
+  const userContextLabel = role === 'admin' ? t('home.roles.admin') : (role === 'unidade' ? userData.unidadeNome : (role === 'professor' ? t('home.roles.professor') : t('home.roles.mentor')));
 
   return (
     <div className="p-6 md:p-8 max-w-[1920px] mx-auto animate-fade-in min-h-screen bg-slate-50 dark:bg-[#0b1120]">
@@ -336,7 +344,7 @@ export default function Home() {
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                       <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                     </span>
-                    <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Sistema Online</span>
+                    <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">{t('home.systemOnline')}</span>
                 </div>
             </div>
         </div>
@@ -347,18 +355,19 @@ export default function Home() {
         
         {permissions.relatorio && (
             <DashboardCard 
-                title="Relatório Gerencial"
-                subtitle={resumoRelatorio.label}
+                title={t('home.cards.reports.title')}
+                subtitle={t(`home.cards.reports.${resumoRelatorio.labelKey}`)}
                 icon={BarChart2}
                 theme="blue"
-                footerText="Ver Detalhes"
+                footerText={t('home.cards.reports.footer')}
                 onClick={() => navigate('/app/relatorio-gerencial')}
             >
                 <div className="bg-blue-50 dark:bg-blue-900/10 p-4 rounded-2xl border border-blue-100 dark:border-blue-800/50 mt-2">
-                    <p className="text-[10px] font-bold text-blue-400 uppercase mb-1">{resumoRelatorio.label}</p>
+                    <p className="text-[10px] font-bold text-blue-400 uppercase mb-1">{t(`home.cards.reports.${resumoRelatorio.labelKey}`)}</p>
                     {loading || loadingCatalogs ? <Loader2 className="w-6 h-6 animate-spin text-blue-500"/> : (
                         <h4 className="text-3xl font-black text-blue-700 dark:text-blue-300 tracking-tight">
-                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(resumoRelatorio.valor)}
+                            {/* 🟢 Adaptação Mágica de Moeda para o idioma selecionado */}
+                            {new Intl.NumberFormat(i18n.language || 'pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(resumoRelatorio.valor)}
                         </h4>
                     )}
                 </div>
@@ -367,11 +376,11 @@ export default function Home() {
 
         {permissions.cronograma && (
             <DashboardCard 
-                title="Cronograma"
-                subtitle="Grade de aulas"
+                title={t('home.cards.schedule.title')}
+                subtitle={t('home.cards.schedule.subtitle')}
                 icon={Calendar}
                 theme="purple"
-                footerText="Ver Grade Completa"
+                footerText={t('home.cards.schedule.footer')}
                 onClick={() => navigate('/app/cronograma')}
                 activeEffect={!!resumoCronograma.proximaAula} 
             >
@@ -382,7 +391,7 @@ export default function Home() {
                                 <div className="flex justify-between items-start">
                                     <div>
                                         <p className="text-[9px] font-bold text-green-600 uppercase mb-0.5 flex items-center gap-1">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> Próxima
+                                            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> {t('home.cards.schedule.next')}
                                         </p>
                                         <h4 className="text-4xl font-black text-slate-800 dark:text-white leading-none">
                                             {resumoCronograma.proximaAula.hora}
@@ -396,12 +405,12 @@ export default function Home() {
                                 </div>
                                 <div className="mt-3 border-t border-slate-50 pt-2 flex justify-between items-center">
                                     <div className="flex-1 min-w-0 pr-2">
-                                        <p className="text-[10px] text-slate-400 font-bold uppercase">Unidade</p>
+                                        <p className="text-[10px] text-slate-400 font-bold uppercase">{t('home.cards.schedule.unit')}</p>
                                         <p className="text-xs font-bold text-slate-700 truncate">{resumoCronograma.proximaAula.unidadeNome}</p>
                                     </div>
                                     <div className="flex items-center gap-2 text-right">
                                         <div>
-                                            <p className="text-[10px] text-slate-400 font-bold uppercase">Professor</p>
+                                            <p className="text-[10px] text-slate-400 font-bold uppercase">{t('home.cards.schedule.teacher')}</p>
                                             <p className="text-xs font-bold text-slate-700">{resumoCronograma.proximaAula.professorNome.split(' ')[0]}</p>
                                         </div>
                                         <ProfessorAvatar name={resumoCronograma.proximaAula.professorNome} />
@@ -411,7 +420,7 @@ export default function Home() {
                         ) : (
                             <div className="text-center opacity-60">
                                 <CheckCircle2 className="w-8 h-8 mx-auto mb-1 text-slate-300"/>
-                                <p className="text-xs font-bold text-slate-500 uppercase">Sem mais aulas hoje</p>
+                                <p className="text-xs font-bold text-slate-500 uppercase">{t('home.cards.schedule.noMoreClasses')}</p>
                             </div>
                         )
                     )}
@@ -421,11 +430,11 @@ export default function Home() {
 
         {permissions.validacaoDiaria && (
             <DashboardCard 
-                title="Validação Diária"
-                subtitle="CONTROLE DE PRESENÇA"
+                title={t('home.cards.validation.title')}
+                subtitle={t('home.cards.validation.subtitle')}
                 icon={CheckCircle2}
                 theme={resumoValidacao.pendentes > 0 ? "red" : "green"}
-                footerText={resumoValidacao.pendentes > 0 ? "Resolver Agora" : "Histórico"}
+                footerText={resumoValidacao.pendentes > 0 ? t('home.cards.validation.resolveNow') : t('home.cards.validation.history')}
                 onClick={() => navigate('/app/validacao-diaria')}
             >
                 <div className="flex flex-col justify-center h-full">
@@ -434,14 +443,14 @@ export default function Home() {
                             <div className="flex items-center gap-3">
                                 <span className="text-6xl font-black text-red-600 tracking-tighter">{resumoValidacao.pendentes}</span>
                                 <div className="flex flex-col border-l-2 border-red-200 pl-3">
-                                    <span className="text-xs font-bold text-red-500 uppercase">Aulas</span>
-                                    <span className="text-xs font-bold text-red-400 uppercase">Pendentes</span>
+                                    <span className="text-xs font-bold text-red-500 uppercase">{t('home.cards.validation.classes')}</span>
+                                    <span className="text-xs font-bold text-red-400 uppercase">{t('home.cards.validation.pending')}</span>
                                 </div>
                             </div>
                         ) : (
                             <div className="flex flex-col items-center w-full bg-emerald-50 rounded-xl p-3 border border-emerald-100">
                                 <Check className="w-8 h-8 text-emerald-600 mb-1" />
-                                <p className="text-sm font-black text-emerald-600 uppercase">Tudo Validado!</p>
+                                <p className="text-sm font-black text-emerald-600 uppercase">{t('home.cards.validation.allValidated')}</p>
                             </div>
                         )
                     )}
@@ -455,11 +464,11 @@ export default function Home() {
         
         {permissions.validacaoColetiva && (
             <DashboardCard 
-                title="Monitoramento de Validação"
-                subtitle="Status de Ontem"
+                title={t('home.cards.monitoring.title')}
+                subtitle={t('home.cards.monitoring.subtitle')}
                 icon={ShieldCheck}
                 theme={coletivaStatus.theme}
-                footerText="Ver Ranking"
+                footerText={t('home.cards.monitoring.footer')}
                 onClick={() => navigate('/app/validacao-coletiva')}
             >
                 <div className="flex flex-col justify-center h-full">
@@ -480,7 +489,7 @@ export default function Home() {
                                 ></div>
                             </div>
                             <p className="text-[10px] text-slate-400 mt-2 text-right font-bold uppercase">
-                                {resumoColetiva.validadas} de {resumoColetiva.total} validadas
+                                {t('home.cards.monitoring.validatedOf', { validated: resumoColetiva.validadas, total: resumoColetiva.total })}
                             </p>
                         </>
                     )}
@@ -490,17 +499,17 @@ export default function Home() {
 
         {permissions.pratiquePlay && (
             <DashboardCard 
-                title="PRATIQUE PLAY"
-                subtitle="MÚSICAS PARA AULAS"
+                title={t('home.cards.pratiquePlay.title')}
+                subtitle={t('home.cards.pratiquePlay.subtitle')}
                 icon={Headphones}
                 theme="pink"
-                footerText="Acessar Play"
+                footerText={t('home.cards.pratiquePlay.footer')}
                 onClick={() => navigate('/app/pratique-play')}
             >
                 <div className="flex flex-col items-center justify-center h-full bg-pink-50 dark:bg-pink-900/10 rounded-xl border border-pink-100 dark:border-pink-800/50 p-4">
                     <Headphones className="w-10 h-10 text-pink-500 mb-2 animate-pulse" />
                     <p className="text-sm font-black text-pink-600 dark:text-pink-400 uppercase text-center leading-tight">
-                        PLAYLISTS DAS <br /> COLETIVAS
+                        {t('home.cards.pratiquePlay.insideLine1')} <br /> {t('home.cards.pratiquePlay.insideLine2')}
                     </p>
                 </div>
             </DashboardCard>
@@ -508,17 +517,17 @@ export default function Home() {
 
         {permissions.linkAluno && (
             <DashboardCard 
-                title="LINK DO ALUNO"
-                subtitle="ACESSO EXTERNO"
+                title={t('home.cards.linkAluno.title')}
+                subtitle={t('home.cards.linkAluno.subtitle')}
                 icon={LinkIcon}
                 theme="cyan"
-                footerText="Abrir Portal"
+                footerText={t('home.cards.linkAluno.footer')}
                 onClick={() => navigate('/app/link-aluno')}
             >
                 <div className="flex flex-col items-center justify-center h-full bg-cyan-50 dark:bg-cyan-900/10 rounded-xl border border-cyan-100 dark:border-cyan-800/50 p-4">
                     <LinkIcon className="w-10 h-10 text-cyan-500 mb-2 animate-pulse" />
                     <p className="text-sm font-black text-cyan-600 dark:text-cyan-400 uppercase text-center leading-tight">
-                        PORTAL DE <br /> ALUNOS
+                        {t('home.cards.linkAluno.insideLine1')} <br /> {t('home.cards.linkAluno.insideLine2')}
                     </p>
                 </div>
             </DashboardCard>
@@ -526,32 +535,32 @@ export default function Home() {
 
         {permissions.configuracoes && (
             <DashboardCard 
-                title="Configurações"
-                subtitle="Painel Administrativo"
+                title={t('home.cards.settings.title')}
+                subtitle={t('home.cards.settings.subtitle')}
                 icon={Settings}
                 theme="slate"
-                footerText="Gerenciar"
+                footerText={t('home.cards.settings.footer')}
                 onClick={() => navigate('/app/configuracoes')}
             >
                 <div className="flex items-center justify-around h-full bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 px-2 mt-1">
                     {(role === 'admin' || role === 'mentor') && (
                         <div className="flex flex-col items-center gap-1 group/icon cursor-pointer hover:bg-white p-2 rounded-lg transition-all">
                             <Building2 className="w-6 h-6 text-slate-400 group-hover/icon:text-blue-600"/>
-                            <span className="text-[8px] font-bold uppercase text-slate-400 group-hover/icon:text-slate-600">Unidades</span>
+                            <span className="text-[8px] font-bold uppercase text-slate-400 group-hover/icon:text-slate-600">{t('home.cards.settings.units')}</span>
                         </div>
                     )}
                     
                     {role === 'admin' && (
                         <div className="flex flex-col items-center gap-1 group/icon cursor-pointer hover:bg-white p-2 rounded-lg transition-all">
                             <Dumbbell className="w-6 h-6 text-slate-400 group-hover/icon:text-purple-600"/>
-                            <span className="text-[8px] font-bold uppercase text-slate-400 group-hover/icon:text-slate-600">Mods</span>
+                            <span className="text-[8px] font-bold uppercase text-slate-400 group-hover/icon:text-slate-600">{t('home.cards.settings.mods')}</span>
                         </div>
                     )}
 
                     {(role === 'admin' || role === 'unidade') && (
                         <div className="flex flex-col items-center gap-1 group/icon cursor-pointer hover:bg-white p-2 rounded-lg transition-all">
                             <Users className="w-6 h-6 text-slate-400 group-hover/icon:text-green-600"/>
-                            <span className="text-[8px] font-bold uppercase text-slate-400 group-hover/icon:text-slate-600">Profs</span>
+                            <span className="text-[8px] font-bold uppercase text-slate-400 group-hover/icon:text-slate-600">{t('home.cards.settings.profs')}</span>
                         </div>
                     )}
                 </div>

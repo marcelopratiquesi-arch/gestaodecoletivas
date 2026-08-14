@@ -13,9 +13,23 @@ import {
     ShieldCheck, Edit2, Trash2, AlertTriangle, CheckCircle2, 
     Loader2, User, Search, Mail, Lock, ChevronDown, ChevronUp, Ban, PowerOff, Plus, X, Phone, Check
 } from "lucide-react";
+import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
+
+// 🌍 PADRÃO OURO INTERNACIONAL
+const PAISES = [
+  { id: "BR", nome: "Brasil", ddi: "+55" },
+  { id: "AR", nome: "Argentina", ddi: "+54" },
+  { id: "US", nome: "Estados Unidos (Miami)", ddi: "+1" },
+];
+
+const DDI_MAP = {
+  "BR": "+55",
+  "AR": "+54",
+  "US": "+1"
+};
 
 // ==========================================
-// MÁSCARA INTELIGENTE DE TELEFONE (Padrão BR)
+// MÁSCARA INTELIGENTE DE TELEFONE (Ajustada para o Padrão Internacional)
 // ==========================================
 const formatarTelefone = (valor) => {
     if (!valor) return "";
@@ -27,11 +41,12 @@ const formatarTelefone = (valor) => {
     if (v.length > 2) v = v.replace(/^(\d{2})(\d)/g, '($1) $2');
     if (v.length > 7) v = v.replace(/(\d{5})(\d)/, '$1-$2');
     
-    return v ? `+55 ${v}` : '';
+    return v; // 🟢 Retorna apenas o número, o DDI é gerenciado pelo País
 };
 
 export function MentoresTab() {
   const { userData } = useAuth();
+  const { t } = useTranslation(); // 🟢 TRADUTOR CONECTADO
   
   const role = useMemo(() => String(userData?.role || "").trim().toLowerCase(), [userData?.role]);
   const userId = useMemo(() => userData?.id || userData?.uid, [userData]);
@@ -58,6 +73,7 @@ export function MentoresTab() {
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
+  const [pais, setPais] = useState("BR"); // 🟢 NOVO CAMPO INTERNACIONAL
   const [telefone, setTelefone] = useState("");
   const [status, setStatus] = useState("ativo");
 
@@ -157,6 +173,7 @@ export function MentoresTab() {
     setNome(""); 
     setEmail(""); 
     setSenha(""); 
+    setPais("BR"); // 🟢 RESET DO PAÍS
     setTelefone(""); 
     setStatus("ativo");
     setErro(""); 
@@ -169,6 +186,7 @@ export function MentoresTab() {
     setNome(m.nome || ""); 
     setEmail(m.email || ""); 
     setSenha(""); 
+    setPais(m.pais || "BR"); // 🟢 CARREGA O PAÍS
     setTelefone(m.telefone || ""); 
     setStatus(m.status || "ativo");
     setErro(""); 
@@ -182,10 +200,10 @@ export function MentoresTab() {
     setSucesso(""); 
     setSalvando(true);
 
-    if (!nome.trim()) { setSalvando(false); return setErro("Nome é obrigatório."); }
+    if (!nome.trim()) { setSalvando(false); return setErro(t('mentorsTab.messages.nameRequired', 'Nome é obrigatório.')); }
     if (!telefone.trim()) { setSalvando(false); return setErro("WhatsApp é obrigatório."); }
-    if (!email.trim()) { setSalvando(false); return setErro("E-mail é obrigatório."); }
-    if (!mentorEditando && senha.length < 6) { setSalvando(false); return setErro("Senha mín. 6 dígitos."); }
+    if (!email.trim()) { setSalvando(false); return setErro(t('mentorsTab.messages.emailRequired', 'E-mail é obrigatório.')); }
+    if (!mentorEditando && senha.length < 6) { setSalvando(false); return setErro(t('mentorsTab.messages.weakPassword', 'Senha mín. 6 dígitos.')); }
 
     let secondaryApp = null;
 
@@ -195,10 +213,12 @@ export function MentoresTab() {
         let mudancas = [];
         if (mentorEditando.nome !== nome.trim()) mudancas.push(`Nome: ${mentorEditando.nome} ➔ ${nome.trim()}`);
         if (mentorEditando.telefone !== telefone.trim()) mudancas.push(`WhatsApp: ${mentorEditando.telefone || 'Sem tel'} ➔ ${telefone.trim()}`);
+        if (mentorEditando.pais !== pais) mudancas.push(`País: ${mentorEditando.pais || 'BR'} ➔ ${pais}`);
         if (mentorEditando.status !== status) mudancas.push(`Status: ${mentorEditando.status} ➔ ${status}`);
 
         await updateDoc(doc(db, "usuarios", mentorEditando.id), {
           nome: nome.trim(), 
+          pais, // 🟢 SALVA O PAÍS
           telefone: telefone.trim(), 
           status, 
           atualizadoEm: serverTimestamp()
@@ -208,7 +228,7 @@ export function MentoresTab() {
             await registrarLogAuditoria('ALTERADA', 'Dados cadastrais do Mentor atualizados.', nome.trim(), mudancas.join(' | '));
         }
 
-        setSucesso("Mentor atualizado!");
+        setSucesso(t('mentorsTab.messages.updated', 'Mentor atualizado!'));
       } else {
         // 🟢 AUDITORIA: Novo mentor criado
         secondaryApp = initializeApp(getApp().options, "SecondaryAppMentor");
@@ -220,6 +240,7 @@ export function MentoresTab() {
         await setDoc(doc(db, "usuarios", newUid), {
           nome: nome.trim(), 
           email: email.trim().toLowerCase(), 
+          pais, // 🟢 SALVA O PAÍS
           telefone: telefone.trim(),
           role: "mentor", 
           status: status,
@@ -230,13 +251,13 @@ export function MentoresTab() {
         await signOut(secondaryAuth);
         await registrarLogAuditoria('NOVA', 'Novo mentor e credenciais criadas no sistema.', nome.trim(), `Email: ${email.trim().toLowerCase()}`);
         
-        setSucesso("Mentor criado com sucesso!");
+        setSucesso(t('mentorsTab.messages.created', 'Mentor criado com sucesso!'));
       }
       
       setTimeout(() => { setModalAberto(false); setSucesso(""); }, 1000);
 
     } catch (e) { 
-      if (e.code === 'auth/email-already-in-use') setErro("Este e-mail já está cadastrado.");
+      if (e.code === 'auth/email-already-in-use') setErro(t('mentorsTab.messages.emailExists', 'Este e-mail já está cadastrado.'));
       else setErro("Erro: " + e.message); 
     } finally { 
       if (secondaryApp) await deleteApp(secondaryApp).catch(() => {});
@@ -269,27 +290,27 @@ export function MentoresTab() {
         await updateDoc(doc(db, "usuarios", m.id), { status: novoStatus }); 
         await registrarLogAuditoria('ALTERADA', `Status modificado para ${novoStatus.toUpperCase()}`, m.nome, `Bloqueio/Desbloqueio de acesso rápido.`);
     } catch (e) { 
-        alert("Erro ao mudar status"); 
+        alert(t('mentorsTab.messages.statusError', 'Erro ao mudar status')); 
     }
   }
 
   // EXCLUSÃO COM AUDITORIA
   async function excluir(m) {
-    if(!window.confirm(`ATENÇÃO: Excluir o mentor "${m.nome}" apagará o login dele.\nConfirmar?`)) return;
+    if(!window.confirm(t('mentorsTab.messages.deleteWarning', { name: m.nome }))) return;
     
     try {
         setSalvando(true);
         await deleteDoc(doc(db, "usuarios", m.id));
         await registrarLogAuditoria('EXCLUÍDA', 'Mentor e acessos excluídos do sistema.', m.nome, `Exclusão definitiva.`);
     } catch (e) { 
-        alert("Erro ao excluir: " + e.message); 
+        alert(t('mentorsTab.messages.deleteError', 'Erro ao excluir mentor.') + " " + e.message); 
     } finally { 
         setSalvando(false); 
     }
   }
 
   // Barreira de Segurança Final
-  if (!podeAcessar) return <div className="p-8 text-center text-slate-500 font-bold">Acesso Restrito: Apenas Administradores.</div>;
+  if (!podeAcessar) return <div className="p-8 text-center text-slate-500 font-bold">{t('mentorsTab.restricted', 'Acesso Restrito: Apenas Administradores.')}</div>;
 
   return (
     <div className="p-6 animate-fade-in max-w-7xl mx-auto space-y-6">
@@ -301,10 +322,10 @@ export function MentoresTab() {
             <span className="p-2 bg-blue-600 text-white rounded-lg shadow-md shadow-blue-500/20">
                 <ShieldCheck className="w-6 h-6"/>
             </span>
-            Gestão de Mentores
+            {t('mentorsTab.title', 'Gestão de Mentores')}
           </h2>
           <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-2">
-              Diretoria e Gestores Regionais.
+              {t('mentorsTab.subtitle', 'Diretoria e Gestores Regionais.')}
           </p>
         </div>
 
@@ -330,7 +351,7 @@ export function MentoresTab() {
                 onClick={abrirModalNovo} 
                 className="px-5 py-2 h-full bg-blue-600 text-white rounded-xl font-bold text-xs uppercase tracking-wide hover:bg-blue-700 shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 transition-transform active:scale-95 whitespace-nowrap"
             >
-                <Plus className="w-4 h-4"/> Novo Mentor
+                <Plus className="w-4 h-4"/> {t('mentorsTab.newMentor', 'Novo Mentor')}
             </button>
         </div>
       </div>
@@ -354,15 +375,15 @@ export function MentoresTab() {
             <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
               <tr>
                 <th className="p-4 text-xs font-bold text-slate-500 uppercase cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors w-28" onClick={() => handleSort('status')}>
-                    <div className="flex items-center gap-2">Status <SortIcon field="status"/></div>
+                    <div className="flex items-center gap-2">{t('mentorsTab.table.status', 'Status')} <SortIcon field="status"/></div>
                 </th>
                 <th className="p-4 text-xs font-bold text-slate-500 uppercase cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('nome')}>
-                    <div className="flex items-center gap-2">Mentor <SortIcon field="nome"/></div>
+                    <div className="flex items-center gap-2">{t('mentorsTab.table.name', 'Mentor')} <SortIcon field="nome"/></div>
                 </th>
                 <th className="p-4 text-xs font-bold text-slate-500 uppercase cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('telefone')}>
-                    <div className="flex items-center gap-2">WhatsApp <SortIcon field="telefone"/></div>
+                    <div className="flex items-center gap-2">{t('mentorsTab.table.phone', 'WhatsApp')} <SortIcon field="telefone"/></div>
                 </th>
-                <th className="p-4 text-xs font-bold text-slate-500 uppercase text-right">Ações</th>
+                <th className="p-4 text-xs font-bold text-slate-500 uppercase text-right">{t('mentorsTab.table.actions', 'Ações')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50 text-sm">
@@ -370,16 +391,19 @@ export function MentoresTab() {
                   <tr>
                       <td colSpan="4" className="p-10 text-center">
                           <Loader2 className="w-8 h-8 animate-spin text-blue-500 mx-auto mb-2"/>
-                          <p className="text-slate-400 font-bold">Sincronizando...</p>
+                          <p className="text-slate-400 font-bold">{t('mentorsTab.loading', 'Sincronizando...')}</p>
                       </td>
                   </tr>
-              ) : mentoresProcessados.map(m => (
+              ) : mentoresProcessados.map(m => {
+                  const paisDDI = DDI_MAP[m.pais || "BR"]; // 🟢 MAPEAMENTO DE DDI
+                  
+                  return (
                   <tr key={m.id} className={`transition-colors group ${m.status === 'inativo' ? 'bg-slate-50 dark:bg-slate-900/30 opacity-75 grayscale-[0.5]' : 'hover:bg-slate-50 dark:hover:bg-slate-700/30'}`}>
                     
                     {/* STATUS */}
                     <td className="p-4">
                       <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wide border ${m.status === 'ativo' ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800' : 'bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'}`}>
-                        {m.status === 'ativo' ? <CheckCircle2 className="w-3 h-3"/> : <Ban className="w-3 h-3"/>} {m.status}
+                        {m.status === 'ativo' ? <CheckCircle2 className="w-3 h-3"/> : <Ban className="w-3 h-3"/>} {m.status === 'ativo' ? t('mentorsTab.table.active', 'ATIVO') : t('mentorsTab.table.inactive', 'INATIVO')}
                       </span>
                     </td>
 
@@ -391,23 +415,24 @@ export function MentoresTab() {
                       </div>
                     </td>
 
-                    {/* EDIÇÃO INLINE DO TELEFONE */}
+                    {/* EDIÇÃO INLINE DO TELEFONE COM DDI */}
                     <td className="p-4">
                         {editandoTelefoneId === m.id ? (
-                            <div className="flex items-center gap-2 animate-in fade-in zoom-in duration-200">
+                            <div className="flex items-center gap-1 bg-white dark:bg-slate-900 border border-blue-300 dark:border-blue-500/50 rounded-lg pl-2 pr-1 ring-2 ring-blue-500/20 w-fit animate-in fade-in zoom-in duration-200">
+                                <span className="text-[9px] font-black text-slate-400 bg-slate-100 dark:bg-slate-800 px-1 rounded">{m.pais || "BR"}</span>
                                 <input 
                                     autoFocus 
-                                    className="px-3 py-1.5 border border-blue-300 dark:border-blue-500/50 bg-white dark:bg-slate-900 rounded-lg text-sm font-mono font-bold outline-none ring-2 ring-blue-500/20 w-40 dark:text-white" 
+                                    className="py-1.5 w-32 text-sm font-mono font-bold outline-none bg-transparent dark:text-white ml-1" 
                                     value={telefoneInline} 
                                     onChange={(e) => setTelefoneInline(formatarTelefone(e.target.value))} 
                                     onKeyDown={(e) => e.key === 'Enter' && salvarTelefoneInline(m)} 
                                     placeholder="Número..." 
                                 />
-                                <button onClick={() => salvarTelefoneInline(m)} className="p-1.5 bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400 rounded-lg hover:bg-green-600 hover:text-white transition-colors" title="Salvar">
-                                    <Check className="w-4 h-4"/>
+                                <button onClick={() => salvarTelefoneInline(m)} className="p-1 bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400 rounded-md hover:bg-green-600 hover:text-white transition-colors" title="Salvar">
+                                    <Check className="w-3.5 h-3.5"/>
                                 </button>
-                                <button onClick={() => setEditandoTelefoneId(null)} className="p-1.5 bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400 rounded-lg hover:bg-slate-300 transition-colors" title="Cancelar">
-                                    <X className="w-4 h-4"/>
+                                <button onClick={() => setEditandoTelefoneId(null)} className="p-1 bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400 rounded-md hover:bg-slate-300 transition-colors" title="Cancelar">
+                                    <X className="w-3.5 h-3.5"/>
                                 </button>
                             </div>
                         ) : (
@@ -417,8 +442,13 @@ export function MentoresTab() {
                                 title="Clique para editar rapidamente"
                             >
                                 <Phone className={`w-3.5 h-3.5 ${m.telefone ? 'text-green-500 dark:text-green-400' : 'text-slate-300 dark:text-slate-600'}`}/>
-                                <span className={`font-mono text-sm font-bold ${m.telefone ? 'text-slate-700 dark:text-slate-300' : 'text-slate-400 dark:text-slate-500 italic font-normal text-xs'}`}>
-                                    {m.telefone || "Adicionar nº"}
+                                <span className={`font-mono text-sm font-bold flex items-center gap-1.5 ${m.telefone ? 'text-slate-700 dark:text-slate-300' : 'text-slate-400 dark:text-slate-500 italic font-normal text-xs'}`}>
+                                    {m.telefone ? (
+                                      <>
+                                        <span className="text-[9px] font-black text-slate-400 bg-slate-100 dark:bg-slate-700 px-1 rounded">{m.pais || "BR"}</span>
+                                        {paisDDI} {m.telefone}
+                                      </>
+                                    ) : t('mentorsTab.table.notInformed', 'Adicionar nº')}
                                 </span>
                                 <Edit2 className="w-3 h-3 text-slate-400 opacity-0 group-hover/edit:opacity-100 transition-opacity ml-1"/>
                             </div>
@@ -428,19 +458,19 @@ export function MentoresTab() {
                     {/* AÇÕES */}
                     <td className="p-4 text-right">
                         <div className="flex gap-2 justify-end opacity-40 group-hover:opacity-100 transition-opacity">
-                            <button onClick={() => abrirModalEditar(m)} className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-600 dark:hover:text-white transition-colors" title="Editar Completo">
+                            <button onClick={() => abrirModalEditar(m)} className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-600 dark:hover:text-white transition-colors" title={t('mentorsTab.table.edit', 'Editar Completo')}>
                                 <Edit2 className="w-4 h-4"/>
                             </button>
                             <button onClick={() => alternarStatus(m)} className={`p-2 rounded-lg transition-colors ${m.status === "ativo" ? "bg-orange-50 text-orange-600 hover:bg-orange-500 hover:text-white dark:bg-orange-900/30 dark:text-orange-400" : "bg-green-50 text-green-600 hover:bg-green-500 hover:text-white dark:bg-green-900/30 dark:text-green-400"}`} title="Alternar Status">
                                 {m.status === "ativo" ? <PowerOff className="w-4 h-4"/> : <CheckCircle2 className="w-4 h-4"/>}
                             </button>
-                            <button onClick={() => excluir(m)} className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-600 hover:text-white dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-600 dark:hover:text-white transition-colors" title="Excluir Definitivamente">
+                            <button onClick={() => excluir(m)} className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-600 hover:text-white dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-600 dark:hover:text-white transition-colors" title={t('mentorsTab.table.delete', 'Excluir Definitivamente')}>
                                 <Trash2 className="w-4 h-4"/>
                             </button>
                         </div>
                     </td>
                   </tr>
-              ))}
+              )})}
             </tbody>
           </table>
         </div>
@@ -455,9 +485,9 @@ export function MentoresTab() {
               <div>
                   <h3 className="font-black text-xl text-slate-800 dark:text-white flex items-center gap-2">
                       {mentorEditando ? <Edit2 className="w-5 h-5 text-blue-500"/> : <ShieldCheck className="w-5 h-5 text-blue-600"/>}
-                      {mentorEditando ? "Editar Mentor" : "Novo Mentor"}
+                      {mentorEditando ? t('mentorsTab.modal.editTitle', 'Editar Mentor') : t('mentorsTab.modal.newTitle', 'Novo Mentor')}
                   </h3>
-                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">Preencha os dados abaixo.</p>
+                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">{t('mentorsTab.modal.instructions', 'Preencha os dados abaixo.')}</p>
               </div>
               <button onClick={() => setModalAberto(false)} className="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-slate-400 hover:text-red-500">
                   <X className="w-5 h-5"/>
@@ -470,7 +500,7 @@ export function MentoresTab() {
               {sucesso && <div className="p-4 bg-green-50 text-green-600 text-sm rounded-lg border border-green-100 flex items-center gap-2"><CheckCircle2 className="w-5 h-5 flex-shrink-0"/> {sucesso}</div>}
 
               <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-1 block">Nome do Mentor</label>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-1 block">{t('mentorsTab.modal.name', 'Nome do Mentor')}</label>
                   <div className="relative">
                       <User className="absolute left-4 top-3.5 w-4 h-4 text-slate-400"/>
                       <input 
@@ -482,29 +512,45 @@ export function MentoresTab() {
                   </div>
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-1 block">WhatsApp</label>
-                    <div className="relative">
-                        <Phone className="absolute left-4 top-3.5 w-4 h-4 text-slate-400"/>
-                        <input 
-                            value={telefone} 
-                            onChange={e=>setTelefone(formatarTelefone(e.target.value))} 
-                            className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-blue-500 rounded-xl text-sm font-bold outline-none dark:text-white" 
-                            placeholder="Apenas números..." 
-                        />
+              {/* 🟢 MODIFICADO: PAÍS E TELEFONE */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex gap-2">
+                    <div className="w-1/3">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-1 block">{t('mentorsTab.modal.country', 'País')}</label>
+                        <select 
+                            value={pais} 
+                            onChange={e => setPais(e.target.value)}
+                            className="w-full py-3 px-2 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-blue-500 rounded-xl text-sm font-bold outline-none appearance-none dark:text-white"
+                        >
+                            {PAISES.map(p => <option key={p.id} value={p.id}>{p.id}</option>)}
+                        </select>
+                    </div>
+                    <div className="w-2/3">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-1 flex items-center justify-between">
+                            <span>{t('mentorsTab.modal.phone', 'WhatsApp')}</span>
+                            <span className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-1.5 rounded">{DDI_MAP[pais]}</span>
+                        </label>
+                        <div className="relative">
+                            <Phone className="absolute left-4 top-3.5 w-4 h-4 text-slate-400"/>
+                            <input 
+                                value={telefone} 
+                                onChange={e=>setTelefone(formatarTelefone(e.target.value))} 
+                                className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-blue-500 rounded-xl text-sm font-bold outline-none dark:text-white" 
+                                placeholder={t('mentorsTab.modal.phonePlaceholder', 'Apenas números...')}
+                            />
+                        </div>
                     </div>
                 </div>
                 <div>
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-1 block">Status</label>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-1 block">{t('mentorsTab.modal.status', 'Status')}</label>
                     <div className="relative">
                         <select 
                             value={status} 
                             onChange={e=>setStatus(e.target.value)} 
                             className="w-full pl-4 pr-10 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-blue-500 rounded-xl text-sm font-bold outline-none appearance-none dark:text-white"
                         >
-                            <option value="ativo">✅ ATIVO</option>
-                            <option value="inativo">🚫 INATIVO</option>
+                            <option value="ativo">✅ {t('mentorsTab.modal.statusActive', 'ATIVO')}</option>
+                            <option value="inativo">🚫 {t('mentorsTab.modal.statusInactive', 'INATIVO')}</option>
                         </select>
                         <ChevronDown className="absolute right-4 top-3.5 w-4 h-4 text-slate-400 pointer-events-none"/>
                     </div>
@@ -512,7 +558,7 @@ export function MentoresTab() {
               </div>
 
               <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-1 block">Login (E-mail)</label>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-1 block">{t('mentorsTab.modal.email', 'Login (E-mail)')}</label>
                   <div className="relative">
                       <Mail className="absolute left-4 top-3.5 w-4 h-4 text-slate-400"/>
                       <input 
@@ -527,7 +573,7 @@ export function MentoresTab() {
               
               {!mentorEditando && (
                   <div>
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-1 block">Senha Inicial</label>
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-1 block">{t('mentorsTab.modal.password', 'Senha Inicial')}</label>
                       <div className="relative">
                           <Lock className="absolute left-4 top-3.5 w-4 h-4 text-slate-400"/>
                           <input 
@@ -545,16 +591,16 @@ export function MentoresTab() {
                   <button 
                       type="button" 
                       onClick={()=>setModalAberto(false)} 
-                      className="px-6 py-3 rounded-xl font-bold text-xs uppercase text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700"
+                      className="px-6 py-3 rounded-xl font-bold text-xs uppercase text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
                   >
-                      Cancelar
+                      {t('mentorsTab.modal.cancel', 'Cancelar')}
                   </button>
                   <button 
                       type="submit" 
                       disabled={salvando} 
-                      className="px-8 py-3 bg-blue-600 text-white rounded-xl font-bold text-xs uppercase hover:bg-blue-700 flex items-center gap-2"
+                      className="px-8 py-3 bg-blue-600 text-white rounded-xl font-bold text-xs uppercase hover:bg-blue-700 flex items-center gap-2 transition-transform active:scale-95"
                   >
-                      {salvando ? <Loader2 className="w-4 h-4 animate-spin" /> : "Salvar"}
+                      {salvando ? <Loader2 className="w-4 h-4 animate-spin" /> : (mentorEditando ? t('mentorsTab.modal.saveEdit', 'Salvar Alterações') : t('mentorsTab.modal.saveNew', 'Concluir Cadastro'))}
                   </button>
               </div>
             </form>

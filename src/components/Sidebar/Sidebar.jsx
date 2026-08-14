@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { useTheme } from "../../contexts/ThemeContext";
 import { db } from "../../services/firebase";
 import { collection, query, where, getDocs, onSnapshot } from "firebase/firestore";
+import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
 
 import { 
   LayoutDashboard, BarChart3, Calendar, CircleCheck, 
@@ -11,25 +12,43 @@ import {
   ChevronRight, TrendingUp, Globe, Megaphone, Headphones, Activity,
   Bell, Download, Trash2,
   Lock, ChevronDown, ShoppingBag, Key, FileSearch, Target,
-  X, ArrowRight // 🟢 Ícones novos para o Modal de Senha
+  X, ArrowRight, Check
 } from "lucide-react";
+
+// 🌍 DADOS DAS BANDEIRAS
+const LANGUAGES = [
+  { code: 'pt-BR', name: 'Português', short: 'PT', flag: 'https://flagcdn.com/w40/br.png' },
+  { code: 'en-US', name: 'English', short: 'EN', flag: 'https://flagcdn.com/w40/us.png' },
+  { code: 'es-AR', name: 'Español', short: 'ES', flag: 'https://flagcdn.com/w40/ar.png' }
+];
 
 export default function Sidebar({ collapsed }) { 
   const { userData, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const location = useLocation();
-  const [pendencias, setPendencias] = useState(0);
+  const { t, i18n } = useTranslation(); // 🟢 CÉREBRO CONECTADO
 
+  const [pendencias, setPendencias] = useState(0);
   const [alertas, setAlertas] = useState([]);
   const [unreadAlerts, setUnreadAlerts] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
   
   // 🟢 ESTADOS DO COFRE E DA SENHA
   const [cofreAberto, setCofreAberto] = useState(false);
-  const [cofreUnlocked, setCofreUnlocked] = useState(false); // Diz se o chefe já destrancou hoje
-  const [showPinModal, setShowPinModal] = useState(false); // Mostra a tela de pedir senha
+  const [cofreUnlocked, setCofreUnlocked] = useState(false); 
+  const [showPinModal, setShowPinModal] = useState(false); 
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState(false);
+
+  // 🟢 ESTADO DO MENU DE IDIOMAS
+  const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
+  const currentLang = LANGUAGES.find(lang => lang.code === (i18n.language || 'pt-BR')) || LANGUAGES[0];
+
+  const changeLanguage = (lng) => {
+    i18n.changeLanguage(lng);
+    localStorage.setItem("idioma_pratique", lng);
+    setIsLangMenuOpen(false);
+  };
   
   // 🔒 A SENHA DO MENU (Pode trocar aqui quando quiser)
   const PIN_DO_MENU = "7788";
@@ -144,12 +163,11 @@ export default function Sidebar({ collapsed }) {
       }
   };
 
-  // 🟢 FUNÇÃO QUE CONTROLA O CLIQUE NO COFRE MASTER
   const handleToggleCofre = () => {
       if (!cofreUnlocked) {
-          setShowPinModal(true); // Se não destrancou ainda, abre a tela de senha
+          setShowPinModal(true); 
       } else {
-          setCofreAberto(!cofreAberto); // Se já destrancou, apenas abre e fecha a gaveta
+          setCofreAberto(!cofreAberto); 
       }
   };
 
@@ -169,7 +187,7 @@ export default function Sidebar({ collapsed }) {
 
   return (
     <>
-      {/* 🟢 O MODAL DE SENHA DO MENU LATERAL (POP-UP FLUTUANTE) */}
+      {/* 🟢 O MODAL DE SENHA DO MENU LATERAL */}
       {showPinModal && (
           <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[99999] flex items-center justify-center p-4 animate-in fade-in duration-200">
               <div className="bg-white dark:bg-slate-900 p-8 rounded-[2rem] shadow-2xl border border-slate-200 dark:border-slate-800 max-w-sm w-full text-center relative overflow-hidden animate-in zoom-in-95 duration-300">
@@ -215,7 +233,7 @@ export default function Sidebar({ collapsed }) {
               {!collapsed && (
                 <div className="animate-in fade-in slide-in-from-left-4 shrink-0">
                   <h2 className="text-xl font-black text-slate-800 dark:text-white italic leading-none">PRATIQUE</h2>
-                  <p className="text-[9px] text-slate-400 font-bold uppercase tracking-[0.2em]">Gestão Coletivas</p>
+                  <p className="text-[9px] text-slate-400 font-bold uppercase tracking-[0.2em]">{t('sidebar.brandSubtitle', 'Gestão Coletivas')}</p>
                 </div>
               )}
           </div>
@@ -276,51 +294,89 @@ export default function Sidebar({ collapsed }) {
           )}
         </div>
 
-        <nav className="flex-1 overflow-y-auto px-4 space-y-6 custom-scrollbar py-4" onClick={() => setShowNotifications(false)}>
+        <nav className="flex-1 overflow-y-auto px-4 space-y-6 custom-scrollbar py-4" onClick={(e) => {setShowNotifications(false); setIsLangMenuOpen(false);}}>
           
+          {/* 🟢 SELETOR DE IDIOMA MAGNÍFICO (NO TOPO) */}
+          <div className="relative mb-6 mx-1">
+              <button 
+                  onClick={(e) => { e.stopPropagation(); setIsLangMenuOpen(!isLangMenuOpen); setShowNotifications(false); }}
+                  className={`w-full flex items-center justify-between p-3 rounded-xl transition-all border shadow-sm ${isLangMenuOpen ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-900/30' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50'} ${collapsed ? 'justify-center' : ''}`}
+                  title="Mudar Idioma"
+              >
+                  <div className="flex items-center gap-3">
+                      <img src={currentLang.flag} alt="Lang" className="w-6 h-auto rounded-[2px] shadow-sm shrink-0" />
+                      {!collapsed && <span className={`text-sm font-black tracking-wide ${isLangMenuOpen ? 'text-red-600 dark:text-red-400' : 'text-slate-700 dark:text-slate-200'}`}>{currentLang.name}</span>}
+                  </div>
+                  {!collapsed && (
+                      <ChevronDown className={`w-4 h-4 transition-transform ${isLangMenuOpen ? 'rotate-180 text-red-500' : 'text-slate-400'}`} />
+                  )}
+              </button>
+
+              {/* Menu Dropdown de Idiomas */}
+              {isLangMenuOpen && (
+                  <>
+                      <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setIsLangMenuOpen(false); }}></div>
+                      <div className={`absolute z-50 ${collapsed ? 'left-full top-0 ml-4' : 'top-full left-0 mt-2'} w-48 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200`}>
+                          {LANGUAGES.map(lang => (
+                              <button
+                                  key={lang.code}
+                                  onClick={(e) => { e.stopPropagation(); changeLanguage(lang.code); }}
+                                  className={`w-full flex items-center justify-between px-4 py-3 text-sm text-left transition-colors ${i18n.language === lang.code ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-bold' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+                              >
+                                  <div className="flex items-center gap-3">
+                                      <img src={lang.flag} alt={lang.name} className="w-5 h-auto rounded-sm shadow-sm" />
+                                      <span>{lang.name}</span>
+                                  </div>
+                                  {i18n.language === lang.code && <Check className="w-4 h-4" />}
+                              </button>
+                          ))}
+                      </div>
+                  </>
+              )}
+          </div>
+
           <div className="space-y-1.5">
-              {!collapsed && <p className="px-4 text-[9px] font-black text-slate-400/60 uppercase tracking-widest mb-2">Principal</p>}
-              <NavItem to="/app" icon={LayoutDashboard} label="Início" collapsed={collapsed} active={path === "/app"} />
+              {!collapsed && <p className="px-4 text-[9px] font-black text-slate-400/60 uppercase tracking-widest mb-2">{t('sidebar.sections.principal', 'Principal')}</p>}
+              <NavItem to="/app" icon={LayoutDashboard} label={t('sidebar.items.inicio', 'Início')} collapsed={collapsed} active={path === "/app"} />
               {["admin", "mentor", "unidade", "professor"].includes(role) && 
-                  <NavItem to="/app/cronograma" icon={Calendar} label="Cronograma" collapsed={collapsed} active={isActive("/app/cronograma")} />
+                  <NavItem to="/app/cronograma" icon={Calendar} label={t('sidebar.items.cronograma', 'Cronograma')} collapsed={collapsed} active={isActive("/app/cronograma")} />
               }
               {["admin", "mentor", "unidade", "professor"].includes(role) && 
                   <NavItem to="/app/pratique-play" icon={Headphones} label="Pratique Play" collapsed={collapsed} active={isActive("/app/pratique-play")} />
               }
-              <NavItem to="/horarios" icon={Globe} label="Link do Aluno" collapsed={collapsed} active={false} target="_blank" />
+              <NavItem to="/horarios" icon={Globe} label={t('sidebar.items.linkAluno', 'Link do Aluno')} collapsed={collapsed} active={false} target="_blank" />
           </div>
 
           <div className="space-y-1.5">
-              {!collapsed && <p className="px-4 text-[9px] font-black text-slate-400/60 uppercase tracking-widest mb-2">Operacional</p>}
-              <NavItem to="/app/validacao-diaria" icon={CircleCheck} label="Validação Diária" collapsed={collapsed} active={isActive("/app/validacao-diaria")} badge={pendencias}/>
-              {["admin", "mentor"].includes(role) && <NavItem to="/app/validacao-coletiva" icon={ShieldCheck} label="Validação Coletiva" collapsed={collapsed} active={isActive("/app/validacao-coletiva")} />}
+              {!collapsed && <p className="px-4 text-[9px] font-black text-slate-400/60 uppercase tracking-widest mb-2">{t('sidebar.sections.operacional', 'Operacional')}</p>}
+              <NavItem to="/app/validacao-diaria" icon={CircleCheck} label={t('sidebar.items.validacaoDiaria', 'Validação Diária')} collapsed={collapsed} active={isActive("/app/validacao-diaria")} badge={pendencias}/>
+              {["admin", "mentor"].includes(role) && <NavItem to="/app/validacao-coletiva" icon={ShieldCheck} label={t('sidebar.items.validacaoColetiva', 'Validação Coletiva')} collapsed={collapsed} active={isActive("/app/validacao-coletiva")} />}
           </div>
 
           <div className="space-y-1.5">
-              {!collapsed && <p className="px-4 text-[9px] font-black text-slate-400/60 uppercase tracking-widest mb-2">Gestão</p>}
-              {["admin", "mentor"].includes(role) && <NavItem to="/app/financeiro" icon={TrendingUp} label="Financeiro" collapsed={collapsed} active={isActive("/app/financeiro")} />}
-              <NavItem to="/app/relatorio-gerencial" icon={BarChart3} label="Relatórios" collapsed={collapsed} active={isActive("/app/relatorio-gerencial")} />
+              {!collapsed && <p className="px-4 text-[9px] font-black text-slate-400/60 uppercase tracking-widest mb-2">{t('sidebar.sections.gestao', 'Gestão')}</p>}
+              {["admin", "mentor"].includes(role) && <NavItem to="/app/financeiro" icon={TrendingUp} label={t('sidebar.items.performanceFinanceira', 'Financeiro')} collapsed={collapsed} active={isActive("/app/financeiro")} />}
+              <NavItem to="/app/relatorio-gerencial" icon={BarChart3} label={t('sidebar.items.relatorios', 'Relatórios')} collapsed={collapsed} active={isActive("/app/relatorio-gerencial")} />
               {["admin", "mentor"].includes(role) && <NavItem to="/app/comunicacao" icon={Megaphone} label="Comunicados" collapsed={collapsed} active={isActive("/app/comunicacao")} />}
-              {["admin", "mentor", "unidade"].includes(role) && <NavItem to="/app/configuracoes" icon={Settings} label="Configurações" collapsed={collapsed} active={isActive("/app/configuracoes")} />}
+              {["admin", "mentor", "unidade"].includes(role) && <NavItem to="/app/configuracoes" icon={Settings} label={t('sidebar.items.configuracoes', 'Configurações')} collapsed={collapsed} active={isActive("/app/configuracoes")} />}
           </div>
 
-          {/* 🟢 O COFRE MASTER COM BOTÃO QUE CHAMA O MODAL */}
+          {/* 🟢 O COFRE MASTER */}
           {isMaster && (
-              <div className={`mt-4 rounded-2xl p-2 border shadow-inner transition-all ${cofreUnlocked ? 'bg-rose-50 dark:bg-rose-900/10 border-rose-200 dark:border-rose-900/30' : 'bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800'}`}>
+              <div className={`mt-4 rounded-2xl p-2 border shadow-inner transition-all mx-1 ${cofreUnlocked ? 'bg-rose-50 dark:bg-rose-900/10 border-rose-200 dark:border-rose-900/30' : 'bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800'}`}>
                   <button 
                       onClick={handleToggleCofre}
-                      className={`w-full flex items-center justify-between p-3 rounded-xl transition-all ${cofreAberto ? 'bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400' : 'hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400'}`}
+                      className={`w-full flex items-center justify-between p-3 rounded-xl transition-all ${cofreAberto ? 'bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400' : 'hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400'} ${collapsed ? 'justify-center' : ''}`}
                   >
                       <div className="flex items-center gap-3">
-                          {cofreUnlocked ? <Lock className="w-5 h-5 text-rose-500" /> : <Lock className="w-5 h-5" />}
+                          {cofreUnlocked ? <Lock className="w-5 h-5 text-rose-500 shrink-0" /> : <Lock className="w-5 h-5 shrink-0" />}
                           {!collapsed && <span className={`text-sm font-black uppercase tracking-wider ${cofreUnlocked ? 'text-rose-600 dark:text-rose-400' : ''}`}>Cofre Master</span>}
                       </div>
                       {!collapsed && (
-                          <ChevronDown className={`w-4 h-4 transition-transform ${cofreAberto ? 'rotate-180 text-rose-500' : ''}`} />
+                          <ChevronDown className={`w-4 h-4 transition-transform shrink-0 ${cofreAberto ? 'rotate-180 text-rose-500' : ''}`} />
                       )}
                   </button>
 
-                  {/* ITENS SÓ APARECEM SE TIVER DESTRANCADO COM SENHA (cofreUnlocked) E ESTIVER ABERTO */}
                   {cofreAberto && cofreUnlocked && (
                       <div className={`mt-2 space-y-1 animate-in slide-in-from-top-2 fade-in duration-200 ${collapsed ? 'flex flex-col items-center' : 'pl-2 border-l-2 border-rose-200 dark:border-rose-900/30 ml-4'}`}>
                           <NavItem to="/app/ociosidade" icon={Target} label="Radar de Grade" collapsed={collapsed} active={isActive("/app/ociosidade")} />
@@ -331,12 +387,13 @@ export default function Sidebar({ collapsed }) {
                   )}
               </div>
           )}
-
         </nav>
 
-        <div className="p-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 backdrop-blur-sm mt-auto">
+        {/* 🟢 FOOTER DA SIDEBAR (APENAS TEMA E SAIR) */}
+        <div className="p-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 backdrop-blur-sm mt-auto relative">
+          
           <div className={`flex items-center gap-3 mb-4 ${collapsed ? "justify-center" : ""}`}>
-            <div className="w-10 h-10 rounded-xl bg-slate-200 dark:bg-slate-700 flex items-center justify-center font-bold text-slate-600 dark:text-white text-xs border-2 border-white dark:border-slate-600 shadow-sm relative">
+            <div className="w-10 h-10 rounded-xl bg-slate-200 dark:bg-slate-700 flex items-center justify-center font-bold text-slate-600 dark:text-white text-xs border-2 border-white dark:border-slate-600 shadow-sm relative shrink-0">
               {userInitials}
               <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-emerald-500 border-2 border-white dark:border-slate-800 rounded-full"></div>
             </div>
@@ -347,9 +404,14 @@ export default function Sidebar({ collapsed }) {
               </div>
             )}
           </div>
+          
           <div className={`flex gap-2 ${collapsed ? 'flex-col' : ''}`}>
-              <button onClick={toggleTheme} className="flex-1 p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 transition-colors"><IconWrapper icon={theme === 'dark' ? Sun : Moon} /></button>
-              <button onClick={logout} className="flex-1 p-2 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 transition-colors"><IconWrapper icon={LogOut} /></button>
+              <button onClick={toggleTheme} title="Mudar Tema" className="flex-1 p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 transition-colors">
+                  <IconWrapper icon={theme === 'dark' ? Sun : Moon} />
+              </button>
+              <button onClick={logout} title="Sair" className="flex-1 p-2 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 transition-colors">
+                  <IconWrapper icon={LogOut} />
+              </button>
           </div>
         </div>
       </div>
@@ -372,4 +434,4 @@ const NavItem = ({ to, icon: Icon, label, collapsed, active, badge, target }) =>
   </Link>
 );
 
-const IconWrapper = ({ icon: Icon }) => <Icon className="w-4 h-4 mx-auto" />;
+const IconWrapper = ({ icon: Icon }) => <Icon className="w-4 h-4 mx-auto flex-shrink-0" />;

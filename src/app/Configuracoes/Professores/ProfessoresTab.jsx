@@ -16,6 +16,20 @@ import {
   X, Mail, Phone, PlusCircle, User, AlertTriangle, ChevronDown, 
   ChevronUp, ArrowDown, DownloadCloud, Layers, Ban, ShieldCheck, MapPin
 } from "lucide-react";
+import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
+
+// 🌍 PADRÃO OURO INTERNACIONAL
+const PAISES = [
+  { id: "BR", nome: "Brasil", ddi: "+55" },
+  { id: "AR", nome: "Argentina", ddi: "+54" },
+  { id: "US", nome: "Estados Unidos (Miami)", ddi: "+1" },
+];
+
+const DDI_MAP = {
+  "BR": "+55",
+  "AR": "+54",
+  "US": "+1"
+};
 
 // --- MÁSCARA INTELIGENTE DE TELEFONE ---
 const mascaraTelefone = (valor) => {
@@ -36,6 +50,7 @@ const mascaraTelefone = (valor) => {
 
 export function ProfessoresTab() {
   const { userData } = useAuth();
+  const { t } = useTranslation(); // 🟢 TRADUTOR CONECTADO
   
   // ===== PERMISSÕES E ESCOPO =====
   const role = useMemo(() => String(userData?.role || "").trim().toLowerCase(), [userData?.role]);
@@ -69,6 +84,7 @@ export function ProfessoresTab() {
   // Forms
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
+  const [pais, setPais] = useState("BR"); // 🟢 NOVO CAMPO INTERNACIONAL
   const [telefone, setTelefone] = useState("");
   const [status, setStatus] = useState("ativo");
   const [unidadeSelecionadaId, setUnidadeSelecionadaId] = useState("");
@@ -91,10 +107,10 @@ export function ProfessoresTab() {
               tipoAcao,
               descricao,
               diffExtras: detalhes,
-              modulo: 'CONFIGURACOES', // Chave exata para o filtro da nova tela
+              modulo: 'CONFIGURACOES', 
               professorNome: nomeProfessor || '-',
               unidadeNome: nomeUnidade || '-',
-              modalidadeNome: '-', // Não se aplica a professores
+              modalidadeNome: '-', 
               usuarioAcaoNome: nomeUsuario,
               usuarioAcaoId: userId,
               dataAcao: serverTimestamp()
@@ -224,7 +240,7 @@ export function ProfessoresTab() {
 
   function verificarEmail(e) {
       e.preventDefault(); 
-      if (!emailVerificacao.includes("@")) return setErro("E-mail inválido.");
+      if (!emailVerificacao.includes("@")) return setErro(t('teachersTab.messages.invalidEmail', 'E-mail inválido.'));
       
       setErro("");
       const emailBusca = emailVerificacao.trim().toLowerCase(); 
@@ -240,7 +256,7 @@ export function ProfessoresTab() {
 
   async function vincularExistente(e) {
       e.preventDefault(); 
-      if (!unidadeSelecionadaId) return setErro("Selecione uma unidade.");
+      if (!unidadeSelecionadaId) return setErro(t('teachersTab.messages.selectUnit', 'Selecione uma unidade.'));
       setSalvando(true);
 
       try {
@@ -251,7 +267,7 @@ export function ProfessoresTab() {
 
           if (jaVinculado) {
               setSalvando(false);
-              return setErro("Este professor já está vinculado a esta unidade.");
+              return setErro(t('teachersTab.messages.alreadyLinked', 'Este professor já está vinculado a esta unidade.'));
           }
 
           await addDoc(collection(db, "vinculos"), {
@@ -265,7 +281,7 @@ export function ProfessoresTab() {
           const uniNome = unidades.find(u => String(u.id) === String(unidadeSelecionadaId))?.nome || 'Unidade';
           await registrarLogAuditoria('ALTERADA', 'Professor vinculado a nova unidade.', professorEncontrado.nome, `Vinculado à: ${uniNome}`, uniNome);
 
-          setSucesso("Vinculado com sucesso!");
+          setSucesso(t('teachersTab.messages.linkedSuccess', 'Vinculado com sucesso!'));
           setTimeout(() => {
               setModalVerificacaoAberto(false);
               setSucesso("");
@@ -273,7 +289,7 @@ export function ProfessoresTab() {
           }, 1000);
 
       } catch (err) {
-          setErro("Erro ao vincular.");
+          setErro(t('teachersTab.messages.linkError', 'Erro ao vincular.'));
           setSalvando(false);
       } 
   }
@@ -283,6 +299,7 @@ export function ProfessoresTab() {
       setProfEditando(null);
       setNome("");
       setEmail(emailPreenchido || "");
+      setPais("BR"); // 🟢 PADRÃO OURO INICIAL
       setTelefone("");
       setStatus("ativo");
       setErro("");
@@ -293,7 +310,8 @@ export function ProfessoresTab() {
       setProfEditando(p);
       setNome(p.nome);
       setEmail(p.email);
-      setTelefone(mascaraTelefone(p.telefone || "")); 
+      setPais(p.pais || "BR"); // 🟢 CARREGA O PAÍS
+      setTelefone(p.pais === 'BR' || !p.pais ? mascaraTelefone(p.telefone || "") : (p.telefone || "")); 
       setStatus(p.status || "ativo");
       setErro("");
       setModalFormAberto(true);
@@ -311,10 +329,10 @@ export function ProfessoresTab() {
 
     if (!nomeLimpo) { 
         setSalvando(false); 
-        return setErro("Nome obrigatório"); 
+        return setErro(t('teachersTab.messages.nameRequired', 'Nome obrigatório')); 
     }
 
-    if (telefone && telLimpo.length < 10) {
+    if (telefone && telLimpo.length < 10 && pais === 'BR') {
         setSalvando(false);
         return setErro("WhatsApp inválido. Digite o número completo com DDD (Ex: 31 99999-8888).");
     }
@@ -328,7 +346,7 @@ export function ProfessoresTab() {
 
       if (duplicados.length > 0) {
           const listaEmails = duplicados.map(d => d.email).join(", ");
-          const msg = `⚠️ ATENÇÃO: Já existe professor com o nome "${nomeLimpo}".\n\nE-mail(s): ${listaEmails}\n\nTem certeza que é outra pessoa?`;
+          const msg = t('teachersTab.messages.duplicateWarning', { name: nomeLimpo, emails: listaEmails });
           if (!window.confirm(msg)) {
               setSalvando(false);
               return; 
@@ -340,10 +358,11 @@ export function ProfessoresTab() {
           let mudancas = [];
           if (profEditando.nome !== nomeLimpo) mudancas.push(`Nome: ${profEditando.nome} ➔ ${nomeLimpo}`);
           if (profEditando.telefone !== telefone) mudancas.push(`Telefone: ${profEditando.telefone || 'Sem tel'} ➔ ${telefone}`);
+          if (profEditando.pais !== pais) mudancas.push(`País: ${profEditando.pais || 'BR'} ➔ ${pais}`);
           if (profEditando.status !== status) mudancas.push(`Status: ${profEditando.status} ➔ ${status}`);
           
           await updateDoc(doc(db, "professores", profEditando.id), { 
-            nome: nomeLimpo, telefone, status, updatedAt: serverTimestamp() 
+            nome: nomeLimpo, pais, telefone, status, updatedAt: serverTimestamp() 
           });
           
           if (profEditando.uidLogin) {
@@ -354,7 +373,7 @@ export function ProfessoresTab() {
               await registrarLogAuditoria('ALTERADA', 'Dados cadastrais do professor atualizados.', nomeLimpo, mudancas.join(' | '));
           }
 
-          setSucesso("Dados atualizados!");
+          setSucesso(t('teachersTab.messages.updated', 'Dados atualizados!'));
       } else { 
           // 🟢 AUDITORIA: Criação de novo professor
           secondaryApp = initializeApp(getApp().options, "SecondaryAppProfCreate");
@@ -363,7 +382,7 @@ export function ProfessoresTab() {
           const newUid = userCred.user.uid;
 
           const docRef = await addDoc(collection(db, "professores"), { 
-              nome: nomeLimpo, email: emailLimpo, telefone, status, uidLogin: newUid, 
+              nome: nomeLimpo, email: emailLimpo, pais, telefone, status, uidLogin: newUid, 
               createdAt: serverTimestamp(), createdBy: userId, roleCreator: role 
           });
 
@@ -393,7 +412,7 @@ export function ProfessoresTab() {
           
           await registrarLogAuditoria('NOVA', 'Novo professor cadastrado na rede.', nomeLimpo, logDetalhe, nomeUnidadeAudit);
           
-          setSucesso("Professor criado com sucesso!");
+          setSucesso(t('teachersTab.messages.created', 'Professor criado com sucesso!'));
       }
       
       setTimeout(() => {
@@ -403,8 +422,8 @@ export function ProfessoresTab() {
       }, 1000);
 
     } catch (e) { 
-        if (e.code === 'auth/email-already-in-use') setErro("E-mail já cadastrado no sistema.");
-        else setErro("Erro: " + e.message); 
+        if (e.code === 'auth/email-already-in-use') setErro(t('teachersTab.messages.emailExists', 'E-mail já cadastrado no sistema.'));
+        else setErro(t('teachersTab.messages.saveError', 'Erro: ') + e.message); 
         setSalvando(false);
     } finally { 
         if (secondaryApp) await deleteApp(secondaryApp).catch(() => {});
@@ -421,7 +440,7 @@ export function ProfessoresTab() {
   }
 
   async function removerVinculo(idVinculo, nomeUnidade, nomeProfessor) {
-      if (!confirm(`Remover o professor ${nomeProfessor} da unidade ${nomeUnidade}?`)) return;
+      if (!window.confirm(t('teachersTab.messages.removeLinkConfirm', 'Remover o professor desta unidade?'))) return;
       try { 
           await deleteDoc(doc(db, "vinculos", idVinculo)); 
           // 🟢 AUDITORIA: Desvinculação
@@ -430,7 +449,7 @@ export function ProfessoresTab() {
   }
 
   async function excluirProfessorTotal(p) {
-      if (!confirm(`ATENÇÃO: Excluir ${p.nome}?\nIsso removerá ele de TODAS as unidades da rede.\n\nConfirmar exclusão definitiva?`)) return;
+      if (!window.confirm(t('teachersTab.messages.deleteConfirm', { name: p.nome }))) return;
       try {
           await deleteDoc(doc(db, "professores", p.id));
           const vinculadosDoProf = vinculos.filter(v => v.professorId === p.id);
@@ -438,11 +457,11 @@ export function ProfessoresTab() {
           
           // 🟢 AUDITORIA: Morte do Professor
           await registrarLogAuditoria('EXCLUÍDA', 'Professor excluído do sistema.', p.nome, `Exclusão definitiva de toda a rede.`);
-      } catch (e) { alert("Erro ao excluir"); }
+      } catch (e) { alert(t('teachersTab.messages.deleteError', 'Erro ao excluir')); }
   }
 
   const corrigirEmailsAntigos = async () => {
-    if (!confirm("⚠️ ATENÇÃO: Isso vai varrer todo o banco e converter os e-mails para minúsculo.\nDeseja continuar?")) return;
+    if (!window.confirm(t('teachersTab.messages.fixConfirm', 'Deseja continuar?'))) return;
     setCorrigindoBase(true);
     let contador = 0;
     try {
@@ -459,8 +478,8 @@ export function ProfessoresTab() {
         await Promise.all(updates);
         // 🟢 AUDITORIA: Correção em massa
         await registrarLogAuditoria('ALTERADA', 'Correção em massa de e-mails', '-', `${contador} e-mails convertidos para letras minúsculas.`);
-        alert(`SUCESSO! ${contador} e-mails corrigidos.`);
-    } catch (e) { alert("Erro na correção."); } finally { setCorrigindoBase(false); }
+        alert(t('teachersTab.messages.fixSuccess', { count: contador }));
+    } catch (e) { alert(t('teachersTab.messages.fixError', 'Erro na correção.')); } finally { setCorrigindoBase(false); }
   };
 
   if (!podeVer) return null;
@@ -474,27 +493,27 @@ export function ProfessoresTab() {
             <span className="p-2 bg-red-600 text-white rounded-lg shadow-md shadow-red-500/20">
                 <UserPlus className="w-6 h-6"/>
             </span>
-            Gestão de Professores
+            {t('teachersTab.title', 'Gestão de Professores')}
           </h2>
           <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-2">
-              Controle de base e vínculos com as unidades.
+              {t('teachersTab.subtitle', 'Controle de base e vínculos com as unidades.')}
           </p>
         </div>
 
         <div className="flex gap-3 w-full md:w-auto">
             <div className="flex items-center gap-4 bg-white dark:bg-slate-800 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
                 <div className="text-center">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('teachersTab.stats.total', 'Total')}</p>
                     <p className="text-lg font-black text-slate-700 dark:text-white leading-none">{kpis.total}</p>
                 </div>
                 <div className="w-px h-8 bg-slate-200 dark:bg-slate-700"></div>
                 <div className="text-center">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Ativos</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('teachersTab.stats.active', 'Ativos')}</p>
                     <p className="text-lg font-black text-green-600 leading-none">{kpis.ativos}</p>
                 </div>
                 <div className="w-px h-8 bg-slate-200 dark:bg-slate-700"></div>
                 <div className="text-center">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Inativos</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('teachersTab.stats.inactive', 'Inativos')}</p>
                     <p className="text-lg font-black text-red-500 leading-none">{kpis.inativos}</p>
                 </div>
             </div>
@@ -505,7 +524,7 @@ export function ProfessoresTab() {
                     onClick={abrirFluxoNovo} 
                     className="px-5 py-2 h-full bg-red-600 text-white rounded-xl font-bold text-xs uppercase tracking-wide hover:bg-red-700 shadow-lg shadow-red-500/20 flex items-center justify-center gap-2 transition-transform active:scale-95 whitespace-nowrap"
                 >
-                    <PlusCircle className="w-4 h-4"/> Novo Vínculo
+                    <PlusCircle className="w-4 h-4"/> {t('teachersTab.newLinkBtn', 'Novo Vínculo')}
                 </button>
             )}
         </div>
@@ -517,7 +536,7 @@ export function ProfessoresTab() {
               <Search className="absolute left-4 top-3.5 w-5 h-5 text-slate-400 group-focus-within:text-red-500 transition-colors"/>
               <input 
                   type="text" 
-                  placeholder="Buscar por nome, telefone ou e-mail..." 
+                  placeholder={t('teachersTab.searchPlaceholder', 'Buscar por nome, telefone ou e-mail...')} 
                   className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500 shadow-sm transition-all text-slate-700 dark:text-white"
                   value={busca}
                   onChange={(e) => setBusca(e.target.value)}
@@ -532,7 +551,7 @@ export function ProfessoresTab() {
                   className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl font-bold text-xs uppercase shadow-sm transition-colors flex items-center gap-2"
               >
                   {corrigindoBase ? <Loader2 className="w-4 h-4 animate-spin"/> : <Layers className="w-4 h-4" />} 
-                  Corrigir E-mails
+                  {t('teachersTab.fixEmailsBtn', 'Corrigir E-mails')}
               </button>
           )}
       </div>
@@ -546,18 +565,18 @@ export function ProfessoresTab() {
                 <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
                     <tr>
                         <th className="p-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors w-24 select-none" onClick={() => handleOrdenar('status')}>
-                            <div className="flex items-center gap-2">Status <SortIcon campo="status" /></div>
+                            <div className="flex items-center gap-2">{t('teachersTab.table.status', 'Status')} <SortIcon campo="status" /></div>
                         </th>
                         <th className="p-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors select-none" onClick={() => handleOrdenar('nome')}>
-                            <div className="flex items-center gap-2">Professor <SortIcon campo="nome" /></div>
+                            <div className="flex items-center gap-2">{t('teachersTab.table.teacher', 'Professor')} <SortIcon campo="nome" /></div>
                         </th>
                         <th className="p-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors select-none" onClick={() => handleOrdenar('email')}>
-                            <div className="flex items-center gap-2">Contato <SortIcon campo="email" /></div>
+                            <div className="flex items-center gap-2">{t('teachersTab.table.contact', 'Contato')} <SortIcon campo="email" /></div>
                         </th>
                         <th className="p-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors select-none" onClick={() => handleOrdenar('unidades')}>
-                            <div className="flex items-center gap-2">Unidades Vinculadas <SortIcon campo="unidades" /></div>
+                            <div className="flex items-center gap-2">{t('teachersTab.table.units', 'Unidades Vinculadas')} <SortIcon campo="unidades" /></div>
                         </th>
-                        <th className="p-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-right">Ações</th>
+                        <th className="p-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-right">{t('teachersTab.table.actions', 'Ações')}</th>
                     </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50 text-sm">
@@ -566,12 +585,13 @@ export function ProfessoresTab() {
                         
                         // LÓGICA DE AUDITORIA DE TELEFONE (Acha os errados para envio de WaSeller)
                         const isTelefoneValido = p.telefone && p.telefone.replace(/\D/g, '').length >= 10;
+                        const paisDDI = DDI_MAP[p.pais || "BR"]; // 🟢 Mapeia o DDI
                         
                         return (
                             <tr key={p.id} className={`transition-colors group ${p.status === 'inativo' ? 'bg-slate-50 dark:bg-slate-900/30 opacity-75 grayscale-[0.5]' : 'hover:bg-slate-50 dark:hover:bg-slate-700/30'}`}>
                                 <td className="p-4">
                                     <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wide border ${p.status === 'ativo' ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800' : 'bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'}`}>
-                                        {p.status === 'ativo' ? <CheckCircle2 className="w-3 h-3"/> : <Ban className="w-3 h-3"/>} {p.status}
+                                        {p.status === 'ativo' ? <CheckCircle2 className="w-3 h-3"/> : <Ban className="w-3 h-3"/>} {p.status === 'ativo' ? t('teachersTab.table.active', 'ATIVO') : t('teachersTab.table.inactive', 'INATIVO')}
                                     </span>
                                 </td>
                                 <td className="p-4 font-black text-slate-800 dark:text-white text-base">
@@ -581,14 +601,16 @@ export function ProfessoresTab() {
                                     <div className="flex flex-col gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400">
                                         <span className="flex items-center gap-1"><Mail className="w-3.5 h-3.5 text-blue-500"/> {p.email}</span>
                                         
-                                        {/* A ETIQUETA VISUAL DO TELEFONE */}
+                                        {/* 🟢 A ETIQUETA VISUAL DO TELEFONE COM PAÍS E DDI */}
                                         {isTelefoneValido ? (
                                             <span className="flex items-center gap-1 text-slate-600 dark:text-slate-300">
-                                                <Phone className="w-3.5 h-3.5 text-green-500"/> {p.telefone}
+                                                <Phone className="w-3.5 h-3.5 text-green-500"/> 
+                                                <span className="text-[9px] font-black text-slate-400 bg-slate-100 dark:bg-slate-700 px-1 rounded">{p.pais || "BR"}</span>
+                                                {paisDDI} {p.telefone}
                                             </span>
                                         ) : (
                                             <span className="flex items-center gap-1 text-red-600 dark:text-red-400 font-bold bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 px-2 py-0.5 rounded-md w-fit" title="Telefone ausente ou inválido para envios do WaSeller. Edite o cadastro.">
-                                                <AlertTriangle className="w-3.5 h-3.5"/> {p.telefone || "Sem Telefone"}
+                                                <AlertTriangle className="w-3.5 h-3.5"/> {p.telefone || t('teachersTab.table.notInformed', 'Sem Telefone')}
                                             </span>
                                         )}
                                     </div>
@@ -599,12 +621,12 @@ export function ProfessoresTab() {
                                             <span key={u.vinculoId} className="pl-3 pr-1 py-1.5 border border-slate-200 dark:border-slate-600 rounded-lg text-xs font-bold flex items-center gap-2 bg-slate-50 dark:bg-slate-800/50 text-slate-700 dark:text-slate-300">
                                                 <MapPin className="w-3 h-3 text-red-500"/> {u.nome}
                                                 {u.podeMexer && (
-                                                    <button type="button" onClick={() => removerVinculo(u.vinculoId, u.nome, p.nome)} className="p-1 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-md text-slate-400 hover:text-red-600 transition-colors" title="Remover Desta Unidade">
+                                                    <button type="button" onClick={() => removerVinculo(u.vinculoId, u.nome, p.nome)} className="p-1 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-md text-slate-400 hover:text-red-600 transition-colors" title={t('teachersTab.messages.removeLinkConfirm', 'Remover Desta Unidade')}>
                                                         <X className="w-3 h-3" />
                                                     </button>
                                                 )}
                                             </span>
-                                        )) : <span className="text-slate-400 text-xs italic font-medium">Nenhum vínculo.</span>}
+                                        )) : <span className="text-slate-400 text-xs italic font-medium">{t('teachersTab.table.noLinks', 'Nenhum vínculo.')}</span>}
                                         
                                         {podeEditar && (
                                             <button type="button" onClick={() => { setEmailVerificacao(p.email); setProfessorEncontrado(p); setUnidadeSelecionadaId(""); setModalVerificacaoAberto(true); }} className="p-2 bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors" title="Vincular a outra unidade">
@@ -636,7 +658,7 @@ export function ProfessoresTab() {
                         )
                     })}
                     {professoresProcessados.length === 0 && !loading && (
-                        <tr><td colSpan="5" className="p-12 text-center text-slate-400 font-bold"><User className="w-12 h-12 mx-auto mb-3 opacity-20"/> Nenhum professor encontrado.</td></tr>
+                        <tr><td colSpan="5" className="p-12 text-center text-slate-400 font-bold"><User className="w-12 h-12 mx-auto mb-3 opacity-20"/> {t('teachersTab.emptyState', 'Nenhum professor encontrado.')}</td></tr>
                     )}
                 </tbody>
             </table>
@@ -651,14 +673,14 @@ export function ProfessoresTab() {
                   onClick={() => handleCarregarMais(20)} 
                   className="px-5 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-sm flex items-center gap-2 transition-all"
               >
-                  <ArrowDown className="w-4 h-4"/> Carregar +20
+                  <ArrowDown className="w-4 h-4"/> {t('teachersTab.load10', 'Carregar +20')}
               </button>
               <button 
                   type="button"
                   onClick={() => handleCarregarMais('todos')} 
                   className="px-5 py-2.5 bg-slate-100 dark:bg-slate-700 border border-transparent rounded-xl text-sm font-bold text-slate-700 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-600 shadow-sm flex items-center gap-2 transition-all"
               >
-                  <DownloadCloud className="w-4 h-4"/> Ver Todos ({professoresProcessados.length})
+                  <DownloadCloud className="w-4 h-4"/> {t('teachersTab.loadAll', 'Ver Todos')} ({professoresProcessados.length})
               </button>
           </div>
       )}
@@ -669,8 +691,8 @@ export function ProfessoresTab() {
               <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200 dark:border-slate-700 flex flex-col">
                   <div className="p-6 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 flex justify-between items-center shrink-0">
                       <div>
-                          <h3 className="font-black text-slate-800 dark:text-white text-xl">Novo Vínculo</h3>
-                          <p className="text-xs font-medium text-slate-500 mt-1">Digite o e-mail para verificar a base.</p>
+                          <h3 className="font-black text-slate-800 dark:text-white text-xl">{t('teachersTab.verifyModal.title', 'Novo Vínculo')}</h3>
+                          <p className="text-xs font-medium text-slate-500 mt-1">{t('teachersTab.verifyModal.desc', 'Digite o e-mail para verificar a base.')}</p>
                       </div>
                       <button type="button" onClick={() => setModalVerificacaoAberto(false)} className="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-slate-400 hover:text-red-500"><X className="w-5 h-5"/></button>
                   </div>
@@ -679,12 +701,12 @@ export function ProfessoresTab() {
                       {!professorEncontrado ? (
                           <form onSubmit={verificarEmail} className="space-y-4">
                               <div>
-                                  <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 block pl-1">E-mail do Professor</label>
+                                  <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 block pl-1">{t('teachersTab.verifyModal.emailLabel', 'E-mail do Professor')}</label>
                                   <div className="flex gap-2">
                                       <input 
                                           type="email" 
                                           className="w-full pl-4 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-red-500 rounded-xl text-sm font-semibold outline-none transition-all dark:text-white" 
-                                          placeholder="exemplo@email.com"
+                                          placeholder={t('teachersTab.verifyModal.emailPlaceholder', 'exemplo@email.com')}
                                           value={emailVerificacao}
                                           onChange={e => setEmailVerificacao(e.target.value)}
                                           autoFocus
@@ -701,21 +723,21 @@ export function ProfessoresTab() {
                               <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4 rounded-xl flex items-start gap-4">
                                   <CheckCircle2 className="w-8 h-8 text-green-600 dark:text-green-400 flex-shrink-0" />
                                   <div>
-                                      <h4 className="font-black text-green-800 dark:text-green-300 text-lg">Localizado!</h4>
+                                      <h4 className="font-black text-green-800 dark:text-green-300 text-lg">{t('teachersTab.verifyModal.foundTitle', 'Localizado!')}</h4>
                                       <p className="text-sm font-bold text-green-700 dark:text-green-400 mt-1">{professorEncontrado.nome}</p>
                                       <p className="text-xs text-green-600 dark:text-green-500">{professorEncontrado.email}</p>
                                   </div>
                               </div>
                               
                               <div>
-                                  <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 block pl-1">Vincular a qual unidade?</label>
+                                  <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 block pl-1">{t('teachersTab.verifyModal.linkToUnit', 'Vincular a qual unidade?')}</label>
                                   <div className="relative">
                                       <select 
                                           className="w-full pl-4 pr-10 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-red-500 rounded-xl text-sm font-bold outline-none appearance-none transition-all dark:text-white"
                                           value={unidadeSelecionadaId}
                                           onChange={e => setUnidadeSelecionadaId(e.target.value)}
                                       >
-                                          {minhasUnidades.length > 1 && <option value="">Selecione...</option>}
+                                          {minhasUnidades.length > 1 && <option value="">{t('teachersTab.verifyModal.select', 'Selecione...')}</option>}
                                           {minhasUnidades.map(u => <option key={u.id} value={u.id}>{u.nome}</option>)}
                                       </select>
                                       <ChevronDown className="absolute right-4 top-3.5 w-4 h-4 text-slate-400 pointer-events-none"/>
@@ -730,9 +752,18 @@ export function ProfessoresTab() {
                                   disabled={salvando || !unidadeSelecionadaId}
                                   className="w-full bg-green-600 text-white py-3.5 rounded-xl font-bold hover:bg-green-700 shadow-lg shadow-green-500/20 transition-transform active:scale-95 disabled:opacity-50 disabled:transform-none flex justify-center items-center gap-2"
                               >
-                                  {salvando ? <Loader2 className="w-5 h-5 animate-spin"/> : <> <LinkIcon className="w-5 h-5"/> Confirmar Vínculo </>}
+                                  {salvando ? <Loader2 className="w-5 h-5 animate-spin"/> : <> <LinkIcon className="w-5 h-5"/> {t('teachersTab.verifyModal.confirmLink', 'Confirmar Vínculo')} </>}
                               </button>
                           </form>
+                      )}
+                  </div>
+
+                  <div className="p-4 bg-slate-50 dark:bg-slate-800 flex justify-between items-center border-t border-slate-100 dark:border-slate-700">
+                      <button onClick={() => setModalVerificacaoAberto(false)} className="text-slate-500 dark:text-slate-400 font-bold text-[10px] uppercase tracking-wider hover:text-slate-800 dark:hover:text-slate-200">{t('teachersTab.verifyModal.cancel', 'Cancelar')}</button>
+                      {!professorEncontrado && emailVerificacao && !buscandoEmail && (
+                          <button onClick={() => abrirCadastroCompleto(emailVerificacao)} className="text-blue-600 dark:text-blue-400 font-black text-[10px] uppercase tracking-wider hover:text-blue-800 dark:hover:text-blue-300 flex items-center gap-1">
+                              {t('teachersTab.verifyModal.registerNew', 'Cadastrar Novo')} <ArrowRight className="w-3 h-3"/>
+                          </button>
                       )}
                   </div>
               </div>
@@ -747,9 +778,9 @@ export function ProfessoresTab() {
                 <div>
                     <h3 className="font-black text-xl text-slate-800 dark:text-white flex items-center gap-2">
                         <Edit2 className="w-5 h-5 text-red-600"/>
-                        {profEditando ? "Editar Professor" : "Novo Cadastro"}
+                        {profEditando ? t('teachersTab.formModal.editTitle', 'Editar Professor') : t('teachersTab.formModal.newTitle', 'Novo Cadastro')}
                     </h3>
-                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">Preencha os dados e clique em salvar.</p>
+                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">{t('teachersTab.formModal.desc', 'Preencha os dados e clique em salvar.')}</p>
                 </div>
                 <button type="button" onClick={() => setModalFormAberto(false)} className="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-slate-400 hover:text-red-500">
                     <X className="w-5 h-5"/>
@@ -761,7 +792,7 @@ export function ProfessoresTab() {
                 {sucesso && <div className="p-4 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-300 text-sm rounded-xl border border-green-100 dark:border-green-800 flex items-center gap-2"><CheckCircle2 className="w-5 h-5 flex-shrink-0"/> {sucesso}</div>}
                 
                 <div>
-                    <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 pl-1">E-mail (Login Fixo)</label>
+                    <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 pl-1">{t('teachersTab.formModal.loginEmail', 'E-mail (Login Fixo)')}</label>
                     <div className="relative">
                         <Mail className="absolute left-4 top-3.5 w-4 h-4 text-slate-400"/>
                         <input className="w-full pl-11 pr-4 py-3 bg-slate-100 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold outline-none text-slate-500 cursor-not-allowed" value={email} disabled={true} />
@@ -769,33 +800,49 @@ export function ProfessoresTab() {
                 </div>
 
                 <div>
-                    <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 pl-1">Nome Completo</label>
+                    <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 pl-1">{t('teachersTab.formModal.fullName', 'Nome Completo')}</label>
                     <div className="relative">
                         <User className="absolute left-4 top-3.5 w-4 h-4 text-slate-400"/>
-                        <input className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-red-500 rounded-xl text-sm font-bold outline-none transition-all dark:text-white" value={nome} onChange={e => setNome(e.target.value)} autoFocus placeholder="Nome do Professor" />
+                        <input className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-red-500 rounded-xl text-sm font-bold outline-none transition-all dark:text-white" value={nome} onChange={e => setNome(e.target.value)} autoFocus placeholder={t('teachersTab.formModal.namePlaceholder', 'Nome do Professor')} />
                     </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 pl-1">WhatsApp <span className="text-red-500">*</span></label>
-                        <div className="relative">
-                            <Phone className="absolute left-4 top-3.5 w-4 h-4 text-slate-400"/>
-                            <input 
-                                className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-red-500 rounded-xl text-sm font-bold outline-none transition-all dark:text-white" 
-                                value={telefone} 
-                                onChange={e => setTelefone(mascaraTelefone(e.target.value))} 
-                                placeholder="(00) 00000-0000" 
-                                maxLength={15}
-                            />
+                {/* 🟢 MODIFICADO PARA COMPORTAR O SELETOR DE PAÍS E O DDI */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex gap-2">
+                        <div className="w-1/3">
+                            <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 pl-1">{t('teachersTab.formModal.country', 'País')}</label>
+                            <select 
+                                value={pais} 
+                                onChange={e => setPais(e.target.value)}
+                                className="w-full pl-3 pr-8 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-red-500 rounded-xl text-sm font-bold outline-none transition-all dark:text-white appearance-none"
+                            >
+                                {PAISES.map(p => <option key={p.id} value={p.id}>{p.id}</option>)}
+                            </select>
+                        </div>
+                        <div className="w-2/3">
+                            <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 pl-1 flex items-center justify-between">
+                                <span>{t('teachersTab.formModal.whatsapp', 'WhatsApp')} <span className="text-red-500">*</span></span>
+                                <span className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-1.5 rounded">{DDI_MAP[pais]}</span>
+                            </label>
+                            <div className="relative">
+                                <Phone className="absolute left-4 top-3.5 w-4 h-4 text-slate-400"/>
+                                <input 
+                                    className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-red-500 rounded-xl text-sm font-bold outline-none transition-all dark:text-white" 
+                                    value={telefone} 
+                                    onChange={e => setTelefone(pais === 'BR' ? mascaraTelefone(e.target.value) : e.target.value.replace(/\D/g, ''))} 
+                                    placeholder={pais === 'BR' ? "(00) 00000-0000" : t('teachersTab.formModal.phonePlaceholder', 'Apenas números...')} 
+                                    maxLength={15}
+                                />
+                            </div>
                         </div>
                     </div>
                     <div>
-                        <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 pl-1">Status</label>
+                        <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 pl-1">{t('teachersTab.formModal.status', 'Status')}</label>
                         <div className="relative">
                             <select className="w-full pl-4 pr-10 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-red-500 rounded-xl text-sm font-bold outline-none appearance-none transition-all dark:text-white" value={status} onChange={e => setStatus(e.target.value)}>
-                                <option value="ativo">✅ ATIVO</option>
-                                <option value="inativo">🚫 INATIVO</option>
+                                <option value="ativo">✅ {t('teachersTab.formModal.statusActive', 'ATIVO')}</option>
+                                <option value="inativo">🚫 {t('teachersTab.formModal.statusInactive', 'INATIVO')}</option>
                             </select>
                             <ChevronDown className="absolute right-4 top-3.5 w-4 h-4 text-slate-400 pointer-events-none"/>
                         </div>
@@ -805,18 +852,18 @@ export function ProfessoresTab() {
                 {!profEditando && (
                     <div className="space-y-4 pt-2">
                         <div className="p-4 bg-blue-50 dark:bg-blue-900/10 text-blue-700 dark:text-blue-400 text-xs font-medium rounded-xl border border-blue-200 dark:border-blue-800">
-                            <strong>Acesso Inicial:</strong> A senha padrão para este professor será <code className="bg-white dark:bg-slate-800 px-1.5 py-0.5 rounded font-bold ml-1 text-slate-800 dark:text-white shadow-sm">{senhaPadrao}</code>.
+                            <strong>{t('teachersTab.formModal.defaultPassNote', 'Senha padrão será')}</strong> <code className="bg-white dark:bg-slate-800 px-1.5 py-0.5 rounded font-bold ml-1 text-slate-800 dark:text-white shadow-sm">{senhaPadrao}</code>.
                         </div>
                         {minhasUnidades.length > 0 && (
                             <div>
-                                <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 pl-1">Vincular Automaticamente a:</label>
+                                <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 pl-1">{t('teachersTab.formModal.autoLink', 'Vincular Automaticamente a:')}</label>
                                 <div className="relative">
                                     <select 
                                         className="w-full pl-4 pr-10 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-red-500 rounded-xl text-sm font-bold outline-none appearance-none transition-all dark:text-white"
                                         value={unidadeSelecionadaId} 
                                         onChange={e => setUnidadeSelecionadaId(e.target.value)}
                                     >
-                                        {minhasUnidades.length > 1 && <option value="">Selecione a unidade...</option>}
+                                        {minhasUnidades.length > 1 && <option value="">{t('teachersTab.formModal.select', 'Selecione a unidade...')}</option>}
                                         {minhasUnidades.map(u => <option key={u.id} value={u.id}>{u.nome}</option>)}
                                     </select>
                                     <ChevronDown className="absolute right-4 top-3.5 w-4 h-4 text-slate-400 pointer-events-none"/>
@@ -827,9 +874,11 @@ export function ProfessoresTab() {
                 )}
 
                 <div className="flex justify-end gap-3 pt-6 border-t border-slate-100 dark:border-slate-700 shrink-0 mt-6">
-                    <button type="button" onClick={() => setModalFormAberto(false)} className="px-6 py-3 rounded-xl font-bold text-xs uppercase text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">Cancelar</button>
+                    <button type="button" onClick={() => setModalFormAberto(false)} className="px-6 py-3 rounded-xl font-bold text-xs uppercase text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                        {t('teachersTab.formModal.cancel', 'Cancelar')}
+                    </button>
                     <button type="submit" disabled={salvando} className="px-8 py-3 bg-red-600 text-white rounded-xl font-bold text-xs uppercase shadow-lg shadow-red-500/30 hover:bg-red-700 hover:-translate-y-0.5 transition-all flex items-center gap-2 disabled:opacity-50 disabled:transform-none">
-                        {salvando ? <Loader2 className="w-4 h-4 animate-spin"/> : (profEditando ? "Salvar Alterações" : <><CheckCircle2 className="w-4 h-4"/> Concluir Cadastro</>)}
+                        {salvando ? <Loader2 className="w-4 h-4 animate-spin"/> : (profEditando ? t('teachersTab.formModal.saveEdit', 'Salvar Alterações') : <><CheckCircle2 className="w-4 h-4"/> {t('teachersTab.formModal.saveNew', 'Concluir Cadastro')}</>)}
                     </button>
                 </div>
             </form>
