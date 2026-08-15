@@ -3,8 +3,9 @@ import { db } from '../../services/firebase';
 import { collection, getDocs, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 import { 
   Search, Clock, ChevronRight, Loader2, 
-  Printer, ArrowLeft, Dumbbell, Sun, Moon, ChevronDown, MapPin, Navigation, LocateFixed, Map, List
+  Printer, ArrowLeft, Dumbbell, Sun, Moon, ChevronDown, MapPin, Navigation, LocateFixed, Map, List, Check
 } from 'lucide-react';
+import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
 
 // 🟢 IMPORTS DO MOTOR DE MAPAS (LEAFLET)
 import { MapContainer, TileLayer, Marker, Popup, Circle } from 'react-leaflet';
@@ -47,6 +48,13 @@ const blueIcon = new L.Icon({
   shadowSize: [41, 41]
 });
 
+// 🌍 DADOS DAS BANDEIRAS E IDIOMAS
+const LANGUAGES = [
+  { code: 'pt-BR', name: 'Português', short: 'PT', flag: 'https://flagcdn.com/w40/br.png' },
+  { code: 'en-US', name: 'English', short: 'EN', flag: 'https://flagcdn.com/w40/us.png' },
+  { code: 'es-AR', name: 'Español', short: 'ES', flag: 'https://flagcdn.com/w40/ar.png' }
+];
+
 // --- CONFIGURAÇÃO DAS IMAGENS ---
 const LOGOS = {
   'pratique': '/logos/pratique.png'
@@ -56,7 +64,6 @@ const getTodayStr = () => new Date().toLocaleDateString('en-CA');
 
 // 🟢 SUPER FILTRO CAÇA-FANTASMAS (Lógica de Abate de Aulas Antigas)
 const isAulaAtiva = (a) => {
-    // 1. Blindagem de Status e Campos Booleanos
     if (
         a.ativo === false || 
         a.encerrada === true || a.encerrado === true || 
@@ -73,8 +80,7 @@ const isAulaAtiva = (a) => {
         }
     }
 
-    // 2. Blindagem de Datas (String e Timestamps do Firebase)
-    const todayStr = getTodayStr(); // 'YYYY-MM-DD'
+    const todayStr = getTodayStr(); 
     let fim = a.dataFim;
     let inicio = a.dataInicio;
 
@@ -93,11 +99,11 @@ const isAulaAtiva = (a) => {
     if (fim && fim < todayStr) return false;
     if (inicio && inicio > todayStr) return false;
 
-    return true; // Passou em todos os testes, está ATIVA!
+    return true; 
 };
 
-const formatProfessorName = (name) => {
-  if (!name) return "Instrutor";
+const formatProfessorName = (name, defaultName) => {
+  if (!name) return defaultName;
   const parts = name.trim().split(' ');
   if (parts.length === 1) return parts[0];
   return `${parts[0]} ${parts[parts.length - 1]}`;
@@ -126,11 +132,6 @@ const getMapsLink = (unidade) => {
     return `http://googleusercontent.com/maps.google.com/?q=${encodeURIComponent(queryBackup)}`;
 };
 
-const displayAddress = (unidade) => {
-    if (unidade.enderecoCompleto) return unidade.enderecoCompleto;
-    return "Endereço não informado. Toque para ver no mapa.";
-};
-
 const extractCoords = (unidade) => {
     const url = unidade.linkGoogleMaps || unidade.localizacao || "";
     const match = url.match(/(?:q=|query=|@)([-.\d]+),([-.\d]+)/);
@@ -150,6 +151,8 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
 };
 
 export default function PublicSchedule() {
+  const { t, i18n } = useTranslation(); // 🟢 MOTOR ACIONADO
+
   const [unidades, setUnidades] = useState([]);
   const [modalidadesMap, setModalidadesMap] = useState({});
   const [professoresMap, setProfessoresMap] = useState({});
@@ -173,6 +176,16 @@ export default function PublicSchedule() {
 
   const [printDensity, setPrintDensity] = useState('auto');
   const [showPrintMenu, setShowPrintMenu] = useState(false);
+
+  // 🟢 ESTADO DO MENU DE IDIOMAS
+  const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
+  const currentLang = LANGUAGES.find(lang => lang.code === (i18n.language || 'pt-BR')) || LANGUAGES[0];
+
+  const changeLanguage = (lng) => {
+      i18n.changeLanguage(lng);
+      localStorage.setItem("idioma_pratique", lng);
+      setIsLangMenuOpen(false);
+  };
 
   useEffect(() => {
     const init = async () => {
@@ -208,7 +221,7 @@ export default function PublicSchedule() {
 
   const ativarRadarGPS = () => {
       if (!navigator.geolocation) {
-          alert("O seu navegador ou dispositivo não suporta GPS.");
+          alert(t('publicSchedule.alerts.noGPS', "O seu navegador ou dispositivo não suporta GPS."));
           return;
       }
       setIsLocating(true);
@@ -219,7 +232,7 @@ export default function PublicSchedule() {
           setViewMode('map'); 
           setIsLocating(false);
       }, (error) => {
-          alert("Não foi possível aceder ao seu GPS. Verifique as permissões de localização.");
+          alert(t('publicSchedule.alerts.gpsDenied', "Não foi possível aceder ao seu GPS. Verifique as permissões de localização."));
           setIsLocating(false);
       });
   };
@@ -279,7 +292,7 @@ export default function PublicSchedule() {
           
           snap.docs.forEach(doc => {
               const aula = doc.data();
-              if (!isAulaAtiva(aula)) return; // 🟢 EXORCISMO NA LUPA DE BUSCA
+              if (!isAulaAtiva(aula)) return; 
 
               const unit = unidades.find(u => u.id === aula.unidadeId);
               if (unit && (!estadoFilter || unit.estado === estadoFilter)) {
@@ -302,9 +315,10 @@ export default function PublicSchedule() {
       const q = query(collection(db, 'aulas'), where('unidadeId', '==', unidadeSelecionada.id));
       
       const unsubscribe = onSnapshot(q, (snap) => {
+          const defaultTeacherName = t('publicSchedule.defaultTeacher', 'Instrutor');
           const data = snap.docs.map(d => {
               const a = d.data();
-              if (!isAulaAtiva(a)) return null; // 🟢 EXORCISMO NA GRADE PRINCIPAL
+              if (!isAulaAtiva(a)) return null; 
 
               const mod = modalidadesMap[a.modalidadeId];
               if(!mod) return null;
@@ -313,7 +327,7 @@ export default function PublicSchedule() {
                   ...a,
                   modalidadeNome: mod.nome,
                   modalidadeCor: mod.cor || '#333',
-                  professorNome: formatProfessorName(professoresMap[a.professorId])
+                  professorNome: formatProfessorName(professoresMap[a.professorId], defaultTeacherName)
               };
           }).filter(Boolean); 
           
@@ -325,7 +339,7 @@ export default function PublicSchedule() {
       });
 
       return () => unsubscribe();
-  }, [unidadeSelecionada, modalidadesMap, professoresMap]);
+  }, [unidadeSelecionada, modalidadesMap, professoresMap, t]);
 
   const gradeOrganizada = useMemo(() => {
       if (!gradeUnidade.length) return { dias: [], horarios: [] };
@@ -358,20 +372,55 @@ export default function PublicSchedule() {
   const cardGlass = isDarkMode ? "bg-[#1a1a1a]/80 backdrop-blur-xl border-white/10 shadow-2xl shadow-black/50" : "bg-white/80 backdrop-blur-xl border-white/40 shadow-2xl shadow-gray-200/50";
   const inputGlass = isDarkMode ? "bg-black/30 border-white/10 text-white placeholder:text-white/30 focus:border-red-500/50 focus:bg-black/50" : "bg-gray-50 border-gray-200 text-gray-800 placeholder:text-gray-400 focus:border-red-500/50 focus:bg-white";
 
+  const displayAddressLocal = (unidade) => {
+      if (unidade.enderecoCompleto) return unidade.enderecoCompleto;
+      return t('publicSchedule.noAddress', "Endereço não informado. Toque para ver no mapa.");
+  };
+
   if (!unidadeSelecionada) {
       return (
-        <div className={`min-h-screen ${bgGradient} transition-colors duration-500 p-4 flex flex-col items-center justify-start pt-8 relative overflow-hidden`}>
+        <div className={`min-h-screen ${bgGradient} transition-colors duration-500 p-4 flex flex-col items-center justify-start pt-8 relative overflow-hidden`} onClick={() => { setIsLangMenuOpen(false); }}>
             
             <div className={`absolute top-0 left-0 w-full h-96 ${isDarkMode ? 'opacity-20' : 'opacity-10'} pointer-events-none`}>
                 <div className="absolute top-[-50%] left-[-10%] w-[50%] h-[100%] rounded-full bg-red-600 blur-[120px]"></div>
                 <div className="absolute top-[-50%] right-[-10%] w-[50%] h-[100%] rounded-full bg-blue-600 blur-[120px]"></div>
             </div>
 
-            <button onClick={() => setIsDarkMode(!isDarkMode)} className={`absolute top-6 right-6 p-3 rounded-full border z-20 transition-all hover:scale-110 ${isDarkMode ? 'bg-black/40 border-white/10 text-yellow-400 hover:bg-black/60' : 'bg-white/80 border-gray-200 text-gray-600 hover:bg-white'}`}>
-                {isDarkMode ? <Sun className="w-5 h-5"/> : <Moon className="w-5 h-5"/>}
-            </button>
+            {/* 🟢 SELETOR DE IDIOMAS E TEMA (TOPO DIREITO) */}
+            <div className="absolute top-6 right-6 flex items-center gap-3 z-50">
+                <div className="relative">
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); setIsLangMenuOpen(!isLangMenuOpen); }}
+                        className={`flex items-center gap-2 p-2.5 md:px-3 md:py-2.5 rounded-full border transition-all hover:scale-105 ${isDarkMode ? 'bg-black/40 border-white/10 text-white hover:bg-black/60' : 'bg-white/80 border-gray-200 text-gray-700 hover:bg-white'}`}
+                        title="Mudar Idioma"
+                    >
+                        <img src={currentLang.flag} alt="Lang" className="w-5 h-auto rounded-[2px] shadow-sm" />
+                        <ChevronDown className="w-3 h-3 opacity-60 hidden md:block" />
+                    </button>
+                    {isLangMenuOpen && (
+                        <div className={`absolute right-0 mt-2 w-48 rounded-xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 border ${isDarkMode ? 'bg-[#1a1a1a] border-white/10' : 'bg-white border-gray-200'}`}>
+                            {LANGUAGES.map(lang => (
+                                <button
+                                    key={lang.code}
+                                    onClick={(e) => { e.stopPropagation(); changeLanguage(lang.code); }}
+                                    className={`w-full flex items-center justify-between px-4 py-3 text-sm text-left transition-colors ${i18n.language === lang.code ? (isDarkMode ? 'bg-red-500/20 text-red-400 font-bold' : 'bg-red-50 text-red-600 font-bold') : (isDarkMode ? 'text-gray-300 hover:bg-white/5' : 'text-gray-600 hover:bg-gray-50')}`}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <img src={lang.flag} alt={lang.name} className="w-5 h-auto rounded-sm shadow-sm" />
+                                        <span>{lang.name}</span>
+                                    </div>
+                                    {i18n.language === lang.code && <Check className="w-4 h-4" />}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                </div>
+                <button onClick={() => setIsDarkMode(!isDarkMode)} className={`p-2.5 md:p-3 rounded-full border transition-all hover:scale-110 ${isDarkMode ? 'bg-black/40 border-white/10 text-yellow-400 hover:bg-black/60' : 'bg-white/80 border-gray-200 text-gray-600 hover:bg-white'}`}>
+                    {isDarkMode ? <Sun className="w-5 h-5"/> : <Moon className="w-5 h-5"/>}
+                </button>
+            </div>
             
-            <div className={`w-full max-w-4xl relative z-10 rounded-3xl p-6 md:p-10 border ${cardGlass} transition-all duration-500 animate-in fade-in slide-in-from-bottom-8`}>
+            <div className={`w-full max-w-4xl relative z-10 rounded-3xl p-6 md:p-10 border ${cardGlass} transition-all duration-500 animate-in fade-in slide-in-from-bottom-8 mt-12 md:mt-4`}>
                 
                 <div className="flex flex-col items-center mb-8">
                     <div className="relative mb-2 group">
@@ -386,7 +435,7 @@ export default function PublicSchedule() {
                         </h2>
                         <div className="flex items-center justify-center gap-2 opacity-60">
                             <div className={`h-[1px] w-8 ${isDarkMode ? 'bg-white' : 'bg-black'}`}></div>
-                            <p className={`text-[10px] font-bold uppercase tracking-[0.3em] ${isDarkMode ? 'text-white' : 'text-black'}`}>Quadro de Horários</p>
+                            <p className={`text-[10px] font-bold uppercase tracking-[0.3em] ${isDarkMode ? 'text-white' : 'text-black'}`}>{t('publicSchedule.title', 'Quadro de Horários')}</p>
                             <div className={`h-[1px] w-8 ${isDarkMode ? 'bg-white' : 'bg-black'}`}></div>
                         </div>
                     </div>
@@ -397,10 +446,10 @@ export default function PublicSchedule() {
                     <div className="space-y-3">
                         <div className="flex items-center justify-between px-1">
                             <span className={`text-[10px] font-bold uppercase tracking-widest ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                <MapPin className="w-3 h-3 inline mr-1 mb-0.5"/> Localização
+                                <MapPin className="w-3 h-3 inline mr-1 mb-0.5"/> {t('publicSchedule.location', 'Localização')}
                             </span>
                             {filtroEstado && (
-                                <button onClick={() => setFiltroEstado("")} className="text-[10px] font-bold text-red-500 hover:underline">Limpar Estado</button>
+                                <button onClick={() => setFiltroEstado("")} className="text-[10px] font-bold text-red-500 hover:underline">{t('publicSchedule.clearState', 'Limpar Estado')}</button>
                             )}
                         </div>
                         
@@ -412,7 +461,7 @@ export default function PublicSchedule() {
                                     : 'bg-gradient-to-r from-blue-600 to-blue-500 text-white border-transparent shadow-blue-500/20'}`}
                             >
                                 {isLocating ? <Loader2 className="w-4 h-4 animate-spin"/> : <LocateFixed className="w-4 h-4"/>}
-                                {userCoords ? "GPS Ativado (Limpar)" : "Perto de Mim"}
+                                {userCoords ? t('publicSchedule.gpsActive', "GPS Ativado (Limpar)") : t('publicSchedule.nearMe', "Perto de Mim")}
                             </button>
 
                             <button 
@@ -421,7 +470,7 @@ export default function PublicSchedule() {
                                     ? 'bg-gradient-to-r from-red-600 to-red-500 text-white border-transparent shadow-lg shadow-red-500/20 translate-y-[-2px]' 
                                     : `${isDarkMode ? 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:text-white' : 'bg-gray-100 border-transparent text-gray-500 hover:bg-gray-200 hover:text-gray-800'}`}`}
                             >
-                                Brasil Todo
+                                {t('publicSchedule.allRegions', 'Todas as Regiões')}
                             </button>
                             {estadosDisponiveis.map(uf => (
                                 <button 
@@ -442,7 +491,7 @@ export default function PublicSchedule() {
                         <div className="relative">
                             <input 
                                 type="text" 
-                                placeholder={filtroEstado ? `Buscar em ${filtroEstado}...` : "Buscar unidade, endereço ou modalidade..."} 
+                                placeholder={filtroEstado ? t('publicSchedule.searchIn', { state: filtroEstado }) : t('publicSchedule.searchPlaceholder', "Buscar unidade, endereço ou modalidade...")} 
                                 className={`w-full h-14 pl-12 pr-4 rounded-2xl border outline-none font-semibold text-sm shadow-inner transition-all ${inputGlass}`} 
                                 value={busca} 
                                 onChange={e => { setBusca(e.target.value); limparGPS(); }} 
@@ -459,15 +508,15 @@ export default function PublicSchedule() {
                          <div className="mb-6 flex flex-col sm:flex-row items-center justify-between gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-2xl mx-auto">
                              <h3 className="text-xs font-bold text-emerald-500 uppercase tracking-wider flex items-center gap-2 px-1">
                                  <span className="p-1 bg-emerald-500/10 rounded"><LocateFixed className="w-3 h-3"/></span>
-                                 No seu Radar (Raio de 15km)
+                                 {t('publicSchedule.radar', 'No seu Radar (Raio de 15km)')}
                              </h3>
                              
                              <div className="flex p-1 bg-black/10 dark:bg-white/5 rounded-xl border border-gray-200 dark:border-white/10">
                                  <button onClick={() => setViewMode('list')} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${viewMode === 'list' ? 'bg-white dark:bg-slate-700 shadow text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}>
-                                     <List className="w-3 h-3"/> Lista
+                                     <List className="w-3 h-3"/> {t('publicSchedule.list', 'Lista')}
                                  </button>
                                  <button onClick={() => setViewMode('map')} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${viewMode === 'map' ? 'bg-white dark:bg-slate-700 shadow text-emerald-600 dark:text-emerald-400' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}>
-                                     <Map className="w-3 h-3"/> Mapa
+                                     <Map className="w-3 h-3"/> {t('publicSchedule.map', 'Mapa')}
                                  </button>
                              </div>
                          </div>
@@ -483,7 +532,7 @@ export default function PublicSchedule() {
                                 
                                 <Marker position={[userCoords.lat, userCoords.lng]} icon={userIcon}>
                                     <Popup className="custom-popup">
-                                        <div className="text-center font-bold text-sm text-slate-800">📍 Você está aqui!</div>
+                                        <div className="text-center font-bold text-sm text-slate-800">{t('publicSchedule.youAreHere', '📍 Você está aqui!')}</div>
                                     </Popup>
                                 </Marker>
                                 <Circle center={[userCoords.lat, userCoords.lng]} pathOptions={{ fillColor: '#10b981', color: '#10b981' }} radius={1500} />
@@ -503,8 +552,8 @@ export default function PublicSchedule() {
                                                 <div className="flex flex-col gap-2 min-w-[200px]">
                                                     <span className="font-black text-sm uppercase text-slate-800">{u.nome}</span>
                                                     <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-1 rounded w-fit uppercase">🚗 {u.distance.toFixed(1)} km</span>
-                                                    <span className="text-[10px] text-slate-500 leading-tight">{displayAddress(u)}</span>
-                                                    <button onClick={() => setUnidadeSelecionada(u)} className="mt-2 w-full py-2 bg-blue-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-blue-700">Ver Horários</button>
+                                                    <span className="text-[10px] text-slate-500 leading-tight">{displayAddressLocal(u)}</span>
+                                                    <button onClick={() => setUnidadeSelecionada(u)} className="mt-2 w-full py-2 bg-blue-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-blue-700">{t('publicSchedule.viewSchedules', 'Ver Horários')}</button>
                                                 </div>
                                             </Popup>
                                         </Marker>
@@ -521,7 +570,7 @@ export default function PublicSchedule() {
                                 <div className="mb-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                                     <h3 className="text-xs font-bold text-blue-500 uppercase tracking-wider flex items-center gap-2 mb-3 px-1">
                                         <span className="p-1 bg-blue-500/10 rounded"><Dumbbell className="w-3 h-3"/></span> 
-                                        Aulas Encontradas
+                                        {t('publicSchedule.classesFound', 'Aulas Encontradas')}
                                     </h3>
                                     <div className="grid gap-3">
                                         {resultadosModalidade.map((item) => (
@@ -533,12 +582,12 @@ export default function PublicSchedule() {
                                                         
                                                         <a href={getMapsLink(item.unidade)} target="_blank" rel="noopener noreferrer" className={`mt-1 flex items-start gap-1 text-[10px] font-medium leading-snug group/map w-fit ${isDarkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'}`}>
                                                             <Navigation className="w-3 h-3 shrink-0 mt-0.5 group-hover/map:scale-110 transition-transform"/>
-                                                            <span className="group-hover/map:underline">{displayAddress(item.unidade)}</span>
+                                                            <span className="group-hover/map:underline">{displayAddressLocal(item.unidade)}</span>
                                                         </a>
                                                     </div>
                                                     
                                                     <button onClick={() => setUnidadeSelecionada(item.unidade)} className="shrink-0 text-[10px] font-bold text-white bg-blue-600 hover:bg-blue-500 px-3 py-2 rounded-lg transition-colors flex items-center shadow-md active:scale-95">
-                                                        VER GRADE <ChevronRight className="w-3 h-3 ml-1"/>
+                                                        {t('publicSchedule.viewGrid', 'VER GRADE')} <ChevronRight className="w-3 h-3 ml-1"/>
                                                     </button>
                                                 </div>
 
@@ -547,12 +596,12 @@ export default function PublicSchedule() {
                                                 <div className="flex flex-wrap gap-1.5">
                                                     {item.aulas.slice(0, 4).map((aula, idx) => (
                                                         <span key={idx} className={`text-[10px] font-bold px-2 py-1 rounded-md border ${isDarkMode ? 'bg-black/30 border-white/10 text-gray-300' : 'bg-gray-50 border-gray-200 text-gray-600'}`}>
-                                                            {aula.dias[0]?.substring(0,3)} {aula.hora}
+                                                            {t('publicSchedule.days.' + aula.dias[0], aula.dias[0])?.substring(0,3)} {aula.hora}
                                                         </span>
                                                     ))}
                                                     {item.aulas.length > 4 && (
                                                         <span className={`text-[10px] font-bold px-2 py-1 rounded-md border italic ${isDarkMode ? 'bg-black/30 border-transparent text-gray-500' : 'bg-gray-50 border-transparent text-gray-400'}`}>
-                                                            +{item.aulas.length - 4} horários
+                                                            +{item.aulas.length - 4} {t('publicSchedule.schedules', 'horários')}
                                                         </span>
                                                     )}
                                                 </div>
@@ -567,7 +616,7 @@ export default function PublicSchedule() {
                                     {!userCoords && (
                                         <h3 className="text-xs font-bold text-red-500 uppercase tracking-wider flex items-center gap-2 mb-3 px-1">
                                             <span className="p-1 bg-red-500/10 rounded"><MapPin className="w-3 h-3"/></span>
-                                            Unidades Disponíveis
+                                            {t('publicSchedule.unitsAvailable', 'Unidades Disponíveis')}
                                         </h3>
                                     )}
                                     <div className="grid gap-3">
@@ -588,7 +637,7 @@ export default function PublicSchedule() {
 
                                                         <a href={getMapsLink(u)} target="_blank" rel="noopener noreferrer" className={`mt-1.5 flex items-start gap-1.5 text-[10px] font-medium leading-snug group/map w-fit ${isDarkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'}`}>
                                                             <Navigation className="w-3.5 h-3.5 shrink-0 mt-0.5 group-hover/map:scale-110 transition-transform"/>
-                                                            <span className="group-hover/map:underline">{displayAddress(u)}</span>
+                                                            <span className="group-hover/map:underline">{displayAddressLocal(u)}</span>
                                                         </a>
                                                     </div>
                                                     
@@ -605,8 +654,8 @@ export default function PublicSchedule() {
                             {((termoDebounce.length > 0 || filtroEstado || userCoords) && !resultadosUnidade.length && !resultadosModalidade) && (
                                 <div className="text-center py-12 opacity-50 animate-in fade-in zoom-in-95">
                                     <div className="mb-3 inline-flex p-4 rounded-full bg-white/5"><Search className="w-6 h-6"/></div>
-                                    <p className="text-sm font-medium">Nenhuma unidade ou aula encontrada.</p>
-                                    <p className="text-xs mt-1">Tente expandir o raio de busca ou mudar o termo.</p>
+                                    <p className="text-sm font-medium">{t('publicSchedule.noUnitsFound', 'Nenhuma unidade ou aula encontrada.')}</p>
+                                    <p className="text-xs mt-1">{t('publicSchedule.tryChangeFilter', 'Tente expandir o raio de busca ou mudar o termo.')}</p>
                                 </div>
                             )}
                         </div>
@@ -615,7 +664,7 @@ export default function PublicSchedule() {
             </div>
             
             <div className={`absolute bottom-4 text-[10px] font-medium tracking-widest uppercase opacity-30 ${isDarkMode ? 'text-white' : 'text-black'}`}>
-                Desenvolvido por Pratique Fitness
+                {t('publicSchedule.developedBy', 'Desenvolvido por Pratique Fitness')}
             </div>
         </div>
       );
@@ -671,14 +720,14 @@ export default function PublicSchedule() {
             <div className="max-w-[1920px] mx-auto px-4 md:px-6 py-4 flex items-center justify-between">
                 <div className="flex items-center gap-4 md:gap-6 flex-1 min-w-0 pr-4">
                     <button onClick={() => setUnidadeSelecionada(null)} className="shrink-0 flex items-center gap-2 text-gray-500 hover:text-blue-500 transition-colors">
-                        <ArrowLeft className="w-6 h-6"/> <span className="text-sm font-bold uppercase hidden md:inline">Voltar</span>
+                        <ArrowLeft className="w-6 h-6"/> <span className="text-sm font-bold uppercase hidden md:inline">{t('publicSchedule.back', 'Voltar')}</span>
                     </button>
                     <div className="flex flex-col min-w-0">
                         <h2 className="text-xl md:text-3xl font-black italic tracking-tighter uppercase text-white truncate">{unidadeSelecionada.nome}</h2>
                         <div className="flex flex-col mt-0.5">
                             <a href={getMapsLink(unidadeSelecionada)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-[10px] md:text-[11px] font-bold uppercase tracking-widest text-blue-400 hover:text-blue-300 transition-colors group mt-1 w-fit">
                                 <MapPin className="w-3.5 h-3.5 shrink-0 group-hover:scale-110 transition-transform"/>
-                                <span className="truncate max-w-[250px] md:max-w-md group-hover:underline">{displayAddress(unidadeSelecionada)}</span>
+                                <span className="truncate max-w-[250px] md:max-w-md group-hover:underline">{displayAddressLocal(unidadeSelecionada)}</span>
                             </a>
                         </div>
                     </div>
@@ -694,18 +743,18 @@ export default function PublicSchedule() {
                         
                         {showPrintMenu && (
                             <div className="absolute right-0 top-14 bg-white rounded-xl shadow-2xl border border-gray-200 w-64 overflow-hidden z-50 animate-in fade-in zoom-in-95">
-                                <div className="p-3 border-b border-gray-100 bg-gray-50"><p className="text-xs font-bold text-gray-500 uppercase tracking-wider text-center">Ajuste de Impressão</p></div>
+                                <div className="p-3 border-b border-gray-100 bg-gray-50"><p className="text-xs font-bold text-gray-500 uppercase tracking-wider text-center">{t('publicSchedule.printAdjustment', 'Ajuste de Impressão')}</p></div>
                                 <button onClick={() => handlePrint('auto')} className="w-full text-left px-4 py-3 text-sm font-bold text-gray-700 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-3 border-b border-gray-100">
                                     <span className="w-6 h-6 rounded bg-blue-100 flex items-center justify-center text-blue-600 text-xs">✨</span> 
-                                    <div><span className="block">Automático</span><span className="text-[10px] text-gray-400 font-normal">O sistema decide</span></div>
+                                    <div><span className="block">{t('publicSchedule.printAuto', 'Automático')}</span><span className="text-[10px] text-gray-400 font-normal">{t('publicSchedule.printAutoDesc', 'O sistema decide')}</span></div>
                                 </button>
                                 <button onClick={() => handlePrint('ultra-compact')} className="w-full text-left px-4 py-3 text-sm font-bold text-gray-700 hover:bg-purple-50 hover:text-purple-600 flex items-center gap-3 border-b border-gray-100">
                                     <span className="w-6 h-6 rounded bg-purple-100 flex items-center justify-center text-purple-600 text-xs">📉</span> 
-                                    <div><span className="block">Compactar</span><span className="text-[10px] text-gray-400 font-normal">Para grades grandes</span></div>
+                                    <div><span className="block">{t('publicSchedule.printCompact', 'Compactar')}</span><span className="text-[10px] text-gray-400 font-normal">{t('publicSchedule.printCompactDesc', 'Para grades grandes')}</span></div>
                                 </button>
                                 <button onClick={() => handlePrint('comfortable')} className="w-full text-left px-4 py-3 text-sm font-bold text-gray-700 hover:bg-green-50 hover:text-green-600 flex items-center gap-3">
                                     <span className="w-6 h-6 rounded bg-green-100 flex items-center justify-center text-green-600 text-xs">📈</span> 
-                                    <div><span className="block">Expandir</span><span className="text-[10px] text-gray-400 font-normal">Para grades pequenas</span></div>
+                                    <div><span className="block">{t('publicSchedule.printExpand', 'Expandir')}</span><span className="text-[10px] text-gray-400 font-normal">{t('publicSchedule.printExpandDesc', 'Para grades pequenas')}</span></div>
                                 </button>
                             </div>
                         )}
@@ -717,12 +766,12 @@ export default function PublicSchedule() {
         <div className={`print-container max-w-[1920px] mx-auto p-4 md:p-8 print:p-0 density-${appliedDensity}`}>
             <div className="hidden print:flex print-header">
                 <div className="ph-left"><img src={LOGOS['pratique']} alt="Logo" className="h-16 brightness-0 invert object-contain"/></div>
-                <div className="ph-center"><h1 className="ph-title">{unidadeSelecionada.nome}</h1><p className="ph-sub">Quadro Happy Zone</p></div>
+                <div className="ph-center"><h1 className="ph-title">{unidadeSelecionada.nome}</h1><p className="ph-sub">{t('publicSchedule.boardTitle', 'Quadro Happy Zone')}</p></div>
                 <div className="ph-right"><div className="bg-white p-1 rounded"><img src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent("https://gestaodecoletivas.vercel.app/horarios")}`} alt="QR" className="w-16 h-16"/></div></div>
             </div>
 
             {loadingGrade ? <div className="flex justify-center h-[50vh] items-center screen-only"><Loader2 className="w-12 h-12 animate-spin text-blue-600"/></div> : 
-            gradeUnidade.length === 0 ? <div className="text-center py-20 opacity-50 screen-only"><p className="font-bold text-xl">Grade vazia.</p></div> : 
+            gradeUnidade.length === 0 ? <div className="text-center py-20 opacity-50 screen-only"><p className="font-bold text-xl">{t('publicSchedule.emptyGrid', 'Grade vazia.')}</p></div> : 
             (
                 <div className={`print-grid-wrapper overflow-x-auto rounded-2xl border ${isDarkMode ? 'bg-[#111] border-white/10' : 'bg-white border-gray-200'} print:bg-black print:border-0 print:rounded-none`}>
                     <div className={`screen-grid print-grid-header ${isDarkMode ? 'bg-[#1a1a1a] border-white/10' : 'bg-gray-50 border-gray-200'} border-b flex`}>
@@ -731,7 +780,7 @@ export default function PublicSchedule() {
                         </div>
                         {gradeOrganizada.dias.map(dia => (
                             <div key={dia} className={`p-4 flex items-center justify-center font-black text-lg uppercase border-r print-cell-header ${isDarkMode ? 'text-white border-white/10' : 'text-slate-800 border-slate-200'}`}>
-                                {dia.substring(0,3)}
+                                {t('publicSchedule.days.' + dia, dia)?.substring(0,3)}
                             </div>
                         ))}
                     </div>

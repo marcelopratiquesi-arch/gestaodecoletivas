@@ -177,6 +177,130 @@ const resources = {
           Domingo: "Domingo"
         }
       },
+      schedulePage: {
+        title: "Agenda de Coletivas",
+        subtitle: "Gerenciamento de Grade e Horário",
+        subtitleReadOnly: "Consulte os horários de todas as unidades",
+        closedBadge: "Encerrada",
+        closedClassTitle: "Aula Encerrada (Apenas Histórico)",
+        activeClassTitle: "Aula Ativa",
+        filters: {
+          state: "Estado",
+          allStates: "Todos os Estados",
+          unit: "Unidade",
+          allUnits: "Selecione...",
+          searchInGrid: "Filtrar nesta grade",
+          searchEverywhere: "Buscar Modalidade em todas as unidades",
+          searchPlaceholderInGrid: "Ex: Spinning...",
+          searchPlaceholderEverywhere: "Ex: Digite 'Pilates' para ver onde tem..."
+        },
+        buttons: {
+          showHistory: "Ver Encerradas",
+          hideHistory: "Ocultar Encerradas",
+          add: "Adicionar"
+        },
+        placeholders: {
+          startSearchTitle: "Comece sua busca",
+          startSearchDesc: "Selecione uma Unidade para ver o calendário ou digite uma Modalidade para buscar em todas.",
+          resultsFor: "Resultados para",
+          noClassesFound: "Nenhuma aula encontrada com este nome.",
+          emptyGrid: "A grade atual está vazia. Tente clicar em 'Ver Encerradas'.",
+          noClassesInUnit: "Nenhuma aula cadastrada nesta unidade.",
+          createFirstClass: "Criar primeira aula"
+        },
+        modal: {
+          newTitle: "CRIAR NOVA AULA",
+          editTitle: "EDITAR AULA",
+          modality: "Modalidade",
+          teacher: "Professor Titular",
+          time: "Horário",
+          value: "Valor Hora/Aula",
+          daysOfWeek: "Dias da Semana",
+          startDate: "Aula Registrada a partir de",
+          endDate: "Encerrar Permanentemente em",
+          cancel: "Cancelar",
+          save: "Salvar",
+          delete: "Excluir",
+          saveEdit: "Salvar Alterações",
+          selectUnitAlert: "Selecione a unidade",
+          noTeacherLinked: "Nenhum vinculado"
+        },
+        splitModal: {
+          title: "Alteração de Grade",
+          desc: "Você alterou dados importantes da aula. Como deseja que o sistema aplique essas mudanças no banco de dados?",
+          recommendedBadge: "RECOMENDADO (Preserva o Passado)",
+          newPhaseTitle: "Criar Nova Fase",
+          newPhaseDesc: "Encerra a aula antiga de forma invisível e cria a nova. Nenhum relatório ou presença passada será perdida. Ideal para troca de horários, dias ou professores.",
+          startDateLabel: "A NOVA CONFIGURAÇÃO PASSA A VALER NO DIA:",
+          applyChange: "Aplicar Troca",
+          or: "OU",
+          directFixTitle: "Corrigir Erro de Digitação",
+          directFixDesc: "Substitui os dados diretamente. Atenção: Isso altera o nome do professor e horários no passado. Use apenas se a aula foi cadastrada errada agora mesmo.",
+          justReplace: "Apenas Substituir Dados",
+          backToForm: "Voltar para o formulário",
+          selectDateAlert: "Selecione a data exata em que a nova configuração começa a valer."
+        },
+        alerts: {
+          fillRequired: "❌ Preencha todos os campos obrigatórios.",
+          invalidDates: "❌ A data de encerramento não pode ser anterior à data de início.",
+          deleteConfirm: "🗑️ LIXEIRA INTELIGENTE:\n\nDeseja ocultar esta aula da grade? Ela será removida da visualização de todos, mas o histórico e o banco de dados serão preservados (Soft Delete).",
+          deleteError: "Erro ao enviar a aula para a lixeira.",
+          saveError: "Erro ao salvar."
+        }
+      },
+      reports: {
+        title: "Inteligência Financeira",
+        subtitle: "Painel Executivo de Folha e Ocupação",
+        filters: {
+          day: "DIA",
+          month: "MÊS",
+          period: "PERÍODO",
+          export: "Exportar",
+          advanced: "Filtros Avançados (Múltipla Escolha)",
+          clear: "Limpar Filtros",
+          country: "País",
+          state: "Estado",
+          mentor: "Mentor",
+          unit: "Unidade",
+          modality: "Modalidade",
+          teacher: "Professor",
+          shift: "Turno"
+        },
+        kpis: {
+          vaultActivated: "Cofre de Relatórios Ativado",
+          vaultDesc: "Para manter a velocidade do sistema, selecione pelo menos um Filtro Avançado para destrancar a inteligência financeira.",
+          payrollSummary: "Resumo de Folha",
+          totalToPay: "Total a Pagar no Período Filtrado",
+          operationalEngine: "Motor Operacional",
+          completedClasses: "Aulas Realizadas",
+          canceledClasses: "Aulas Canceladas",
+          avgClassValue: "Valor Médio P/ Aula",
+          gridHealth: "Saúde da Grade",
+          occupancyRate: "Taxa de Ocupação",
+          vacancyRate: "Taxa de Vacância",
+          avgStudents: "Média de Alunos"
+        },
+        table: {
+          summary: "Resumo da Folha",
+          detailed: "Detalhado",
+          unit: "UNIDADE (PAÍS/ESTADO)",
+          modality: "MODALIDADE",
+          time: "HORÁRIO",
+          teacher: "PROFESSOR",
+          completed: "REALIZADAS",
+          canceled: "CANCELADAS",
+          avgStudentsCol: "MÉDIA ALUNOS",
+          occupancyCol: "TAXA OCUPAÇÃO",
+          classValue: "VALOR AULA",
+          toReceive: "A RECEBER",
+          noData: "SEM DADOS ENCONTRADOS PARA O FILTRO ATUAL."
+        },
+        buttons: {
+          load20: "CARREGAR +20",
+          load50: "CARREGAR +50",
+          loadAll: "VER TODOS"
+        }
+      },
       settingsPage: {
         loadingModule: "Carregando módulo...",
         restrictedAccess: {
@@ -260,7 +384,7 @@ const resources = {
       },
       mentorsTab: {
         title: "Gestão de Mentores",
-        subtitle: "Diretoria e Gestores Regionais.",
+        subtitle: "Diretoria e Gestores Regionales.",
         stats: {
           total: "Total",
           active: "Ativos",
@@ -584,6 +708,130 @@ const resources = {
           Sexta: "Viernes",
           Sábado: "Sábado",
           Domingo: "Domingo"
+        }
+      },
+      schedulePage: {
+        title: "Agenda de Clases",
+        subtitle: "Gestión de Grilla y Horarios",
+        subtitleReadOnly: "Consulta los horarios de todas las unidades",
+        closedBadge: "Cerrada",
+        closedClassTitle: "Clase Cerrada (Solo Historial)",
+        activeClassTitle: "Clase Activa",
+        filters: {
+          state: "Provincia",
+          allStates: "Todas las Provincias",
+          unit: "Unidad",
+          allUnits: "Seleccione...",
+          searchInGrid: "Filtrar en esta grilla",
+          searchEverywhere: "Buscar Modalidad en todas las unidades",
+          searchPlaceholderInGrid: "Ej: Spinning...",
+          searchPlaceholderEverywhere: "Ej: Escribe 'Pilates' para ver dónde hay..."
+        },
+        buttons: {
+          showHistory: "Ver Finalizadas",
+          hideHistory: "Ocultar Finalizadas",
+          add: "Agregar"
+        },
+        placeholders: {
+          startSearchTitle: "Comienza tu búsqueda",
+          startSearchDesc: "Selecciona una Unidad para ver el calendario o escribe una Modalidad para buscar en todas.",
+          resultsFor: "Resultados para",
+          noClassesFound: "No se encontró ninguna clase con este nombre.",
+          emptyGrid: "La grilla actual está vacía. Intenta hacer clic en 'Ver Finalizadas'.",
+          noClassesInUnit: "No hay clases registradas en esta unidad.",
+          createFirstClass: "Crear primera clase"
+        },
+        modal: {
+          newTitle: "CREAR NUEVA CLASE",
+          editTitle: "EDITAR CLASE",
+          modality: "Modalidad",
+          teacher: "Profesor Titular",
+          time: "Horario",
+          value: "Valor Hora/Clase",
+          daysOfWeek: "Días de la Semana",
+          startDate: "Clase Registrada a partir de",
+          endDate: "Finalizar Permanentemente en",
+          cancel: "Cancelar",
+          save: "Guardar",
+          delete: "Eliminar",
+          saveEdit: "Guardar Cambios",
+          selectUnitAlert: "Seleccione la unidad",
+          noTeacherLinked: "Ninguno vinculado"
+        },
+        splitModal: {
+          title: "Alteración de Grilla",
+          desc: "Has cambiado datos importantes de la clase. ¿Cómo deseas que el sistema aplique estos cambios en la base de datos?",
+          recommendedBadge: "RECOMENDADO (Preserva el Pasado)",
+          newPhaseTitle: "Crear Nueva Fase",
+          newPhaseDesc: "Cierra la clase antigua de forma invisible y crea la nueva. Ningún reporte o asistencia pasada se perderá. Ideal para cambio de horarios, días o profesores.",
+          startDateLabel: "LA NUEVA CONFIGURACIÓN EMPIEZA A VALER EL DÍA:",
+          applyChange: "Aplicar Cambio",
+          or: "O",
+          directFixTitle: "Corregir Error de Escritura",
+          directFixDesc: "Reemplaza los datos directamente. Atención: Esto altera el nombre del profesor y horarios en el pasado. Úsalo solo si la clase fue registrada incorrectamente justo ahora.",
+          justReplace: "Solo Reemplazar Datos",
+          backToForm: "Volver al formulario",
+          selectDateAlert: "Selecciona la fecha exacta en la que la nueva configuración empieza a valer."
+        },
+        alerts: {
+          fillRequired: "❌ Completa todos los campos obligatorios.",
+          invalidDates: "❌ La fecha de finalización no puede ser anterior a la fecha de inicio.",
+          deleteConfirm: "🗑️ PAPELERA INTELIGENTE:\n\n¿Deseas ocultar esta clase de la grilla? Será removida de la vista de todos, pero el historial y la base de datos se preservarán (Soft Delete).",
+          deleteError: "Error al enviar la clase a la papelera.",
+          saveError: "Error al guardar."
+        }
+      },
+      reports: {
+        title: "Inteligencia Financiera",
+        subtitle: "Panel Ejecutivo de Nómina y Ocupación",
+        filters: {
+          day: "DÍA",
+          month: "MES",
+          period: "PERÍODO",
+          export: "Exportar",
+          advanced: "Filtros Avanzados (Selección Múltiple)",
+          clear: "Limpiar Filtros",
+          country: "País",
+          state: "Provincia",
+          mentor: "Mentor",
+          unit: "Unidad",
+          modality: "Modalidad",
+          teacher: "Profesor",
+          shift: "Turno"
+        },
+        kpis: {
+          vaultActivated: "Caja Fuerte Activada",
+          vaultDesc: "Para mantener la velocidad del sistema, seleccione al menos un Filtro Avanzado para desbloquear la inteligencia financiera.",
+          payrollSummary: "Resumen de Nómina",
+          totalToPay: "Total a Pagar en el Período",
+          operationalEngine: "Motor Operativo",
+          completedClasses: "Clases Realizadas",
+          canceledClasses: "Clases Canceladas",
+          avgClassValue: "Valor Medio P/ Clase",
+          gridHealth: "Salud de la Grilla",
+          occupancyRate: "Tasa de Ocupación",
+          vacancyRate: "Tasa de Vacancia",
+          avgStudents: "Promedio de Alumnos"
+        },
+        table: {
+          summary: "Resumen de Nómina",
+          detailed: "Detallado",
+          unit: "UNIDAD (PAÍS/PROV)",
+          modality: "MODALIDAD",
+          time: "HORARIO",
+          teacher: "PROFESOR",
+          completed: "REALIZADAS",
+          canceled: "CANCELADAS",
+          avgStudentsCol: "PROM ALUMNOS",
+          occupancyCol: "TASA OCUPACIÓN",
+          classValue: "VALOR CLASE",
+          toReceive: "A RECIBIR",
+          noData: "NO SE ENCONTRARON DATOS PARA EL FILTRO ACTUAL."
+        },
+        buttons: {
+          load20: "CARGAR +20",
+          load50: "CARGAR +50",
+          loadAll: "VER TODOS"
         }
       },
       settingsPage: {
@@ -993,6 +1241,130 @@ const resources = {
           Sexta: "Friday",
           Sábado: "Saturday",
           Domingo: "Sunday"
+        }
+      },
+      schedulePage: {
+        title: "Class Schedule",
+        subtitle: "Grid and Schedule Management",
+        subtitleReadOnly: "Check the schedules of all units",
+        closedBadge: "Closed",
+        closedClassTitle: "Closed Class (History Only)",
+        activeClassTitle: "Active Class",
+        filters: {
+          state: "State",
+          allStates: "All States",
+          unit: "Unit",
+          allUnits: "Select...",
+          searchInGrid: "Filter in this grid",
+          searchEverywhere: "Search Modality in all units",
+          searchPlaceholderInGrid: "Ex: Spinning...",
+          searchPlaceholderEverywhere: "Ex: Type 'Pilates' to see where it's available..."
+        },
+        buttons: {
+          showHistory: "View Finished",
+          hideHistory: "Hide Finished",
+          add: "Add"
+        },
+        placeholders: {
+          startSearchTitle: "Start your search",
+          startSearchDesc: "Select a Unit to view the calendar or type a Modality to search all.",
+          resultsFor: "Results for",
+          noClassesFound: "No classes found with this name.",
+          emptyGrid: "The current grid is empty. Try clicking 'View Finished'.",
+          noClassesInUnit: "No classes registered in this unit.",
+          createFirstClass: "Create first class"
+        },
+        modal: {
+          newTitle: "CREATE NEW CLASS",
+          editTitle: "EDIT CLASS",
+          modality: "Modality",
+          teacher: "Main Teacher",
+          time: "Time",
+          value: "Class/Hour Rate",
+          daysOfWeek: "Days of the Week",
+          startDate: "Class Registered starting from",
+          endDate: "Permanently End on",
+          cancel: "Cancel",
+          save: "Save",
+          delete: "Delete",
+          saveEdit: "Save Changes",
+          selectUnitAlert: "Select a unit",
+          noTeacherLinked: "None linked"
+        },
+        splitModal: {
+          title: "Grid Alteration",
+          desc: "You have changed important data for this class. How do you want the system to apply these changes to the database?",
+          recommendedBadge: "RECOMMENDED (Preserves the Past)",
+          newPhaseTitle: "Create New Phase",
+          newPhaseDesc: "Invisibly closes the old class and creates the new one. No past reports or attendance will be lost. Ideal for changing schedules, days, or teachers.",
+          startDateLabel: "THE NEW CONFIGURATION TAKES EFFECT ON:",
+          applyChange: "Apply Change",
+          or: "OR",
+          directFixTitle: "Correct Typing Error",
+          directFixDesc: "Replaces the data directly. Attention: This alters the teacher's name and schedules in the past. Use only if the class was registered incorrectly just now.",
+          justReplace: "Just Replace Data",
+          backToForm: "Back to form",
+          selectDateAlert: "Select the exact date the new configuration takes effect."
+        },
+        alerts: {
+          fillRequired: "❌ Fill in all required fields.",
+          invalidDates: "❌ The end date cannot be earlier than the start date.",
+          deleteConfirm: "🗑️ SMART TRASH:\n\nDo you want to hide this class from the grid? It will be removed from everyone's view, but the history and database will be preserved (Soft Delete).",
+          deleteError: "Error sending the class to the trash.",
+          saveError: "Error saving."
+        }
+      },
+      reports: {
+        title: "Financial Intelligence",
+        subtitle: "Payroll and Occupancy Executive Dashboard",
+        filters: {
+          day: "DAY",
+          month: "MONTH",
+          period: "PERIOD",
+          export: "Export",
+          advanced: "Advanced Filters (Multi-Select)",
+          clear: "Clear Filters",
+          country: "Country",
+          state: "State",
+          mentor: "Mentor",
+          unit: "Unit",
+          modality: "Modality",
+          teacher: "Teacher",
+          shift: "Shift"
+        },
+        kpis: {
+          vaultActivated: "Report Vault Activated",
+          vaultDesc: "To maintain system speed, select at least one Advanced Filter to unlock financial intelligence.",
+          payrollSummary: "Payroll Summary",
+          totalToPay: "Total to Pay in Filtered Period",
+          operationalEngine: "Operational Engine",
+          completedClasses: "Completed Classes",
+          canceledClasses: "Canceled Classes",
+          avgClassValue: "Avg Value Per Class",
+          gridHealth: "Grid Health",
+          occupancyRate: "Occupancy Rate",
+          vacancyRate: "Vacancy Rate",
+          avgStudents: "Average Students"
+        },
+        table: {
+          summary: "Payroll Summary",
+          detailed: "Detailed",
+          unit: "UNIT (COUNTRY/STATE)",
+          modality: "MODALITY",
+          time: "TIME",
+          teacher: "TEACHER",
+          completed: "COMPLETED",
+          canceled: "CANCELED",
+          avgStudentsCol: "AVG STUDENTS",
+          occupancyCol: "OCCUPANCY RATE",
+          classValue: "CLASS RATE",
+          toReceive: "TO RECEIVE",
+          noData: "NO DATA FOUND FOR CURRENT FILTER."
+        },
+        buttons: {
+          load20: "LOAD +20",
+          load50: "LOAD +50",
+          loadAll: "VIEW ALL"
         }
       },
       settingsPage: {

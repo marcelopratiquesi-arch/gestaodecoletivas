@@ -4,6 +4,7 @@ import {
   Building2, Users, Dumbbell, CalendarDays, 
   ShieldCheck, Database, LayoutDashboard, Loader2, Headphones 
 } from "lucide-react";
+import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
 
 // --- LAZY LOADING ---
 const UnidadesTab = lazy(() => import('./Unidades/UnidadesTab').then(module => ({ default: module.UnidadesTab })));
@@ -16,29 +17,33 @@ const BackupTab = lazy(() => import('./Backup/BackupTab'));
 // 🟢 NOVA ABA: PRATIQUE PLAY
 const PratiquePlayTab = lazy(() => import('./PratiquePlay/PratiquePlayTab').then(module => ({ default: module.PratiquePlayTab })));
 
-// Componente de Loading
-const TabLoading = () => (
-  <div className="flex h-64 items-center justify-center text-slate-400 animate-pulse">
-    <Loader2 className="w-8 h-8 animate-spin mr-2" />
-    <span className="text-sm font-medium">Carregando módulo...</span>
-  </div>
-);
+// Componente de Loading com Tradução
+const TabLoading = () => {
+  const { t } = useTranslation();
+  return (
+    <div className="flex h-64 items-center justify-center text-slate-400 animate-pulse">
+      <Loader2 className="w-8 h-8 animate-spin mr-2" />
+      <span className="text-sm font-medium">{t('settingsPage.loadingModule', 'Carregando módulo...')}</span>
+    </div>
+  );
+};
 
 export default function ConfiguracoesPage() {
   const { userData, loading } = useAuth();
+  const { t } = useTranslation(); // 🟢 CÉREBRO CONECTADO NO COMPONENTE PRINCIPAL
   
   const role = useMemo(() => String(userData?.role || "").trim().toLowerCase(), [userData?.role]);
 
+  // 🟢 Abas agora reagem ao idioma em tempo real
   const tabs = useMemo(() => [
-    { id: "unidades", label: "Unidades", icon: Building2, roles: ["admin", "mentor"] },
-    { id: "mentores", label: "Mentores", icon: ShieldCheck, roles: ["admin"] },
-    { id: "professores", label: "Professores", icon: Users, roles: ["admin", "mentor", "unidade"] },
-    { id: "modalidades", label: "Modalidades", icon: Dumbbell, roles: ["admin", "mentor"] },
-    { id: "feriados", label: "Feriados", icon: CalendarDays, roles: ["admin", "mentor"] },
-    // 🎧 Nova Aba de Músicas
-    { id: "pratique-play", label: "Pratique Play", icon: Headphones, roles: ["admin"] },
-    { id: "backup", label: "Backup", icon: Database, roles: ["admin"] },
-  ], []);
+    { id: "unidades", label: t('settingsPage.tabs.unidades', 'Unidades'), icon: Building2, roles: ["admin", "mentor"] },
+    { id: "mentores", label: t('settingsPage.tabs.mentores', 'Mentores'), icon: ShieldCheck, roles: ["admin"] },
+    { id: "professores", label: t('settingsPage.tabs.professores', 'Professores'), icon: Users, roles: ["admin", "mentor", "unidade"] },
+    { id: "modalidades", label: t('settingsPage.tabs.modalidades', 'Modalidades'), icon: Dumbbell, roles: ["admin", "mentor"] },
+    { id: "feriados", label: t('settingsPage.tabs.feriados', 'Feriados'), icon: CalendarDays, roles: ["admin", "mentor"] },
+    { id: "pratique-play", label: t('settingsPage.tabs.pratiquePlay', 'Pratique Play'), icon: Headphones, roles: ["admin"] },
+    { id: "backup", label: t('settingsPage.tabs.backup', 'Backup'), icon: Database, roles: ["admin"] },
+  ], [t]);
 
   const allowedTabs = useMemo(() => tabs.filter(t => t.roles.includes(role)), [role, tabs]);
 
@@ -55,8 +60,8 @@ export default function ConfiguracoesPage() {
             <ShieldCheck className="w-16 h-16 text-slate-300" />
         </div>
         <div className="text-center">
-            <h2 className="text-xl font-bold text-slate-600">Acesso Restrito</h2>
-            <p className="text-sm">Esta área é exclusiva para gestão.</p>
+            <h2 className="text-xl font-bold text-slate-600">{t('settingsPage.restrictedAccess.title', 'Acesso Restrito')}</h2>
+            <p className="text-sm">{t('settingsPage.restrictedAccess.desc', 'Esta área é exclusiva para gestão.')}</p>
         </div>
       </div>
     );
@@ -74,10 +79,12 @@ export default function ConfiguracoesPage() {
           <span className="bg-red-50 dark:bg-red-900/20 p-2 rounded-xl text-red-600">
             <LayoutDashboard className="w-6 h-6" />
           </span>
-          Painel de Configurações
+          {t('settingsPage.title', 'Painel de Configurações')}
         </h1>
         <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium ml-1">
-          {role === 'unidade' ? 'Gerencie o quadro de professores da sua unidade.' : 'Gerencie os registros globais e parâmetros do sistema.'}
+          {role === 'unidade' 
+            ? t('settingsPage.subtitle.unidade', 'Gerencie o quadro de professores da sua unidade.') 
+            : t('settingsPage.subtitle.default', 'Gerencie os registros globais e parâmetros do sistema.')}
         </p>
       </div>
 

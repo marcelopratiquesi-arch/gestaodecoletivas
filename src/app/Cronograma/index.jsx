@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { 
   Calendar, Clock, Plus, Filter, 
   Search, Trash2, Edit2, X, Check, 
@@ -11,12 +11,13 @@ import { db } from '../../services/firebase';
 import { 
   collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where, serverTimestamp, onSnapshot 
 } from 'firebase/firestore';
+import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
 
 // --- FUNÇÕES UTILITÁRIAS ---
 const getTodayStr = () => new Date().toLocaleDateString('en-CA');
 
-const formatFirstLastName = (fullName) => {
-  if (!fullName) return "Instrutor";
+const formatFirstLastName = (fullName, defaultName) => {
+  if (!fullName) return defaultName;
   const parts = fullName.trim().split(/\s+/);
   if (parts.length === 1) return parts[0];
   return `${parts[0]} ${parts[parts.length - 1]}`;
@@ -34,9 +35,16 @@ const getContrastColor = (hexColor) => {
   return yiq >= 128 ? '#1e293b' : '#ffffff';
 };
 
+// 🟢 FUNÇÃO INTELIGENTE DE MOEDA
+const getMoedaSymbol = (pais) => {
+    if (pais === "AR" || pais === "Argentina") return "$ ARS";
+    if (pais === "US" || pais === "Estados Unidos") return "$ USD";
+    return "R$";
+};
+
 // --- COMPONENTES VISUAIS ---
 
-const ClassCard = ({ data, onClick, isReadOnly }) => {
+const ClassCard = ({ data, onClick, isReadOnly, defaultTeacher, t }) => {
   const textColor = getContrastColor(data.modalidadeCor || '#E6332A');
   const isEncerrada = data.dataFim && data.dataFim < getTodayStr();
 
@@ -47,7 +55,7 @@ const ClassCard = ({ data, onClick, isReadOnly }) => {
       className={`group relative mb-2 p-2 rounded-lg shadow-sm transition-all duration-200 overflow-hidden flex flex-col items-center justify-center min-h-[70px] text-center w-full 
       ${!isReadOnly ? 'cursor-pointer hover:shadow-lg hover:scale-[1.02]' : 'cursor-default'} 
       ${isEncerrada ? 'opacity-40 grayscale border-2 border-dashed border-slate-900' : ''}`}
-      title={isEncerrada ? "Aula Encerrada (Apenas Histórico)" : "Aula Ativa"}
+      title={isEncerrada ? t('schedulePage.closedClassTitle', 'Aula Encerrada (Apenas Histórico)') : t('schedulePage.activeClassTitle', 'Aula Ativa')}
     >
       <h4 style={{ color: textColor }} className="font-black text-[10px] uppercase tracking-wide leading-tight w-full break-words">
         {data.modalidadeNome}
@@ -55,7 +63,7 @@ const ClassCard = ({ data, onClick, isReadOnly }) => {
       <div className="flex items-center gap-1 mt-1 opacity-90">
         <Users className="w-3 h-3" style={{ color: textColor }} />
         <span style={{ color: textColor }} className="text-[9px] font-bold uppercase truncate max-w-[120px]">
-          {formatFirstLastName(data.professorNome)}
+          {formatFirstLastName(data.professorNome, defaultTeacher)}
         </span>
       </div>
       {!isReadOnly && (
@@ -69,7 +77,7 @@ const ClassCard = ({ data, onClick, isReadOnly }) => {
   );
 };
 
-const GlobalUnitBlock = ({ unitName, classes, isReadOnly, onEdit }) => {
+const GlobalUnitBlock = ({ unitName, classes, isReadOnly, onEdit, t }) => {
   return (
     <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm hover:shadow-md transition-shadow mb-6">
       <div className="bg-slate-50 dark:bg-slate-900/50 px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
@@ -80,13 +88,14 @@ const GlobalUnitBlock = ({ unitName, classes, isReadOnly, onEdit }) => {
           {unitName}
         </h4>
         <span className="text-xs font-bold bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-3 py-1 rounded-full">
-          {classes.length} horários
+          {classes.length} {t('publicSchedule.schedules', 'horários')}
         </span>
       </div>
       
       <div className="divide-y divide-slate-100 dark:divide-slate-700">
         {classes.map(aula => {
           const isEncerrada = aula.dataFim && aula.dataFim < getTodayStr();
+          const diasTraduzidos = (aula.dias || []).map(d => t('publicSchedule.days.' + d, d)).join(', ');
 
           return (
             <div 
@@ -105,11 +114,11 @@ const GlobalUnitBlock = ({ unitName, classes, isReadOnly, onEdit }) => {
                  <h5 className="font-black text-slate-800 dark:text-white text-base truncate flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full" style={{ backgroundColor: aula.modalidadeCor || '#ccc' }}></div>
                     {aula.modalidadeNome}
-                    {isEncerrada && <span className="text-[9px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded uppercase tracking-wide font-bold">Encerrada</span>}
+                    {isEncerrada && <span className="text-[9px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded uppercase tracking-wide font-bold">{t('schedulePage.closedBadge', 'Encerrada')}</span>}
                  </h5>
                  <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-wide mt-1">
                     <Calendar className="w-3.5 h-3.5"/>
-                    {aula.dias.join(', ')}
+                    {diasTraduzidos}
                  </div>
               </div>
 
@@ -118,8 +127,8 @@ const GlobalUnitBlock = ({ unitName, classes, isReadOnly, onEdit }) => {
                     <User className="w-4 h-4"/>
                  </div>
                  <div className="min-w-0">
-                    <p className="text-[10px] uppercase font-bold text-slate-400">Instrutor</p>
-                    <p className="text-sm font-bold text-slate-700 dark:text-slate-300 truncate">{formatFirstLastName(aula.professorNome)}</p>
+                    <p className="text-[10px] uppercase font-bold text-slate-400">{t('publicSchedule.defaultTeacher', 'Instrutor')}</p>
+                    <p className="text-sm font-bold text-slate-700 dark:text-slate-300 truncate">{formatFirstLastName(aula.professorNome, t('publicSchedule.defaultTeacher', 'Instrutor'))}</p>
                  </div>
               </div>
 
@@ -140,6 +149,7 @@ const GlobalUnitBlock = ({ unitName, classes, isReadOnly, onEdit }) => {
 
 export default function CronogramaPage() {
   const { userData } = useAuth();
+  const { t } = useTranslation(); // 🟢 MOTOR ACIONADO
   
   // --- PERMISSÕES ---
   const role = useMemo(() => String(userData?.role || "").trim().toLowerCase(), [userData?.role]);
@@ -258,7 +268,7 @@ export default function CronogramaPage() {
     }
 
     const unsubscribe = onSnapshot(qAulas, (snap) => {
-        // 🟢 A MÁGICA: Ignora qualquer aula que tenha a tag { excluido: true }
+        // Ignora qualquer aula que tenha a tag { excluido: true }
         const aulasData = snap.docs
           .map(d => ({ id: d.id, ...d.data() }))
           .filter(aula => aula.excluido !== true); 
@@ -292,7 +302,7 @@ export default function CronogramaPage() {
         ...c,
         modalidadeNome: mod?.nome || 'Desconhecido',
         modalidadeCor: mod?.cor || '#9ca3af',
-        professorNome: prof?.nome || 'Sem Professor',
+        professorNome: prof?.nome || t('publicSchedule.defaultTeacher', 'Sem Professor'),
         unidadeNome: uni?.nome || 'Unidade Desconhecida'
       };
     }).filter(c => {
@@ -300,7 +310,7 @@ export default function CronogramaPage() {
       const term = debouncedSearchTerm.toLowerCase();
       return (c.modalidadeNome.toLowerCase().includes(term) || c.professorNome.toLowerCase().includes(term));
     });
-  }, [selectedUnit, debouncedSearchTerm, aulas, catalogs, availableUnits, mostrarEncerradas]);
+  }, [selectedUnit, debouncedSearchTerm, aulas, catalogs, availableUnits, mostrarEncerradas, t]);
 
   const visibleDays = useMemo(() => {
     const defaultDays = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta']; 
@@ -334,6 +344,15 @@ export default function CronogramaPage() {
   }, [availableUnits, selectedState]);
 
 
+  // 🟢 DESCOBRIR MOEDA DA UNIDADE SELECIONADA NO MODAL
+  const modalCurrencySymbol = useMemo(() => {
+      if (!formData.unidadeId) return "R$";
+      const unit = catalogs.unidades.find(u => String(u.id) === String(formData.unidadeId));
+      if (!unit) return "R$";
+      return getMoedaSymbol(unit.pais);
+  }, [formData.unidadeId, catalogs.unidades]);
+
+
   // ==========================================
   // 4. AÇÕES DO MODAL E MOTOR DE AUDITORIA X-9 ("DE -> PARA")
   // ==========================================
@@ -356,7 +375,6 @@ export default function CronogramaPage() {
       };
   };
 
-  // 🟢 O Motor Invisível Enriquecido e Blindado com o módulo 'CRONOGRAMA'
   const registrarLogAuditoria = async (tipoAcao, descricao, diffExtras = "", estadoAnterior = null, estadoNovo = null) => {
     try {
         const nomeUsuario = userData?.nome || userData?.email || 'Administrador do Sistema';
@@ -366,11 +384,10 @@ export default function CronogramaPage() {
             tipoAcao,
             descricao,
             diffExtras,
-            estadoAnterior, // Fotografia DE
-            estadoNovo,     // Fotografia PARA
-            modulo: 'CRONOGRAMA', // 🟢 A PEÇA QUE FALTAVA (O Carimbo Oficial)
+            estadoAnterior, 
+            estadoNovo,     
+            modulo: 'CRONOGRAMA', 
             
-            // Retrocompatibilidade
             unidadeNome: ref.unidade || 'Unidade Desconhecida',
             modalidadeNome: ref.modalidade || 'Modalidade Desconhecida',
             professorNome: ref.professor || 'Professor Desconhecido',
@@ -390,21 +407,20 @@ export default function CronogramaPage() {
     if (isReadOnly || saving) return; 
 
     if (!formData.unidadeId || !formData.modalidadeId || !formData.professorId || !formData.hora || formData.dias.length === 0 || !formData.dataInicio) {
-        return alert("❌ Preencha todos os campos obrigatórios.");
+        return alert(t('schedulePage.alerts.fillRequired', "❌ Preencha todos os campos obrigatórios."));
     }
     if (formData.dataFim && formData.dataInicio > formData.dataFim) {
-        return alert("❌ A data de encerramento não pode ser anterior à data de início.");
+        return alert(t('schedulePage.alerts.invalidDates', "❌ A data de encerramento não pode ser anterior à data de início."));
     }
 
     const payload = {
         unidadeId: formData.unidadeId, modalidadeId: formData.modalidadeId, professorId: formData.professorId,
         hora: formData.hora, valor: formData.valor ? parseFloat(formData.valor) : 0, 
         dias: formData.dias, dataInicio: formData.dataInicio, dataFim: formData.dataFim || null,
-        excluido: false // 🟢 Garante que aulas novas nascem visíveis
+        excluido: false 
     };
 
     if (editingClass) {
-        // Verifica se há MUDANÇAS ESTRUTURAIS para ativar o Cérebro Temporal
         const diasAntigos = [...(editingClass.dias || [])].sort();
         const diasNovos = [...formData.dias].sort();
         const valorAntigo = editingClass.valor ? parseFloat(editingClass.valor) : 0;
@@ -422,7 +438,7 @@ export default function CronogramaPage() {
             const mNovo = catalogs.modalidades.find(m => m.id === formData.modalidadeId)?.nome || 'Desconhecida';
             mudancas.push(`Modalidade: ${mAntigo} ➔ ${mNovo}`);
         }
-        if (valorAntigo !== valorNovo) mudancas.push(`Valor: R$ ${valorAntigo} ➔ R$ ${valorNovo}`);
+        if (valorAntigo !== valorNovo) mudancas.push(`Valor: ${modalCurrencySymbol} ${valorAntigo} ➔ ${modalCurrencySymbol} ${valorNovo}`);
         if (editingClass.hora !== formData.hora) mudancas.push(`Hora: ${editingClass.hora} ➔ ${formData.hora}`);
         
         const diasAdicionados = diasNovos.filter(d => !diasAntigos.includes(d));
@@ -435,7 +451,6 @@ export default function CronogramaPage() {
         }
 
         if (mudancas.length > 0) {
-            // 🟢 ENGATILHA A TELA DE TRANSIÇÃO (O ROBÔ INTELIGENTE)
             let defaultDate = getTodayStr();
             if (new Date().getHours() >= 12) {
                 const tomorrow = new Date();
@@ -447,14 +462,12 @@ export default function CronogramaPage() {
             return;
         }
 
-        // Se não houver mudanças estruturais, apenas checa se mudou limite de validade
         let isVigencia = false;
         if (editingClass.dataInicio !== formData.dataInicio || editingClass.dataFim !== formData.dataFim) {
             isVigencia = true;
         }
         executeDirectSave(payload, isVigencia);
     } else {
-        // Aula nova
         executeDirectSave(payload, false);
     }
   };
@@ -476,58 +489,51 @@ export default function CronogramaPage() {
           }
           closeModal();
       } catch (e) {
-          alert("Erro ao salvar.");
+          alert(t('schedulePage.alerts.saveError', "Erro ao salvar."));
       } finally {
           setSaving(false);
       }
   };
 
   const executeSplitSave = async () => {
-      if (!dataCorteTransicao) return alert("Selecione a data exata em que a nova configuração começa a valer.");
+      if (!dataCorteTransicao) return alert(t('schedulePage.splitModal.selectDateAlert', "Selecione a data exata em que a nova configuração começa a valer."));
       
       setSaving(true);
       try {
           const { payload, mudancas } = pendingSplit;
           const diffString = mudancas.join('\n'); 
           
-          // O corte da aula velha é D-1 da data que a nova começa
           const dataInicioObj = new Date(dataCorteTransicao + 'T12:00:00');
           dataInicioObj.setDate(dataInicioObj.getDate() - 1);
           const dataFimAntiga = dataInicioObj.toISOString().split('T')[0];
 
           const payloadNova = { ...payload, dataInicio: dataCorteTransicao };
 
-          // Fotografia do DE -> PARA
           const estadoAnt = buildEstadoCompleto(editingClass);
-          estadoAnt.dataFim = dataFimAntiga; // Atualiza para mostrar o corte exato no log
+          estadoAnt.dataFim = dataFimAntiga; 
           const estadoNov = buildEstadoCompleto(payloadNova);
 
-          // 1. Encerra a aula velha protegendo o passado
           await updateDoc(doc(db, "aulas", editingClass.id), { dataFim: dataFimAntiga, updatedAt: serverTimestamp() });
-          
-          // 2. Cria a aula nova protegendo o futuro
           await addDoc(collection(db, "aulas"), { ...payloadNova, createdAt: serverTimestamp() });
           
           await registrarLogAuditoria('ALTERADA', 'Transição estrutural gravada.', `[A PARTIR DE ${dataCorteTransicao.split('-').reverse().join('/')}]\n${diffString}`, estadoAnt, estadoNov);
           
           closeModal();
       } catch (e) {
-          alert("Erro ao executar a transição da grade.");
+          alert(t('schedulePage.alerts.saveError', "Erro ao executar a transição da grade."));
       } finally {
           setSaving(false);
       }
   };
 
-  // 🟢 A OPERAÇÃO SOFT DELETE: Troca deleteDoc por updateDoc(excluido: true)
   const handleDelete = async () => {
     if (isReadOnly) return;
     
-    if (confirm("🗑️ LIXEIRA INTELIGENTE:\n\nDeseja ocultar esta aula da grade? Ela será removida da visualização de todos, mas o histórico e o banco de dados serão preservados (Soft Delete).")) {
+    if (confirm(t('schedulePage.alerts.deleteConfirm', "🗑️ LIXEIRA INTELIGENTE:\n\nDeseja ocultar esta aula da grade? Ela será removida da visualização de todos, mas o histórico e o banco de dados serão preservados (Soft Delete)."))) {
       try {
         setSaving(true);
         const estadoAnt = buildEstadoCompleto(editingClass);
         
-        // Em vez de deleteDoc, nós atualizamos o documento colocando a tag "excluido: true"
         await updateDoc(doc(db, "aulas", editingClass.id), { 
             excluido: true,
             deletedAt: serverTimestamp(),
@@ -538,7 +544,7 @@ export default function CronogramaPage() {
         closeModal();
       } catch (error) { 
           console.error(error);
-          alert("Erro ao enviar a aula para a lixeira."); 
+          alert(t('schedulePage.alerts.deleteError', "Erro ao enviar a aula para a lixeira.")); 
       } finally { 
           setSaving(false); 
       }
@@ -549,7 +555,6 @@ export default function CronogramaPage() {
 
   const openNewModal = () => {
     if (isReadOnly) return;
-    // 🟢 SEMPRE PUXA A DATA DE HOJE CORRETA!
     setFormData({ unidadeId: selectedUnit || '', modalidadeId: '', professorId: '', hora: '07:00', valor: '', dias: [], dataInicio: getTodayStr(), dataFim: '' });
     setEditingClass(null);
     setPendingSplit(null);
@@ -562,7 +567,6 @@ export default function CronogramaPage() {
     setFormData({ 
         ...cls, 
         dias: cls.dias || [],
-        // 🟢 FIX: Se o passado era nulo, assume a data de HOJE em vez de 1º de Janeiro!
         dataInicio: cls.dataInicio || getTodayStr(), 
         dataFim: cls.dataFim || ''
     });
@@ -582,7 +586,7 @@ export default function CronogramaPage() {
     return catalogs.professores.filter(p => idsPermitidos.includes(String(p.id)));
   }, [formData.unidadeId, catalogs.vinculos, catalogs.professores]);
 
-  if (loading) return <div className="flex h-screen items-center justify-center text-slate-400 gap-2"><Loader2 className="w-6 h-6 animate-spin text-red-600" /> Carregando...</div>;
+  if (loading) return <div className="flex h-screen items-center justify-center text-slate-400 gap-2"><Loader2 className="w-6 h-6 animate-spin text-red-600" /> {t('layout.loading', 'Carregando...')}</div>;
 
   return (
     <div className="p-8 max-w-[1800px] mx-auto animate-fade-in space-y-8">
@@ -594,10 +598,10 @@ export default function CronogramaPage() {
             <span className="bg-red-600 text-white p-2 rounded-lg shadow-red-200 dark:shadow-none shadow-lg">
               <Calendar className="w-6 h-6" />
             </span>
-            Agenda de Coletivas
+            {t('schedulePage.title', 'Agenda de Coletivas')}
           </h1>
           <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium">
-            {isReadOnly ? "Consulte os horários de todas as unidades" : "Gerenciamento Inteligente de Grade e Horário"}
+            {isReadOnly ? t('schedulePage.subtitleReadOnly', "Consulte os horários de todas as unidades") : t('schedulePage.subtitle', "Gerenciamento Inteligente de Grade e Horário")}
           </p>
         </div>
       </div>
@@ -608,7 +612,7 @@ export default function CronogramaPage() {
           
           <div className="w-full md:w-32 space-y-2">
             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-              <Globe className="w-3 h-3" /> Estado
+              <Globe className="w-3 h-3" /> {t('schedulePage.filters.state', 'Estado')}
             </label>
             <div className="relative">
                 <select 
@@ -616,7 +620,7 @@ export default function CronogramaPage() {
                     value={selectedState}
                     onChange={(e) => { setSelectedState(e.target.value); setSelectedUnit(""); }}
                 >
-                    <option value="">Todos</option>
+                    <option value="">{t('schedulePage.filters.allStates', 'Todos')}</option>
                     {uniqueStates.map(st => <option key={st} value={st}>{st}</option>)}
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
@@ -625,7 +629,7 @@ export default function CronogramaPage() {
 
           <div className="w-full md:w-64 space-y-2">
             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-              <MapPin className="w-3 h-3" /> Unidade
+              <MapPin className="w-3 h-3" /> {t('schedulePage.filters.unit', 'Unidade')}
             </label>
             <div className="relative group">
               <select 
@@ -634,7 +638,7 @@ export default function CronogramaPage() {
                 onChange={(e) => setSelectedUnit(e.target.value)}
                 disabled={availableUnits.length <= 1 && (role === 'unidade' || role === 'professor')}
               >
-                <option value="">Selecione...</option>
+                <option value="">{t('schedulePage.filters.allUnits', 'Selecione...')}</option>
                 {filteredUnitsDropdown.map(u => (
                   <option key={u.id} value={u.id}>{u.nome}</option>
                 ))}
@@ -645,12 +649,12 @@ export default function CronogramaPage() {
 
           <div className="flex-1 w-full space-y-2">
             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-              <Search className="w-3 h-3" /> {selectedUnit ? "Filtrar nesta grade" : "Buscar Modalidade em todas as unidades"}
+              <Search className="w-3 h-3" /> {selectedUnit ? t('schedulePage.filters.searchInGrid', "Filtrar nesta grade") : t('schedulePage.filters.searchEverywhere', "Buscar Modalidade em todas as unidades")}
             </label>
             <div className="relative">
               <input 
                 type="text" 
-                placeholder={selectedUnit ? "Ex: Spinning..." : "Ex: Digite 'Pilates' para ver onde tem..."}
+                placeholder={selectedUnit ? t('schedulePage.filters.searchPlaceholderInGrid', "Ex: Spinning...") : t('schedulePage.filters.searchPlaceholderEverywhere', "Ex: Digite 'Pilates' para ver onde tem...")}
                 className="w-full h-12 pl-11 pr-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl text-sm font-medium text-slate-700 dark:text-white focus:border-red-500 outline-none transition-all shadow-sm"
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
@@ -659,7 +663,6 @@ export default function CronogramaPage() {
             </div>
           </div>
 
-          {/* BOTÃO DE VER HISTÓRICO/ENCERRADAS */}
           <button 
               onClick={() => setMostrarEncerradas(!mostrarEncerradas)}
               className={`h-12 px-4 rounded-xl font-bold text-[11px] uppercase flex items-center gap-2 shadow-sm transition-all whitespace-nowrap
@@ -668,7 +671,7 @@ export default function CronogramaPage() {
                   : 'bg-white dark:bg-slate-900 text-slate-500 border border-slate-200 dark:border-slate-600 hover:bg-slate-50'}`}
           >
               {mostrarEncerradas ? <EyeOff className="w-4 h-4"/> : <History className="w-4 h-4"/>}
-              <span className="hidden sm:inline">{mostrarEncerradas ? "Ocultar Encerradas" : "Ver Encerradas"}</span>
+              <span className="hidden sm:inline">{mostrarEncerradas ? t('schedulePage.buttons.hideHistory', "Ocultar Encerradas") : t('schedulePage.buttons.showHistory', "Ver Encerradas")}</span>
           </button>
 
           {!isReadOnly && (
@@ -682,7 +685,7 @@ export default function CronogramaPage() {
                     : 'bg-slate-100 dark:bg-slate-700 text-slate-400 cursor-not-allowed border border-slate-200 dark:border-slate-600'}
                 `}
             >
-                <Plus className="w-4 h-4" /> Adicionar
+                <Plus className="w-4 h-4" /> {t('schedulePage.buttons.add', 'Adicionar')}
             </button>
           )}
         </div>
@@ -694,18 +697,18 @@ export default function CronogramaPage() {
         {!selectedUnit && !debouncedSearchTerm && (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 bg-slate-50/50 dark:bg-slate-900/50 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-700">
             <Globe className="w-16 h-16 mb-4 text-slate-300 dark:text-slate-600" />
-            <h3 className="text-xl font-black text-slate-600 dark:text-slate-400">Comece sua busca</h3>
-            <p className="text-sm mt-1">Selecione uma <strong>Unidade</strong> para ver o calendário ou digite uma <strong>Modalidade</strong> para buscar em todas.</p>
+            <h3 className="text-xl font-black text-slate-600 dark:text-slate-400">{t('schedulePage.placeholders.startSearchTitle', 'Comece sua busca')}</h3>
+            <p className="text-sm mt-1">{t('schedulePage.placeholders.startSearchDesc', 'Selecione uma Unidade para ver o calendário ou digite uma Modalidade para buscar em todas.')}</p>
           </div>
         )}
 
         {!selectedUnit && debouncedSearchTerm && (
             <div className="space-y-6">
                 <h3 className="text-lg font-bold text-slate-600 flex items-center gap-2">
-                    <List className="w-5 h-5"/> Resultados em todas as unidades para "{debouncedSearchTerm}"
+                    <List className="w-5 h-5"/> {t('schedulePage.placeholders.resultsFor', 'Resultados para')} "{debouncedSearchTerm}"
                 </h3>
                 {groupedClasses.length === 0 ? (
-                    <div className="text-center py-10 text-slate-400">Nenhuma aula encontrada com este nome.</div>
+                    <div className="text-center py-10 text-slate-400">{t('schedulePage.placeholders.noClassesFound', 'Nenhuma aula encontrada com este nome.')}</div>
                 ) : (
                     <div className="space-y-6">
                         {groupedClasses.map((group) => (
@@ -715,6 +718,7 @@ export default function CronogramaPage() {
                                 classes={group.aulas} 
                                 isReadOnly={isReadOnly}
                                 onEdit={openEditModal}
+                                t={t}
                             />
                         ))}
                     </div>
@@ -727,8 +731,8 @@ export default function CronogramaPage() {
                 {filteredClasses.length === 0 && !debouncedSearchTerm ? (
                     <div className="py-20 flex flex-col items-center justify-center text-slate-400 dark:text-slate-500">
                         <Calendar className="w-12 h-12 mb-3 opacity-20" />
-                        <p>{mostrarEncerradas ? "Nenhuma aula cadastrada nesta unidade." : "A grade atual está vazia. Tente clicar em 'Ver Encerradas'."}</p>
-                        {!isReadOnly && <button onClick={openNewModal} className="mt-2 text-red-600 hover:underline font-bold text-sm">Criar nova aula</button>}
+                        <p>{mostrarEncerradas ? t('schedulePage.placeholders.noClassesInUnit', "Nenhuma aula cadastrada nesta unidade.") : t('schedulePage.placeholders.emptyGrid', "A grade atual está vazia. Tente clicar em 'Ver Encerradas'.")}</p>
+                        {!isReadOnly && <button onClick={openNewModal} className="mt-2 text-red-600 hover:underline font-bold text-sm">{t('schedulePage.placeholders.createFirstClass', 'Criar nova aula')}</button>}
                     </div>
                 ) : (
                     <div className="overflow-x-auto custom-scrollbar pb-6">
@@ -739,9 +743,11 @@ export default function CronogramaPage() {
                                 minWidth: `${80 + visibleDays.length * 180}px` 
                             }}
                         >
-                            <div className="bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur border-b border-slate-200 dark:border-slate-700 p-4 text-center text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest sticky top-0 left-0 z-20">Horário</div>
+                            <div className="bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur border-b border-slate-200 dark:border-slate-700 p-4 text-center text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest sticky top-0 left-0 z-20">{t('schedulePage.modal.time', 'Horário')}</div>
                             {visibleDays.map(day => (
-                                <div key={day} className="bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur border-b border-slate-200 dark:border-slate-700 border-l border-slate-100 dark:border-slate-800 p-4 text-center text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest sticky top-0 z-10">{day}</div>
+                                <div key={day} className="bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur border-b border-slate-200 dark:border-slate-700 border-l border-slate-100 dark:border-slate-800 p-4 text-center text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest sticky top-0 z-10">
+                                    {t('publicSchedule.days.' + day, day)}
+                                </div>
                             ))}
                             
                             {activeTimeSlots.map(time => (
@@ -751,7 +757,7 @@ export default function CronogramaPage() {
                                         const classesInSlot = filteredClasses.filter(c => c.dias.includes(day) && c.hora === time);
                                         return (
                                             <div key={`${day}-${time}`} className="bg-white dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700 border-l border-slate-100 dark:border-slate-700 p-2 min-h-[110px] h-auto hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition-colors flex flex-col gap-1">
-                                                {classesInSlot.map(cls => <ClassCard key={cls.id} data={cls} onClick={() => openEditModal(cls)} isReadOnly={isReadOnly} />)}
+                                                {classesInSlot.map(cls => <ClassCard key={cls.id} data={cls} onClick={() => openEditModal(cls)} isReadOnly={isReadOnly} defaultTeacher={t('publicSchedule.defaultTeacher', 'Instrutor')} t={t} />)}
                                             </div>
                                         );
                                     })}
@@ -773,32 +779,32 @@ export default function CronogramaPage() {
             {!pendingSplit ? (
                 <>
                     <div className="px-8 py-6 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50 shrink-0">
-                        <h3 className="font-black text-xl text-slate-800 dark:text-white uppercase tracking-tight">{editingClass ? 'EDITAR AULA' : 'CRIAR NOVA AULA'}</h3>
+                        <h3 className="font-black text-xl text-slate-800 dark:text-white uppercase tracking-tight">{editingClass ? t('schedulePage.modal.editTitle', 'EDITAR AULA') : t('schedulePage.modal.newTitle', 'CRIAR NOVA AULA')}</h3>
                         <button onClick={closeModal} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-200 dark:bg-slate-800 text-slate-500 hover:text-rose-500 hover:bg-rose-50 transition-colors"><X className="w-5 h-5" /></button>
                     </div>
                     
                     <form onSubmit={handleFirstSaveClick} className="p-8 space-y-6 overflow-y-auto custom-scrollbar">
                     
                         <div>
-                            <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 block">Unidade</label>
+                            <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 block">{t('schedulePage.filters.unit', 'Unidade')}</label>
                             <select className="w-full p-3.5 bg-slate-100 dark:bg-slate-900 border-transparent rounded-xl text-sm font-bold text-slate-600 dark:text-slate-300 outline-none" value={formData.unidadeId} onChange={e => setFormData({...formData, unidadeId: e.target.value})} disabled={userData?.role === 'unidade'}>
-                                <option value="">Selecione...</option>
+                                <option value="">{t('schedulePage.filters.allUnits', 'Selecione...')}</option>
                                 {availableUnits.map(u => <option key={u.id} value={u.id}>{u.nome}</option>)}
                             </select>
                         </div>
                         
                         <div className="grid grid-cols-2 gap-5">
                             <div>
-                                <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 block">Modalidade</label>
+                                <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 block">{t('schedulePage.modal.modality', 'Modalidade')}</label>
                                 <select className="w-full p-3.5 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-700 dark:text-white rounded-xl text-sm focus:border-red-500 outline-none font-bold" value={formData.modalidadeId} onChange={e => setFormData({...formData, modalidadeId: e.target.value})} required>
-                                    <option value="">Selecione...</option>
+                                    <option value="">{t('schedulePage.filters.allUnits', 'Selecione...')}</option>
                                     {catalogs.modalidades.map(m => <option key={m.id} value={m.id}>{m.nome}</option>)}
                                 </select>
                             </div>
                             <div>
-                                <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 block">Professor Titular</label>
+                                <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 block">{t('schedulePage.modal.teacher', 'Professor Titular')}</label>
                                 <select className="w-full p-3.5 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-700 dark:text-white rounded-xl text-sm focus:border-red-500 outline-none font-bold" value={formData.professorId} onChange={e => setFormData({...formData,professorId: e.target.value})} required disabled={!formData.unidadeId}>
-                                    <option value="">{!formData.unidadeId ? "Selecione a unidade" : (professoresDoModal.length === 0 ? "Nenhum vinculado" : "Selecione...")}</option>
+                                    <option value="">{!formData.unidadeId ? t('schedulePage.modal.selectUnitAlert', "Selecione a unidade") : (professoresDoModal.length === 0 ? t('schedulePage.modal.noTeacherLinked', "Nenhum vinculado") : t('schedulePage.filters.allUnits', 'Selecione...'))}</option>
                                     {professoresDoModal.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
                                 </select>
                             </div>
@@ -806,20 +812,25 @@ export default function CronogramaPage() {
                         
                         <div className="grid grid-cols-2 gap-5">
                             <div>
-                                <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 flex items-center gap-1"><Clock className="w-3 h-3"/> Horário</label>
+                                <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 flex items-center gap-1"><Clock className="w-3 h-3"/> {t('schedulePage.modal.time', 'Horário')}</label>
                                 <input type="time" className="w-full p-3.5 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-700 dark:text-white rounded-xl text-sm focus:border-red-500 outline-none font-bold" value={formData.hora} onChange={e => setFormData({...formData, hora: e.target.value})} required />
                             </div>
                             <div>
-                                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1.5 flex items-center gap-1"><DollarSign className="w-3 h-3 text-green-600"/> Valor Hora/Aula</label>
-                                <input type="number" step="0.01" min="0" className="w-full p-3.5 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 rounded-xl text-sm focus:border-green-500 outline-none font-black text-slate-700 dark:text-white" value={formData.valor} onChange={e => setFormData({...formData, valor: e.target.value})} placeholder="0.00" />
+                                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1.5 flex items-center gap-1"><DollarSign className="w-3 h-3 text-green-600"/> {t('schedulePage.modal.value', 'Valor Hora/Aula')}</label>
+                                <div className="relative">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">{modalCurrencySymbol}</span>
+                                    <input type="number" step="0.01" min="0" className="w-full p-3.5 pl-14 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 rounded-xl text-sm focus:border-green-500 outline-none font-black text-slate-700 dark:text-white" value={formData.valor} onChange={e => setFormData({...formData, valor: e.target.value})} placeholder="0.00" />
+                                </div>
                             </div>
                         </div>
 
                         <div>
-                            <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2 block">Dias da Semana</label>
+                            <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2 block">{t('schedulePage.modal.daysOfWeek', 'Dias da Semana')}</label>
                             <div className="flex flex-wrap gap-2">
                                 {allDays.map(day => (
-                                    <button key={day} type="button" onClick={() => toggleDay(day)} className={`flex-1 min-w-[65px] py-3 rounded-xl text-[10px] font-black uppercase tracking-wider border-2 transition-all ${formData.dias.includes(day) ? 'bg-red-600 text-white border-red-600 shadow-md shadow-red-200 dark:shadow-none transform scale-105' : 'bg-white dark:bg-slate-900 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-slate-700 hover:border-red-300 hover:text-red-500'}`}>{day.substring(0, 3)}</button>
+                                    <button key={day} type="button" onClick={() => toggleDay(day)} className={`flex-1 min-w-[65px] py-3 rounded-xl text-[10px] font-black uppercase tracking-wider border-2 transition-all ${formData.dias.includes(day) ? 'bg-red-600 text-white border-red-600 shadow-md shadow-red-200 dark:shadow-none transform scale-105' : 'bg-white dark:bg-slate-900 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-slate-700 hover:border-red-300 hover:text-red-500'}`}>
+                                        {t('publicSchedule.days.' + day, day).substring(0, 3)}
+                                    </button>
                                 ))}
                             </div>
                         </div>
@@ -827,11 +838,11 @@ export default function CronogramaPage() {
                         {/* DATAS DA CONFIGURAÇÃO */}
                         <div className="grid grid-cols-2 gap-5 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-800">
                             <div>
-                                <label className="text-[10px] font-bold text-slate-800 dark:text-slate-200 uppercase mb-1.5 block">Aula Registrada a partir de</label>
+                                <label className="text-[10px] font-bold text-slate-800 dark:text-slate-200 uppercase mb-1.5 block">{t('schedulePage.modal.startDate', 'Aula Registrada a partir de')}</label>
                                 <input type="date" required className="w-full p-2.5 bg-transparent border-b-2 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-white text-sm focus:border-blue-500 outline-none font-bold" value={formData.dataInicio} onChange={e => setFormData({...formData, dataInicio: e.target.value})} />
                             </div>
                             <div>
-                                <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 block">Encerrar Permanentemente em</label>
+                                <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 block">{t('schedulePage.modal.endDate', 'Encerrar Permanentemente em')}</label>
                                 <input type="date" className="w-full p-2.5 bg-transparent border-b-2 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-white text-sm focus:border-rose-500 outline-none font-bold" value={formData.dataFim} onChange={e => setFormData({...formData, dataFim: e.target.value})} />
                             </div>
                         </div>
@@ -839,12 +850,12 @@ export default function CronogramaPage() {
                         <div className="pt-4 flex justify-end gap-3 shrink-0">
                             {editingClass && (
                                 <button type="button" onClick={handleDelete} disabled={saving} className="mr-auto text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 px-4 py-3.5 rounded-xl text-xs font-black uppercase flex items-center gap-2 disabled:opacity-50 transition-colors">
-                                    <Trash2 className="w-4 h-4"/> Excluir
+                                    <Trash2 className="w-4 h-4"/> {t('schedulePage.modal.delete', 'Excluir')}
                                 </button>
                             )}
-                            <button type="button" onClick={closeModal} disabled={saving} className="px-6 py-3.5 text-slate-500 dark:text-slate-400 font-bold uppercase text-xs hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl disabled:opacity-50 transition-colors">Cancelar</button>
+                            <button type="button" onClick={closeModal} disabled={saving} className="px-6 py-3.5 text-slate-500 dark:text-slate-400 font-bold uppercase text-xs hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl disabled:opacity-50 transition-colors">{t('schedulePage.modal.cancel', 'Cancelar')}</button>
                             <button type="submit" disabled={saving} className="px-8 py-3.5 bg-red-600 text-white rounded-xl font-black uppercase text-xs hover:bg-red-700 shadow-lg shadow-red-200 dark:shadow-none flex items-center gap-2 disabled:opacity-70 transition-all active:scale-95">
-                                {saving ? <Loader2 className="w-4 h-4 animate-spin"/> : <Check className="w-4 h-4" />} Salvar
+                                {saving ? <Loader2 className="w-4 h-4 animate-spin"/> : <Check className="w-4 h-4" />} {editingClass ? t('schedulePage.modal.saveEdit', 'Salvar Alterações') : t('schedulePage.modal.save', 'Salvar')}
                             </button>
                         </div>
                     </form>
@@ -856,8 +867,8 @@ export default function CronogramaPage() {
                         <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4 border border-amber-200">
                             <ArrowRightLeft className="w-8 h-8" />
                         </div>
-                        <h3 className="font-black text-2xl text-slate-800 dark:text-white uppercase tracking-tight">Alteração de Grade</h3>
-                        <p className="text-slate-500 text-sm font-bold mt-2">Você alterou dados importantes da aula. Como deseja que o sistema aplique essas mudanças no banco de dados?</p>
+                        <h3 className="font-black text-2xl text-slate-800 dark:text-white uppercase tracking-tight">{t('schedulePage.splitModal.title', 'Alteração de Grade')}</h3>
+                        <p className="text-slate-500 text-sm font-bold mt-2">{t('schedulePage.splitModal.desc', 'Você alterou dados importantes da aula. Como deseja que o sistema aplique essas mudanças no banco de dados?')}</p>
                     </div>
 
                     <div className="p-8 space-y-6 overflow-y-auto">
@@ -865,18 +876,18 @@ export default function CronogramaPage() {
                         {/* OPÇÃO 1: TRANSIÇÃO SEGURA (CRIAR FASE) */}
                         <div className="border-2 border-emerald-500 rounded-2xl p-5 bg-emerald-50/50 dark:bg-emerald-900/10 relative">
                             <div className="absolute -top-3 left-6 bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full shadow-sm">
-                                RECOMENDADO (Preserva o Passado)
+                                {t('schedulePage.splitModal.recommendedBadge', 'RECOMENDADO (Preserva o Passado)')}
                             </div>
                             <h4 className="font-black text-emerald-800 dark:text-emerald-400 text-lg mb-2 flex items-center gap-2">
-                                Criar Nova Fase <Check className="w-5 h-5"/>
+                                {t('schedulePage.splitModal.newPhaseTitle', 'Criar Nova Fase')} <Check className="w-5 h-5"/>
                             </h4>
                             <p className="text-emerald-700/80 dark:text-emerald-500/80 text-xs font-bold leading-relaxed mb-4">
-                                Encerra a aula antiga de forma invisível e cria a nova. <strong>Nenhum relatório ou presença passada será perdida.</strong> Ideal para troca de horários, dias ou professores.
+                                {t('schedulePage.splitModal.newPhaseDesc', 'Encerra a aula antiga de forma invisível e cria a nova. Nenhum relatório ou presença passada será perdida. Ideal para troca de horários, dias ou professores.')}
                             </p>
                             
                             <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-emerald-200 dark:border-emerald-800 shadow-sm flex flex-col sm:flex-row sm:items-center gap-4">
                                 <div className="flex-1">
-                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">A NOVA CONFIGURAÇÃO PASSA A VALER NO DIA:</label>
+                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{t('schedulePage.splitModal.startDateLabel', 'A NOVA CONFIGURAÇÃO PASSA A VALER NO DIA:')}</label>
                                     <div className="relative mt-1">
                                         <Calendar className="absolute left-3 top-3 w-4 h-4 text-emerald-600"/>
                                         <input 
@@ -892,38 +903,38 @@ export default function CronogramaPage() {
                                     disabled={saving || !dataCorteTransicao}
                                     className="w-full sm:w-auto px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase rounded-xl transition-all shadow-md active:scale-95 flex items-center justify-center disabled:opacity-50"
                                 >
-                                    {saving ? <Loader2 className="w-4 h-4 animate-spin"/> : 'Aplicar Troca'}
+                                    {saving ? <Loader2 className="w-4 h-4 animate-spin"/> : t('schedulePage.splitModal.applyChange', 'Aplicar Troca')}
                                 </button>
                             </div>
                         </div>
 
                         <div className="flex items-center gap-4 opacity-50">
                             <div className="h-px bg-slate-300 flex-1"></div>
-                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">OU</span>
+                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{t('schedulePage.splitModal.or', 'OU')}</span>
                             <div className="h-px bg-slate-300 flex-1"></div>
                         </div>
 
                         {/* OPÇÃO 2: CORREÇÃO DIRETA (SOBRESCREVER) */}
                         <div className="border border-slate-200 dark:border-slate-700 rounded-2xl p-5 hover:border-rose-300 transition-colors">
                             <h4 className="font-black text-slate-700 dark:text-slate-300 text-base mb-2 flex items-center gap-2">
-                                Corrigir Erro de Digitação <Edit2 className="w-4 h-4 text-slate-400"/>
+                                {t('schedulePage.splitModal.directFixTitle', 'Corrigir Erro de Digitação')} <Edit2 className="w-4 h-4 text-slate-400"/>
                             </h4>
                             <p className="text-slate-500 text-xs font-bold leading-relaxed mb-4">
-                                Substitui os dados diretamente. <strong className="text-rose-500">Atenção:</strong> Isso altera o nome do professor e horários no passado. Use apenas se a aula foi cadastrada errada agora mesmo.
+                                {t('schedulePage.splitModal.directFixDesc', 'Substitui os dados diretamente. Atenção: Isso altera o nome do professor e horários no passado. Use apenas se a aula foi cadastrada errada agora mesmo.')}
                             </p>
                             <button 
                                 onClick={() => executeDirectSave(pendingSplit.payload, false)} 
                                 disabled={saving}
                                 className="w-full py-3 bg-slate-100 hover:bg-rose-50 dark:bg-slate-800 dark:hover:bg-rose-900/20 text-slate-600 hover:text-rose-600 border border-slate-200 dark:border-slate-700 hover:border-rose-200 font-black text-xs uppercase rounded-xl transition-all flex items-center justify-center disabled:opacity-50"
                             >
-                                {saving ? <Loader2 className="w-4 h-4 animate-spin"/> : 'Apenas Substituir Dados'}
+                                {saving ? <Loader2 className="w-4 h-4 animate-spin"/> : t('schedulePage.splitModal.justReplace', 'Apenas Substituir Dados')}
                             </button>
                         </div>
 
                     </div>
 
                     <div className="px-8 py-4 border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 shrink-0 text-center">
-                        <button onClick={() => setPendingSplit(null)} className="text-slate-400 hover:text-slate-600 font-bold text-xs uppercase tracking-wider underline">Voltar para o formulário</button>
+                        <button onClick={() => setPendingSplit(null)} className="text-slate-400 hover:text-slate-600 font-bold text-xs uppercase tracking-wider underline">{t('schedulePage.splitModal.backToForm', 'Voltar para o formulário')}</button>
                     </div>
                 </div>
             )}

@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../services/firebase';
 import { collection, getDocs, onSnapshot, query, where, documentId, orderBy } from 'firebase/firestore'; 
+import { useTranslation } from "react-i18next"; // 🟢 MOTOR DE IDIOMAS ACIONADO
+
 import { 
   BarChart2, Filter, DollarSign, Users, Calendar, 
   CheckCircle2, XCircle, Clock, ChevronRight, ChevronDown, 
@@ -10,9 +12,7 @@ import {
   ArrowDown, DownloadCloud, Star, AlignJustify, Layers, Lock, PieChart, Activity, TrendingUp, Search, CheckSquare, Square
 } from 'lucide-react';
 
-// --- HELPERS ---
-const formatCurrency = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
-
+// --- HELPERS E MÁSCARAS ---
 const diasSemanaMap = { 0: 'Domingo', 1: 'Segunda', 2: 'Terça', 3: 'Quarta', 4: 'Quinta', 5: 'Sexta', 6: 'Sábado' };
 const DIAS_UTEIS = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta']; 
 const DURACAO_AULA_PADRAO = 40; 
@@ -29,6 +29,23 @@ const getInitials = (name) => {
 
 const timeToMins = (timeStr) => { if (!timeStr) return 0; const [h, m] = timeStr.split(':').map(Number); return h * 60 + m; };
 const minsToTime = (mins) => { const h = Math.floor(mins / 60).toString().padStart(2, '0'); const m = (mins % 60).toString().padStart(2, '0'); return `${h}:${m}`; };
+
+// 🟢 MÁSCARA INTELIGENTE DE MOEDA (Smart Currency)
+const formatSmartCurrency = (val, pais) => {
+    const p = (pais || '').toUpperCase();
+    let locale = 'pt-BR';
+    let currency = 'BRL';
+
+    if (p === 'AR' || p === 'ARGENTINA') {
+        locale = 'es-AR';
+        currency = 'ARS';
+    } else if (p === 'US' || p === 'ESTADOS UNIDOS') {
+        locale = 'en-US';
+        currency = 'USD';
+    }
+
+    return new Intl.NumberFormat(locale, { style: 'currency', currency }).format(val);
+};
 
 const getTurnoFromTime = (timeStr) => {
     if (!timeStr) return null;
@@ -63,7 +80,6 @@ const getDatesByWeekdayInPeriod = (startStr, endStr, activeDaysArray) => {
 
 const processarBuracos = (aulasDoDia, turnosArray) => {
     if (!aulasDoDia) return [];
-    // Simplificação de turnos múltiplos para o cálculo de buracos
     let abertura = timeToMins("06:00");
     let fechamento = timeToMins("22:00");
 
@@ -96,7 +112,6 @@ const processarBuracos = (aulasDoDia, turnosArray) => {
     return janelas.map(j => `${minsToTime(j.inicio)} - ${minsToTime(j.fim)}`);
 };
 
-// 🟢 TEMAS DA DIRETORIA
 const getOcupacaoTheme = (perc) => {
     if (perc <= 50) return { text: 'text-red-500', bg: 'bg-red-500' };
     if (perc <= 75) return { text: 'text-amber-500', bg: 'bg-amber-500' };
@@ -110,9 +125,10 @@ const getMediaAlunosTheme = (media) => {
 };
 
 // 🟢 COMPONENTE: MULTI-SELECT AVANÇADO
-const MultiSelectDropdown = ({ label, options, selected, onChange, placeholder = "SELECIONAR..." }) => {
+const MultiSelectDropdown = ({ label, options, selected, onChange, placeholder }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [search, setSearch] = useState("");
+    const { t } = useTranslation();
 
     const filteredOptions = (options || []).filter(o => (o.label || '').toUpperCase().includes(search.toUpperCase()));
 
@@ -176,6 +192,8 @@ const SortableHeader = ({ label, field, currentSort, onSort, align = "left", cla
 
 export default function RelatorioPage() {
   const { userData } = useAuth();
+  const { t } = useTranslation(); // 🟢 MOTOR DE IDIOMAS ACIONADO
+
   const role = String(userData?.role || "").toLowerCase();
   const userId = userData?.id || userData?.uid;
 
@@ -199,7 +217,6 @@ export default function RelatorioPage() {
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [viewMode, setViewMode] = useState('agrupado'); 
 
-  // 🟢 ARRAYS DE MÚLTIPLA ESCOLHA
   const [paisesFiltro, setPaisesFiltro] = useState([]);
   const [estadosFiltro, setEstadosFiltro] = useState([]);
   const [mentoresFiltro, setMentoresFiltro] = useState([]);
@@ -213,7 +230,6 @@ export default function RelatorioPage() {
   const [expandedRowId, setExpandedRowId] = useState(null);
   const [itensVisiveis, setItensVisiveis] = useState(20);
 
-  // 🟢 O COFRE AGORA AVALIA SE ALGUM DOS ARRAYS TEM CONTEÚDO
   const isCofreFechado = (role === 'admin' || role === 'mentor') && 
       (paisesFiltro.length === 0 && estadosFiltro.length === 0 && mentoresFiltro.length === 0 && 
        unidadesFiltro.length === 0 && modalidadesFiltro.length === 0 && professoresFiltro.length === 0 && turnosFiltro.length === 0);
@@ -222,8 +238,6 @@ export default function RelatorioPage() {
       setPaisesFiltro([]); setEstadosFiltro([]); setMentoresFiltro([]); setUnidadesFiltro([]);
       setModalidadesFiltro([]); setProfessoresFiltro([]); setTurnosFiltro([]); setFiltroKPI(null);
   };
-
-  const toggleFiltroKPI = (tipo) => { setFiltroKPI(filtroKPI === tipo ? null : tipo); };
 
   const period = useMemo(() => {
     let start = "", end = "";
@@ -406,7 +420,6 @@ export default function RelatorioPage() {
         const unidade = catalogs.unidades.find(u => String(u.id) === String(aulaBase.unidadeId));
         if (!unidade) return null;
 
-        // 🟢 CÓDIGO BLINDADO PARA ARRAYS DE FILTROS (MULTI-SELECT)
         if (paisesFiltro.length > 0 && !paisesFiltro.includes(unidade.pais?.toUpperCase())) return null;
         if (estadosFiltro.length > 0 && !estadosFiltro.includes(unidade.estado?.toUpperCase())) return null;
         if (mentoresFiltro.length > 0 && !mentoresFiltro.includes(unidade.mentorId)) return null;
@@ -445,7 +458,7 @@ export default function RelatorioPage() {
             unidadeId: aulaBase.unidadeId,
             unidadeNome: (unidade.nome || '').toUpperCase(), 
             unidadeEstado: (unidade.estado || '').toUpperCase(), 
-            unidadePais: (unidade.pais || '').toUpperCase(),
+            unidadePais: (unidade.pais || 'BR').toUpperCase(), // 🟢 CARREGANDO PAÍS SEGURO
             professorNome: (professor?.nome || 'SEM PROFESSOR').toUpperCase(),
             tipoLinha: item.tipo,
             modalidadeNome: (modalidade?.nome || 'DESCONHECIDA').toUpperCase(), 
@@ -538,7 +551,6 @@ export default function RelatorioPage() {
     maxSlotsGlobais = (listasFiltros.unidadesFiltradas || []).length * maxSlotsPorDia * diasUteisNoPeriodo;
     const taxaVacancia = maxSlotsGlobais > 0 ? Math.min((totalBuracosGlobais / maxSlotsGlobais) * 100, 100) : 0;
 
-    // 🟢 INTELIGÊNCIA YTD REAL-TIME BLINDADA (LENDO AS VALIDAÇÕES DO BANCO)
     const currentYear = new Date(period.start + 'T00:00:00').getFullYear();
     const currentMonthIdx = new Date(period.start + 'T00:00:00').getMonth(); 
     const mesesNomes = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
@@ -550,13 +562,11 @@ export default function RelatorioPage() {
             const mesFormatado = String(idx + 1).padStart(2, '0');
             const prefix = `${currentYear}-${mesFormatado}`;
             
-            // O Segredo: Filtra só as validações do mês específico que passaram pelo filtro gigante da base
             const valsMes = (validacoesYTD || []).filter(v => v.data && v.data.startsWith(prefix) && v.status === 'realizada');
             valsMes.forEach(v => {
                 const aula = (aulasRealtime || []).find(a => String(a.id) === String(v.aulaId));
                 if (!aula) return;
                 
-                // Filtros Múltiplos Espaciais Aplicados Retroativamente
                 const u = (catalogs.unidades || []).find(x => String(x.id) === String(aula.unidadeId));
                 if (!u) return;
                 if (paisesFiltro.length > 0 && !paisesFiltro.includes(u.pais?.toUpperCase())) return;
@@ -583,6 +593,9 @@ export default function RelatorioPage() {
     return { totalFinanceiro, totalRealizadas, totalCanceladas, mediaAlunos, custoMedio, mediaOcupacao, taxaVacancia, historicoYTD, maxTrendYTD };
   }, [processamentoBase, listasFiltros.unidadesFiltradas, aulasRealtime, period, turnosFiltro, validacoesYTD, paisesFiltro, estadosFiltro, mentoresFiltro, unidadesFiltro, modalidadesFiltro, professoresFiltro, catalogs.unidades]);
 
+  // 🟢 DESCOBRIR QUAL A MOEDA DOMINANTE NO KPI GLOBAL
+  const dominantCountry = paisesFiltro.length === 1 ? paisesFiltro[0] : (listasFiltros.unidadesFiltradas[0]?.pais || 'BR');
+
   const handleSort = (field) => {
     setSortConfig(prev => ({ field, direction: prev.field === field && prev.direction === 'desc' ? 'asc' : 'desc' }));
   };
@@ -592,7 +605,7 @@ export default function RelatorioPage() {
     setShowExportMenu(false);
     const headers = ["País", "Estado", "Unidade", "Modalidade", "Horário", "Professor", "Tipo", "Aulas Realizadas", "Aulas Canceladas", "Média Alunos", "Taxa Ocupação", "Valor Hora Aula", "Total a Receber"];
     const rows = relatorioFinal.map(r => {
-        return [ r.unidadePais||"-", r.unidadeEstado||"-", r.unidadeNome, r.modalidadeNome, r.horario, r.professorNome, r.isGroup ? "AGRUPADO" : (r.tipoLinha === 'aulao' ? "AULÃO" : (r.tipoLinha === 'substituto' ? "SUBSTITUTO" : "TITULAR")), r.aulasRealizadas, r.aulasCanceladas, r.mediaAlunos, `${(r.ocupacao || 0).toFixed(1)}%`, formatCurrency(r.valorHora), formatCurrency(r.totalReceber) ];
+        return [ r.unidadePais||"-", r.unidadeEstado||"-", r.unidadeNome, r.modalidadeNome, r.horario, r.professorNome, r.isGroup ? "AGRUPADO" : (r.tipoLinha === 'aulao' ? "AULÃO" : (r.tipoLinha === 'substituto' ? "SUBSTITUTO" : "TITULAR")), r.aulasRealizadas, r.aulasCanceladas, r.mediaAlunos, `${(r.ocupacao || 0).toFixed(1)}%`, formatSmartCurrency(r.valorHora, r.unidadePais), formatSmartCurrency(r.totalReceber, r.unidadePais) ];
     });
 
     if (type === 'csv' || type === 'excel') {
@@ -607,7 +620,7 @@ export default function RelatorioPage() {
     }
   };
 
-  if (loading && catalogs.unidades.length === 0) return <div className="flex h-screen items-center justify-center text-slate-400 dark:text-slate-500 gap-2"><LayoutDashboard className="animate-spin"/> Carregando Relatório...</div>;
+  if (loading && catalogs.unidades.length === 0) return <div className="flex h-screen items-center justify-center text-slate-400 dark:text-slate-500 gap-2"><LayoutDashboard className="animate-spin"/> {t('layout.loading', 'Carregando...')}</div>;
 
   const themeOcupacao = getOcupacaoTheme(kpis.mediaOcupacao);
   const themeMedia = getMediaAlunosTheme(kpis.mediaAlunos);
@@ -618,16 +631,16 @@ export default function RelatorioPage() {
         <div>
           <h1 className="text-3xl font-black text-slate-800 dark:text-white tracking-tight flex items-center gap-3">
             <span className="bg-emerald-600 text-white p-2 rounded-lg shadow-lg shadow-emerald-500/20"><BarChart2 className="w-6 h-6" /></span>
-            Inteligência Financeira
+            {t('reports.title', 'Inteligência Financeira')}
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium text-sm">Painel Executivo de Folha e Ocupação</p>
+          <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium text-sm">{t('reports.subtitle', 'Painel Executivo de Folha e Ocupação')}</p>
         </div>
         
         <div className="flex items-center gap-3 bg-white dark:bg-slate-800 p-2 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-x-auto max-w-full">
           <div className="flex bg-slate-100 dark:bg-slate-700 rounded-lg p-1 shrink-0">
-            <button onClick={() => setModoFiltro('dia')} className={`px-4 py-2 text-xs font-bold rounded-md transition-all uppercase ${modoFiltro === 'dia' ? 'bg-white dark:bg-slate-600 shadow text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400'}`}>DIA</button>
-            <button onClick={() => setModoFiltro('mes')} className={`px-4 py-2 text-xs font-bold rounded-md transition-all uppercase ${modoFiltro === 'mes' ? 'bg-white dark:bg-slate-600 shadow text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400'}`}>MÊS</button>
-            <button onClick={() => setModoFiltro('periodo')} className={`px-4 py-2 text-xs font-bold rounded-md transition-all uppercase ${modoFiltro === 'periodo' ? 'bg-white dark:bg-slate-600 shadow text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400'}`}>PERÍODO</button>
+            <button onClick={() => setModoFiltro('dia')} className={`px-4 py-2 text-xs font-bold rounded-md transition-all uppercase ${modoFiltro === 'dia' ? 'bg-white dark:bg-slate-600 shadow text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400'}`}>{t('reports.filters.day', 'DIA')}</button>
+            <button onClick={() => setModoFiltro('mes')} className={`px-4 py-2 text-xs font-bold rounded-md transition-all uppercase ${modoFiltro === 'mes' ? 'bg-white dark:bg-slate-600 shadow text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400'}`}>{t('reports.filters.month', 'MÊS')}</button>
+            <button onClick={() => setModoFiltro('periodo')} className={`px-4 py-2 text-xs font-bold rounded-md transition-all uppercase ${modoFiltro === 'periodo' ? 'bg-white dark:bg-slate-600 shadow text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400'}`}>{t('reports.filters.period', 'PERÍODO')}</button>
           </div>
           <div className="h-8 w-px bg-slate-200 dark:bg-slate-600 mx-1 shrink-0"></div>
           
@@ -645,7 +658,7 @@ export default function RelatorioPage() {
           
           <div className="h-8 w-px bg-slate-200 dark:bg-slate-600 mx-1 shrink-0"></div>
           <div className="relative shrink-0">
-            <button onClick={() => setShowExportMenu(!showExportMenu)} className="p-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg text-slate-600 dark:text-slate-300 transition-colors flex items-center gap-2 font-bold text-xs"><Download className="w-4 h-4"/> Exportar</button>
+            <button onClick={() => setShowExportMenu(!showExportMenu)} className="p-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg text-slate-600 dark:text-slate-300 transition-colors flex items-center gap-2 font-bold text-xs"><Download className="w-4 h-4"/> {t('reports.filters.export', 'Exportar')}</button>
             {showExportMenu && (<div className="absolute right-0 top-12 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl rounded-xl w-40 z-50 overflow-hidden animate-in fade-in zoom-in duration-200"><button onClick={() => handleExport('excel')} className="w-full text-left px-4 py-3 text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 text-slate-700 dark:text-slate-300"><FileSpreadsheet className="w-4 h-4 text-green-600"/> Excel (XLSX)</button><button onClick={() => handleExport('csv')} className="w-full text-left px-4 py-3 text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 text-slate-700 dark:text-slate-300"><FileText className="w-4 h-4 text-blue-600"/> CSV</button></div>)}
           </div>
         </div>
@@ -655,24 +668,24 @@ export default function RelatorioPage() {
       {role !== 'professor' && (
         <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm relative group/filter animate-fade-in z-20">
             <div className="flex justify-between items-center mb-4">
-                <h4 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase flex items-center gap-2"><Filter className="w-3 h-3"/> Filtros Avançados (Múltipla Escolha)</h4>
-                <button onClick={clearFilters} className="text-[10px] font-bold text-red-500 hover:text-red-600 dark:text-red-400 flex items-center gap-1 opacity-0 group-hover/filter:opacity-100 transition-opacity bg-red-50 dark:bg-red-900/20 px-3 py-1.5 rounded-lg"><X className="w-3 h-3"/> Limpar Filtros</button>
+                <h4 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase flex items-center gap-2"><Filter className="w-3 h-3"/> {t('reports.filters.advanced', 'Filtros Avançados (Múltipla Escolha)')}</h4>
+                <button onClick={clearFilters} className="text-[10px] font-bold text-red-500 hover:text-red-600 dark:text-red-400 flex items-center gap-1 opacity-0 group-hover/filter:opacity-100 transition-opacity bg-red-50 dark:bg-red-900/20 px-3 py-1.5 rounded-lg"><X className="w-3 h-3"/> {t('reports.filters.clear', 'Limpar Filtros')}</button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-4">
                 {role === 'admin' && (
                     <>
-                        <MultiSelectDropdown label="País" options={(listasFiltros.paises || []).map(p => ({id: p, label: p}))} selected={paisesFiltro} onChange={setPaisesFiltro} placeholder="TODOS" />
-                        <MultiSelectDropdown label="Estado" options={(listasFiltros.estados || []).map(e => ({id: e, label: e}))} selected={estadosFiltro} onChange={setEstadosFiltro} placeholder="TODOS" />
-                        <MultiSelectDropdown label="Mentor" options={(listasFiltros.mentores || []).map(m => ({id: m.id, label: m.nome}))} selected={mentoresFiltro} onChange={setMentoresFiltro} placeholder="TODOS" />
+                        <MultiSelectDropdown label={t('reports.filters.country', 'País')} options={(listasFiltros.paises || []).map(p => ({id: p, label: p}))} selected={paisesFiltro} onChange={setPaisesFiltro} placeholder="TODOS" />
+                        <MultiSelectDropdown label={t('reports.filters.state', 'Estado')} options={(listasFiltros.estados || []).map(e => ({id: e, label: e}))} selected={estadosFiltro} onChange={setEstadosFiltro} placeholder="TODOS" />
+                        <MultiSelectDropdown label={t('reports.filters.mentor', 'Mentor')} options={(listasFiltros.mentores || []).map(m => ({id: m.id, label: m.nome}))} selected={mentoresFiltro} onChange={setMentoresFiltro} placeholder="TODOS" />
                     </>
                 )}
                 {role !== 'unidade' && (
-                    <MultiSelectDropdown label="Unidade" options={(listasFiltros.unidadesFiltradas || []).map(u => ({id: u.id, label: u.nome.toUpperCase()}))} selected={unidadesFiltro} onChange={setUnidadesFiltro} placeholder="TODAS" />
+                    <MultiSelectDropdown label={t('reports.filters.unit', 'Unidade')} options={(listasFiltros.unidadesFiltradas || []).map(u => ({id: u.id, label: u.nome.toUpperCase()}))} selected={unidadesFiltro} onChange={setUnidadesFiltro} placeholder="TODAS" />
                 )}
-                <MultiSelectDropdown label="Modalidade" options={(catalogs.modalidades || []).map(m => ({id: m.id, label: m.nome.toUpperCase()}))} selected={modalidadesFiltro} onChange={setModalidadesFiltro} placeholder="TODAS" />
-                <MultiSelectDropdown label="Professor" options={(catalogs.professores || []).map(p => ({id: p.id, label: p.nome.toUpperCase()}))} selected={professoresFiltro} onChange={setProfessoresFiltro} placeholder="TODOS" />
-                <MultiSelectDropdown label="Turno" options={[{id: 'Manhã', label: 'MANHÃ (05:30 - 11:59)'}, {id: 'Tarde', label: 'TARDE (12:00 - 17:00)'}, {id: 'Noite', label: 'NOITE (17:01 - 23:00)'}]} selected={turnosFiltro} onChange={setTurnosFiltro} placeholder="TODOS" />
+                <MultiSelectDropdown label={t('reports.filters.modality', 'Modalidade')} options={(catalogs.modalidades || []).map(m => ({id: m.id, label: m.nome.toUpperCase()}))} selected={modalidadesFiltro} onChange={setModalidadesFiltro} placeholder="TODAS" />
+                <MultiSelectDropdown label={t('reports.filters.teacher', 'Professor')} options={(catalogs.professores || []).map(p => ({id: p.id, label: p.nome.toUpperCase()}))} selected={professoresFiltro} onChange={setProfessoresFiltro} placeholder="TODOS" />
+                <MultiSelectDropdown label={t('reports.filters.shift', 'Turno')} options={[{id: 'Manhã', label: 'MANHÃ (05:30 - 11:59)'}, {id: 'Tarde', label: 'TARDE (12:00 - 17:00)'}, {id: 'Noite', label: 'NOITE (17:01 - 23:00)'}]} selected={turnosFiltro} onChange={setTurnosFiltro} placeholder="TODOS" />
             </div>
         </div>
       )}
@@ -684,10 +697,10 @@ export default function RelatorioPage() {
               <Lock className="w-10 h-10 text-blue-500 animate-pulse"/>
             </div>
             <h3 className="text-2xl font-black text-slate-700 dark:text-white mb-3">
-                Cofre de Relatórios Ativado
+                {t('reports.kpis.vaultActivated', 'Cofre de Relatórios Ativado')}
             </h3>
             <p className="text-slate-500 dark:text-slate-400 text-sm font-medium max-w-lg mx-auto leading-relaxed">
-                Para manter a velocidade do sistema, selecione pelo menos um <strong>Filtro Avançado</strong> para destrancar a inteligência financeira.
+                {t('reports.kpis.vaultDesc', 'Para manter a velocidade do sistema, selecione pelo menos um Filtro Avançado para destrancar a inteligência financeira.')}
             </p>
           </div>
       ) : (
@@ -702,13 +715,13 @@ export default function RelatorioPage() {
                   <div className="relative z-10 shrink-0">
                       <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2 text-emerald-400/80 font-bold uppercase tracking-widest text-[10px] xl:text-xs">
-                              <DollarSign className="w-4 h-4"/> Resumo de Folha
+                              <DollarSign className="w-4 h-4"/> {t('reports.kpis.payrollSummary', 'Resumo de Folha')}
                           </div>
                       </div>
                       <div className="text-4xl xl:text-5xl font-black tracking-tighter text-white mb-1">
-                          {formatCurrency(kpis.totalFinanceiro)}
+                          {formatSmartCurrency(kpis.totalFinanceiro, dominantCountry)}
                       </div>
-                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-700 pb-4 mb-4">Total a Pagar no Período Filtrado</div>
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-700 pb-4 mb-4">{t('reports.kpis.totalToPay', 'Total a Pagar no Período Filtrado')}</div>
                   </div>
 
                   {/* 🟢 GRÁFICO YTD VERTICAL E DINÂMICO */}
@@ -723,7 +736,7 @@ export default function RelatorioPage() {
                                   ></div>
                               </div>
                               <span className={`w-16 text-right text-[10px] font-black tracking-tighter ${item.status === 'atual' ? 'text-emerald-400' : item.status === 'fechado' ? 'text-slate-200 group-hover:text-emerald-400 transition-colors' : 'text-slate-600'}`}>
-                                  {item.valor > 0 ? formatCurrency(item.valor) : '-'}
+                                  {item.valor > 0 ? formatSmartCurrency(item.valor, dominantCountry) : '-'}
                               </span>
                           </div>
                       ))}
@@ -737,7 +750,7 @@ export default function RelatorioPage() {
                   <div>
                       <div className="flex items-center justify-between mb-6">
                           <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest text-[10px] xl:text-xs">
-                              <Activity className="w-4 h-4 text-blue-500"/> Motor Operacional
+                              <Activity className="w-4 h-4 text-blue-500"/> {t('reports.kpis.operationalEngine', 'Motor Operacional')}
                           </div>
                       </div>
 
@@ -746,8 +759,7 @@ export default function RelatorioPage() {
                               <div className="flex items-center gap-3">
                                   <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 flex items-center justify-center"><CheckCircle2 className="w-4 h-4"/></div>
                                   <div>
-                                      <span className="block text-xs font-black text-slate-700 dark:text-slate-200 uppercase tracking-wide">Aulas Realizadas</span>
-                                      <span className="block text-[9px] font-bold text-slate-400 uppercase">Volume Validado</span>
+                                      <span className="block text-xs font-black text-slate-700 dark:text-slate-200 uppercase tracking-wide">{t('reports.kpis.completedClasses', 'Aulas Realizadas')}</span>
                                   </div>
                               </div>
                               <span className="text-xl font-black text-slate-800 dark:text-white">{kpis.totalRealizadas}</span>
@@ -757,8 +769,7 @@ export default function RelatorioPage() {
                               <div className="flex items-center gap-3">
                                   <div className="w-8 h-8 rounded-lg bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 flex items-center justify-center"><XCircle className="w-4 h-4"/></div>
                                   <div>
-                                      <span className="block text-xs font-black text-slate-700 dark:text-slate-200 uppercase tracking-wide">Aulas Canceladas</span>
-                                      <span className="block text-[9px] font-bold text-slate-400 uppercase">Perda de Receita</span>
+                                      <span className="block text-xs font-black text-slate-700 dark:text-slate-200 uppercase tracking-wide">{t('reports.kpis.canceledClasses', 'Aulas Canceladas')}</span>
                                   </div>
                               </div>
                               <span className="text-xl font-black text-red-500">{kpis.totalCanceladas}</span>
@@ -768,11 +779,10 @@ export default function RelatorioPage() {
                               <div className="flex items-center gap-3">
                                   <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300 flex items-center justify-center"><Clock className="w-4 h-4"/></div>
                                   <div>
-                                      <span className="block text-xs font-black text-slate-700 dark:text-slate-200 uppercase tracking-wide">Valor Médio P/ Aula</span>
-                                      <span className="block text-[9px] font-bold text-slate-400 uppercase">Custo da Hora</span>
+                                      <span className="block text-xs font-black text-slate-700 dark:text-slate-200 uppercase tracking-wide">{t('reports.kpis.avgClassValue', 'Valor Médio P/ Aula')}</span>
                                   </div>
                               </div>
-                              <span className="text-lg font-black text-slate-800 dark:text-white">{formatCurrency(kpis.custoMedio)}</span>
+                              <span className="text-lg font-black text-slate-800 dark:text-white">{formatSmartCurrency(kpis.custoMedio, dominantCountry)}</span>
                           </div>
                       </div>
                   </div>
@@ -785,7 +795,7 @@ export default function RelatorioPage() {
                   <div>
                       <div className="flex items-center justify-between mb-6">
                           <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest text-[10px] xl:text-xs">
-                              <TrendingUp className="w-4 h-4 text-purple-500"/> Saúde da Grade
+                              <TrendingUp className="w-4 h-4 text-purple-500"/> {t('reports.kpis.gridHealth', 'Saúde da Grade')}
                           </div>
                       </div>
 
@@ -794,35 +804,33 @@ export default function RelatorioPage() {
                               <div className="flex justify-between items-end mb-2">
                                   <div className="flex items-center gap-2">
                                       <PieChart className={`w-4 h-4 ${themeOcupacao.text}`}/>
-                                      <span className="text-xs font-black text-slate-700 dark:text-slate-200 uppercase tracking-wide">Taxa de Ocupação</span>
+                                      <span className="text-xs font-black text-slate-700 dark:text-slate-200 uppercase tracking-wide">{t('reports.kpis.occupancyRate', 'Taxa de Ocupação')}</span>
                                   </div>
                                   <span className={`text-xl font-black ${themeOcupacao.text}`}>{(kpis.mediaOcupacao || 0).toFixed(1)}%</span>
                               </div>
                               <div className="w-full h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
                                   <div className={`h-full rounded-full ${themeOcupacao.bg}`} style={{ width: `${Math.min(kpis.mediaOcupacao || 0, 100)}%` }}></div>
                               </div>
-                              <span className="block text-[9px] font-bold text-slate-400 uppercase mt-1.5 text-right">Lotação das Salas M²</span>
                           </div>
 
                           <div className="p-3">
                               <div className="flex justify-between items-end mb-2">
                                   <div className="flex items-center gap-2">
                                       <AlertTriangle className="w-4 h-4 text-rose-500"/>
-                                      <span className="text-xs font-black text-slate-700 dark:text-slate-200 uppercase tracking-wide">Taxa de Vacância</span>
+                                      <span className="text-xs font-black text-slate-700 dark:text-slate-200 uppercase tracking-wide">{t('reports.kpis.vacancyRate', 'Taxa de Vacância')}</span>
                                   </div>
                                   <span className="text-xl font-black text-rose-500 dark:text-rose-400">{(kpis.taxaVacancia || 0).toFixed(1)}%</span>
                               </div>
                               <div className="w-full h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
                                   <div className="h-full rounded-full bg-rose-500" style={{ width: `${kpis.taxaVacancia || 0}%` }}></div>
                               </div>
-                              <span className="block text-[9px] font-bold text-slate-400 uppercase mt-1.5 text-right">Ociosidade da Grade</span>
                           </div>
 
                           <div className="flex items-center justify-between p-3 border-t border-slate-100 dark:border-slate-700 pt-4">
                               <div className="flex items-center gap-3">
                                   <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${themeMedia.icon}`}><Users className="w-4 h-4"/></div>
                                   <div>
-                                      <span className="block text-xs font-black text-slate-700 dark:text-slate-200 uppercase tracking-wide">Média de Alunos</span>
+                                      <span className="block text-xs font-black text-slate-700 dark:text-slate-200 uppercase tracking-wide">{t('reports.kpis.avgStudents', 'Média de Alunos')}</span>
                                   </div>
                               </div>
                               <span className={`text-xl font-black ${themeMedia.text}`}>{kpis.mediaAlunos}</span>
@@ -840,13 +848,13 @@ export default function RelatorioPage() {
                           onClick={() => { setViewMode('agrupado'); setExpandedRowId(null); }} 
                           className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-xs font-bold uppercase transition-all ${viewMode === 'agrupado' ? 'bg-slate-100 dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-700'}`}
                       >
-                          <Layers className="w-4 h-4"/> Resumo da Folha
+                          <Layers className="w-4 h-4"/> {t('reports.table.summary', 'Resumo da Folha')}
                       </button>
                       <button 
                           onClick={() => { setViewMode('detalhado'); setExpandedRowId(null); }} 
                           className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-xs font-bold uppercase transition-all ${viewMode === 'detalhado' ? 'bg-slate-100 dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-700'}`}
                       >
-                          <AlignJustify className="w-4 h-4"/> Detalhado
+                          <AlignJustify className="w-4 h-4"/> {t('reports.table.detailed', 'Detalhado')}
                       </button>
                   </div>
               </div>
@@ -858,18 +866,18 @@ export default function RelatorioPage() {
                     <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10">
                       <tr>
                         <th className="p-3 w-8"></th>
-                        <SortableHeader label="UNIDADE (PAÍS/ESTADO)" field="unidadeNome" currentSort={sortConfig} onSort={handleSort} />
-                        <SortableHeader label="MODALIDADE" field="modalidadeNome" currentSort={sortConfig} onSort={handleSort} />
-                        <SortableHeader label={viewMode === 'agrupado' ? 'TURNOS' : 'HORÁRIO'} field="horario" currentSort={sortConfig} onSort={handleSort} />
-                        <SortableHeader label="PROFESSOR" field="professorNome" currentSort={sortConfig} onSort={handleSort} />
+                        <SortableHeader label={t('reports.table.unit', 'UNIDADE')} field="unidadeNome" currentSort={sortConfig} onSort={handleSort} />
+                        <SortableHeader label={t('reports.table.modality', 'MODALIDADE')} field="modalidadeNome" currentSort={sortConfig} onSort={handleSort} />
+                        <SortableHeader label={t('reports.table.time', 'HORÁRIO')} field="horario" currentSort={sortConfig} onSort={handleSort} />
+                        <SortableHeader label={t('reports.table.teacher', 'PROFESSOR')} field="professorNome" currentSort={sortConfig} onSort={handleSort} />
                         
-                        <SortableHeader label="REALIZADAS" field="aulasRealizadas" currentSort={sortConfig} onSort={handleSort} align="center" />
-                        <SortableHeader label="CANCELADAS" field="aulasCanceladas" currentSort={sortConfig} onSort={handleSort} align="center" />
-                        <SortableHeader label="MÉDIA ALUNOS" field="mediaAlunos" currentSort={sortConfig} onSort={handleSort} align="center" />
-                        <SortableHeader label="TAXA OCUPAÇÃO" field="ocupacao" currentSort={sortConfig} onSort={handleSort} align="center" />
+                        <SortableHeader label={t('reports.table.completed', 'REALIZADAS')} field="aulasRealizadas" currentSort={sortConfig} onSort={handleSort} align="center" />
+                        <SortableHeader label={t('reports.table.canceled', 'CANCELADAS')} field="aulasCanceladas" currentSort={sortConfig} onSort={handleSort} align="center" />
+                        <SortableHeader label={t('reports.table.avgStudentsCol', 'MÉDIA ALUNOS')} field="mediaAlunos" currentSort={sortConfig} onSort={handleSort} align="center" />
+                        <SortableHeader label={t('reports.table.occupancyCol', 'TAXA OCUPAÇÃO')} field="ocupacao" currentSort={sortConfig} onSort={handleSort} align="center" />
                         
-                        <SortableHeader label="VALOR AULA" field="valorHora" currentSort={sortConfig} onSort={handleSort} align="right" />
-                        <SortableHeader label="A RECEBER" field="totalReceber" currentSort={sortConfig} onSort={handleSort} align="right" />
+                        <SortableHeader label={t('reports.table.classValue', 'VALOR AULA')} field="valorHora" currentSort={sortConfig} onSort={handleSort} align="right" />
+                        <SortableHeader label={t('reports.table.toReceive', 'A RECEBER')} field="totalReceber" currentSort={sortConfig} onSort={handleSort} align="right" />
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-700 text-xs">
@@ -937,8 +945,8 @@ export default function RelatorioPage() {
                                     )}
                                 </td>
                                 
-                                <td className="p-3 text-right text-slate-500 dark:text-slate-400">{formatCurrency(row.valorHora)}</td>
-                                <td className="p-3 text-right font-mono text-green-600 font-black text-sm">{formatCurrency(row.totalReceber)}</td>
+                                <td className="p-3 text-right text-slate-500 dark:text-slate-400">{formatSmartCurrency(row.valorHora, row.unidadePais)}</td>
+                                <td className="p-3 text-right font-mono text-green-600 font-black text-sm">{formatSmartCurrency(row.totalReceber, row.unidadePais)}</td>
                               </tr>
                               
                               {/* EXPANSÃO DA GAVETA */}
@@ -958,9 +966,9 @@ export default function RelatorioPage() {
                                                             <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{(filha.dias || []).join(', ').toUpperCase()}</div>
                                                         </div>
                                                         <div className="text-right flex flex-col items-end">
-                                                            <div className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded uppercase">{filha.aulasRealizadas} AULAS REALIZADAS</div>
+                                                            <div className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded uppercase">{filha.aulasRealizadas} REALIZADAS</div>
                                                             <div className={`text-[10px] font-bold ${filhaOcupTheme.text} bg-slate-100 dark:bg-slate-700 mt-1 px-2 py-0.5 rounded uppercase`}>{filha.metragem > 0 ? `${(filha.ocupacao || 0).toFixed(0)}% OCUPAÇÃO` : 'S/ M²'}</div>
-                                                            <div className="text-xs font-black text-slate-700 dark:text-slate-300 mt-1">{formatCurrency(filha.totalReceber)}</div>
+                                                            <div className="text-xs font-black text-slate-700 dark:text-slate-300 mt-1">{formatSmartCurrency(filha.totalReceber, row.unidadePais)}</div>
                                                         </div>
                                                     </div>
                                                 )})}
@@ -973,52 +981,52 @@ export default function RelatorioPage() {
                                                 
                                                 return (
                                                     <div key={dia} className="flex-1 min-w-[130px] max-w-[180px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden flex flex-col shadow-sm">
-                                                    <div className="bg-slate-100 dark:bg-slate-700 px-3 py-1.5 text-center border-b border-slate-200 dark:border-slate-600">
-                                                        <span className="text-[10px] font-black text-slate-600 dark:text-slate-300 uppercase">{dia.toUpperCase()}</span>
-                                                    </div>
-                                                    <div className="p-2 space-y-1.5 flex-1 min-h-[50px]">
-                                                        {(datasDoDia || []).length === 0 && <span className="text-[10px] text-slate-300 text-center block">-</span>}
-                                                        {(datasDoDia || []).map(dataStr => {
-                                                            const validacao = (row.historico || []).find(h => h.data === dataStr);
-                                                            const foiSubstituido = (row.historicoSubstituido || []).find(h => h.data === dataStr);
-                                                            
-                                                            if (row.aulaBase.dataInicio && dataStr < row.aulaBase.dataInicio) return null;
-                                                            if (row.aulaBase.dataFim && dataStr > row.aulaBase.dataFim) return null;
+                                                        <div className="bg-slate-100 dark:bg-slate-700 px-3 py-1.5 text-center border-b border-slate-200 dark:border-slate-600">
+                                                            <span className="text-[10px] font-black text-slate-600 dark:text-slate-300 uppercase">{dia.toUpperCase()}</span>
+                                                        </div>
+                                                        <div className="p-2 space-y-1.5 flex-1 min-h-[50px]">
+                                                            {(datasDoDia || []).length === 0 && <span className="text-[10px] text-slate-300 text-center block">-</span>}
+                                                            {(datasDoDia || []).map(dataStr => {
+                                                                const validacao = (row.historico || []).find(h => h.data === dataStr);
+                                                                const foiSubstituido = (row.historicoSubstituido || []).find(h => h.data === dataStr);
+                                                                
+                                                                if (row.aulaBase.dataInicio && dataStr < row.aulaBase.dataInicio) return null;
+                                                                if (row.aulaBase.dataFim && dataStr > row.aulaBase.dataFim) return null;
 
-                                                            const diaMes = new Date(dataStr + 'T00:00:00').toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit'});
-                                                            
-                                                            const itemClass = validacao 
-                                                                ? (validacao.status === 'cancelada' 
-                                                                    ? 'bg-red-50 border-red-100 text-red-700 dark:bg-red-900/20 dark:border-red-900 dark:text-red-300' 
-                                                                    : 'bg-green-50 border-green-100 text-green-700 dark:bg-green-900/20 dark:border-green-900 dark:text-green-300')
-                                                                : (foiSubstituido 
-                                                                    ? 'bg-blue-50 border-blue-100 text-blue-700 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-300 opacity-70' 
-                                                                    : 'bg-slate-50 border-slate-100 text-slate-300 dark:bg-slate-900 dark:border-slate-800 opacity-60');
+                                                                const diaMes = new Date(dataStr + 'T00:00:00').toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit'});
+                                                                
+                                                                const itemClass = validacao 
+                                                                    ? (validacao.status === 'cancelada' 
+                                                                        ? 'bg-red-50 border-red-100 text-red-700 dark:bg-red-900/20 dark:border-red-900 dark:text-red-300' 
+                                                                        : 'bg-green-50 border-green-100 text-green-700 dark:bg-green-900/20 dark:border-green-900 dark:text-green-300')
+                                                                    : (foiSubstituido 
+                                                                        ? 'bg-blue-50 border-blue-100 text-blue-700 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-300 opacity-70' 
+                                                                        : 'bg-slate-50 border-slate-100 text-slate-300 dark:bg-slate-900 dark:border-slate-800 opacity-60');
 
-                                                            return (
-                                                                <div key={dataStr} className={`text-[9px] px-2 py-1.5 rounded border flex flex-col gap-1 ${itemClass}`}>
-                                                                <div className="flex justify-between items-center w-full">
-                                                                    <span className="font-bold">{diaMes}</span>
-                                                                    {validacao ? (
-                                                                        validacao.status === 'cancelada' 
-                                                                        ? <span className="font-bold text-[8px] uppercase">CANCEL</span> 
-                                                                        : <span className="font-bold flex items-center gap-1"><Users className="w-3 h-3"/> {validacao.alunos}</span>
-                                                                    ) : (
-                                                                        foiSubstituido 
-                                                                        ? <span className="font-bold text-[8px] uppercase flex items-center gap-1"><ArrowRightLeft className="w-2.5 h-2.5"/> SUBST</span> 
-                                                                        : <span>--</span>
-                                                                    )}
-                                                                </div>
-                                                                {validacao && validacao.status === 'cancelada' && (
-                                                                    <div className="text-[8px] font-bold border-t border-red-200 dark:border-red-800 pt-1 mt-0.5 flex items-center gap-1">
-                                                                        <AlertTriangle className="w-2.5 h-2.5 flex-shrink-0"/>
-                                                                        <span className="truncate max-w-[100px] uppercase" title={validacao.motivoCancelamento}>{validacao.motivoCancelamento}</span>
+                                                                return (
+                                                                    <div key={dataStr} className={`text-[9px] px-2 py-1.5 rounded border flex flex-col gap-1 ${itemClass}`}>
+                                                                        <div className="flex justify-between items-center w-full">
+                                                                            <span className="font-bold">{diaMes}</span>
+                                                                            {validacao ? (
+                                                                                validacao.status === 'cancelada' 
+                                                                                ? <span className="font-bold text-[8px] uppercase">CANCEL</span> 
+                                                                                : <span className="font-bold flex items-center gap-1"><Users className="w-3 h-3"/> {validacao.alunos}</span>
+                                                                            ) : (
+                                                                                foiSubstituido 
+                                                                                ? <span className="font-bold text-[8px] uppercase flex items-center gap-1"><ArrowRightLeft className="w-2.5 h-2.5"/> SUBST</span> 
+                                                                                : <span>--</span>
+                                                                            )}
+                                                                        </div>
+                                                                        {validacao && validacao.status === 'cancelada' && (
+                                                                            <div className="text-[8px] font-bold border-t border-red-200 dark:border-red-800 pt-1 mt-0.5 flex items-center gap-1">
+                                                                                <AlertTriangle className="w-2.5 h-2.5 flex-shrink-0"/>
+                                                                                <span className="truncate max-w-[100px] uppercase" title={validacao.motivoCancelamento}>{validacao.motivoCancelamento}</span>
+                                                                            </div>
+                                                                        )}
                                                                     </div>
-                                                                )}
-                                                                </div>
-                                                            )
-                                                        })}
-                                                    </div>
+                                                                )
+                                                            })}
+                                                        </div>
                                                     </div>
                                                 )
                                             })}
@@ -1030,7 +1038,7 @@ export default function RelatorioPage() {
                             </React.Fragment>
                           )
                       })}
-                      {(relatorioVisivel || []).length === 0 && <tr><td colSpan="11" className="p-8 text-center text-slate-400 text-sm uppercase">SEM DADOS ENCONTRADOS PARA O FILTRO ATUAL.</td></tr>}
+                      {(relatorioVisivel || []).length === 0 && <tr><td colSpan="11" className="p-8 text-center text-slate-400 text-sm uppercase">{t('reports.table.noData', 'SEM DADOS ENCONTRADOS PARA O FILTRO ATUAL.')}</td></tr>}
                     </tbody>
                   </table>
                 </div>
@@ -1043,19 +1051,19 @@ export default function RelatorioPage() {
                           onClick={() => handleCarregarMais(20)} 
                           className="px-5 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-sm flex items-center gap-2 transition-all uppercase"
                       >
-                          <ArrowDown className="w-4 h-4"/> CARREGAR +20
+                          <ArrowDown className="w-4 h-4"/> {t('reports.buttons.load20', 'CARREGAR +20')}
                       </button>
                       <button 
                           onClick={() => handleCarregarMais(50)} 
                           className="px-5 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-sm flex items-center gap-2 transition-all uppercase"
                       >
-                          CARREGAR +50
+                          {t('reports.buttons.load50', 'CARREGAR +50')}
                       </button>
                       <button 
                           onClick={() => handleCarregarMais('todos')} 
                           className="px-5 py-2.5 bg-slate-100 dark:bg-slate-700 border border-transparent rounded-xl text-sm font-bold text-slate-700 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-600 shadow-sm flex items-center gap-2 transition-all uppercase"
                       >
-                          <DownloadCloud className="w-4 h-4"/> VER TODOS ({(relatorioFinal || []).length})
+                          <DownloadCloud className="w-4 h-4"/> {t('reports.buttons.loadAll', 'VER TODOS')} ({(relatorioFinal || []).length})
                       </button>
                   </div>
               )}
