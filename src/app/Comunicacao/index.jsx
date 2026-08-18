@@ -158,6 +158,9 @@ export default function CentralComunicacao() {
     const [resultadosBusca, setResultadosBusca] = useState([]);
     const [buscaRealizada, setBuscaRealizada] = useState(false);
 
+    // 🟢 ESTADO PARA A NOVA EXPORTAÇÃO
+    const [ordemExportacao, setOrdemExportacao] = useState('asc');
+
     const cacheRef = useRef({ professores: null, aulas: null, timestamp: 0 });
     const buscaRef = useRef(0);
 
@@ -233,7 +236,7 @@ export default function CentralComunicacao() {
         setFiltrosNaBusca(null);
     };
 
-    // 🟢 MOTOR DE BUSCA: PROCESSA O PÚBLICO CORRETO
+    // 🟢 MOTOR DE BUSCA: PROCESSA O PÚBLICO CORRETO E ADICIONA `exportData`
     const buscarPublico = async () => {
         const currentBuscaId = ++buscaRef.current; 
         setProcessing(true);
@@ -276,9 +279,22 @@ export default function CentralComunicacao() {
                     const passaTurno = filtros.turnos.length === 0 || filtros.turnos.includes(turnoAula);
 
                     if (passaEstado && passaMentor && passaUnidade && passaModalidade && passaTurno) {
-                        if (!relacaoProfessor[aula.professorId]) relacaoProfessor[aula.professorId] = { modalidades: new Set(), unidades: new Set() };
+                        if (!relacaoProfessor[aula.professorId]) {
+                            relacaoProfessor[aula.professorId] = { 
+                                modalidades: new Set(), 
+                                unidades: new Set(), 
+                                exportUnits: new Map() // Usado para exportação profissional
+                            };
+                        }
                         if (aula.modalidadeId) relacaoProfessor[aula.professorId].modalidades.add(modMap[aula.modalidadeId] || 'Geral');
-                        if (unidade.nome) relacaoProfessor[aula.professorId].unidades.add(unidade.nome);
+                        
+                        if (unidade.nome) {
+                            relacaoProfessor[aula.professorId].unidades.add(unidade.nome);
+                            relacaoProfessor[aula.professorId].exportUnits.set(unidade.id, { 
+                                unidade: unidade.nome, 
+                                estado: unidade.estado || 'NÃO INFORMADO' 
+                            });
+                        }
                     }
                 });
 
@@ -286,13 +302,24 @@ export default function CentralComunicacao() {
                 Object.keys(relacaoProfessor).forEach(profId => {
                     const profData = profMap.get(profId); 
                     const phoneFinal = formatarParaWaSeller(profData?.telefone);
+                    
                     if (phoneFinal) {
+                        const relData = relacaoProfessor[profId];
+                        
+                        const exportRows = Array.from(relData.exportUnits.values()).map(u => ({
+                            estado: u.estado,
+                            unidade: u.unidade,
+                            nome: profData.nome,
+                            telefone: phoneFinal
+                        }));
+
                         resultados.push({
                             id: profData.id,
                             nome: profData.nome,
                             telefoneFormatado: phoneFinal,
-                            detalhe1: Array.from(relacaoProfessor[profId].modalidades).join(', '),
-                            detalhe2: Array.from(relacaoProfessor[profId].unidades).join(', ')
+                            detalhe1: Array.from(relData.modalidades).join(', '),
+                            detalhe2: Array.from(relData.unidades).join(', '),
+                            exportData: exportRows
                         });
                     }
                 });
@@ -307,10 +334,16 @@ export default function CentralComunicacao() {
                     if (phoneFinal) {
                         resultados.push({
                             id: u.id,
-                            nome: u.nome, // Aqui passamos o nome completo da unidade
+                            nome: u.nome,
                             telefoneFormatado: phoneFinal,
                             detalhe1: `LÍDER DE UNIDADE`,
-                            detalhe2: u.estado || 'ESTADO NÃO DEFINIDO'
+                            detalhe2: u.estado || 'ESTADO NÃO DEFINIDO',
+                            exportData: [{ 
+                                estado: u.estado || 'NÃO INFORMADO', 
+                                unidade: u.nome, 
+                                nome: u.nome, 
+                                telefone: phoneFinal 
+                            }]
                         });
                     }
                 });
@@ -330,7 +363,13 @@ export default function CentralComunicacao() {
                             nome: m.nome,
                             telefoneFormatado: phoneFinal,
                             detalhe1: 'MENTOR REGIONAL',
-                            detalhe2: 'GESTÃO PRATIQUE'
+                            detalhe2: 'GESTÃO PRATIQUE',
+                            exportData: [{ 
+                                estado: 'NÃO INFORMADO', 
+                                unidade: 'GESTÃO PRATIQUE', 
+                                nome: m.nome, 
+                                telefone: phoneFinal 
+                            }]
                         });
                     }
                 });
@@ -374,7 +413,6 @@ export default function CentralComunicacao() {
         setTimeout(() => { el.focus(); el.setSelectionRange(start + tag.length + 2, start + tag.length + 2); }, 0);
     };
 
-    // 🟢 EXPORTAÇÃO CORRIGIDA: LÍDER EXPORTA NOME COMPLETO
     const copiarParaDisparador = async () => {
         if (resultadosBusca.length === 0) return;
         const text = resultadosBusca.map(p => {
@@ -389,6 +427,7 @@ export default function CentralComunicacao() {
         } catch (err) { alert("❌ Permissão negada. Use o botão Baixar CSV."); }
     };
 
+    // 🟢 EXPORTAÇÃO ANTIGA MANTIDA INTACTA
     const exportarCSV = () => {
         if (resultadosBusca.length === 0) return;
         const headers = "Telefone,Nome\n";
@@ -401,6 +440,53 @@ export default function CentralComunicacao() {
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
         link.setAttribute('download', `Contatos_${publicoAlvo.toUpperCase()}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    // 🟢 FUNÇÕES PARA A NOVA EXPORTAÇÃO PROFISSIONAL COM CORREÇÃO NO EXCEL
+    const escaparCSV = (str) => {
+        if (!str) return '""';
+        const txt = String(str).replace(/"/g, '""');
+        return `"${txt}"`;
+    };
+
+    const ordenarListaExportacao = (lista, direcao) => {
+        return [...lista].sort((a, b) => {
+            const val = a.estado.localeCompare(b.estado, 'pt-BR') ||
+                        a.unidade.localeCompare(b.unidade, 'pt-BR') ||
+                        a.nome.localeCompare(b.nome, 'pt-BR');
+            return direcao === 'asc' ? val : -val;
+        });
+    };
+
+    const exportarListaCompleta = () => {
+        if (resultadosBusca.length === 0) return;
+        
+        let dadosParaExportar = [];
+        resultadosBusca.forEach(item => {
+            if (item.exportData) {
+                dadosParaExportar.push(...item.exportData);
+            }
+        });
+
+        const ordenados = ordenarListaExportacao(dadosParaExportar, ordemExportacao);
+
+        const headers = "Estado;Unidade;Nome;Telefone\n";
+        
+        // 🟢 FIX: O telefone recebe a fórmula de texto para o Excel entender: ="NUMERO"
+        const rows = ordenados.map(r => 
+            `${escaparCSV(r.estado)};${escaparCSV(r.unidade)};${escaparCSV(r.nome)};="${r.telefone}"`
+        ).join("\n");
+        
+        const blob = new Blob(["\uFEFF" + headers + rows], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        
+        const dataHoje = new Date().toISOString().split('T')[0];
+        link.setAttribute('download', `Contatos_${publicoAlvo.toUpperCase()}_${ordemExportacao.toUpperCase()}_${dataHoje}.csv`);
+        
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -431,7 +517,7 @@ export default function CentralComunicacao() {
                 </div>
             </div>
 
-            {/* 🟢 SEGMENTED CONTROL: ABAS ELEGANTES E COMPACTAS NO TOPO */}
+            {/* SEGMENTED CONTROL: ABAS ELEGANTES E COMPACTAS NO TOPO */}
             <div className="flex bg-slate-100 dark:bg-slate-800 p-1.5 rounded-xl w-full sm:w-fit shadow-inner">
                 <button 
                     onClick={() => setPublicoAlvo('professores')} 
@@ -527,7 +613,7 @@ export default function CentralComunicacao() {
 
                     {buscaRealizada && (
                         <div className={`bg-white dark:bg-slate-800 rounded-2xl border shadow-sm overflow-hidden transition-all duration-300 ${resultadoDesatualizado ? 'border-amber-300 opacity-60' : 'border-slate-200 dark:border-slate-700'}`}>
-                            <div className="bg-slate-50 dark:bg-slate-900/50 p-4 border-b border-slate-200 dark:border-slate-700 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                            <div className="bg-slate-50 dark:bg-slate-900/50 p-4 border-b border-slate-200 dark:border-slate-700 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
                                 <div>
                                     <h2 className="font-black text-slate-800 dark:text-white uppercase flex items-center gap-2 text-xs tracking-widest">
                                         <Users className="w-4 h-4 text-indigo-500"/> 3. Lista Final ({publicoAlvo})
@@ -537,10 +623,22 @@ export default function CentralComunicacao() {
                                     </p>
                                 </div>
                                 
-                                <div className="flex gap-2 w-full md:w-auto">
-                                    <button onClick={exportarCSV} disabled={resultadoDesatualizado} className="flex-1 md:flex-none px-4 py-2 bg-white border border-slate-200 text-emerald-600 hover:bg-emerald-50 rounded-lg text-[10px] font-black uppercase flex items-center justify-center gap-2 transition-colors shadow-sm disabled:opacity-50">
+                                {/* 🟢 BOTÕES DE AÇÃO COM NOVA EXPORTAÇÃO */}
+                                <div className="flex flex-wrap gap-2 w-full xl:w-auto">
+                                    <button onClick={exportarCSV} disabled={resultadoDesatualizado} className="flex-1 md:flex-none px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-slate-700 rounded-lg text-[10px] font-black uppercase flex items-center justify-center gap-2 transition-colors shadow-sm disabled:opacity-50" title="CSV Simples (WaSeller)">
                                         <FileSpreadsheet className="w-3.5 h-3.5"/> Baixar CSV
                                     </button>
+
+                                    {/* 🟢 GRUPO DA NOVA EXPORTAÇÃO PROFISSIONAL */}
+                                    <div className="flex flex-1 md:flex-none flex-row gap-1 border border-slate-200 dark:border-slate-700 p-0.5 rounded-lg bg-slate-50 dark:bg-slate-800">
+                                        <button onClick={exportarListaCompleta} disabled={resultadoDesatualizado} className="flex-1 md:flex-none px-4 py-1.5 bg-emerald-600 text-white hover:bg-emerald-700 rounded-md text-[10px] font-black uppercase flex items-center justify-center gap-2 transition-colors shadow-sm disabled:opacity-50">
+                                            <FileSpreadsheet className="w-3.5 h-3.5"/> Exportar Lista
+                                        </button>
+                                        <button onClick={() => setOrdemExportacao(prev => prev === 'asc' ? 'desc' : 'asc')} disabled={resultadoDesatualizado} className="px-3 py-1.5 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 rounded-md text-[10px] font-black uppercase flex items-center justify-center transition-colors shadow-sm disabled:opacity-50" title={`Ordenação atual: ${ordemExportacao === 'asc' ? 'A-Z' : 'Z-A'}`}>
+                                            <Filter className="w-3 h-3 mr-1"/> {ordemExportacao === 'asc' ? 'A-Z' : 'Z-A'}
+                                        </button>
+                                    </div>
+
                                     <button onClick={copiarParaDisparador} disabled={resultadoDesatualizado} className={`flex-1 md:flex-none px-4 py-2 text-white rounded-lg text-[10px] font-black uppercase flex items-center justify-center gap-2 transition-colors shadow-sm disabled:opacity-50 ${copiado ? 'bg-green-500' : 'bg-indigo-600 hover:bg-indigo-700'}`}>
                                         {copiado ? <Check className="w-3.5 h-3.5"/> : <Copy className="w-3.5 h-3.5"/>} 
                                         {copiado ? 'COPIADO! ✅' : 'COPIAR (WASELLER)'}
