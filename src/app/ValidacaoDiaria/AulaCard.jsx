@@ -3,38 +3,35 @@ import {
   Calendar, Clock, MapPin, User, ArrowRightLeft, 
   CircleCheck, CircleX, TriangleAlert, Lock 
 } from 'lucide-react';
-
-// Helpers internos para formatação visual
-const formatDateBr = (dateStr) => {
-  if(!dateStr) return "-";
-  const [y, m, d] = dateStr.split('-');
-  return `${d}/${m}/${y}`;
-};
+import { useTranslation } from 'react-i18next';
+import { formatDate, formatWeekday, formatCancelReason } from '../../utils/formatters';
 
 // Componente Badge (interno do Card)
 const StatusBadge = ({ status }) => {
+    const { t } = useTranslation();
     if (status === 'realizada') {
         return (
             <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wide bg-emerald-100 text-emerald-700 border border-emerald-200 shadow-sm">
-                <CircleCheck className="w-3 h-3 flex-shrink-0" /> <span>Realizada</span>
+                <CircleCheck className="w-3 h-3 flex-shrink-0" /> <span>{t('common.status.realizada')}</span>
             </div>
         );
     }
     if (status === 'cancelada') {
         return (
             <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wide bg-rose-100 text-rose-700 border border-rose-200 shadow-sm">
-                <CircleX className="w-3 h-3 flex-shrink-0" /> <span>Cancelada</span>
+                <CircleX className="w-3 h-3 flex-shrink-0" /> <span>{t('common.status.cancelada')}</span>
             </div>
         );
     }
     return (
         <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wide bg-amber-100 text-amber-700 border border-amber-200 shadow-sm">
-            <TriangleAlert className="w-3 h-3 flex-shrink-0" /> <span>Pendente</span>
+            <TriangleAlert className="w-3 h-3 flex-shrink-0" /> <span>{t('common.status.pendente')}</span>
         </div>
     );
 };
 
 export function AulaCard({ item, onValidar, onCancelar, verificarFuturo }) {
+    const { t } = useTranslation();
     const isFuture = verificarFuturo(item.data);
     const status = item.status; 
     const isSub = item.professor?.isSubstituto;
@@ -48,7 +45,7 @@ export function AulaCard({ item, onValidar, onCancelar, verificarFuturo }) {
             <div className="flex justify-between items-start mb-4 pt-2">
                 <div className="flex flex-col">
                     <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 flex items-center gap-1 mb-1">
-                        <Calendar className="w-3 h-3"/> {item.diaSemana}, {formatDateBr(item.data)}
+                        <Calendar className="w-3 h-3"/> {formatWeekday(item.diaSemana)}, {formatDate(item.data)}
                     </span>
                     <h3 className="font-black text-lg text-slate-800 dark:text-white leading-tight">{item.modalidade?.nome}</h3>
                 </div>
@@ -64,7 +61,7 @@ export function AulaCard({ item, onValidar, onCancelar, verificarFuturo }) {
                         <MapPin className="w-4 h-4"/>
                     </div>
                     <div>
-                        <p className="text-[10px] text-slate-400 font-bold uppercase">Unidade</p>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase">{t('dailyValidation.card.unit')}</p>
                         <p className="text-sm font-bold text-slate-700 dark:text-slate-200 truncate max-w-[200px]">{item.unidade?.nome}</p>
                     </div>
                 </div>
@@ -75,8 +72,8 @@ export function AulaCard({ item, onValidar, onCancelar, verificarFuturo }) {
                     </div>
                     <div className="flex-1">
                         <p className="text-[10px] text-slate-400 font-bold uppercase flex justify-between items-center">
-                            Professor 
-                            {isSub && <span className="text-[9px] bg-blue-100 text-blue-700 px-1.5 rounded font-black tracking-wide">SUBSTITUTO</span>}
+                            {t('dailyValidation.card.teacher')}
+                            {isSub && <span className="text-[9px] bg-blue-100 text-blue-700 px-1.5 rounded font-black tracking-wide">{t('dailyValidation.card.substitute')}</span>}
                         </p>
                         <div className="flex flex-col">
                             {isSub && (
@@ -85,7 +82,7 @@ export function AulaCard({ item, onValidar, onCancelar, verificarFuturo }) {
                                 </span>
                             )}
                             <p className={`text-sm font-bold truncate max-w-[200px] ${isSub ? 'text-blue-600 dark:text-blue-400' : 'text-slate-700 dark:text-slate-200'}`}>
-                                {item.professor?.nome || "Sem Professor"}
+                                {item.professor?.nome || t('common.unknown.noTeacher')}
                             </p>
                         </div>
                     </div>
@@ -98,12 +95,12 @@ export function AulaCard({ item, onValidar, onCancelar, verificarFuturo }) {
                 
                 {status === 'realizada' && (
                     <div className="text-xs font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
-                        <User className="w-3.5 h-3.5"/> {item.validacao?.alunos} Alunos
+                        <User className="w-3.5 h-3.5"/> {t('dailyValidation.card.students', { count: item.validacao?.alunos ?? 0 })}
                     </div>
                 )}
                 {status === 'cancelada' && (
-                    <div className="text-[10px] font-bold text-rose-600 max-w-[100px] truncate text-right" title={item.validacao?.motivoCancelamento}>
-                        {item.validacao?.motivoCancelamento || "Recesso"}
+                    <div className="text-[10px] font-bold text-rose-600 max-w-[100px] truncate text-right" title={formatCancelReason(item.validacao?.motivoCancelamento)}>
+                        {formatCancelReason(item.validacao?.motivoCancelamento) || t('common.cancelReasons.recess')}
                     </div>
                 )}
             </div>
@@ -120,7 +117,7 @@ export function AulaCard({ item, onValidar, onCancelar, verificarFuturo }) {
                             ? 'bg-slate-100 text-slate-300 cursor-not-allowed'
                             : 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 hover:bg-emerald-600 hover:shadow-emerald-500/40 hover:-translate-y-0.5'}`}
                 >
-                    {status === 'realizada' ? 'Editar' : 'Validar'}
+                    {status === 'realizada' ? t('dailyValidation.card.edit') : t('dailyValidation.card.validate')}
                 </button>
 
                 <button 
@@ -133,7 +130,7 @@ export function AulaCard({ item, onValidar, onCancelar, verificarFuturo }) {
                             ? 'bg-slate-100 text-slate-300 cursor-not-allowed'
                             : 'bg-white text-rose-500 border border-rose-200 hover:bg-rose-50 hover:border-rose-300 hover:text-rose-600'}`}
                 >
-                    {status === 'cancelada' ? 'Detalhes' : 'Cancelar'}
+                    {status === 'cancelada' ? t('dailyValidation.card.details') : t('dailyValidation.card.cancel')}
                 </button>
             </div>
 
@@ -142,7 +139,7 @@ export function AulaCard({ item, onValidar, onCancelar, verificarFuturo }) {
                 <div className="absolute inset-0 bg-white/60 dark:bg-slate-900/60 backdrop-blur-[1px] flex items-center justify-center z-10 rounded-2xl">
                     <div className="bg-white dark:bg-slate-800 px-4 py-2 rounded-full shadow-xl border border-slate-200 dark:border-slate-600 flex items-center gap-2">
                         <Lock className="w-3 h-3 text-slate-400"/>
-                        <span className="text-xs font-bold text-slate-500">Aguarde a data</span>
+                        <span className="text-xs font-bold text-slate-500">{t('dailyValidation.card.waitForDate')}</span>
                     </div>
                 </div>
             )}

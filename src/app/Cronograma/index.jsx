@@ -12,6 +12,7 @@ import {
   collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where, serverTimestamp, onSnapshot 
 } from 'firebase/firestore';
 import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
+import { DIAS_SEMANA_GRADE, formatWeekday, getCurrencySymbol } from '../../utils/formatters';
 
 // --- FUNÇÕES UTILITÁRIAS ---
 const getTodayStr = () => new Date().toLocaleDateString('en-CA');
@@ -33,13 +34,6 @@ const getContrastColor = (hexColor) => {
   const b = parseInt(hex.substr(4, 2), 16);
   const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
   return yiq >= 128 ? '#1e293b' : '#ffffff';
-};
-
-// 🟢 FUNÇÃO INTELIGENTE DE MOEDA
-const getMoedaSymbol = (pais) => {
-    if (pais === "AR" || pais === "Argentina") return "$ ARS";
-    if (pais === "US" || pais === "Estados Unidos") return "$ USD";
-    return "R$";
 };
 
 // --- COMPONENTES VISUAIS ---
@@ -95,7 +89,7 @@ const GlobalUnitBlock = ({ unitName, classes, isReadOnly, onEdit, t }) => {
       <div className="divide-y divide-slate-100 dark:divide-slate-700">
         {classes.map(aula => {
           const isEncerrada = aula.dataFim && aula.dataFim < getTodayStr();
-          const diasTraduzidos = (aula.dias || []).map(d => t('publicSchedule.days.' + d, d)).join(', ');
+          const diasTraduzidos = (aula.dias || []).map(d => formatWeekday(d)).join(', ');
 
           return (
             <div 
@@ -185,7 +179,7 @@ export default function CronogramaPage() {
     dataInicio: getTodayStr(), dataFim: '' 
   });
 
-  const allDays = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
+  const allDays = DIAS_SEMANA_GRADE;
 
   useEffect(() => {
       const timer = setTimeout(() => setDebouncedSearchTerm(searchTerm), 500);
@@ -300,10 +294,10 @@ export default function CronogramaPage() {
       
       return {
         ...c,
-        modalidadeNome: mod?.nome || 'Desconhecido',
+        modalidadeNome: mod?.nome || t('schedulePage.unknownModality'),
         modalidadeCor: mod?.cor || '#9ca3af',
         professorNome: prof?.nome || t('publicSchedule.defaultTeacher', 'Sem Professor'),
-        unidadeNome: uni?.nome || 'Unidade Desconhecida'
+        unidadeNome: uni?.nome || t('schedulePage.unknownUnit')
       };
     }).filter(c => {
       if (!debouncedSearchTerm) return true;
@@ -346,10 +340,8 @@ export default function CronogramaPage() {
 
   // 🟢 DESCOBRIR MOEDA DA UNIDADE SELECIONADA NO MODAL
   const modalCurrencySymbol = useMemo(() => {
-      if (!formData.unidadeId) return "R$";
       const unit = catalogs.unidades.find(u => String(u.id) === String(formData.unidadeId));
-      if (!unit) return "R$";
-      return getMoedaSymbol(unit.pais);
+      return getCurrencySymbol(unit?.pais);
   }, [formData.unidadeId, catalogs.unidades]);
 
 
@@ -746,7 +738,7 @@ export default function CronogramaPage() {
                             <div className="bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur border-b border-slate-200 dark:border-slate-700 p-4 text-center text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest sticky top-0 left-0 z-20">{t('schedulePage.modal.time', 'Horário')}</div>
                             {visibleDays.map(day => (
                                 <div key={day} className="bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur border-b border-slate-200 dark:border-slate-700 border-l border-slate-100 dark:border-slate-800 p-4 text-center text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest sticky top-0 z-10">
-                                    {t('publicSchedule.days.' + day, day)}
+                                    {formatWeekday(day)}
                                 </div>
                             ))}
                             
@@ -829,7 +821,7 @@ export default function CronogramaPage() {
                             <div className="flex flex-wrap gap-2">
                                 {allDays.map(day => (
                                     <button key={day} type="button" onClick={() => toggleDay(day)} className={`flex-1 min-w-[65px] py-3 rounded-xl text-[10px] font-black uppercase tracking-wider border-2 transition-all ${formData.dias.includes(day) ? 'bg-red-600 text-white border-red-600 shadow-md shadow-red-200 dark:shadow-none transform scale-105' : 'bg-white dark:bg-slate-900 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-slate-700 hover:border-red-300 hover:text-red-500'}`}>
-                                        {t('publicSchedule.days.' + day, day).substring(0, 3)}
+                                        {formatWeekday(day, { short: true })}
                                     </button>
                                 ))}
                             </div>

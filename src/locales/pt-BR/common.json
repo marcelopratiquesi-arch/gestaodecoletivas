@@ -1,0 +1,86 @@
+{
+  "weekdays": {
+    "Segunda": "Segunda",
+    "Terça": "Terça",
+    "Quarta": "Quarta",
+    "Quinta": "Quinta",
+    "Sexta": "Sexta",
+    "Sábado": "Sábado",
+    "Domingo": "Domingo"
+  },
+  "weekdaysShort": {
+    "Segunda": "Seg",
+    "Terça": "Ter",
+    "Quarta": "Qua",
+    "Quinta": "Qui",
+    "Sexta": "Sex",
+    "Sábado": "Sáb",
+    "Domingo": "Dom"
+  },
+  "status": {
+    "realizada": "Realizada",
+    "cancelada": "Cancelada",
+    "pendente": "Pendente"
+  },
+  "cancelReasons": {
+    "holiday": "Feriado",
+    "teacherVacation": "Férias Professor",
+    "medicalLeave": "Atestado Médico",
+    "unitMaintenance": "Manutenção Unidade",
+    "unjustifiedAbsence": "Falta sem Justificativa",
+    "weather": "Chuva/Clima",
+    "other": "Outros",
+    "recessHoliday": "Recesso/Feriado",
+    "autoRecess": "Recesso/Feriado automático",
+    "recessNamed": "Recesso: {{name}}",
+    "recess": "Recesso"
+  },
+  "substitutionReasons": {
+    "holderMedicalLeave": "Atestado do Titular",
+    "vacation": "Férias",
+    "scheduledDayOff": "Folga Programada",
+    "emergency": "Emergência",
+    "other": "Outros"
+  },
+  "roles": {
+    "admin": "Administrador",
+    "mentor": "Mentor",
+    "unidade": "Unidade",
+    "professor": "Professor",
+    "system": "Sistema"
+  },
+  "actions": {
+    "cancel": "Cancelar",
+    "confirm": "Confirmar",
+    "close": "Fechar",
+    "select": "Selecione...",
+    "copy": "Copiar",
+    "loadMore": "Carregar +{{count}}",
+    "viewAll": "Ver Todos"
+  },
+  "multiSelect": {
+    "all": "Todos",
+    "allSelected": "Todos selecionados",
+    "selected": "{{count}} selecionado(s)",
+    "selectAll": "Marcar todos",
+    "clear": "Limpar",
+    "search": "Buscar...",
+    "noResults": "Nenhum resultado"
+  },
+  "unknown": {
+    "teacher": "Professor Desconhecido",
+    "modality": "Modalidade Desconhecida",
+    "unit": "Unidade Desconhecida",
+    "deletedTeacher": "Professor Excluído",
+    "deletedModality": "Modalidade Excluída",
+    "noTeacher": "Sem Professor",
+    "noMentor": "Sem Mentor",
+    "general": "Geral",
+    "reception": "Recepção / Sistema"
+  },
+  "period": {
+    "day": "Dia",
+    "month": "Mês",
+    "range": "Período"
+  }
+}

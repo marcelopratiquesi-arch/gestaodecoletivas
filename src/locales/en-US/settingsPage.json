@@ -1,0 +1,21 @@
+{
+  "loadingModule": "Loading module...",
+  "restrictedAccess": {
+    "title": "Restricted Access",
+    "desc": "This area is exclusive for management."
+  },
+  "title": "Settings Panel",
+  "subtitle": {
+    "unidade": "Manage your unit's teacher roster.",
+    "default": "Manage global records and system parameters."
+  },
+  "tabs": {
+    "unidades": "Units",
+    "mentores": "Mentors",
+    "professores": "Teachers",
+    "modalidades": "Modalities",
+    "feriados": "Holidays",
+    "pratiquePlay": "Pratique Play",
+    "backup": "Backup"
+  }
+}

@@ -4,7 +4,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 
-const formatCurrency = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
+import { formatCurrency, formatDate } from '../../utils/formatters';
 const TAMANHOS_PADRAO = ['PP', 'P', 'M', 'G', 'GG', 'XG', 'XGG', '3G'];
 
 const TabelaEstoque = ({
@@ -21,7 +21,7 @@ const TabelaEstoque = ({
             const tableRows = [];
 
             stockLedgerFiltrado.forEach(item => {
-                const data = item.data?.toDate ? item.data.toDate().toLocaleDateString('pt-BR') : 'Hoje';
+                const data = item.data?.toDate ? formatDate(item.data) : 'Hoje';
                 const fornecedor = item.tipo === 'entrada' ? item.fornecedorNome : item.motivoSaida;
                 const financeiro = item.tipo === 'entrada' ? `Custo: ${formatCurrency(item.custoTotal)}` : `Venda: ${formatCurrency(item.valorVenda)}`;
                 tableRows.push([data, item.tipo.toUpperCase(), item.modalidade, item.quantidadeTotal, fornecedor, financeiro]);
@@ -46,7 +46,7 @@ const TabelaEstoque = ({
                 .map(([k, v]) => `${k}(${v})`).join(', ');
 
             return {
-                'Data Registo': item.data?.toDate ? item.data.toDate().toLocaleDateString('pt-BR') : 'Hoje',
+                'Data Registo': item.data?.toDate ? formatDate(item.data) : 'Hoje',
                 'Operação': item.tipo.toUpperCase(),
                 'Modalidade (Produto)': item.modalidade,
                 'Qtd. Peças': item.quantidadeTotal,
@@ -159,7 +159,7 @@ const TabelaEstoque = ({
                             {stockLedgerFiltrado.map(item => (
                                 <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors group">
                                     <td className="p-4 text-xs font-bold text-slate-500 whitespace-nowrap">
-                                        {item.data?.toDate ? item.data.toDate().toLocaleDateString('pt-BR') : 'Hoje'}
+                                        {item.data?.toDate ? formatDate(item.data) : 'Hoje'}
                                     </td>
                                     <td className="p-4">
                                         <span className={`px-2 py-1 text-[9px] font-black uppercase rounded-md ${item.tipo === 'entrada' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'}`}>

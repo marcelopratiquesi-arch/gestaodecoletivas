@@ -4,31 +4,7 @@ import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../services/firebase";
 import { User, Lock, Loader2, AlertCircle, ChevronDown, Check } from "lucide-react";
 import { useTranslation } from "react-i18next"; 
-
-// 🌍 DADOS DAS BANDEIRAS E IDIOMAS
-const LANGUAGES = [
-  { 
-    code: 'pt-BR', 
-    name: 'Português', 
-    region: '(Brasil)', 
-    short: 'PT-BR', 
-    flag: 'https://flagcdn.com/w40/br.png' 
-  },
-  { 
-    code: 'en-US', 
-    name: 'English', 
-    region: '(US)', 
-    short: 'EN', 
-    flag: 'https://flagcdn.com/w40/us.png' 
-  },
-  { 
-    code: 'es-AR', 
-    name: 'Español', 
-    region: '(Argentina)', 
-    short: 'ES', 
-    flag: 'https://flagcdn.com/w40/ar.png' 
-  }
-];
+import { LANGUAGES } from "../utils/formatters";
 
 export default function Login() {
   const navigate = useNavigate();

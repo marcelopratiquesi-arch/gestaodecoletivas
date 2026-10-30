@@ -1,0 +1,42 @@
+{
+  "brandSubtitle": "Gestión de Colectivas",
+  "sections": {
+    "principal": "Principal",
+    "operacional": "Operativo",
+    "gestao": "Gestión"
+  },
+  "items": {
+    "inicio": "Inicio",
+    "cronograma": "Cronograma",
+    "linkAluno": "Enlace del Alumno",
+    "validacaoDiaria": "Validación Diaria",
+    "validacaoColetiva": "Validación Colectiva",
+    "performanceFinanceira": "Rendimiento Financiero",
+    "relatorios": "Reportes",
+    "configuracoes": "Configuraciones",
+    "pratiquePlay": "Pratique Play",
+    "comunicados": "Comunicados",
+    "radarGrade": "Radar de Grilla",
+    "lojaEventos": "Tienda & Eventos",
+    "auditoria": "Auditoría",
+    "acessos": "Accesos"
+  },
+  "vault": {
+    "title": "Caja Fuerte Master",
+    "pinPrompt": "Ingresá el PIN para liberar el menú",
+    "wrongPin": "PIN Incorrecto",
+    "unlock": "Desbloquear Menú"
+  },
+  "alerts": {
+    "title": "Alertas Críticas",
+    "actions": "{{count}} Acciones",
+    "none": "No hay alertas recientes.",
+    "openAudit": "Abrir Auditoría Completa",
+    "lgpdExport": "Planilla de Datos Descargada",
+    "hiddenClass": "Clase Ocultada (Papelera)",
+    "by": "Por: {{name}}"
+  },
+  "changeLanguage": "Cambiar Idioma",
+  "changeTheme": "Cambiar Tema",
+  "logout": "Salir"
+}

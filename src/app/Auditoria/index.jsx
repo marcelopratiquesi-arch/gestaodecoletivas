@@ -8,6 +8,7 @@ import {
     Key, LogIn, LogOut // 🟢 Ícones Novos para Acessos
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { formatDate, formatTime, formatCurrency } from '../../utils/formatters';
 
 // --- HELPERS E CONSTANTES ---
 const getTodayStr = () => new Date().toLocaleDateString('en-CA');
@@ -26,20 +27,18 @@ const formatarDataHora = (isoString) => {
     if (!isoString) return "-";
     try {
         const dateObj = new Date(isoString);
-        const d = dateObj.toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit', year: 'numeric'});
-        const h = dateObj.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'});
+        const d = formatDate(dateObj);
+        const h = formatTime(dateObj);
         return `${d} ÀS ${h}`;
     } catch { return isoString; }
 };
 
 const formatarDataSimples = (dateStr) => {
     if (!dateStr || dateStr === 'N/A') return 'N/A';
-    const parts = dateStr.split('-');
-    if (parts.length !== 3) return dateStr;
-    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+    return formatDate(dateStr);
 };
 
-const formatCurrency = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
 
 export default function AuditoriaPage() {
     const { userData } = useAuth();

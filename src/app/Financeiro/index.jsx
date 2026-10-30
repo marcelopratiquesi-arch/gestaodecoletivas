@@ -13,10 +13,9 @@ import {
 
 // Bibliotecas Externas
 import * as XLSX from 'xlsx';
+import { formatCurrency, formatPercent } from '../../utils/formatters';
 
 // --- HELPERS ---
-const formatCurrency = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
-const formatPercent = (val) => new Intl.NumberFormat('pt-BR', { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(val / 100);
 
 const getPreviousMonthStr = () => {
     const d = new Date();
@@ -205,7 +204,7 @@ const PerformanceRow = ({ unidade, mentorNome, custoAuto, folhaManualInicial, on
             </td>
             <td className="p-4 text-xs font-bold text-slate-500 hidden md:table-cell">{mentorNome}</td>
             <td className="p-4 text-right">
-                <div className="font-bold text-slate-700 dark:text-slate-300 text-sm">{formatCurrency(custoAuto)}</div>
+                <div className="font-bold text-slate-700 dark:text-slate-300 text-sm">{formatCurrency(custoAuto, unidade.pais)}</div>
             </td>
             <td className="p-4 text-right">
                 <div className="flex items-center justify-end gap-2">
@@ -226,7 +225,7 @@ const PerformanceRow = ({ unidade, mentorNome, custoAuto, folhaManualInicial, on
                     ) : (
                         <div className="flex items-center gap-2 group/edit cursor-pointer" onClick={() => setIsEditing(true)}>
                             <span className={`text-sm font-bold ${folhaManualInicial === 0 ? 'text-slate-300 italic' : 'text-slate-600 dark:text-slate-300'}`}>
-                                {folhaManualInicial > 0 ? formatCurrency(folhaManualInicial) : "DEFINIR VALOR"}
+                                {folhaManualInicial > 0 ? formatCurrency(folhaManualInicial, unidade.pais) : "DEFINIR VALOR"}
                             </span>
                             <div className="p-1.5 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-blue-50 transition-colors opacity-0 group-hover/edit:opacity-100">
                                 <Edit2 className="w-3.5 h-3.5"/>

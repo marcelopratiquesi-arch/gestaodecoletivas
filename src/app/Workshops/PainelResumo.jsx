@@ -1,7 +1,7 @@
 import React, { memo } from 'react';
 import { TrendingUp, ArrowDownRight, Users, DollarSign, ArrowUpRight, Edit, Trash2 } from 'lucide-react';
 
-const formatCurrency = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
+import { formatCurrency } from '../../utils/formatters';
 
 const PainelResumo = ({ 
     kpis, 

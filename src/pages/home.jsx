@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
+import { getDiaSemana, formatCurrency } from "../utils/formatters";
 
 // 🟢 CACHE GLOBAL DA HOME (Fica fora do componente para não ser destruído ao trocar de aba)
 let homeDashboardCache = {
@@ -121,7 +122,7 @@ const DashboardCard = ({ title, subtitle, icon: Icon, theme, onClick, footerText
 export default function Home() {
   const { userData } = useAuth();
   const navigate = useNavigate();
-  const { t, i18n } = useTranslation(); // 🟢 MOTOR ACIONADO NA HOME
+  const { t } = useTranslation(); // 🟢 MOTOR ACIONADO NA HOME
   
   const { catalogs, loadingCatalogs } = useCatalogs();
 
@@ -161,7 +162,6 @@ export default function Home() {
       setLoading(true);
       
       try {
-        const weekDayMap = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
         
         const d = new Date();
         const y = d.getFullYear();
@@ -169,8 +169,8 @@ export default function Home() {
         const day = String(d.getDate()).padStart(2, '0');
         
         const todayStr = `${y}-${m}-${day}`;
-        const todayWeekDay = weekDayMap[d.getDay()];
-        const nowTime = d.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
+        const todayWeekDay = getDiaSemana(d);
+        const nowTime = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; // comparado com aula.hora ("HH:MM")
 
         const ontemData = new Date(d);
         if (d.getDay() === 1) { 
@@ -184,7 +184,7 @@ export default function Home() {
         const dayO = String(ontemData.getDate()).padStart(2, '0');
         
         const ontemStr = `${yO}-${mO}-${dayO}`;
-        const ontemWeekDay = weekDayMap[ontemData.getDay()];
+        const ontemWeekDay = getDiaSemana(ontemData);
 
         const unidadesMap = {};
         const unidadesMentorIds = []; 
@@ -367,7 +367,7 @@ export default function Home() {
                     {loading || loadingCatalogs ? <Loader2 className="w-6 h-6 animate-spin text-blue-500"/> : (
                         <h4 className="text-3xl font-black text-blue-700 dark:text-blue-300 tracking-tight">
                             {/* 🟢 Adaptação Mágica de Moeda para o idioma selecionado */}
-                            {new Intl.NumberFormat(i18n.language || 'pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(resumoRelatorio.valor)}
+                            {formatCurrency(resumoRelatorio.valor, catalogs.unidades?.find(u => String(u.id) === String(userData?.unidadeId))?.pais, { maximumFractionDigits: 0 })}
                         </h4>
                     )}
                 </div>

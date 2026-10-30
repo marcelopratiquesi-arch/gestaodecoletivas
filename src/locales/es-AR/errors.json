@@ -1,0 +1,8 @@
+{
+  "invalidCredential": "Correo o contraseña incorrectos.",
+  "userNotFound": "Usuario no encontrado.",
+  "wrongPassword": "Contraseña incorrecta.",
+  "tooManyRequests": "Demasiados intentos. Inténtalo más tarde.",
+  "userDisabled": "Cuenta desactivada. Habla con el soporte.",
+  "default": "Error de acceso. Inténtalo de nuevo."
+}

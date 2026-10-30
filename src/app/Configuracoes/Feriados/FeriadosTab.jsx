@@ -6,9 +6,9 @@ import {
   writeBatch, query, where, serverTimestamp 
 } from 'firebase/firestore';
 import { Calendar, Plus, Trash2, AlertTriangle, Loader2, CalendarDays } from 'lucide-react';
+import { getDiaSemana } from '../../../utils/formatters';
 
 // Helpers de Data
-const diasSemanaMap = { 0: 'Domingo', 1: 'Segunda', 2: 'Terça', 3: 'Quarta', 4: 'Quinta', 5: 'Sexta', 6: 'Sábado' };
 
 const getDatesInRange = (startDate, endDate) => {
   const date = new Date(startDate + 'T00:00:00');
@@ -95,7 +95,7 @@ export function FeriadosTab() {
 
       for (const dateObj of datasDoRecesso) {
         const dataStr = dateObj.toISOString().split('T')[0];
-        const diaSemana = diasSemanaMap[dateObj.getDay()];
+        const diaSemana = getDiaSemana(dateObj);
 
         const aulasDoDia = todasAulas.filter(aula => aula.dias && aula.dias.includes(diaSemana));
 

@@ -1,0 +1,42 @@
+{
+  "brandSubtitle": "Gestão de Coletivas",
+  "sections": {
+    "principal": "Principal",
+    "operacional": "Operacional",
+    "gestao": "Gestão"
+  },
+  "items": {
+    "inicio": "Início",
+    "cronograma": "Cronograma",
+    "linkAluno": "Link do Aluno",
+    "validacaoDiaria": "Validação Diária",
+    "validacaoColetiva": "Validação Coletiva",
+    "performanceFinanceira": "Performance Financeira",
+    "relatorios": "Relatórios",
+    "configuracoes": "Configurações",
+    "pratiquePlay": "Pratique Play",
+    "comunicados": "Comunicados",
+    "radarGrade": "Radar de Grade",
+    "lojaEventos": "Loja & Eventos",
+    "auditoria": "Auditoria",
+    "acessos": "Acessos"
+  },
+  "vault": {
+    "title": "Cofre Master",
+    "pinPrompt": "Digite o PIN para liberar o menu",
+    "wrongPin": "PIN Incorreto",
+    "unlock": "Destravar Menu"
+  },
+  "alerts": {
+    "title": "Alertas Críticos",
+    "actions": "{{count}} Ações",
+    "none": "Nenhum alerta recente.",
+    "openAudit": "Abrir Auditoria Completa",
+    "lgpdExport": "Planilha LGPD Baixada",
+    "hiddenClass": "Aula Ocultada (Lixeira)",
+    "by": "Por: {{name}}"
+  },
+  "changeLanguage": "Mudar Idioma",
+  "changeTheme": "Mudar Tema",
+  "logout": "Sair"
+}

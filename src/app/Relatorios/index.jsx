@@ -3,6 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../services/firebase';
 import { collection, getDocs, onSnapshot, query, where, documentId, orderBy } from 'firebase/firestore'; 
 import { useTranslation } from "react-i18next"; // 🟢 MOTOR DE IDIOMAS ACIONADO
+import { DIAS_SEMANA as diasSemanaMap, getDiaSemana, formatCurrency, formatDate, formatWeekday } from '../../utils/formatters';
 
 import { 
   BarChart2, Filter, DollarSign, Users, Calendar, 
@@ -13,7 +14,6 @@ import {
 } from 'lucide-react';
 
 // --- HELPERS E MÁSCARAS ---
-const diasSemanaMap = { 0: 'Domingo', 1: 'Segunda', 2: 'Terça', 3: 'Quarta', 4: 'Quinta', 5: 'Sexta', 6: 'Sábado' };
 const DIAS_UTEIS = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta']; 
 const DURACAO_AULA_PADRAO = 40; 
 const GAP_MINIMO_OCIOSO = 60; 
@@ -31,21 +31,7 @@ const timeToMins = (timeStr) => { if (!timeStr) return 0; const [h, m] = timeStr
 const minsToTime = (mins) => { const h = Math.floor(mins / 60).toString().padStart(2, '0'); const m = (mins % 60).toString().padStart(2, '0'); return `${h}:${m}`; };
 
 // 🟢 MÁSCARA INTELIGENTE DE MOEDA (Smart Currency)
-const formatSmartCurrency = (val, pais) => {
-    const p = (pais || '').toUpperCase();
-    let locale = 'pt-BR';
-    let currency = 'BRL';
-
-    if (p === 'AR' || p === 'ARGENTINA') {
-        locale = 'es-AR';
-        currency = 'ARS';
-    } else if (p === 'US' || p === 'ESTADOS UNIDOS') {
-        locale = 'en-US';
-        currency = 'USD';
-    }
-
-    return new Intl.NumberFormat(locale, { style: 'currency', currency }).format(val);
-};
+const formatSmartCurrency = (val, pais) => formatCurrency(val, pais);
 
 const getTurnoFromTime = (timeStr) => {
     if (!timeStr) return null;
@@ -411,7 +397,7 @@ export default function RelatorioPage() {
     });
 
     auloes.forEach(v => {
-        const diaSemana = diasSemanaMap[new Date(v.data + 'T00:00:00').getDay()];
+        const diaSemana = getDiaSemana(v.data);
         todasLinhas.push({ tipo: 'aulao', aulaBase: { id: `aulao_${v.id}`, unidadeId: v.unidadeId, modalidadeId: v.modalidadeId, professorId: v.professorId, hora: v.hora || "00:00", valor: v.valorPago || 0, dias: [diaSemana] }, professorId: v.professorId, validacoes: [v], validacoesSubstituido: [] });
     });
 
@@ -982,7 +968,7 @@ export default function RelatorioPage() {
                                                 return (
                                                     <div key={dia} className="flex-1 min-w-[130px] max-w-[180px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden flex flex-col shadow-sm">
                                                         <div className="bg-slate-100 dark:bg-slate-700 px-3 py-1.5 text-center border-b border-slate-200 dark:border-slate-600">
-                                                            <span className="text-[10px] font-black text-slate-600 dark:text-slate-300 uppercase">{dia.toUpperCase()}</span>
+                                                            <span className="text-[10px] font-black text-slate-600 dark:text-slate-300 uppercase">{formatWeekday(dia).toUpperCase()}</span>
                                                         </div>
                                                         <div className="p-2 space-y-1.5 flex-1 min-h-[50px]">
                                                             {(datasDoDia || []).length === 0 && <span className="text-[10px] text-slate-300 text-center block">-</span>}
@@ -993,7 +979,7 @@ export default function RelatorioPage() {
                                                                 if (row.aulaBase.dataInicio && dataStr < row.aulaBase.dataInicio) return null;
                                                                 if (row.aulaBase.dataFim && dataStr > row.aulaBase.dataFim) return null;
 
-                                                                const diaMes = new Date(dataStr + 'T00:00:00').toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit'});
+                                                                const diaMes = formatDate(dataStr, 'dayMonth');
                                                                 
                                                                 const itemClass = validacao 
                                                                     ? (validacao.status === 'cancelada' 

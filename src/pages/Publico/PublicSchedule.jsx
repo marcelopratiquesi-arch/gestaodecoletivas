@@ -6,6 +6,7 @@ import {
   Printer, ArrowLeft, Dumbbell, Sun, Moon, ChevronDown, MapPin, Navigation, LocateFixed, Map, List, Check
 } from 'lucide-react';
 import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
+import { LANGUAGES, formatWeekday } from '../../utils/formatters';
 
 // 🟢 IMPORTS DO MOTOR DE MAPAS (LEAFLET)
 import { MapContainer, TileLayer, Marker, Popup, Circle } from 'react-leaflet';
@@ -47,13 +48,6 @@ const blueIcon = new L.Icon({
   popupAnchor: [1, -34],
   shadowSize: [41, 41]
 });
-
-// 🌍 DADOS DAS BANDEIRAS E IDIOMAS
-const LANGUAGES = [
-  { code: 'pt-BR', name: 'Português', short: 'PT', flag: 'https://flagcdn.com/w40/br.png' },
-  { code: 'en-US', name: 'English', short: 'EN', flag: 'https://flagcdn.com/w40/us.png' },
-  { code: 'es-AR', name: 'Español', short: 'ES', flag: 'https://flagcdn.com/w40/ar.png' }
-];
 
 // --- CONFIGURAÇÃO DAS IMAGENS ---
 const LOGOS = {
@@ -596,7 +590,7 @@ export default function PublicSchedule() {
                                                 <div className="flex flex-wrap gap-1.5">
                                                     {item.aulas.slice(0, 4).map((aula, idx) => (
                                                         <span key={idx} className={`text-[10px] font-bold px-2 py-1 rounded-md border ${isDarkMode ? 'bg-black/30 border-white/10 text-gray-300' : 'bg-gray-50 border-gray-200 text-gray-600'}`}>
-                                                            {t('publicSchedule.days.' + aula.dias[0], aula.dias[0])?.substring(0,3)} {aula.hora}
+                                                            {formatWeekday(aula.dias[0], { short: true })} {aula.hora}
                                                         </span>
                                                     ))}
                                                     {item.aulas.length > 4 && (
@@ -780,7 +774,7 @@ export default function PublicSchedule() {
                         </div>
                         {gradeOrganizada.dias.map(dia => (
                             <div key={dia} className={`p-4 flex items-center justify-center font-black text-lg uppercase border-r print-cell-header ${isDarkMode ? 'text-white border-white/10' : 'text-slate-800 border-slate-200'}`}>
-                                {t('publicSchedule.days.' + dia, dia)?.substring(0,3)}
+                                {formatWeekday(dia, { short: true })}
                             </div>
                         ))}
                     </div>

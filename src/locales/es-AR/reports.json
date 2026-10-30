@@ -1,0 +1,53 @@
+{
+  "title": "Inteligencia Financiera",
+  "subtitle": "Panel Ejecutivo de Nómina y Ocupación",
+  "filters": {
+    "day": "DÍA",
+    "month": "MES",
+    "period": "PERÍODO",
+    "export": "Exportar",
+    "advanced": "Filtros Avanzados (Selección Múltiple)",
+    "clear": "Limpiar Filtros",
+    "country": "País",
+    "state": "Provincia",
+    "mentor": "Mentor",
+    "unit": "Unidad",
+    "modality": "Modalidad",
+    "teacher": "Profesor",
+    "shift": "Turno"
+  },
+  "kpis": {
+    "vaultActivated": "Caja Fuerte Activada",
+    "vaultDesc": "Para mantener la velocidad del sistema, seleccione al menos un Filtro Avanzado para desbloquear la inteligencia financiera.",
+    "payrollSummary": "Resumen de Nómina",
+    "totalToPay": "Total a Pagar en el Período",
+    "operationalEngine": "Motor Operativo",
+    "completedClasses": "Clases Realizadas",
+    "canceledClasses": "Clases Canceladas",
+    "avgClassValue": "Valor Medio P/ Clase",
+    "gridHealth": "Salud de la Grilla",
+    "occupancyRate": "Tasa de Ocupación",
+    "vacancyRate": "Tasa de Vacancia",
+    "avgStudents": "Promedio de Alumnos"
+  },
+  "table": {
+    "summary": "Resumen de Nómina",
+    "detailed": "Detallado",
+    "unit": "UNIDAD (PAÍS/PROV)",
+    "modality": "MODALIDAD",
+    "time": "HORARIO",
+    "teacher": "PROFESOR",
+    "completed": "REALIZADAS",
+    "canceled": "CANCELADAS",
+    "avgStudentsCol": "PROM ALUMNOS",
+    "occupancyCol": "TASA OCUPACIÓN",
+    "classValue": "VALOR CLASE",
+    "toReceive": "A RECIBIR",
+    "noData": "NO SE ENCONTRARON DATOS PARA EL FILTRO ACTUAL."
+  },
+  "buttons": {
+    "load20": "CARGAR +20",
+    "load50": "CARGAR +50",
+    "loadAll": "VER TODOS"
+  }
+}

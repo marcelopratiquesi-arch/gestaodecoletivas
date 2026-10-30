@@ -1,0 +1,21 @@
+{
+  "loadingModule": "Cargando módulo...",
+  "restrictedAccess": {
+    "title": "Acceso Restringido",
+    "desc": "Esta área es exclusiva para gestión."
+  },
+  "title": "Panel de Configuración",
+  "subtitle": {
+    "unidade": "Gestiona la plantilla de profesores de tu unidad.",
+    "default": "Gestiona los registros globales y parámetros del sistema."
+  },
+  "tabs": {
+    "unidades": "Unidades",
+    "mentores": "Mentores",
+    "professores": "Profesores",
+    "modalidades": "Modalidades",
+    "feriados": "Feriados",
+    "pratiquePlay": "Pratique Play",
+    "backup": "Copia de Seguridad"
+  }
+}

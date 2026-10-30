@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { db } from '../../services/firebase';
 import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import { useAuth } from '../../contexts/AuthContext';
+import { formatCurrency, getCurrencySymbol } from '../../utils/formatters';
 
 import { 
   ShoppingBag, Calendar, Loader2, Users,
@@ -14,7 +15,6 @@ import PainelResumo from './PainelResumo';
 import TabelaEstoque from './TabelaEstoque';
 import DREModal from './DREModal';
 
-const formatCurrency = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
 
 const formatarNomeEvento = (w) => {
     if (!w) return '';
@@ -495,7 +495,7 @@ export default function WorkshopsTab() {
                               </div>
                               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2 border-t border-blue-100">
                                   <div><label className="text-[10px] font-black text-slate-500 uppercase block mb-1">Nº NF</label><input type="text" value={formStock.numeroNF} onChange={e=>setFormStock({...formStock, numeroNF: e.target.value})} className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-sm font-bold outline-none" /></div>
-                                  <div><label className="text-[10px] font-black text-blue-600 uppercase block mb-1">Custo Un (R$)</label><input type="number" step="0.01" value={formStock.valorUnitario} onChange={e=>setFormStock({...formStock, valorUnitario: e.target.value})} className="w-full p-2.5 bg-white border border-blue-200 rounded-xl text-sm font-black text-blue-600 outline-none focus:ring-2 focus:ring-blue-500" required/></div>
+                                  <div><label className="text-[10px] font-black text-blue-600 uppercase block mb-1">Custo Un ({getCurrencySymbol()})</label><input type="number" step="0.01" value={formStock.valorUnitario} onChange={e=>setFormStock({...formStock, valorUnitario: e.target.value})} className="w-full p-2.5 bg-white border border-blue-200 rounded-xl text-sm font-black text-blue-600 outline-none focus:ring-2 focus:ring-blue-500" required/></div>
                                   <div><label className="text-[10px] font-black text-red-600 uppercase block mb-1">Custo Total</label><div className="w-full p-2.5 bg-red-100 border border-red-200 rounded-xl text-sm font-black text-red-600">{formatCurrency(custoTotalCalculado)}</div></div>
                                   <div className="md:col-span-3"><label className="text-[10px] font-black text-slate-500 uppercase block mb-1 flex items-center gap-1"><Paperclip className="w-3 h-3"/> Link do Anexo</label><input type="url" value={formStock.comprovanteUrl} onChange={e=>setFormStock({...formStock, comprovanteUrl: e.target.value})} className="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs font-medium outline-none" /></div>
                               </div>
@@ -653,7 +653,7 @@ export default function WorkshopsTab() {
                           
                           <div>
                               <label className={`text-[10px] font-black uppercase tracking-widest mb-1 block ${formTransacao.tipo === 'comissao' ? 'text-amber-600' : 'text-slate-400'}`}>
-                                  {formTransacao.tipo === 'comissao' ? 'Porcentagem (%)' : 'Valor (R$)'}
+                                  {formTransacao.tipo === 'comissao' ? 'Porcentagem (%)' : `Valor (${getCurrencySymbol()})`}
                               </label>
                               <input type="number" step={formTransacao.tipo === 'comissao' ? "1" : "0.01"} min={formTransacao.tipo === 'comissao' ? "1" : "0.01"} max={formTransacao.tipo === 'comissao' ? "100" : undefined} value={formTransacao.valor} onChange={e=>setFormTransacao({...formTransacao, valor: e.target.value})} className={`w-full p-3 bg-white border rounded-xl text-sm font-black outline-none focus:ring-2 ${formTransacao.tipo === 'comissao' ? 'border-amber-300 focus:ring-amber-500 text-amber-600' : 'border-slate-200'}`} required/>
                           </div>

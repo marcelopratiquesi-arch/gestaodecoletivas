@@ -1,0 +1,12 @@
+{
+  "subtitle": "Gestão de Coletivas",
+  "emailLabel": "Usuário / E-mail",
+  "emailPlaceholder": "seu@email.com",
+  "passwordLabel": "Senha",
+  "passwordPlaceholder": "••••••••",
+  "button": "ENTRAR NO SISTEMA",
+  "loading": "Acessando...",
+  "forgotPassword": "Esqueceu sua senha?",
+  "support": "Contate o suporte",
+  "version": "v2.5.0 • Pratique Fitness"
+}

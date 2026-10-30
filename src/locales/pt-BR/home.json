@@ -1,0 +1,83 @@
+{
+  "greeting": {
+    "morning": "Bom dia",
+    "afternoon": "Boa tarde",
+    "night": "Boa noite"
+  },
+  "roles": {
+    "admin": "Administrador",
+    "professor": "Professor",
+    "mentor": "Mentor",
+    "unidade": "Unidade"
+  },
+  "systemOnline": "Sistema Online",
+  "cardDefaults": {
+    "access": "Acessar"
+  },
+  "cards": {
+    "reports": {
+      "title": "Relatório Gerencial",
+      "subtitle": "Performance Financeira",
+      "revenueYesterday": "RECEITA DE ONTEM",
+      "monthlyForecast": "PREVISÃO MENSAL",
+      "footer": "Ver Detalhes",
+      "monthlyEstimate": "Previsão Mensal (Est.)"
+    },
+    "schedule": {
+      "title": "Cronograma",
+      "subtitle": "Grade de aulas",
+      "footer": "Ver Grade Completa",
+      "next": "Próxima",
+      "unit": "Unidade",
+      "teacher": "Professor",
+      "noMoreClasses": "Sem mais aulas hoje",
+      "defaultModality": "Coletiva",
+      "defaultTeacher": "Instrutor"
+    },
+    "validation": {
+      "title": "Validação Diária",
+      "subtitle": "CONTROLE DE PRESENÇA",
+      "resolveNow": "Resolver Agora",
+      "history": "Histórico",
+      "classes": "Aulas",
+      "pending": "Pendentes",
+      "allValidated": "Tudo Validado!"
+    },
+    "monitoring": {
+      "title": "Monitoramento de Validação",
+      "subtitle": "Status de Ontem",
+      "footer": "Ver Ranking",
+      "status": {
+        "goalMet": "Meta Batida",
+        "highAdhesion": "Alta Adesão",
+        "attention": "ATENÇÃO",
+        "critical": "Crítico",
+        "excellent": "EXCELENTE",
+        "inProgress": "EM ANDAMENTO"
+      },
+      "validatedOf": "{{validated}} de {{total}} validadas"
+    },
+    "pratiquePlay": {
+      "title": "PRATIQUE PLAY",
+      "subtitle": "MÚSICAS PARA AULAS",
+      "footer": "Acessar Play",
+      "insideLine1": "PLAYLISTS DAS",
+      "insideLine2": "COLETIVAS"
+    },
+    "linkAluno": {
+      "title": "LINK DO ALUNO",
+      "subtitle": "ACESSO EXTERNO",
+      "footer": "Abrir Portal",
+      "insideLine1": "PORTAL DE",
+      "insideLine2": "ALUNOS"
+    },
+    "settings": {
+      "title": "Configurações",
+      "subtitle": "Painel Administrativo",
+      "footer": "Gerenciar",
+      "units": "Unidades",
+      "mods": "Mods",
+      "profs": "Profs"
+    }
+  }
+}

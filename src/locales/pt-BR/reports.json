@@ -1,0 +1,53 @@
+{
+  "title": "Inteligência Financeira",
+  "subtitle": "Painel Executivo de Folha e Ocupação",
+  "filters": {
+    "day": "DIA",
+    "month": "MÊS",
+    "period": "PERÍODO",
+    "export": "Exportar",
+    "advanced": "Filtros Avançados (Múltipla Escolha)",
+    "clear": "Limpar Filtros",
+    "country": "País",
+    "state": "Estado",
+    "mentor": "Mentor",
+    "unit": "Unidade",
+    "modality": "Modalidade",
+    "teacher": "Professor",
+    "shift": "Turno"
+  },
+  "kpis": {
+    "vaultActivated": "Cofre de Relatórios Ativado",
+    "vaultDesc": "Para manter a velocidade do sistema, selecione pelo menos um Filtro Avançado para destrancar a inteligência financeira.",
+    "payrollSummary": "Resumo de Folha",
+    "totalToPay": "Total a Pagar no Período Filtrado",
+    "operationalEngine": "Motor Operacional",
+    "completedClasses": "Aulas Realizadas",
+    "canceledClasses": "Aulas Canceladas",
+    "avgClassValue": "Valor Médio P/ Aula",
+    "gridHealth": "Saúde da Grade",
+    "occupancyRate": "Taxa de Ocupação",
+    "vacancyRate": "Taxa de Vacância",
+    "avgStudents": "Média de Alunos"
+  },
+  "table": {
+    "summary": "Resumo da Folha",
+    "detailed": "Detalhado",
+    "unit": "UNIDADE (PAÍS/ESTADO)",
+    "modality": "MODALIDADE",
+    "time": "HORÁRIO",
+    "teacher": "PROFESSOR",
+    "completed": "REALIZADAS",
+    "canceled": "CANCELADAS",
+    "avgStudentsCol": "MÉDIA ALUNOS",
+    "occupancyCol": "TAXA OCUPAÇÃO",
+    "classValue": "VALOR AULA",
+    "toReceive": "A RECEBER",
+    "noData": "SEM DADOS ENCONTRADOS PARA O FILTRO ATUAL."
+  },
+  "buttons": {
+    "load20": "CARREGAR +20",
+    "load50": "CARREGAR +50",
+    "loadAll": "VER TODOS"
+  }
+}

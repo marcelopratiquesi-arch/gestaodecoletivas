@@ -11,6 +11,7 @@ import {
   TrendingUp, CheckCircle2, AlertOctagon, PieChart, Users, Siren, Maximize
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { DIAS_SEMANA_GRADE, formatDate, formatWeekday, getCurrencySymbol } from '../../utils/formatters';
 
 // 🟢 IMPORTANDO AS VISÕES (Os arquivos que você já separou)
 import VisaoGlobal from './VisaoGlobal';
@@ -19,8 +20,8 @@ import VisaoPerformance from './VisaoPerformance';
 // ============================================================================
 // 1. HELPERS & CONFIGURAÇÕES GLOBAIS
 // ============================================================================
-const ALL_DAYS = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
-const DIAS_UTEIS = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta']; 
+const ALL_DAYS = DIAS_SEMANA_GRADE;
+const DIAS_UTEIS = DIAS_SEMANA_GRADE.slice(0, 5); 
 const DURACAO_AULA_PADRAO = 40; 
 const GAP_MINIMO_OCIOSO = 60; 
 const MAX_AULAS_MES = 480;
@@ -612,7 +613,7 @@ export default function RadarDeGrade() {
                                     <thead className="sticky top-0 z-30 shadow-sm bg-slate-800 dark:bg-slate-900 text-white text-[10px] font-black uppercase">
                                         <tr>
                                             <th className="p-5 w-64 sticky left-0 z-40 bg-slate-900 dark:bg-slate-950 border-r border-slate-700 dark:border-slate-800">UNIDADE / FLUXO</th>
-                                            {ALL_DAYS.map(d => <th key={d} className="p-5 text-center border-r border-slate-700/50 dark:border-slate-800/50">{d}</th>)}
+                                            {ALL_DAYS.map(d => <th key={d} className="p-5 text-center border-r border-slate-700/50 dark:border-slate-800/50">{formatWeekday(d)}</th>)}
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
@@ -658,7 +659,7 @@ export default function RadarDeGrade() {
                                 if (!u) return null;
                                 return (
                                     <div key={dia} className="bg-white dark:bg-slate-800 rounded-3xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-xl cursor-pointer" onClick={() => setPreviewModal({ isOpen: true, unidadeNome: u.nome, unidadeId: u.id, dia, aulas: (aulasPorUnidade[u.id] || []).filter(a => a.dias?.includes(dia)).sort((a,b) => timeToMins(a.hora) - timeToMins(b.hora)), buracos: u.dias[dia], pos: getCenterPos(450, 500), size: previewModal.size })}>
-                                        <h3 className="font-black text-lg text-blue-600 dark:text-blue-400 mb-4">{dia}</h3>
+                                        <h3 className="font-black text-lg text-blue-600 dark:text-blue-400 mb-4">{formatWeekday(dia)}</h3>
                                         <div className="space-y-3">
                                             {u.dias[dia].length === 0 ? <p className="text-xs font-bold text-slate-300 dark:text-slate-600 italic text-center py-4">GRADE TOTALMENTE OCUPADA</p> : u.dias[dia].map((j, i) => (
                                                 <div key={i} className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-2xl border border-blue-100 dark:border-blue-900/50 text-blue-700 dark:text-blue-400 font-bold text-xs"><Clock className="w-4 h-4 opacity-50"/> {j}</div>
@@ -724,7 +725,7 @@ export default function RadarDeGrade() {
                             <div key={dia} className="flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm transition-transform hover:-translate-y-0.5">
                                 <div className="flex items-center gap-3">
                                     <div className={`w-2 h-2 rounded-full ${breakdown.janelasMes > 0 ? 'bg-rose-500 shadow-[0_0_5px_rgba(244,63,94,0.5)]' : 'bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)]'}`}></div>
-                                    <span className="font-black text-slate-700 dark:text-slate-200 text-sm uppercase tracking-wide">{dia}</span>
+                                    <span className="font-black text-slate-700 dark:text-slate-200 text-sm uppercase tracking-wide">{formatWeekday(dia)}</span>
                                 </div>
                                 <div className="text-right">
                                     <div className={`text-sm font-black ${breakdown.janelasMes > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
@@ -805,7 +806,7 @@ export default function RadarDeGrade() {
             {/* OUTROS MODAIS EXISTENTES */}
             <ResizableModal 
                 isOpen={previewModal.isOpen} onClose={() => setPreviewModal({...previewModal, isOpen: false})} 
-                title={`PRÉVIA: ${previewModal.dia} (${previewModal.unidadeNome})`} icon={CalendarIcon} headerColor="bg-blue-50 dark:bg-slate-900 text-blue-800 dark:text-blue-400 border-blue-100 dark:border-slate-800"
+                title={`PRÉVIA: ${formatWeekday(previewModal.dia)} (${previewModal.unidadeNome})`} icon={CalendarIcon} headerColor="bg-blue-50 dark:bg-slate-900 text-blue-800 dark:text-blue-400 border-blue-100 dark:border-slate-800"
                 pos={previewModal.pos} setPos={(pos) => setPreviewModal({...previewModal, pos})} size={previewModal.size} setSize={(size) => setPreviewModal({...previewModal, size})} minW={350} minH={300}
             >
                 <div className="p-6 overflow-y-auto flex-1 space-y-4 custom-scrollbar bg-white dark:bg-slate-800">
@@ -852,7 +853,7 @@ export default function RadarDeGrade() {
                         <div className="flex flex-wrap gap-2">
                             {ALL_DAYS.map(d => (
                                 <button key={d} type="button" onClick={() => toggleDia(d)} className={`px-3 py-2 text-[10px] font-black rounded-lg border uppercase transition-colors ${formData.dias.includes(d) ? 'bg-blue-600 dark:bg-blue-500 text-white border-blue-700 dark:border-blue-600 shadow-md scale-105' : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'}`}>
-                                    {d.substring(0,3)}
+                                    {formatWeekday(d, { short: true })}
                                 </button>
                             ))}
                         </div>
@@ -887,7 +888,7 @@ export default function RadarDeGrade() {
                             <input required type="time" value={formData.hora} onChange={e => setFormData({...formData, hora: e.target.value})} className="w-full p-3 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-black text-slate-800 dark:text-white outline-none focus:border-blue-500 bg-slate-50 dark:bg-slate-900 uppercase"/>
                         </div>
                         <div className="flex-1">
-                            <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1 block">Valor (R$)</label>
+                            <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1 block">Valor ({getCurrencySymbol(catalogs.unidades?.find(u => String(u.id) === String(previewModal.unidadeId))?.pais)})</label>
                             <input required type="number" step="0.01" value={formData.valor} onChange={e => setFormData({...formData, valor: e.target.value})} className="w-full p-3 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-800 dark:text-white outline-none focus:border-blue-500 bg-slate-50 dark:bg-slate-900 uppercase"/>
                         </div>
                     </div>
@@ -916,7 +917,7 @@ export default function RadarDeGrade() {
                             return (
                                 <div key={dia} className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
                                     <div className="bg-slate-100 dark:bg-slate-900/50 px-4 py-2 border-b border-slate-200 dark:border-slate-700">
-                                        <h4 className="text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">{dia}</h4>
+                                        <h4 className="text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">{formatWeekday(dia)}</h4>
                                     </div>
                                     <div className="p-3 bg-slate-50/50 dark:bg-slate-800/50">
                                         <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-3">
@@ -974,7 +975,7 @@ export default function RadarDeGrade() {
                                     <div key={i} className="flex justify-between items-center bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm shrink-0 hover:border-blue-200 dark:hover:border-blue-800 transition-colors uppercase">
                                         <div className="flex flex-col min-w-0 flex-1 pr-2">
                                             <span className="text-[11px] font-black text-slate-700 dark:text-slate-300 truncate">{mod?.nome || 'AULA COLETIVA'}</span>
-                                            <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 mt-0.5">{new Date(v.data).toLocaleDateString('pt-BR')}</span>
+                                            <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 mt-0.5">{formatDate(v.data)}</span>
                                         </div>
                                         <div className="text-xs font-black text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-3 py-1.5 rounded-lg border border-blue-100 dark:border-blue-800 shrink-0">
                                             {v.alunos} <span className="text-[8px] uppercase">Alunos</span>

@@ -6,11 +6,14 @@ import { db } from '../../services/firebase';
 import { collection, query, where, onSnapshot, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
 import { ShieldCheck, LayoutDashboard, Download, MapPin, UserCog, Building2, Lock, Calendar, CheckCircle2, AlertCircle, Trophy, List, MessageSquare } from 'lucide-react';
 
-import { KPICard, MultiSelectDropdown, getTodayStr, normalizeDate, getDatesInRange, diasSemanaMap, formatHeaderPeriodo, formatDateShort, filterPendingDates, getFirstLast, getEmojiByPercent } from './components';
+import { KPICard, MultiSelectDropdown, getTodayStr, normalizeDate, getDatesInRange, formatHeaderPeriodo, formatDateShort, filterPendingDates, getFirstLast, getEmojiByPercent } from './components';
 import { RankingTab, StatusTab, CobrancaTab } from './Tabs';
+import { getDiaSemana, toDate, formatDate, formatTime } from '../../utils/formatters';
+import { useTranslation } from 'react-i18next';
 
 export default function ValidacaoColetiva() {
   const { userData } = useAuth();
+  const { t } = useTranslation();
   const role = String(userData?.role || "").toLowerCase();
   const userId = userData?.id || userData?.uid;
   const isMentor = role === 'mentor';
@@ -115,7 +118,7 @@ export default function ValidacaoColetiva() {
         datas.forEach(dStr => {
             if (dStr > todayStr) return;
             const isFer = feriadosBase.some(f => (!f.unidadeId || String(f.unidadeId) === String(unidade.id)) && (dStr >= normalizeDate(f.inicio) && dStr <= normalizeDate(f.fim)));
-            const diaSem = diasSemanaMap[new Date(dStr + 'T00:00:00').getDay()];
+            const diaSem = getDiaSemana(dStr);
             
             const aulasDia = grade.filter(a => {
                 if (!a.dias?.includes(diaSem)) return false;
@@ -126,10 +129,10 @@ export default function ValidacaoColetiva() {
             
             aulasDia.forEach(aula => {
                 const [h, m] = aula.hora.split(':');
-                const dHa = new Date(dStr); dHa.setHours(parseInt(h), parseInt(m), 59);
+                const dHa = toDate(dStr); dHa.setHours(parseInt(h), parseInt(m), 59);
                 if (dStr < todayStr || (dStr === todayStr && dHa < now)) {
                     totalEsp++;
-                    if (isFer) { totalVal++; hist.push({ key: aula.id + dStr, data: new Date(dStr + 'T00:00:00').toLocaleDateString('pt-BR'), dia: diaSem, horaAula: aula.hora, modalidade: modMap[aula.modalidadeId] || 'GERAL', professor: profMap[aula.professorId] || 'SEM PROF', status: 'FERIADO', responsavelNome: 'SISTEMA', timestampOrdenacao: dHa }); return; }
+                    if (isFer) { totalVal++; hist.push({ key: aula.id + dStr, data: formatDate(dStr), dia: diaSem, horaAula: aula.hora, modalidade: modMap[aula.modalidadeId] || t('common.unknown.general'), professor: profMap[aula.professorId] || t('common.unknown.noTeacher'), status: 'FERIADO', responsavelNome: t('common.roles.system'), timestampOrdenacao: dHa }); return; }
                     
                     const pool = [...(vIndex[`${unidade.id}_${dStr}`] || [])];
                     let fIdx = pool.findIndex(v => String(v.aulaId) === String(aula.id) || v.hora === aula.hora);
@@ -147,27 +150,27 @@ export default function ValidacaoColetiva() {
                         
                         if (campoData && campoData.seconds) {
                             const dateVal = new Date(campoData.seconds * 1000);
-                            horaValidacao = dateVal.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
-                            dataValidacao = dateVal.toLocaleDateString('pt-BR', {day: '2-digit', month:'2-digit', year:'numeric'});
+                            horaValidacao = formatTime(dateVal);
+                            dataValidacao = formatDate(dateVal);
                             const dateAula = new Date(dStr + 'T00:00:00');
                             const dateValidacaoTime = new Date(dateVal);
                             dateAula.setHours(0,0,0,0);
                             dateValidacaoTime.setHours(0,0,0,0);
                             diffDays = Math.floor((dateValidacaoTime - dateAula) / (1000 * 60 * 60 * 24));
                         } else {
-                            dataValidacao = v.data ? v.data.split('-').reverse().join('/') : '-'; 
+                            dataValidacao = formatDate(v.data); 
                             horaValidacao = v.hora || '-';
                         }
 
-                        const extractedName = uL?.nome || v.userName || v.validadoPorNome || v.nome_usuario || 'RECEPCAO / SISTEMA';
+                        const extractedName = uL?.nome || v.userName || v.validadoPorNome || v.nome_usuario || t('common.unknown.reception');
 
                         hist.push({ 
                             key: aula.id + dStr, 
-                            data: new Date(dStr + 'T00:00:00').toLocaleDateString('pt-BR'), 
+                            data: formatDate(dStr), 
                             dia: diaSem, 
                             horaAula: aula.hora, 
-                            modalidade: modMap[aula.modalidadeId] || 'GERAL', 
-                            professor: profMap[aula.professorId] || 'SEM PROF', 
+                            modalidade: modMap[aula.modalidadeId] || t('common.unknown.general'), 
+                            professor: profMap[aula.professorId] || t('common.unknown.noTeacher'), 
                             status: String(v.status || 'REALIZADA').toUpperCase(), 
                             alunos: v.alunos || v.fluxo || v.quantidadeAlunos || 0,
                             responsavelNome: extractedName, 
@@ -178,7 +181,7 @@ export default function ValidacaoColetiva() {
                         });
                     } else { 
                         pends.push({data: dStr, dia: diaSem, info: aula.hora}); 
-                        hist.push({ key: aula.id + dStr, data: new Date(dStr + 'T00:00:00').toLocaleDateString('pt-BR'), dia: diaSem, horaAula: aula.hora, modalidade: modMap[aula.modalidadeId] || 'GERAL', professor: profMap[aula.professorId] || 'SEM PROF', status: 'ATRASADO', alunos: 0, responsavelNome: '-', timestampOrdenacao: dHa }); 
+                        hist.push({ key: aula.id + dStr, data: formatDate(dStr), dia: diaSem, horaAula: aula.hora, modalidade: modMap[aula.modalidadeId] || t('common.unknown.general'), professor: profMap[aula.professorId] || t('common.unknown.noTeacher'), status: 'ATRASADO', alunos: 0, responsavelNome: '-', timestampOrdenacao: dHa }); 
                     }
                 }
             });
@@ -189,23 +192,23 @@ export default function ValidacaoColetiva() {
         
         const lastV = validacoesBase.filter(v => String(v.unidadeId) === String(unidade.id)).sort((a,b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0))[0];
         
-        let responsavelInfo = { nome: '-', role: '-', data: '-', horaValidacao: '-' };
+        let responsavelInfo = { responsavelNome: '-', responsavelRole: '-', data: '-', horaValidacao: '-' };
         if (lastV) {
             const validadoPorUid = lastV.userId || lastV.uid || lastV.validadoPor;
             const uL = usuariosMap[validadoPorUid];
-            responsavelInfo.nome = uL?.nome || lastV.userName || lastV.validadoPorNome || 'RECEPCAO / SISTEMA';
-            responsavelInfo.role = uL?.role || lastV.userRole || lastV.validadoPorRole || 'SISTEMA';
-            responsavelInfo.data = normalizeDate(lastV.data).split('-').reverse().join('/');
+            responsavelInfo.responsavelNome = uL?.nome || lastV.userName || lastV.validadoPorNome || t('common.unknown.reception');
+            responsavelInfo.responsavelRole = uL?.role || lastV.userRole || lastV.validadoPorRole || 'sistema';
+            responsavelInfo.data = formatDate(normalizeDate(lastV.data));
             
             const t = lastV.validadoEm || lastV.timestamp;
             if (t && t.seconds) {
-                responsavelInfo.horaValidacao = new Date(t.seconds * 1000).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
+                responsavelInfo.horaValidacao = formatTime(t);
             }
         }
 
         return { 
             id: unidade.id, nome: unidade.nome, telefone: unidade.telefone, mentorId: unidade.mentorId, 
-            mentorNome: usuariosMap[unidade.mentorId]?.nome || 'SEM MENTOR', totalEsperado: totalEsp, totalValidado: totalVal, 
+            mentorNome: usuariosMap[unidade.mentorId]?.nome || t('common.unknown.noMentor'), totalEsperado: totalEsp, totalValidado: totalVal, 
             percentual: pct, pendencias: pends, statusTexto: totalEsp === 0 ? 'AGUARDANDO' : pct === 100 ? 'PARABÉNS!' : 'EM ANDAMENTO', 
             temCronograma: temCronograma,
             historicoDetalhado: hist, 
@@ -240,7 +243,7 @@ export default function ValidacaoColetiva() {
     });
 
     return { mentores: rankingMentores, unidades: statusUnidades, kpis: { totalAulas: statusUnidades.reduce((acc, u) => acc + u.totalEsperado, 0), unidadesValidadas: statusUnidades.filter(u => u.percentual === 100 && u.totalEsperado > 0).length, unidadesPendentes: statusUnidades.filter(u => u.percentual < 100).length } };
-  }, [unidadesBase, usuariosBase, catalogs, validacoesBase, dataInicio, dataFim, now, estadoFiltro, unidadeFiltro, isCofreGlobalFechado]);
+  }, [unidadesBase, usuariosBase, catalogs, validacoesBase, dataInicio, dataFim, now, estadoFiltro, unidadeFiltro, isCofreGlobalFechado, t]);
 
   const rankingUnidades = useMemo(() => {
       let filtered = [...dadosProcessados.unidades];
@@ -316,8 +319,8 @@ export default function ValidacaoColetiva() {
   // 🟢 NOVA FUNÇÃO EXPORTAR CSV BLINDADA (X-9)
   const exportarCSV = async () => {
     // 1. Lógica original de criação e download do CSV
-    const headers = "UNIDADE,MENTOR,REALIZADO,ESPERADO,STATUS,PROGRESSO,PENDENCIAS\n";
-    const rows = sortedUnidades.map(u => `${u.nome.toUpperCase()},${u.mentorNome.toUpperCase()},${u.totalValidado},${u.totalEsperado},${u.statusTexto.toUpperCase()},${u.percentual}%,${u.pendencias.length}`).join("\n");
+    const headers = ['unit', 'mentor', 'done', 'expected', 'status', 'progress', 'pendencies'].map(k => t(`groupValidation.csv.${k}`)).join(',') + "\n";
+    const rows = sortedUnidades.map(u => `${u.nome.toUpperCase()},${u.mentorNome.toUpperCase()},${u.totalValidado},${u.totalEsperado},${traduzirStatus(u.statusTexto).toUpperCase()},${u.percentual}%,${u.pendencias.length}`).join("\n");
     const link = document.createElement('a');
     link.href = URL.createObjectURL(new Blob([headers + rows], { type: 'text/csv;charset=utf-8;' }));
     link.setAttribute('download', `validacao_coletiva_${dataInicio}.csv`);
@@ -341,40 +344,46 @@ export default function ValidacaoColetiva() {
     }
   };
 
+  // Traduz os códigos internos de status (PARABÉNS!, EM ANDAMENTO...) para o CSV.
+  const traduzirStatus = (codigo) => {
+      const chaves = { 'PARABÉNS!': 'congrats', 'EM ANDAMENTO': 'inProgress', 'AGUARDANDO': 'awaiting' };
+      return chaves[codigo] ? t(`groupValidation.badges.${chaves[codigo]}`) : codigo;
+  };
+
   const msgAdminToMentor = (m) => {
       const u100 = m.unidadesList.filter(u => u.percentual === 100).map(u => `✅ *${u.nome.toUpperCase()}*`);
       const uPendentes = m.unidadesList.filter(u => u.percentual < 100).map(u => {
           const datas = filterPendingDates(u.pendencias).map(d => formatDateShort(d)).join(', ');
-          return `⚠️ *${u.nome.toUpperCase()}* (Faltam ${u.pendencias.length} aulas: ${datas})`;
+          return t('groupValidation.messages.adminToMentor.pendingLine', { unit: u.nome.toUpperCase(), count: u.pendencias.length, dates: datas });
       });
 
-      let msg = `OLÁ LÍDER ${getFirstLast(m.nome).toUpperCase()}, TUDO BEM? 🚀\n\n`;
-      msg += `ESTOU ACOMPANHANDO O PLACAR DE VALIDAÇÕES DAS SUAS UNIDADES COLETIVAS:\n\n`;
-      
+      let msg = `${t('groupValidation.messages.adminToMentor.greeting', { name: getFirstLast(m.nome).toUpperCase() })}\n\n`;
+      msg += `${t('groupValidation.messages.adminToMentor.intro')}\n\n`;
+
       if (u100.length > 0) {
-          msg += `🏆 *PARABÉNS (100% OK):*\n${u100.join('\n')}\n\n`;
+          msg += `${t('groupValidation.messages.adminToMentor.congratsTitle')}\n${u100.join('\n')}\n\n`;
       }
-      
+
       if (uPendentes.length > 0) {
-          msg += `🚨 *PRECISAM DE ATENÇÃO (PENDÊNCIAS):*\n${uPendentes.join('\n')}\n\n`;
-          msg += `CONSEGUE VERIFICAR COM OS LÍDERES DESSAS UNIDADES PARA REGULARIZAREM HOJE? CONTO COM A SUA GESTÃO! 👊`;
+          msg += `${t('groupValidation.messages.adminToMentor.pendingTitle')}\n${uPendentes.join('\n')}\n\n`;
+          msg += t('groupValidation.messages.adminToMentor.pendingClosing');
       } else {
-          msg += `SUA REDE ESTÁ 100% IMPECÁVEL! PARABÉNS PELO ACOMPANHAMENTO! 🏆👏`;
+          msg += t('groupValidation.messages.adminToMentor.allDone');
       }
-      
+
       return msg;
   };
 
   const msgMentorToUnit = (u) => {
       const datas = filterPendingDates(u.pendencias).map(d => formatDateShort(d)).join(', ');
-      return `FALA LÍDER *${u.nome.toUpperCase()}*, IDENTIFICAMOS PENDÊNCIAS NA VALIDAÇÃO DAS COLETIVAS.\nDIAS: ${datas}\nCONSEGUE REGULARIZAR HOJE? 🚀`;
+      return t('groupValidation.messages.mentorToUnit', { unit: u.nome.toUpperCase(), dates: datas });
   };
 
-  const msgAdminGeneralReport = () => `📢 *STATUS VALIDAÇÃO COLETIVA - ${formatHeaderPeriodo(dataInicio, dataFim)}*\n\n🏆 *PARABÉNS (100% VALIDADO):*\n${mentoresRelGeral.filter(m => m.totalPendencias === 0).map(m => `✅ ${getFirstLast(m.nome).toUpperCase()}`).join('\n')}\n\n⚠️ *PENDENTES DE VALIDAÇÃO:*\n${mentoresRelGeral.filter(m => m.totalPendencias > 0).map(m => `${getEmojiByPercent(m.mediaGeral)} ${getFirstLast(m.nome).toUpperCase()} (${m.totalPendencias} FALTAS)`).join('\n')}\n\nGESTÃO DE COLETIVAS - PRATIQUE FITNESS 💪`;
+  const msgAdminGeneralReport = () => `${t('groupValidation.messages.generalTitle', { period: formatHeaderPeriodo(dataInicio, dataFim) })}\n\n${t('groupValidation.messages.adminGeneral.congratsTitle')}\n${mentoresRelGeral.filter(m => m.totalPendencias === 0).map(m => `✅ ${getFirstLast(m.nome).toUpperCase()}`).join('\n')}\n\n${t('groupValidation.messages.adminGeneral.pendingTitle')}\n${mentoresRelGeral.filter(m => m.totalPendencias > 0).map(m => t('groupValidation.messages.adminGeneral.line', { emoji: getEmojiByPercent(m.mediaGeral), name: getFirstLast(m.nome).toUpperCase(), count: m.totalPendencias })).join('\n')}\n\n${t('groupValidation.messages.adminGeneral.footer')}`;
   
-  const msgMentorGeneralReport = () => `📢 *STATUS VALIDAÇÃO COLETIVA - ${formatHeaderPeriodo(dataInicio, dataFim)}*\n\n🏆 *UNIDADES EM DIA (100%):*\n${rankingUnidades.filter(u => u.pendencias.length === 0 && u.totalEsperado > 0).map(u => `✅ ${u.nome.toUpperCase()}`).join('\n')}\n\n⚠️ *ATENÇÃO (PENDÊNCIAS):*\n${rankingUnidades.filter(u => u.pendencias.length > 0).map(u => `${getEmojiByPercent(u.percentual)} ${u.nome.toUpperCase()} (${u.pendencias.length} FALTAS)`).join('\n')}\n\nBORA REGULARIZAR E GARANTIR A EXCELÊNCIA NAS AULAS! CONTO COM TODOS. 🚀`;
+  const msgMentorGeneralReport = () => `${t('groupValidation.messages.generalTitle', { period: formatHeaderPeriodo(dataInicio, dataFim) })}\n\n${t('groupValidation.messages.mentorGeneral.congratsTitle')}\n${rankingUnidades.filter(u => u.pendencias.length === 0 && u.totalEsperado > 0).map(u => `✅ ${u.nome.toUpperCase()}`).join('\n')}\n\n${t('groupValidation.messages.mentorGeneral.pendingTitle')}\n${rankingUnidades.filter(u => u.pendencias.length > 0).map(u => t('groupValidation.messages.mentorGeneral.line', { emoji: getEmojiByPercent(u.percentual), name: u.nome.toUpperCase(), count: u.pendencias.length })).join('\n')}\n\n${t('groupValidation.messages.mentorGeneral.footer')}`;
 
-  if (loadingCatalogs) return <div className="h-screen flex items-center justify-center text-slate-400 font-black uppercase animate-pulse">SINCRONIZANDO SISTEMA...</div>;
+  if (loadingCatalogs) return <div className="h-screen flex items-center justify-center text-slate-400 font-black uppercase animate-pulse">{t('groupValidation.syncing')}</div>;
 
   return (
     <div className="p-6 md:p-8 max-w-[1920px] mx-auto animate-fade-in space-y-8 uppercase">
@@ -385,22 +394,22 @@ export default function ValidacaoColetiva() {
             <div>
               <h1 className="text-3xl font-black text-slate-800 dark:text-white tracking-tight flex items-center gap-3">
                 <span className="bg-gradient-to-tr from-blue-600 to-indigo-600 text-white p-2 rounded-lg shadow-lg shadow-blue-500/20"><ShieldCheck className="w-7 h-7" /></span>
-                VALIDAÇÃO COLETIVA
+                {t('groupValidation.title')}
               </h1>
-              <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium text-sm">MONITORAMENTO DE ADESÃO E AUDITORIA EM TEMPO REAL</p>
+              <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium text-sm">{t('groupValidation.subtitle')}</p>
             </div>
             
             <button onClick={exportarCSV} className="hidden md:flex h-11 px-5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-600 dark:text-slate-300 font-bold text-xs items-center gap-2 transition-all shadow-sm tooltip uppercase">
-                <Download className="w-4 h-4"/> Exportar CSV
+                <Download className="w-4 h-4"/> {t('groupValidation.exportCsv')}
             </button>
         </div>
 
         <div className="bg-white dark:bg-slate-800 p-3 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm w-full flex flex-wrap items-center gap-3">
             {/* DATAS (IGUAL VALIDAÇÃO DIÁRIA) */}
             <div className="flex bg-slate-100 dark:bg-slate-700 rounded-xl p-1 h-11 shrink-0">
-                <button onClick={() => handleDateChange('dia')} className={`px-4 text-xs font-bold rounded-lg uppercase transition-all ${modoFiltro === 'dia' ? 'bg-white dark:bg-slate-600 shadow-sm text-blue-600 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}>DIA</button>
-                <button onClick={() => setModoFiltro('periodo')} className={`px-4 text-xs font-bold rounded-lg uppercase transition-all ${modoFiltro === 'periodo' ? 'bg-white dark:bg-slate-600 shadow-sm text-blue-600 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}>PERÍODO</button>
-                <button onClick={() => handleDateChange('mes')} className={`px-4 text-xs font-bold rounded-lg uppercase transition-all ${modoFiltro === 'mes' ? 'bg-white dark:bg-slate-600 shadow-sm text-blue-600 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}>MÊS</button>
+                <button onClick={() => handleDateChange('dia')} className={`px-4 text-xs font-bold rounded-lg uppercase transition-all ${modoFiltro === 'dia' ? 'bg-white dark:bg-slate-600 shadow-sm text-blue-600 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}>{t('common.period.day')}</button>
+                <button onClick={() => setModoFiltro('periodo')} className={`px-4 text-xs font-bold rounded-lg uppercase transition-all ${modoFiltro === 'periodo' ? 'bg-white dark:bg-slate-600 shadow-sm text-blue-600 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}>{t('common.period.range')}</button>
+                <button onClick={() => handleDateChange('mes')} className={`px-4 text-xs font-bold rounded-lg uppercase transition-all ${modoFiltro === 'mes' ? 'bg-white dark:bg-slate-600 shadow-sm text-blue-600 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}>{t('common.period.month')}</button>
             </div>
 
             <div className="h-11 px-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-700 flex items-center gap-2 shrink-0">
@@ -418,20 +427,20 @@ export default function ValidacaoColetiva() {
             {/* SELETORES COMPACTOS COM LIMITADOR DE LARGURA (MAX-W) */}
             {role === 'admin' && (
                 <div className="w-full sm:w-auto sm:flex-1 max-w-[200px]">
-                    <MultiSelectDropdown options={estadosOptions} selectedValues={estadoFiltro} onChange={(v) => { setEstadoFiltro(v); setMentorFiltro([]); setUnidadeFiltro([]); }} placeholder="ESTADOS" icon={MapPin} />
+                    <MultiSelectDropdown options={estadosOptions} selectedValues={estadoFiltro} onChange={(v) => { setEstadoFiltro(v); setMentorFiltro([]); setUnidadeFiltro([]); }} placeholder={t('groupValidation.filters.states')} icon={MapPin} />
                 </div>
             )}
             {!isMentor && (
                 <div className="w-full sm:w-auto sm:flex-1 max-w-[240px]">
-                    <MultiSelectDropdown options={mentoresOptions} selectedValues={mentorFiltro} onChange={(v) => { setMentorFiltro(v); setUnidadeFiltro([]); }} placeholder="MENTORES" icon={UserCog} />
+                    <MultiSelectDropdown options={mentoresOptions} selectedValues={mentorFiltro} onChange={(v) => { setMentorFiltro(v); setUnidadeFiltro([]); }} placeholder={t('groupValidation.filters.mentors')} icon={UserCog} />
                 </div>
             )}
             <div className="w-full sm:w-auto sm:flex-1 max-w-[280px]">
-                <MultiSelectDropdown options={unidadesOptions} selectedValues={unidadeFiltro} onChange={setUnidadeFiltro} placeholder="UNIDADES" icon={Building2} />
+                <MultiSelectDropdown options={unidadesOptions} selectedValues={unidadeFiltro} onChange={setUnidadeFiltro} placeholder={t('groupValidation.filters.units')} icon={Building2} />
             </div>
 
             <button onClick={exportarCSV} className="md:hidden w-full h-11 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 rounded-xl text-slate-600 dark:text-white font-bold text-xs flex justify-center items-center gap-2 uppercase">
-                <Download className="w-4 h-4"/> Exportar CSV
+                <Download className="w-4 h-4"/> {t('groupValidation.exportCsv')}
             </button>
         </div>
       </div>
@@ -442,21 +451,21 @@ export default function ValidacaoColetiva() {
               <div className="bg-blue-50 dark:bg-slate-900 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 border border-blue-100 dark:border-slate-800 shadow-inner">
                   <Lock className="w-10 h-10 text-blue-500 animate-pulse"/>
               </div>
-              <h3 className="text-2xl font-black text-slate-700 dark:text-white mb-3 uppercase">SELECIONE UM FILTRO PARA INICIAR</h3>
-              <p className="text-slate-500 dark:text-slate-400 text-sm font-medium max-w-lg mx-auto leading-relaxed uppercase">SELECIONE UM ESTADO, MENTOR OU UNIDADE NO FILTRO ACIMA PARA CARREGAR OS DADOS DO SISTEMA.</p>
+              <h3 className="text-2xl font-black text-slate-700 dark:text-white mb-3 uppercase">{t('groupValidation.locked.title')}</h3>
+              <p className="text-slate-500 dark:text-slate-400 text-sm font-medium max-w-lg mx-auto leading-relaxed uppercase">{t('groupValidation.locked.desc')}</p>
           </div>
       ) : (
           <>
             {/* CARDS DE RESUMO */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <KPICard title="AULAS ESPERADAS" value={dadosProcessados.kpis.totalAulas} icon={Calendar} colorClass="border-l-4 border-l-blue-500" iconBg="bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400"/>
-                <KPICard title="UNIDADES 100%" value={dadosProcessados.kpis.unidadesValidadas} icon={CheckCircle2} colorClass="border-l-4 border-l-emerald-500" iconBg="bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400" subTitle={`DE ${dadosProcessados.unidades.length} UNIDADES`}/>
-                <KPICard title="UNIDADES PENDENTES" value={dadosProcessados.kpis.unidadesPendentes} icon={AlertCircle} colorClass="border-l-4 border-l-rose-500" iconBg="bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400"/>
+                <KPICard title={t('groupValidation.kpis.expectedClasses')} value={dadosProcessados.kpis.totalAulas} icon={Calendar} colorClass="border-l-4 border-l-blue-500" iconBg="bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400"/>
+                <KPICard title={t('groupValidation.kpis.units100')} value={dadosProcessados.kpis.unidadesValidadas} icon={CheckCircle2} colorClass="border-l-4 border-l-emerald-500" iconBg="bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400" subTitle={t('groupValidation.kpis.ofUnits', { count: dadosProcessados.unidades.length })}/>
+                <KPICard title={t('groupValidation.kpis.pendingUnits')} value={dadosProcessados.kpis.unidadesPendentes} icon={AlertCircle} colorClass="border-l-4 border-l-rose-500" iconBg="bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400"/>
             </div>
 
             {/* NAVEGAÇÃO ENTRE ABAS */}
             <div className="flex gap-8 border-b border-slate-200 dark:border-slate-700">
-                {[{ id: 'ranking', label: 'RANKING', icon: Trophy }, { id: 'status', label: 'STATUS DETALHADO', icon: List }, { id: 'cobranca', label: 'CENTRAL DE COBRANÇA', icon: MessageSquare }].map(tab => (
+                {[{ id: 'ranking', label: t('groupValidation.tabs.ranking'), icon: Trophy }, { id: 'status', label: t('groupValidation.tabs.status'), icon: List }, { id: 'cobranca', label: t('groupValidation.tabs.collection'), icon: MessageSquare }].map(tab => (
                     <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`pb-4 text-sm font-bold uppercase flex items-center gap-2 transition-all relative ${activeTab === tab.id ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300'}`}>
                         <tab.icon className="w-4 h-4"/> {tab.label}
                         {activeTab === tab.id && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 dark:bg-blue-400 rounded-t-full"></div>}
