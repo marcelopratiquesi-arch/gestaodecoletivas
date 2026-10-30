@@ -7,6 +7,7 @@ import {
 } from 'firebase/firestore';
 import { Calendar, Plus, Trash2, AlertTriangle, Loader2, CalendarDays } from 'lucide-react';
 import { getDiaSemana, formatDate as formatarData } from '../../../utils/formatters';
+import { idValidacao } from '../../../utils/validacoes';
 import { useTranslation } from 'react-i18next';
 
 // Tipo gravado no banco (português) -> chave de tradução.
@@ -94,6 +95,10 @@ export function FeriadosTab() {
       const todasAulas = aulasSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
       const datasDoRecesso = getDatesInRange(form.dataInicio, form.dataFim);
+
+      // Aulas que já têm validação no período (realizada ou cancelada) não são sobrescritas pelo feriado.
+      const jaValidadasSnap = await getDocs(query(collection(db, "validacoes"), where('data', '>=', form.dataInicio), where('data', '<=', form.dataFim)));
+      const jaValidadas = new Set(jaValidadasSnap.docs.map(d => idValidacao(d.data().aulaId, d.data().data)));
       
       let batch = writeBatch(db);
       let count = 0;
@@ -105,7 +110,8 @@ export function FeriadosTab() {
         const aulasDoDia = todasAulas.filter(aula => aula.dias && aula.dias.includes(diaSemana));
 
         for (const aula of aulasDoDia) {
-          const validacaoRef = doc(collection(db, "validacoes")); 
+          if (jaValidadas.has(idValidacao(aula.id, dataStr))) continue;
+          const validacaoRef = doc(db, "validacoes", idValidacao(aula.id, dataStr));
           
           batch.set(validacaoRef, {
             aulaId: aula.id,

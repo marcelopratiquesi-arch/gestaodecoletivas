@@ -14,6 +14,7 @@ import {
 // Bibliotecas Externas
 import * as XLSX from 'xlsx';
 import { formatCurrency, formatPercent } from '../../utils/formatters';
+import { deduplicarValidacoes } from '../../utils/validacoes';
 import { useTranslation } from 'react-i18next';
 
 // --- HELPERS ---
@@ -340,8 +341,7 @@ export default function PerformanceFinanceiraPage() {
                 const valSnap = await getDocs(qVal);
                 
                 const custosMap = {};
-                valSnap.docs.forEach(d => {
-                    const val = d.data();
+                deduplicarValidacoes(valSnap.docs.map(d => d.data())).forEach(val => {
                     // 🟢 OTIMIZAÇÃO: Busca no SET é 100x mais rápida que o .some() num array
                     if (unidadesSet.has(val.unidadeId)) {
                         const aula = aulasMap[val.aulaId];

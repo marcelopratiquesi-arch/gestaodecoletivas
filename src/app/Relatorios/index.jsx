@@ -3,6 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../services/firebase';
 import { collection, getDocs, onSnapshot, query, where, documentId, orderBy } from 'firebase/firestore'; 
 import { useTranslation } from "react-i18next"; // 🟢 MOTOR DE IDIOMAS ACIONADO
+import { deduplicarValidacoes } from '../../utils/validacoes';
 import { DIAS_SEMANA as diasSemanaMap, getDiaSemana, formatCurrency, formatDate, formatWeekday, formatCancelReason } from '../../utils/formatters';
 
 import { 
@@ -298,8 +299,8 @@ export default function RelatorioPage() {
       }
 
       const unsubAulas = onSnapshot(qAulas, (snap) => setAulasRealtime(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
-      const unsubValidacoes = onSnapshot(qValidacoes, (snap) => setValidacoesRealtime(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
-      const unsubValidacoesYTD = onSnapshot(qValidacoesYTD, (snap) => setValidacoesYTD(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+      const unsubValidacoes = onSnapshot(qValidacoes, (snap) => setValidacoesRealtime(deduplicarValidacoes(snap.docs.map(d => ({ id: d.id, ...d.data() })))));
+      const unsubValidacoesYTD = onSnapshot(qValidacoesYTD, (snap) => setValidacoesYTD(deduplicarValidacoes(snap.docs.map(d => ({ id: d.id, ...d.data() })))));
 
       return () => { unsubAulas(); unsubValidacoes(); unsubValidacoesYTD(); };
   }, [role, userData.unidadeId, period, isCofreFechado, catalogs.professores, userId]);

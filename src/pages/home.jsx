@@ -11,6 +11,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
 import { getDiaSemana, formatCurrency } from "../utils/formatters";
+import { deduplicarValidacoes } from "../utils/validacoes";
 
 // 🟢 CACHE GLOBAL DA HOME (Fica fora do componente para não ser destruído ao trocar de aba)
 let homeDashboardCache = {
@@ -280,8 +281,7 @@ export default function Home() {
                  const qVal = query(collection(db, "validacoes"), where("data", "in", [todayStr, ontemStr]));
                  const valSnap = await getDocs(qVal);
                  
-                 valSnap.forEach(doc => {
-                     const val = doc.data();
+                 deduplicarValidacoes(valSnap.docs.map(d => d.data())).forEach(val => {
                      if (val.data === ontemStr && idsAulasOntem.includes(val.aulaId)) validacoesRealizadasOntem++;
                      if (val.data === todayStr && idsAulasHoje.includes(val.aulaId)) validacoesRealizadasHoje++;
                  });

@@ -9,6 +9,7 @@ import { ShieldCheck, LayoutDashboard, Download, MapPin, UserCog, Building2, Loc
 import { KPICard, MultiSelectDropdown, getTodayStr, normalizeDate, getDatesInRange, formatHeaderPeriodo, formatDateShort, filterPendingDates, getFirstLast, getEmojiByPercent } from './components';
 import { RankingTab, StatusTab, CobrancaTab } from './Tabs';
 import { getDiaSemana, toDate, formatDate, formatTime } from '../../utils/formatters';
+import { deduplicarValidacoes } from '../../utils/validacoes';
 import { useTranslation } from 'react-i18next';
 
 export default function ValidacaoColetiva() {
@@ -85,7 +86,7 @@ export default function ValidacaoColetiva() {
     if (isCofreGlobalFechado) { setValidacoesBase([]); setLoadingRealtime(false); return; }
     setLoadingRealtime(true);
     const q = query(collection(db, 'validacoes'), where('data', '>=', dataInicio), where('data', '<=', dataFim));
-    const u = onSnapshot(q, s => { setValidacoesBase(s.docs.map(d => ({id: d.id, ...d.data()}))); setLoadingRealtime(false); });
+    const u = onSnapshot(q, s => { setValidacoesBase(deduplicarValidacoes(s.docs.map(d => ({id: d.id, ...d.data()})))); setLoadingRealtime(false); });
     return () => u();
   }, [dataInicio, dataFim, userId, isCofreGlobalFechado, loadingCatalogs]); 
 

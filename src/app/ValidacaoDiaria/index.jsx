@@ -3,7 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useCatalogs } from '../../contexts/CatalogContext'; 
 import { db } from '../../services/firebase';
 import { 
-  collection, query, where, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, deleteDoc 
+  collection, query, where, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, deleteDoc, setDoc 
 } from 'firebase/firestore';
 import { 
   Calendar, CircleCheck, CircleX, TriangleAlert, 
@@ -14,6 +14,7 @@ import {
 import { AulaCard } from './AulaCard';
 import { ValidationModal } from './ValidationModal';
 import { getDiaSemana, formatCurrency } from '../../utils/formatters';
+import { idValidacao, deduplicarValidacoes } from '../../utils/validacoes';
 import { useTranslation } from 'react-i18next';
 
 // --- HELPERS ---
@@ -298,7 +299,7 @@ export default function ValidacaoDiariaPage() {
     }
 
     const unsubValidacoes = onSnapshot(qValidacoes, (snap) => {
-        setValidacoesRealtime(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        setValidacoesRealtime(deduplicarValidacoes(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
         setLoading(false); 
     });
 
@@ -551,7 +552,8 @@ export default function ValidacaoDiariaPage() {
             await updateDoc(doc(db, 'validacoes', item.validacao.id), payload);
             await registrarLogAuditoria('ALTERADA', tipo === 'validar' ? `Validação editada.` : `Cancelamento editado.`, item, diffLog.join(' | '));
           } else {
-            await addDoc(collection(db, 'validacoes'), payload);
+            // ID fixo por aula/dia: se outra pessoa validar ao mesmo tempo, atualiza o mesmo registro (sem duplicar).
+            await setDoc(doc(db, 'validacoes', idValidacao(payload.aulaId, payload.data)), payload);
             await registrarLogAuditoria('NOVA', tipo === 'validar' ? `Aula validada.` : `Aula cancelada.`, item, diffLog.join(' | '));
           }
       }

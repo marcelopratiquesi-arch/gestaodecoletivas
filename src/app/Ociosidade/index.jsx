@@ -13,6 +13,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { DIAS_SEMANA_GRADE, formatDate, formatWeekday, getCurrencySymbol } from '../../utils/formatters';
 import { useTranslation } from 'react-i18next';
+import { deduplicarValidacoes } from '../../utils/validacoes';
 
 // 🟢 IMPORTANDO AS VISÕES (Os arquivos que você já separou)
 import VisaoGlobal from './VisaoGlobal';
@@ -219,7 +220,7 @@ export default function RadarDeGrade() {
                 const dataCorteStr = dataCorte.toISOString().split('T')[0];
                 const q = query(collection(db, 'validacoes'), where('data', '>=', dataCorteStr));
                 const snap = await getDocs(q);
-                setValidacoesRecentes(snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(v => v.status === 'realizada'));
+                setValidacoesRecentes(deduplicarValidacoes(snap.docs.map(d => ({ id: d.id, ...d.data() }))).filter(v => v.status === 'realizada'));
             } catch (e) { console.error(e); }
             finally { setLoading(false); }
         };
