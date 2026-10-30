@@ -1,0 +1,71 @@
+{
+  "title": "Central de Comunicação",
+  "subtitle": "Segmente e extraia listas para o WaSeller",
+  "greetings": {
+    "morning": "Bom dia",
+    "afternoon": "Boa tarde",
+    "evening": "Boa noite"
+  },
+  "defaultMessage": "Olá [PRIMEIRO_NOME], tudo bem?\n\nAqui é da gestão Pratique.",
+  "shifts": {
+    "manha": "Manhã (05:00 às 11:59)",
+    "tarde": "Tarde (12:00 às 17:59)",
+    "noite": "Noite (18:00 às 23:59)"
+  },
+  "audience": {
+    "professores": "Professores",
+    "lideres": "Líderes (Unidades)",
+    "mentores": "Mentores"
+  },
+  "step1": "1. Refine a Busca",
+  "step2": "2. Rascunho da Mensagem",
+  "step3": "3. Lista Final ({{audience}})",
+  "filters": {
+    "states": "Estados (Regional)",
+    "mentors": "Mentores (Rede)",
+    "units": "Unidades",
+    "modalities": "Modalidades",
+    "shifts": "Turnos"
+  },
+  "clear": "Limpar",
+  "process": "Processar Lista",
+  "tagName": "Nome / Unidade",
+  "tagGreeting": "Bom dia/tarde",
+  "messagePlaceholder": "Digite sua mensagem aqui...",
+  "outdatedTitle": "Filtros Alterados",
+  "outdatedDesc": "A lista abaixo pode estar desatualizada. Clique em \"Processar Lista\".",
+  "validContacts": "{{count}} contatos válidos",
+  "downloadCsv": "Baixar CSV",
+  "csvTitle": "CSV Simples (WaSeller)",
+  "exportList": "Exportar Lista",
+  "sortTitle": "Ordenação atual: {{order}}",
+  "copied": "Copiado! ✅",
+  "copyWaseller": "Copiar (WaSeller)",
+  "colTeacher": "Professor",
+  "colUnit": "Unidade",
+  "colMentor": "Mentor",
+  "colModalities": "Modalidades",
+  "colProfile": "Perfil",
+  "colWhatsapp": "WhatsApp",
+  "colQuickTest": "Teste Rápido",
+  "send": "Enviar",
+  "noContacts": "Nenhum contato encontrado.",
+  "details": {
+    "unitLeader": "Líder de unidade",
+    "regionalMentor": "Mentor regional",
+    "management": "Gestão Pratique",
+    "noState": "Estado não definido",
+    "notInformed": "Não informado"
+  },
+  "exportHeaders": {
+    "state": "Estado",
+    "unit": "Unidade",
+    "name": "Nome",
+    "phone": "Telefone"
+  },
+  "messages": {
+    "processError": "Erro ao processar a lista. Tente novamente.",
+    "permissionDenied": "❌ Permissão negada. Use o botão Baixar CSV."
+  },
+  "restricted": "Acesso Restrito: Apenas Gestão."
+}

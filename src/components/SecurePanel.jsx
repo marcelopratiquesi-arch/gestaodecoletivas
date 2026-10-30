@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { Lock, ShieldCheck, ArrowRight } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
-export default function SecurePanel({ children, pinCorreto = "1234", titulo = "Área Restrita" }) {
+export default function SecurePanel({ children, pinCorreto = "1234", titulo }) {
+    const { t } = useTranslation();
     const [desbloqueado, setDesbloqueado] = useState(false);
     const [senhaDigitada, setSenhaDigitada] = useState('');
     const [erro, setErro] = useState(false);
@@ -33,9 +35,9 @@ export default function SecurePanel({ children, pinCorreto = "1234", titulo = "�
                     <Lock className={`w-10 h-10 ${erro ? 'animate-bounce' : ''}`} />
                 </div>
                 
-                <h2 className="text-2xl font-black uppercase tracking-tight text-slate-800 dark:text-white mb-2">{titulo}</h2>
+                <h2 className="text-2xl font-black uppercase tracking-tight text-slate-800 dark:text-white mb-2">{titulo || t('misc.secure.restricted')}</h2>
                 <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mb-8">
-                    Confirme seu PIN de segurança
+                    {t('misc.secure.confirmPin')}
                 </p>
                 
                 <form onSubmit={handleUnlock}>
@@ -48,7 +50,7 @@ export default function SecurePanel({ children, pinCorreto = "1234", titulo = "�
                         placeholder="••••"
                         maxLength={6}
                     />
-                    {erro && <p className="text-[10px] font-black text-rose-500 uppercase mt-2 animate-pulse">Senha Incorreta</p>}
+                    {erro && <p className="text-[10px] font-black text-rose-500 uppercase mt-2 animate-pulse">{t('misc.secure.wrongPin')}</p>}
                     
                     <button 
                         type="submit"

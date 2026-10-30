@@ -60,5 +60,18 @@
     "deleteError": "Erro ao excluir mentor.",
     "statusChanged": "Mentor {{status}} com sucesso!",
     "statusError": "Erro ao mudar status"
+  },
+  "extra": {
+    "whatsappRequired": "WhatsApp é obrigatório.",
+    "phoneRequired": "O telefone é obrigatório!",
+    "savePhoneError": "Erro ao salvar telefone.",
+    "total": "Total",
+    "active": "Ativos",
+    "inactive": "Inativos",
+    "allCountries": "Todos os países",
+    "save": "Salvar",
+    "quickEdit": "Clique para editar rapidamente",
+    "fullNamePlaceholder": "Nome completo",
+    "passwordPlaceholder": "Mínimo 6 dígitos"
   }
 }

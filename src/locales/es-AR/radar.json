@@ -1,0 +1,156 @@
+{
+  "title": "Radar de Grilla",
+  "restricted": "Acceso restringido.",
+  "groupClass": "Clase colectiva",
+  "classFallback": "Clase",
+  "views": {
+    "matrix": "Matriz global",
+    "byUnit": "Vista por sede",
+    "global": "Informe global",
+    "performance": "Performance de la grilla"
+  },
+  "shifts": {
+    "all": "Todos",
+    "morning": "Mañana",
+    "afternoon": "Tarde",
+    "night": "Noche"
+  },
+  "filters": {
+    "states": "Provincias",
+    "mentors": "Mentores",
+    "units": "Sedes",
+    "allStates": "Todas las provincias",
+    "allMentors": "Todos los mentores",
+    "allUnits": "Todas las sedes",
+    "select": "Seleccionar..."
+  },
+  "locked": {
+    "title": "Caja fuerte del radar activada",
+    "desc": "Seleccioná al menos un filtro avanzado arriba para rastrear los huecos de ociosidad y los indicadores de performance."
+  },
+  "matrix": {
+    "unitFlow": "Sede / Flujo",
+    "studentsPerClass": "{{count}} al/clase",
+    "noData": "Sin datos",
+    "schedule": "Cuadro de clases",
+    "full": "Completa",
+    "consult": "Consultar",
+    "fullyBooked": "Grilla totalmente ocupada",
+    "selectOneUnit": "Seleccioná exactamente 1 sede en el filtro para generar las tarjetas."
+  },
+  "idleModal": {
+    "title": "Rayos X de ociosidad: {{name}}",
+    "executive": "Rayos X ejecutivo (período: 1 mes)",
+    "emptyWindows": "Ventanas vacías",
+    "activeClasses": "Clases activas",
+    "idleness": "Ociosidad",
+    "groupRoom": "Sala colectiva",
+    "maxBase": "Base de cálculo máxima: 480 ventanas de oportunidad por mes",
+    "dailyLeak": "Fuga diaria (proyección mensual)",
+    "emptyClasses": "{{count}} clases vacías",
+    "perWeek": "(En el mes | {{count}} por semana)",
+    "viewInMatrix": "Ver horarios en la matriz de la sede"
+  },
+  "perfModal": {
+    "title": "Rayos X de performance: {{name}}",
+    "heading": "Desempeño de las clases (alumnos vs estructura)",
+    "occupancyAvg": "Ocupación (promedio)",
+    "vacancyMonth": "Vacancia (mes)",
+    "whichClasses": "¿Qué clases están llenando el gimnasio?",
+    "noClasses": "No hay clases registradas.",
+    "capacity": " / {{count}} al",
+    "fillRate": "{{value}}% de ocupación"
+  },
+  "preview": {
+    "title": "Vista previa: {{day}} ({{unit}})",
+    "noClassesDay": "No hay clases este día.",
+    "teacher": "Prof: {{name}}",
+    "studentsShort": "al",
+    "last30": "Últimos 30 días",
+    "fillSlot": "Completar horario libre"
+  },
+  "newClass": {
+    "title": "Nueva clase: {{unit}}",
+    "days": "Días de la semana (recurrencia)",
+    "modality": "Modalidad",
+    "selectModality": "Seleccioná la modalidad...",
+    "teacher": "Profesor (vinculado oficial)",
+    "selectModalityFirst": "Seleccioná una modalidad primero",
+    "noTeacherLinked": "Ningún profesor vinculado a la sede",
+    "selectTeacher": "Seleccioná el profesor...",
+    "startDate": "Fecha de inicio",
+    "startTime": "Hora de inicio",
+    "value": "Valor ({{symbol}})",
+    "save": "Guardar nueva clase",
+    "alerts": {
+      "fillRequired": "¡Completá todos los campos obligatorios!",
+      "selectDay": "¡Seleccioná al menos un día de la semana para la clase!",
+      "noRetroactive": "ERROR DE INTEGRIDAD: ¡La fecha de inicio no puede ser retroactiva!",
+      "saved": "¡CLASE REGISTRADA CON ÉXITO!",
+      "saveError": "Error al guardar la clase en la base de datos."
+    }
+  },
+  "floating": {
+    "title": "Cuadro de clases: {{unit}}",
+    "noClasses": "No hay clases registradas en esta sede.",
+    "days30": "30 días"
+  },
+  "health": {
+    "title": "Salud de la sede",
+    "globalAvg": "Promedio global de la sede (90 días)",
+    "history": "Historial completo ({{count}} registros)",
+    "noRecords": "No se encontraron registros.",
+    "students": "Alumnos",
+    "fullReport": "Informe completo"
+  },
+  "global": {
+    "calculating": "Calculando datos...",
+    "howTitle": "¿Cómo se calculan los datos globales? (métrica mensual)",
+    "idleHoursTitle": "Horas ociosas en la red (mensual)",
+    "idleHoursDesc": "Representa la <b>suma de todo el tiempo perdido</b> (sin clases) proyectado a 1 mes (4 semanas). Mapeamos las \"ventanas\" diarias que quedan vacías por más de 60 minutos, las convertimos en bloques de 40 minutos y multiplicamos por el mes entero. <b>Matemática pura para que el CEO sepa exactamente cuántas horas de dinero se están perdiendo.</b>",
+    "biggestTitle": "Mayor ociosidad",
+    "biggestDesc": "El ranking de los gimnasios que están \"perdiendo\" más ingresos. El sistema recorre las <b>16 horas de funcionamiento diario</b> (06 a 22 h, de lun. a vie.) y totaliza las <b>oportunidades perdidas en el mes</b>. Mostramos la herida abierta en \"ventanas vacías mensuales\" para cada sede.",
+    "optimizedTitle": "Sedes optimizadas",
+    "optimizedDesc": "Las sedes de élite de la red. Son los gimnasios que tienen <b>cero huecos en la grilla</b> durante todo el turno útil de 16 horas. El ranking ordena a quienes están 100% optimizados, encabezado por quien entrega el <b>mayor volumen absoluto de clases</b> en el mes.",
+    "idleHoursCard": "Horas ociosas en la red",
+    "thisMonth": "Este mes",
+    "unitsCount": "{{count}} sedes",
+    "sparkTitle": "{{day}}: {{count}} clases vacías en el mes",
+    "windowsPerMonth": "{{count}} ventanas/mes",
+    "windowsOpen": "<b>{{count}} ventanas</b> abiertas este mes",
+    "optimizedSub": "Con alto volumen y grilla mensual completa",
+    "noneFull": "Ninguna sede 100% completa.",
+    "classesPerMonth": "{{count}} clases/mes",
+    "showLess": "Ver menos",
+    "showMore": "Ver más..."
+  },
+  "performance": {
+    "mapping": "Mapeando datos de ocupación...",
+    "howTitle": "¿Cómo se calculan los datos de performance? (métrica mensual)",
+    "occTitle": "Tasa de ocupación de la sala",
+    "occDesc": "Representa la ocupación real de las clases, cruzando la asistencia con la planta de la sede. Dividimos el <b>promedio de alumnos presentes</b> por la <b>capacidad máxima de la sala</b>.",
+    "occFormula": "Capacidad = (Metraje real registrado en la sede) ÷ (m² exigidos por la modalidad). Si el metraje no está informado, el sistema marca error para evitar datos falsos.",
+    "vacTitle": "Tasa de vacancia de la grilla",
+    "vacDesc": "El porcentaje exacto de \"ventanas vacías\" durante el horario útil de funcionamiento del gimnasio a lo largo de <b>todo el mes (4 semanas)</b>.",
+    "vacFormula": "1 mes útil = 20 días de 16 horas = 320 horas o 480 bloques de clase posibles. La tasa muestra cuánto de eso está ocioso.",
+    "diagTitle": "Diagnóstico y cuello de botella de ingresos",
+    "diagDesc": "La alerta roja se dispara cuando la sede tiene <b>sobreocupación</b> en las pocas clases que ofrece (ocupación > 70%), pero el gimnasio sigue mucho tiempo vacío <b>(vacancia mensual > 30%)</b>.",
+    "diagAction": "Acción del CEO: exigir la apertura inmediata de nuevos grupos en los horarios ociosos para aliviar las salas llenas y facturar más.",
+    "leaders": "Líderes de ocupación",
+    "biggestVacancy": "Mayor vacancia (ociosidad mensual)",
+    "bottlenecks": "Cuellos de botella identificados",
+    "bottlenecksSub": "Ocupación alta + grilla vacía",
+    "detailedView": "Vista detallada de performance",
+    "colUnit": "Sede",
+    "colRoom": "Estructura de la sala",
+    "colOccupancy": "Ocupación global (promedio)",
+    "colVacancy": "Vacancia de la grilla (1 mes)",
+    "colDiagnosis": "Diagnóstico",
+    "noArea": "M² no registrados",
+    "detailClasses": "Detallar clases",
+    "windowsHours": "{{count}} ventanas / mes (<b>{{hours}}H libres</b>)",
+    "incomplete": "Datos incompletos",
+    "revenueRisk": "Riesgo de ingresos",
+    "healthy": "Saludable"
+  }
+}

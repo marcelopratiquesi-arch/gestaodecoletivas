@@ -1,0 +1,27 @@
+{
+  "title": "Programar Receso o Feriado",
+  "desc": "Esto cancelará automáticamente todas las clases del período seleccionado.",
+  "eventName": "Nombre del Evento",
+  "eventPlaceholder": "Ej: Receso de Carnaval",
+  "startDate": "Fecha Inicio",
+  "endDate": "Fecha Fin",
+  "type": "Tipo",
+  "types": {
+    "recess": "Receso",
+    "national": "Feriado Nacional",
+    "municipal": "Feriado Municipal"
+  },
+  "processing": "Procesando...",
+  "create": "Crear Receso",
+  "calendar": "Calendario de Descansos",
+  "range": "{{start}} al {{end}}",
+  "none": "No hay recesos ni feriados registrados.",
+  "messages": {
+    "fillRequired": "¡Completá el nombre y las fechas!",
+    "confirmCreate": "ATENCIÓN: Esto va a CANCELAR AUTOMÁTICAMENTE todas las clases entre el {{start}} y el {{end}}.\n\n¿Querés continuar?",
+    "created": "¡Listo! Receso creado y {{count}} clases fueron canceladas automáticamente.",
+    "saveError": "Error al guardar el feriado.",
+    "confirmDelete": "¿Querés eliminar el receso \"{{name}}\"?\n\nNota: Por seguridad, las clases canceladas NO se reactivarán automáticamente. Si hace falta, eliminá las cancelaciones en la validación diaria.",
+    "deleteError": "Error al eliminar"
+  }
+}

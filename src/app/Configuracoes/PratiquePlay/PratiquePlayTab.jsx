@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from "../../../services/firebase"; 
+import { useTranslation } from "react-i18next";
 import { collection, addDoc, getDocs, deleteDoc, doc, onSnapshot, serverTimestamp, query, orderBy } from "firebase/firestore";
 import { 
   Headphones, Music, PlayCircle, Trash2, Loader2, 
@@ -7,6 +8,7 @@ import {
 } from "lucide-react";
 
 export function PratiquePlayTab() {
+  const { t } = useTranslation();
   const [modalidades, setModalidades] = useState([]);
   const [faixas, setFaixas] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -51,12 +53,12 @@ export function PratiquePlayTab() {
   const salvarFaixa = async (e) => {
     e.preventDefault();
     if (!titulo || !vimeoUrl || !modalidadeSelecionada) {
-        return setErro("Preencha o título e cole o link do Vimeo.");
+        return setErro(t('playTab.messages.fillRequired'));
     }
 
     const vimeoId = extrairVimeoId(vimeoUrl);
     if (!vimeoId) {
-        return setErro("Link inválido. Exemplo correto: https://vimeo.com/123456789");
+        return setErro(t('playTab.messages.invalidLink'));
     }
 
     setSalvando(true);
@@ -74,25 +76,25 @@ export function PratiquePlayTab() {
             createdAt: serverTimestamp(),
         });
 
-        setSucesso("Música adicionada com sucesso!");
+        setSucesso(t('playTab.messages.added'));
         setTitulo("");
         setBpm("");
         setVimeoUrl("");
         
         setTimeout(() => setSucesso(""), 3000);
     } catch (err) {
-        setErro("Erro ao salvar: " + err.message);
+        setErro(t('playTab.messages.saveError', { error: err.message }));
     } finally {
         setSalvando(false);
     }
   };
 
   const excluirFaixa = async (faixa) => {
-      if (!window.confirm(`Tem certeza que deseja excluir a música "${faixa.titulo}"?`)) return;
+      if (!window.confirm(t('playTab.messages.confirmDelete', { name: faixa.titulo }))) return;
       try {
           await deleteDoc(doc(db, "pratique_play_faixas", faixa.id));
       } catch (error) {
-          alert("Erro ao excluir: " + error.message);
+          alert(t('playTab.messages.deleteError', { error: error.message }));
       }
   };
 
@@ -107,10 +109,10 @@ export function PratiquePlayTab() {
             <span className="p-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl shadow-lg shadow-blue-500/20">
                 <Video className="w-6 h-6"/>
             </span>
-            Gestão Pratique Play (Vimeo)
+            {t('playTab.title')}
           </h2>
           <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-2 uppercase tracking-wide">
-             Cadastre os links das aulas hospedadas no Vimeo.
+             {t('playTab.subtitle')}
           </p>
         </div>
       </div>
@@ -121,7 +123,7 @@ export function PratiquePlayTab() {
           <div className="lg:col-span-4 space-y-6">
               <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-6">
                   <h3 className="font-black text-slate-800 dark:text-white uppercase flex items-center gap-2 mb-5 pb-3 border-b border-slate-100 dark:border-slate-700">
-                      <LinkIcon className="w-5 h-5 text-blue-500"/> Vincular Nova Aula
+                      <LinkIcon className="w-5 h-5 text-blue-500"/> {t('playTab.linkNew')}
                   </h3>
 
                   <form onSubmit={salvarFaixa} className="space-y-4">
@@ -129,7 +131,7 @@ export function PratiquePlayTab() {
                       {sucesso && <div className="text-blue-600 text-xs font-bold bg-blue-50 border border-blue-100 p-3 rounded-xl flex items-center gap-2"><CheckCircle2 className="w-4 h-4"/> {sucesso}</div>}
 
                       <div>
-                          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Álbum / Modalidade</label>
+                          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">{t('playTab.album')}</label>
                           <select 
                               className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-white outline-none focus:border-blue-500 transition-colors"
                               value={modalidadeSelecionada}
@@ -141,7 +143,7 @@ export function PratiquePlayTab() {
                       </div>
 
                       <div>
-                          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Link do Vimeo <span className="text-red-500">*</span></label>
+                          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">{t('playTab.vimeoLink')} <span className="text-red-500">*</span></label>
                           <input 
                               type="url"
                               value={vimeoUrl}
@@ -153,25 +155,25 @@ export function PratiquePlayTab() {
                       </div>
 
                       <div>
-                          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Nome da Faixa <span className="text-red-500">*</span></label>
+                          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">{t('playTab.trackName')} <span className="text-red-500">*</span></label>
                           <input 
                               type="text"
                               value={titulo}
                               onChange={e => setTitulo(e.target.value)}
                               disabled={salvando}
-                              placeholder="Ex: Mix Aquecimento 01"
+                              placeholder={t('playTab.trackPlaceholder')}
                               className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-white outline-none focus:border-blue-500 transition-colors"
                           />
                       </div>
 
                       <div>
-                          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">BPM (Opcional)</label>
+                          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">{t('playTab.bpm')}</label>
                           <input 
                               type="number"
                               value={bpm}
                               onChange={e => setBpm(e.target.value)}
                               disabled={salvando}
-                              placeholder="Ex: 145"
+                              placeholder={t('playTab.bpmPlaceholder')}
                               className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-white outline-none focus:border-blue-500 transition-colors"
                           />
                       </div>
@@ -184,7 +186,7 @@ export function PratiquePlayTab() {
                           {salvando ? (
                               <Loader2 className="w-5 h-5 animate-spin"/>
                           ) : (
-                              <><CheckCircle2 className="w-4 h-4"/> Salvar Faixa</>
+                              <><CheckCircle2 className="w-4 h-4"/> {t('playTab.save')}</>
                           )}
                       </button>
                   </form>
@@ -197,10 +199,10 @@ export function PratiquePlayTab() {
                   
                   <div className="p-5 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 flex justify-between items-center">
                       <h3 className="font-black text-slate-800 dark:text-white uppercase flex items-center gap-2 text-lg">
-                          <FolderSync className="w-5 h-5 text-indigo-500"/> Biblioteca Ativa
+                          <FolderSync className="w-5 h-5 text-indigo-500"/> {t('playTab.library')}
                       </h3>
                       <span className="px-3 py-1 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 font-bold text-xs rounded-lg border border-indigo-100 dark:border-indigo-800/30">
-                          {faixasVisiveis.length} Músicas
+                          {t('playTab.tracksCount', { count: faixasVisiveis.length })}
                       </span>
                   </div>
 
@@ -210,8 +212,8 @@ export function PratiquePlayTab() {
                       ) : faixasVisiveis.length === 0 ? (
                           <div className="flex flex-col items-center justify-center h-full text-slate-400 opacity-50 py-10">
                               <Music className="w-16 h-16 mb-4"/>
-                              <p className="font-bold uppercase tracking-wide">Nenhuma música cadastrada</p>
-                              <p className="text-xs mt-1">Cole o link do Vimeo ao lado para começar.</p>
+                              <p className="font-bold uppercase tracking-wide">{t('playTab.none')}</p>
+                              <p className="text-xs mt-1">{t('playTab.noneHint')}</p>
                           </div>
                       ) : (
                           <div className="space-y-3">
@@ -238,14 +240,14 @@ export function PratiquePlayTab() {
                                               target="_blank" 
                                               rel="noreferrer"
                                               className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                              title="Testar Link no Vimeo"
+                                              title={t('playTab.testLink')}
                                           >
                                               <LinkIcon className="w-4 h-4"/>
                                           </a>
                                           <button 
                                               onClick={() => excluirFaixa(faixa)}
                                               className="p-2.5 text-slate-400 hover:text-white hover:bg-red-500 rounded-lg transition-colors"
-                                              title="Excluir Faixa Definitivamente"
+                                              title={t('playTab.deleteTrack')}
                                           >
                                               <Trash2 className="w-4 h-4"/>
                                           </button>

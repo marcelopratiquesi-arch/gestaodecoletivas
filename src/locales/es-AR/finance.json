@@ -1,0 +1,66 @@
+{
+  "title": "Performance Financiera",
+  "subtitle": "Control estratégico de costos y eficiencia.",
+  "searchUnit": "Buscar sede...",
+  "noMentor": "Ningún mentor",
+  "allMentors": "Todos los mentores",
+  "exportExcel": "Exportar Excel",
+  "excel": "Excel",
+  "loadingMemory": "Cargando memoria global...",
+  "processing": "Procesando datos...",
+  "restricted": {
+    "title": "Acceso restringido",
+    "desc": "Solo los gestores tienen acceso a la performance financiera."
+  },
+  "error": {
+    "title": "Falla de comunicación",
+    "desc": "No se pudieron cargar los datos financieros. Intentá de nuevo.",
+    "reload": "Actualizar página",
+    "save": "¡ERROR AL GUARDAR EL VALOR!"
+  },
+  "locked": {
+    "title": "Seleccioná un mentor para comenzar",
+    "desc": "Seleccioná uno o más mentores en el filtro de arriba para obtener el informe financiero."
+  },
+  "alerts": {
+    "title": "Pendientes de carga",
+    "allFilled": "100% completo",
+    "pendingSheets_one": "{{count}} nómina pendiente",
+    "pendingSheets_other": "{{count}} nóminas pendientes",
+    "unitsWithout": "Sedes sin carga financiera en este período:"
+  },
+  "ranking": {
+    "noData": "Datos insuficientes",
+    "topEfficiency": "Top eficiencia 🏆"
+  },
+  "kpis": {
+    "groupCost": "Costo clases colectivas",
+    "totalPayroll": "Nómina total",
+    "totalDeclared": "Total declarado",
+    "avgImpact": "Impacto promedio",
+    "highCost": "Costo alto",
+    "healthy": "Saludable",
+    "vsLastYear": "{{value}}% vs año ant."
+  },
+  "table": {
+    "title": "Detalle operativo",
+    "unitsCount": "{{count}} sedes",
+    "unit": "Sede",
+    "mentor": "Mentor",
+    "groupCost": "Costo colectivas",
+    "totalPayroll": "Nómina total",
+    "impact": "Impacto %",
+    "setValue": "Definir valor",
+    "noUnits": "No se encontraron sedes.",
+    "viewAllCount": "Ver todos ({{count}})"
+  },
+  "export": {
+    "unit": "SEDE",
+    "city": "CIUDAD",
+    "mentor": "MENTOR",
+    "groupCost": "COSTO COLECTIVAS",
+    "payroll": "NÓMINA",
+    "impact": "IMPACTO %",
+    "sheet": "FINANZAS"
+  }
+}

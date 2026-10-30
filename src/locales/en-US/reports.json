@@ -14,7 +14,11 @@
     "unit": "Unit",
     "modality": "Modality",
     "teacher": "Teacher",
-    "shift": "Shift"
+    "shift": "Shift",
+    "until": "To",
+    "shiftMorning": "Morning (05:30 - 11:59)",
+    "shiftAfternoon": "Afternoon (12:00 - 17:00)",
+    "shiftNight": "Evening (17:01 - 23:00)"
   },
   "kpis": {
     "vaultActivated": "Report Vault Activated",
@@ -43,11 +47,43 @@
     "occupancyCol": "OCCUPANCY RATE",
     "classValue": "CLASS RATE",
     "toReceive": "TO RECEIVE",
-    "noData": "NO DATA FOUND FOR CURRENT FILTER."
+    "noData": "NO DATA FOUND FOR CURRENT FILTER.",
+    "multipleTimes": "Multiple times",
+    "multiple": "Multiple",
+    "consolidatedTotal": "Consolidated total",
+    "substitute": "Substitute",
+    "specialClass": "Special class",
+    "noArea": "No m²",
+    "scheduleDetail": "Schedule breakdown",
+    "completedCount": "{{count}} completed",
+    "occupancyPct": "{{value}}% occupancy",
+    "cancelShort": "Canc",
+    "substShort": "Sub"
   },
   "buttons": {
     "load20": "LOAD +20",
     "load50": "LOAD +50",
     "loadAll": "VIEW ALL"
+  },
+  "export": {
+    "excel": "Excel (XLSX)",
+    "csv": "CSV",
+    "country": "Country",
+    "state": "State",
+    "unit": "Unit",
+    "modality": "Modality",
+    "time": "Time",
+    "teacher": "Teacher",
+    "type": "Type",
+    "completed": "Completed Classes",
+    "canceled": "Canceled Classes",
+    "avgStudents": "Avg Students",
+    "occupancy": "Occupancy Rate",
+    "classValue": "Hourly Class Rate",
+    "toReceive": "Total to Receive",
+    "typeGrouped": "Grouped",
+    "typeSpecial": "Special Class",
+    "typeSubstitute": "Substitute",
+    "typeHolder": "Main Teacher"
   }
 }

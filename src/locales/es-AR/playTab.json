@@ -1,0 +1,26 @@
+{
+  "title": "Gestión Pratique Play (Vimeo)",
+  "subtitle": "Registrá los links de las clases alojadas en Vimeo.",
+  "linkNew": "Vincular Nueva Clase",
+  "album": "Álbum / Modalidad",
+  "vimeoLink": "Link de Vimeo",
+  "trackName": "Nombre del Tema",
+  "trackPlaceholder": "Ej: Mix Calentamiento 01",
+  "bpm": "BPM (Opcional)",
+  "bpmPlaceholder": "Ej: 145",
+  "save": "Guardar Tema",
+  "library": "Biblioteca Activa",
+  "tracksCount": "{{count}} Temas",
+  "none": "No hay música registrada",
+  "noneHint": "Pegá el link de Vimeo al costado para empezar.",
+  "testLink": "Probar Link en Vimeo",
+  "deleteTrack": "Eliminar Tema Definitivamente",
+  "messages": {
+    "fillRequired": "Completá el título y pegá el link de Vimeo.",
+    "invalidLink": "Link inválido. Ejemplo correcto: https://vimeo.com/123456789",
+    "added": "¡Tema agregado con éxito!",
+    "saveError": "Error al guardar: {{error}}",
+    "confirmDelete": "¿Seguro que querés eliminar el tema \"{{name}}\"?",
+    "deleteError": "Error al eliminar: {{error}}"
+  }
+}

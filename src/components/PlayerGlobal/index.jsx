@@ -2,12 +2,15 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { usePlayer } from '../../contexts/PlayerContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTranslation } from 'react-i18next';
+import i18n from '../../i18n';
 import { db } from '../../services/firebase';
 import { doc, setDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
 import { Play, Pause, SkipBack, SkipForward, Music, ChevronDown, Heart, AlertCircle, X, Loader2 } from 'lucide-react';
 import Player from '@vimeo/player';
 
 export default function PlayerGlobal() {
+    useTranslation(); // re-renderiza ao trocar o idioma
     const { userData } = useAuth();
     const { faixaAtual, isPlaying, setIsPlaying, togglePlay, tocarProxima, tocarAnterior, playerRef } = usePlayer();
     const containerRef = useRef(null);
@@ -104,7 +107,7 @@ export default function PlayerGlobal() {
             navigator.mediaSession.metadata = new MediaMetadata({
                 title: faixaAtual.titulo,
                 artist: 'Pratique Play',
-                album: faixaAtual.bpm !== "N/A" ? `${faixaAtual.bpm} BPM` : 'Aulas Coletivas'
+                album: faixaAtual.bpm !== "N/A" ? `${faixaAtual.bpm} BPM` : i18n.t('misc.play.groupClasses')
             });
             navigator.mediaSession.setActionHandler('play', togglePlay);
             navigator.mediaSession.setActionHandler('pause', togglePlay);
@@ -159,7 +162,7 @@ export default function PlayerGlobal() {
                                 <div className="overflow-hidden pr-2 flex-1">
                                     <h4 className="text-sm font-bold truncate leading-tight text-white">{faixaAtual.titulo}</h4>
                                     <p className="text-[10px] text-[#1DB954] uppercase tracking-widest truncate mt-0.5">
-                                        {isBuffering ? "Carregando faixa..." : "Clique para expandir"}
+                                        {isBuffering ? i18n.t('misc.play.loadingTrack') : i18n.t('misc.play.clickToExpand')}
                                     </p>
                                 </div>
                             </div>

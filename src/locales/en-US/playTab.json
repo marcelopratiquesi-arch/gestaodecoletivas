@@ -1,0 +1,26 @@
+{
+  "title": "Pratique Play Management (Vimeo)",
+  "subtitle": "Register the links of the classes hosted on Vimeo.",
+  "linkNew": "Link New Class",
+  "album": "Album / Modality",
+  "vimeoLink": "Vimeo Link",
+  "trackName": "Track Name",
+  "trackPlaceholder": "E.g.: Warm-up Mix 01",
+  "bpm": "BPM (Optional)",
+  "bpmPlaceholder": "E.g.: 145",
+  "save": "Save Track",
+  "library": "Active Library",
+  "tracksCount": "{{count}} Tracks",
+  "none": "No music registered",
+  "noneHint": "Paste the Vimeo link on the side to get started.",
+  "testLink": "Test Link on Vimeo",
+  "deleteTrack": "Delete Track Permanently",
+  "messages": {
+    "fillRequired": "Fill in the title and paste the Vimeo link.",
+    "invalidLink": "Invalid link. Correct example: https://vimeo.com/123456789",
+    "added": "Track added successfully!",
+    "saveError": "Error saving: {{error}}",
+    "confirmDelete": "Are you sure you want to delete the track \"{{name}}\"?",
+    "deleteError": "Error deleting: {{error}}"
+  }
+}

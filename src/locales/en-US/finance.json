@@ -1,0 +1,66 @@
+{
+  "title": "Financial Performance",
+  "subtitle": "Strategic cost and efficiency control.",
+  "searchUnit": "Search unit...",
+  "noMentor": "No mentor",
+  "allMentors": "All mentors",
+  "exportExcel": "Export Excel",
+  "excel": "Excel",
+  "loadingMemory": "Loading global data...",
+  "processing": "Processing data...",
+  "restricted": {
+    "title": "Restricted access",
+    "desc": "Only managers can access financial performance."
+  },
+  "error": {
+    "title": "Connection failure",
+    "desc": "Could not load the financial data. Please try again.",
+    "reload": "Reload page",
+    "save": "ERROR SAVING THE VALUE!"
+  },
+  "locked": {
+    "title": "Select a mentor to start",
+    "desc": "Select one or more mentors in the filter above to get the financial report."
+  },
+  "alerts": {
+    "title": "Missing entries",
+    "allFilled": "100% filled in",
+    "pendingSheets_one": "{{count}} payroll pending",
+    "pendingSheets_other": "{{count}} payrolls pending",
+    "unitsWithout": "Units with no financial entry this period:"
+  },
+  "ranking": {
+    "noData": "Not enough data",
+    "topEfficiency": "Top efficiency 🏆"
+  },
+  "kpis": {
+    "groupCost": "Group class cost",
+    "totalPayroll": "Total payroll",
+    "totalDeclared": "Total declared",
+    "avgImpact": "Average impact",
+    "highCost": "High cost",
+    "healthy": "Healthy",
+    "vsLastYear": "{{value}}% vs last year"
+  },
+  "table": {
+    "title": "Operational breakdown",
+    "unitsCount": "{{count}} units",
+    "unit": "Unit",
+    "mentor": "Mentor",
+    "groupCost": "Group class cost",
+    "totalPayroll": "Total payroll",
+    "impact": "Impact %",
+    "setValue": "Set value",
+    "noUnits": "No units found.",
+    "viewAllCount": "View all ({{count}})"
+  },
+  "export": {
+    "unit": "UNIT",
+    "city": "CITY",
+    "mentor": "MENTOR",
+    "groupCost": "GROUP CLASS COST",
+    "payroll": "PAYROLL",
+    "impact": "IMPACT %",
+    "sheet": "FINANCE"
+  }
+}

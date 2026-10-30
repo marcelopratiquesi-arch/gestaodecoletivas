@@ -1,0 +1,71 @@
+{
+  "title": "Communication Center",
+  "subtitle": "Segment and extract lists for WaSeller",
+  "greetings": {
+    "morning": "Good morning",
+    "afternoon": "Good afternoon",
+    "evening": "Good evening"
+  },
+  "defaultMessage": "Hi [PRIMEIRO_NOME], how are you?\n\nThis is the Pratique management team.",
+  "shifts": {
+    "manha": "Morning (05:00 to 11:59)",
+    "tarde": "Afternoon (12:00 to 17:59)",
+    "noite": "Evening (18:00 to 23:59)"
+  },
+  "audience": {
+    "professores": "Teachers",
+    "lideres": "Leaders (Units)",
+    "mentores": "Mentors"
+  },
+  "step1": "1. Refine the Search",
+  "step2": "2. Message Draft",
+  "step3": "3. Final List ({{audience}})",
+  "filters": {
+    "states": "States (Regional)",
+    "mentors": "Mentors (Network)",
+    "units": "Units",
+    "modalities": "Modalities",
+    "shifts": "Shifts"
+  },
+  "clear": "Clear",
+  "process": "Process List",
+  "tagName": "Name / Unit",
+  "tagGreeting": "Good morning/afternoon",
+  "messagePlaceholder": "Type your message here...",
+  "outdatedTitle": "Filters Changed",
+  "outdatedDesc": "The list below may be outdated. Click \"Process List\".",
+  "validContacts": "{{count}} valid contacts",
+  "downloadCsv": "Download CSV",
+  "csvTitle": "Simple CSV (WaSeller)",
+  "exportList": "Export List",
+  "sortTitle": "Current order: {{order}}",
+  "copied": "Copied! ✅",
+  "copyWaseller": "Copy (WaSeller)",
+  "colTeacher": "Teacher",
+  "colUnit": "Unit",
+  "colMentor": "Mentor",
+  "colModalities": "Modalities",
+  "colProfile": "Profile",
+  "colWhatsapp": "WhatsApp",
+  "colQuickTest": "Quick Test",
+  "send": "Send",
+  "noContacts": "No contacts found.",
+  "details": {
+    "unitLeader": "Unit leader",
+    "regionalMentor": "Regional mentor",
+    "management": "Pratique Management",
+    "noState": "State not set",
+    "notInformed": "Not provided"
+  },
+  "exportHeaders": {
+    "state": "State",
+    "unit": "Unit",
+    "name": "Name",
+    "phone": "Phone"
+  },
+  "messages": {
+    "processError": "Error processing the list. Please try again.",
+    "permissionDenied": "❌ Permission denied. Use the Download CSV button."
+  },
+  "restricted": "Restricted Access: Management Only."
+}

@@ -56,7 +56,8 @@
     "select": "Seleccioná...",
     "copy": "Copiar",
     "loadMore": "Cargar +{{count}}",
-    "viewAll": "Ver Todos"
+    "viewAll": "Ver Todos",
+    "save": "Guardar"
   },
   "multiSelect": {
     "all": "Todos",
@@ -76,11 +77,17 @@
     "noTeacher": "Sin Profesor",
     "noMentor": "Sin Mentor",
     "general": "General",
-    "reception": "Recepción / Sistema"
+    "reception": "Recepción / Sistema",
+    "generic": "Desconocido"
   },
   "period": {
     "day": "Día",
     "month": "Mes",
     "range": "Período"
+  },
+  "countries": {
+    "BR": "Brasil",
+    "AR": "Argentina",
+    "US": "Estados Unidos"
   }
 }

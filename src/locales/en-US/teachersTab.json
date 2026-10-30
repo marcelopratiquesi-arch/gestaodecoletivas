@@ -83,5 +83,14 @@
     "fixConfirm": "⚠️ WARNING: This will scan the entire database and convert all teacher emails to lowercase.\n\nDo you wish to continue?",
     "fixSuccess": "SUCCESS! {{count}} teachers were corrected to lowercase.",
     "fixError": "Error fixing database. Check the console."
+  },
+  "extra": {
+    "statusError": "Error changing status",
+    "phoneInvalidHint": "Phone missing or invalid for WaSeller messages. Edit the record.",
+    "linkOtherUnit": "Link to another unit",
+    "editData": "Edit details",
+    "deactivateProfile": "Deactivate profile",
+    "activateProfile": "Activate profile",
+    "deleteNetwork": "Delete permanently from the whole network"
   }
 }

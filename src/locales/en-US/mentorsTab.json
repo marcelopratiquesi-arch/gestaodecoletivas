@@ -60,5 +60,18 @@
     "deleteError": "Error deleting mentor.",
     "statusChanged": "Mentor {{status}} successfully!",
     "statusError": "Error changing status."
+  },
+  "extra": {
+    "whatsappRequired": "WhatsApp is required.",
+    "phoneRequired": "Phone is required!",
+    "savePhoneError": "Error saving phone.",
+    "total": "Total",
+    "active": "Active",
+    "inactive": "Inactive",
+    "allCountries": "All countries",
+    "save": "Save",
+    "quickEdit": "Click to edit quickly",
+    "fullNamePlaceholder": "Full name",
+    "passwordPlaceholder": "At least 6 characters"
   }
 }

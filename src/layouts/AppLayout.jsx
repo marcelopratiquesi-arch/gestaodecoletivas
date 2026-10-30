@@ -6,8 +6,10 @@ import { Menu, X, ChevronLeft, ChevronRight } from "lucide-react";
 // 🟢 Importação do nosso Player e do nosso Vigia
 import PlayerGlobal from "../components/PlayerGlobal"; 
 import VigiaNoturno from "../components/VigiaNoturno"; 
+import { useTranslation } from "react-i18next";
 
 export default function AppLayout() {
+  const { t } = useTranslation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
 
@@ -25,7 +27,7 @@ export default function AppLayout() {
         `}
       >
         <div className="flex items-center justify-between p-4 h-16 border-b border-slate-800 md:hidden">
-           <span className="text-white font-bold">Menu</span>
+           <span className="text-white font-bold">{t('layout.menu')}</span>
            <button onClick={() => setMobileOpen(false)} className="text-slate-400 hover:text-white">
              <X size={24} />
            </button>
@@ -49,7 +51,7 @@ export default function AppLayout() {
           <button onClick={() => setMobileOpen(true)} className="text-slate-600 dark:text-slate-200 hover:text-red-600">
             <Menu className="w-6 h-6" />
           </button>
-          <span className="font-bold text-slate-800 dark:text-white">Gestão Pratique</span>
+          <span className="font-bold text-slate-800 dark:text-white">{t('layout.title')}</span>
         </header>
 
         <main className="flex-1 overflow-auto p-4 md:p-8 pb-24 md:pb-24 bg-slate-50 dark:bg-[#121212] relative">

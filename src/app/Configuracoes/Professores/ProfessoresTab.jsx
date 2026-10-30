@@ -511,7 +511,7 @@ export function ProfessoresTab() {
           await updateDoc(doc(db, "professores", p.id), { status: novoStatus });
           // 🟢 AUDITORIA: Mudança Rápida de Status
           await registrarLogAuditoria('ALTERADA', `Status modificado para ${novoStatus.toUpperCase()}`, p.nome, `Alteração rápida de status`);
-      } catch (e) { alert("Erro ao mudar status"); }
+      } catch (e) { alert(t('teachersTab.extra.statusError')); }
   }
 
   async function removerVinculo(idVinculo, nomeUnidade, nomeProfessor) {
@@ -627,7 +627,7 @@ export function ProfessoresTab() {
                       className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold uppercase outline-none appearance-none shadow-sm dark:text-white"
                   >
                       <option value="">{t('teachersTab.filterCountry.all', 'Todos os Países')}</option>
-                      {PAISES.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
+                      {PAISES.map(p => <option key={p.id} value={p.id}>{t(`common.countries.${p.id}`, p.nome)}</option>)}
                   </select>
                   <ChevronDown className="absolute right-4 top-3.5 w-4 h-4 text-slate-400 pointer-events-none"/>
               </div>
@@ -702,7 +702,7 @@ export function ProfessoresTab() {
                                                 {paisDDI} {p.telefone}
                                             </span>
                                         ) : (
-                                            <span className="flex items-center gap-1 text-red-600 dark:text-red-400 font-bold bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 px-2 py-0.5 rounded-md w-fit" title="Telefone ausente ou inválido para envios do WaSeller. Edite o cadastro.">
+                                            <span className="flex items-center gap-1 text-red-600 dark:text-red-400 font-bold bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 px-2 py-0.5 rounded-md w-fit" title={t('teachersTab.extra.phoneInvalidHint')}>
                                                 <AlertTriangle className="w-3.5 h-3.5"/> {p.telefone || t('teachersTab.table.notInformed', 'Sem Telefone')}
                                             </span>
                                         )}
@@ -722,7 +722,7 @@ export function ProfessoresTab() {
                                         )) : <span className="text-slate-400 text-xs italic font-medium">{t('teachersTab.table.noLinks', 'Nenhum vínculo.')}</span>}
                                         
                                         {podeEditar && (
-                                            <button type="button" onClick={() => { setEmailVerificacao(p.email); setProfessorEncontrado(p); setUnidadeSelecionadaId(""); setModalVerificacaoAberto(true); }} className="p-2 bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors" title="Vincular a outra unidade">
+                                            <button type="button" onClick={() => { setEmailVerificacao(p.email); setProfessorEncontrado(p); setUnidadeSelecionadaId(""); setModalVerificacaoAberto(true); }} className="p-2 bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors" title={t('teachersTab.extra.linkOtherUnit')}>
                                                 <PlusCircle className="w-4 h-4"/>
                                             </button>
                                         )}
@@ -732,16 +732,16 @@ export function ProfessoresTab() {
                                     <div className="flex gap-2 justify-end opacity-40 group-hover:opacity-100 transition-opacity">
                                         {podeEditar && (
                                             <>
-                                                <button type="button" onClick={() => abrirEdicao(p)} className={`p-2 rounded-lg transition-colors title="Editar Dados" ${!isTelefoneValido ? 'bg-red-50 text-red-600 animate-pulse' : 'bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400'}`}>
+                                                <button type="button" onClick={() => abrirEdicao(p)} className={`p-2 rounded-lg transition-colors title={t('teachersTab.extra.editData')} ${!isTelefoneValido ? 'bg-red-50 text-red-600 animate-pulse' : 'bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400'}`}>
                                                     <Edit2 className="w-4 h-4"/>
                                                 </button>
-                                                <button type="button" onClick={() => alternarStatusProf(p)} className={`p-2 rounded-lg transition-colors ${p.status === "ativo" ? "bg-orange-50 text-orange-600 hover:bg-orange-500 hover:text-white dark:bg-orange-900/30 dark:text-orange-400" : "bg-green-50 text-green-600 hover:bg-green-500 hover:text-white dark:bg-green-900/30 dark:text-green-400"}`} title={p.status === "ativo" ? "Desativar Perfil" : "Ativar Perfil"}>
+                                                <button type="button" onClick={() => alternarStatusProf(p)} className={`p-2 rounded-lg transition-colors ${p.status === "ativo" ? "bg-orange-50 text-orange-600 hover:bg-orange-500 hover:text-white dark:bg-orange-900/30 dark:text-orange-400" : "bg-green-50 text-green-600 hover:bg-green-500 hover:text-white dark:bg-green-900/30 dark:text-green-400"}`} title={p.status === "ativo" ? t('teachersTab.extra.deactivateProfile') : t('teachersTab.extra.activateProfile')}>
                                                     {p.status === "ativo" ? <Ban className="w-4 h-4"/> : <CheckCircle2 className="w-4 h-4"/>}
                                                 </button>
                                             </>
                                         )}
                                         {podeExcluir && (
-                                            <button type="button" onClick={() => excluirProfessorTotal(p)} className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-600 hover:text-white dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-600 dark:hover:text-white transition-colors" title="Excluir Definitivamente de Toda a Rede">
+                                            <button type="button" onClick={() => excluirProfessorTotal(p)} className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-600 hover:text-white dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-600 dark:hover:text-white transition-colors" title={t('teachersTab.extra.deleteNetwork')}>
                                                 <Trash2 className="w-4 h-4"/>
                                             </button>
                                         )}
@@ -911,7 +911,7 @@ export function ProfessoresTab() {
                                     onChange={e => { setPais(e.target.value); setTelefone(formatarTelefone(telefone, e.target.value)); }}
                                     className="w-full pl-3 pr-7 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-green-500 rounded-xl text-xs font-bold outline-none transition-all dark:text-white appearance-none"
                                 >
-                                    {PAISES.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
+                                    {PAISES.map(p => <option key={p.id} value={p.id}>{t(`common.countries.${p.id}`, p.nome)}</option>)}
                                 </select>
                                 <ChevronDown className="absolute right-2 top-3.5 w-3.5 h-3.5 text-slate-400 pointer-events-none"/>
                             </div>

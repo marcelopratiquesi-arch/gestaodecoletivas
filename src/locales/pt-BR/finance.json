@@ -1,0 +1,66 @@
+{
+  "title": "Performance Financeira",
+  "subtitle": "Controle estratégico de custos e eficiência.",
+  "searchUnit": "Buscar unidade...",
+  "noMentor": "Nenhum mentor",
+  "allMentors": "Todos os mentores",
+  "exportExcel": "Exportar Excel",
+  "excel": "Excel",
+  "loadingMemory": "Carregando memória global...",
+  "processing": "Processando dados...",
+  "restricted": {
+    "title": "Acesso restrito",
+    "desc": "Apenas gestores têm acesso à performance financeira."
+  },
+  "error": {
+    "title": "Falha de comunicação",
+    "desc": "Não foi possível carregar os dados financeiros. Tente novamente.",
+    "reload": "Atualizar página",
+    "save": "ERRO AO SALVAR O VALOR!"
+  },
+  "locked": {
+    "title": "Selecione um mentor para iniciar",
+    "desc": "Selecione um ou mais mentores no filtro acima para obter o relatório financeiro."
+  },
+  "alerts": {
+    "title": "Pendências de preenchimento",
+    "allFilled": "100% preenchido",
+    "pendingSheets_one": "{{count}} folha pendente",
+    "pendingSheets_other": "{{count}} folhas pendentes",
+    "unitsWithout": "Unidades sem lançamento financeiro neste período:"
+  },
+  "ranking": {
+    "noData": "Sem dados suficientes",
+    "topEfficiency": "Top eficiência 🏆"
+  },
+  "kpis": {
+    "groupCost": "Custo coletiva",
+    "totalPayroll": "Folha total",
+    "totalDeclared": "Total declarado",
+    "avgImpact": "Impacto médio",
+    "highCost": "Alto custo",
+    "healthy": "Saudável",
+    "vsLastYear": "{{value}}% vs ano ant."
+  },
+  "table": {
+    "title": "Detalhamento operacional",
+    "unitsCount": "{{count}} unidades",
+    "unit": "Unidade",
+    "mentor": "Mentor",
+    "groupCost": "Custo coletiva",
+    "totalPayroll": "Folha total",
+    "impact": "Impacto %",
+    "setValue": "Definir valor",
+    "noUnits": "Nenhuma unidade encontrada.",
+    "viewAllCount": "Ver todos ({{count}})"
+  },
+  "export": {
+    "unit": "UNIDADE",
+    "city": "CIDADE",
+    "mentor": "MENTOR",
+    "groupCost": "CUSTO COLETIVA",
+    "payroll": "FOLHA PAGAMENTO",
+    "impact": "IMPACTO %",
+    "sheet": "FINANCEIRO"
+  }
+}

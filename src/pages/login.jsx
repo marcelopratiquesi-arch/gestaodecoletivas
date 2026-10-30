@@ -60,7 +60,7 @@ export default function Login() {
           onClick={(e) => { e.stopPropagation(); setIsLangMenuOpen(!isLangMenuOpen); }}
           className="flex items-center gap-2 bg-zinc-900/80 backdrop-blur-md rounded-full px-3 py-1.5 shadow-lg border border-zinc-700 hover:bg-zinc-800 transition-colors"
         >
-          <img src={currentLang.flag} alt="Bandeira" className="w-5 h-auto rounded-[2px] shadow-sm" />
+          <img src={currentLang.flag} alt={currentLang.name} className="w-5 h-auto rounded-[2px] shadow-sm" />
           <ChevronDown size={14} className="text-zinc-400" />
         </button>
 

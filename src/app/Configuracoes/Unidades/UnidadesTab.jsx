@@ -386,7 +386,7 @@ export function UnidadesTab() {
               await registrarLogAuditoria('ALTERADA', `Edição inline de ${labelAuditoria}`, unidade.nome, `${valorAntigo} ➔ ${valorNovo}`);
           }
           return true;
-      } catch (error) { alert(`Erro ao salvar ${labelAuditoria}.`); return false; }
+      } catch (error) { alert(t('unitsTab.extra.saveError')); return false; }
   }
 
   const normalizarNome = (str) => {
@@ -402,7 +402,7 @@ export function UnidadesTab() {
       reader.onload = (evt) => {
           const text = evt.target.result;
           const lines = text.split('\n');
-          if (lines.length < 2) return alert("Arquivo CSV vazio ou inválido.");
+          if (lines.length < 2) return alert(t('unitsTab.extra.csv.emptyFile'));
 
           const regex = /,(?=(?:(?:[^"]*"){2})*[^"]*$)/;
           const matches = [];
@@ -475,7 +475,7 @@ export function UnidadesTab() {
   };
 
   const aprovarItem = async (item, index) => {
-      if (!item.dbId) return alert("Selecione uma unidade do sistema para vincular primeiro.");
+      if (!item.dbId) return alert(t('unitsTab.extra.csv.selectUnitFirst'));
       try {
           const ref = doc(db, "unidades", item.dbId);
           let updateData = {};
@@ -489,7 +489,7 @@ export function UnidadesTab() {
           const newMatches = [...importData.matches];
           newMatches[index].status = 'aprovado';
           setImportData({...importData, matches: newMatches});
-      } catch (error) { alert("Erro ao injetar na unidade " + item.dbNome); }
+      } catch (error) { alert(t('unitsTab.extra.csv.injectError', { name: item.dbNome })); }
   };
 
   const descartarItem = (index) => {
@@ -521,7 +521,7 @@ export function UnidadesTab() {
           
           const newMatches = importData.matches.map(m => (m.status === 'pendente' && m.dbId) ? {...m, status: 'aprovado'} : m);
           setImportData({...importData, matches: newMatches});
-      } catch (e) { alert("Erro ao processar lote."); } finally { setImportando(false); }
+      } catch (e) { alert(t('unitsTab.extra.csv.batchError')); } finally { setImportando(false); }
   };
 
   function abrirNovaUnidade() {
@@ -696,7 +696,7 @@ export function UnidadesTab() {
     } catch (e) { alert(t('unitsTab.messages.deleteError', "Erro ao excluir:") + " " + e.message); } finally { setSalvando(false); }
   }
 
-  if (!podeAcessar) return <div className="p-8 text-center text-slate-500 font-bold">Acesso Restrito.</div>;
+  if (!podeAcessar) return <div className="p-8 text-center text-slate-500 font-bold">{t('unitsTab.extra.restricted')}</div>;
 
   return (
     <>
@@ -714,17 +714,17 @@ export function UnidadesTab() {
           <div className="flex gap-3 w-full md:w-auto h-[48px]">
               <div className="flex items-center gap-4 bg-white dark:bg-slate-800 px-4 h-full rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
                   <div className="text-center">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total</p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('unitsTab.extra.total')}</p>
                       <p className="text-lg font-black text-slate-700 dark:text-white leading-none">{kpis.total}</p>
                   </div>
                   <div className="w-px h-8 bg-slate-200 dark:bg-slate-700"></div>
                   <div className="text-center">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Ativas</p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('unitsTab.extra.active')}</p>
                       <p className="text-lg font-black text-green-600 leading-none">{kpis.ativas}</p>
                   </div>
                   <div className="w-px h-8 bg-slate-200 dark:bg-slate-700"></div>
                   <div className="text-center">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Inativas</p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('unitsTab.extra.inactive')}</p>
                       <p className="text-lg font-black text-red-500 leading-none">{kpis.inativas}</p>
                   </div>
               </div>
@@ -758,7 +758,7 @@ export function UnidadesTab() {
                 <div className="flex w-full lg:w-auto gap-4 flex-col sm:flex-row">
                     <div className="relative w-full sm:w-56">
                         <select value={estadoFiltro} onChange={e => setEstadoFiltro(e.target.value)} className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold uppercase outline-none appearance-none shadow-sm dark:text-white">
-                            <option value="">TODOS OS ESTADOS</option>
+                            <option value="">{t('unitsTab.extra.allStates').toUpperCase()}</option>
                             {[...new Set(unidadesBase.map(u => u.estado).filter(Boolean))].sort().map(e => <option key={e} value={e}>{e}</option>)}
                         </select>
                         <ChevronDown className="absolute right-4 top-3.5 w-4 h-4 text-slate-400 pointer-events-none"/>
@@ -770,15 +770,15 @@ export function UnidadesTab() {
                             onChange={e => setPaisFiltro(e.target.value)} 
                             className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold uppercase outline-none appearance-none shadow-sm dark:text-white"
                         >
-                            <option value="">TODOS OS PAÍSES</option>
-                            {PAISES.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
+                            <option value="">{t('unitsTab.extra.allCountries').toUpperCase()}</option>
+                            {PAISES.map(p => <option key={p.id} value={p.id}>{t(`common.countries.${p.id}`, p.nome)}</option>)}
                         </select>
                         <ChevronDown className="absolute right-4 top-3.5 w-4 h-4 text-slate-400 pointer-events-none"/>
                     </div>
 
                     <div className="relative w-full sm:w-64">
                         <select value={mentorFiltro} onChange={e => setMentorFiltro(e.target.value)} className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold uppercase outline-none appearance-none shadow-sm dark:text-white">
-                            <option value="">TODOS OS MENTORES</option>
+                            <option value="">{t('unitsTab.extra.allMentors').toUpperCase()}</option>
                             {mentores.map(m => <option key={m.id} value={m.id}>{m.nome}</option>)}
                         </select>
                         <ChevronDown className="absolute right-4 top-3.5 w-4 h-4 text-slate-400 pointer-events-none"/>
@@ -803,7 +803,7 @@ export function UnidadesTab() {
                       {t('unitsTab.table.location', 'Local')}
                   </th>
                   <th className="px-3 py-2.5 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('estado')}>
-                      <div className="flex items-center gap-1.5">Região <SortIcon field="estado"/></div>
+                      <div className="flex items-center gap-1.5">{t('unitsTab.extra.region')} <SortIcon field="estado"/></div>
                   </th>
                   <th className="px-3 py-2.5 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('mentorId')}>
                       <div className="flex items-center gap-1.5">{t('unitsTab.table.responsible', 'Responsável')} <SortIcon field="mentorId"/></div>
@@ -813,7 +813,7 @@ export function UnidadesTab() {
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
                 {loading ? (
-                    <tr><td colSpan="6" className="py-8 text-center"><Loader2 className="w-6 h-6 animate-spin text-red-500 mx-auto mb-2"/><p className="text-slate-400 font-bold text-xs uppercase">Sincronizando...</p></td></tr>
+                    <tr><td colSpan="6" className="py-8 text-center"><Loader2 className="w-6 h-6 animate-spin text-red-500 mx-auto mb-2"/><p className="text-slate-400 font-bold text-xs uppercase">{t('unitsTab.extra.syncing')}</p></td></tr>
                 ) : unidadesProcessadas.length === 0 ? (
                     <tr><td colSpan="6" className="py-8 text-center text-slate-400 font-bold text-xs uppercase"><Building2 className="w-6 h-6 mx-auto mb-2 opacity-20"/> {t('unitsTab.emptyState', 'Nenhuma unidade encontrada.')}</td></tr>
                 ) : (
@@ -884,7 +884,7 @@ export function UnidadesTab() {
                           ) : (
                               <div className="flex items-center gap-1.5 group/edit w-fit">
                                   <Maximize className="w-3 h-3 text-slate-400"/>
-                                  <span className={`text-[10px] font-black uppercase tracking-widest ${u.metragemSalaColetiva ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 italic opacity-50'}`}>{u.metragemSalaColetiva ? `${u.metragemSalaColetiva} m² LIVRE` : "Add Metragem"}</span>
+                                  <span className={`text-[10px] font-black uppercase tracking-widest ${u.metragemSalaColetiva ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 italic opacity-50'}`}>{u.metragemSalaColetiva ? t('unitsTab.extra.freeArea', { value: u.metragemSalaColetiva }) : t('unitsTab.extra.addArea')}</span>
                                   <Edit2 onClick={() => { setEditandoMetragemId(u.id); setMetragemInline(u.metragemSalaColetiva || ""); }} className="w-3 h-3 opacity-0 group-hover/edit:opacity-100 cursor-pointer text-blue-500 ml-1"/>
                               </div>
                           )}
@@ -901,12 +901,12 @@ export function UnidadesTab() {
                                   <MapPin className="w-3.5 h-3.5 shrink-0 mt-0.5 text-slate-400"/>
                                   <div className="flex flex-col">
                                       {u.linkGoogleMaps ? (
-                                          <a href={getValidUrl(u.linkGoogleMaps)} target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold uppercase text-blue-600 dark:text-blue-400 hover:underline truncate max-w-[250px] leading-tight" title="Abrir no Google Maps" onClick={e => e.stopPropagation()}>
-                                              {u.enderecoCompleto || "Ver no Mapa"}
+                                          <a href={getValidUrl(u.linkGoogleMaps)} target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold uppercase text-blue-600 dark:text-blue-400 hover:underline truncate max-w-[250px] leading-tight" title={t('unitsTab.extra.openMaps')} onClick={e => e.stopPropagation()}>
+                                              {u.enderecoCompleto || t('unitsTab.extra.viewOnMap')}
                                           </a>
                                       ) : (
                                           <span className={`text-[10px] font-bold uppercase truncate max-w-[250px] leading-tight ${u.enderecoCompleto ? 'text-slate-600 dark:text-slate-300' : 'italic opacity-50'}`}>
-                                              {u.enderecoCompleto || "Adicionar Endereço"}
+                                              {u.enderecoCompleto || t('unitsTab.extra.addAddress')}
                                           </span>
                                       )}
                                   </div>
@@ -925,13 +925,13 @@ export function UnidadesTab() {
                           {!editandoMapaId && !u.linkGoogleMaps && (
                               <div className="flex items-center gap-1.5 group/edit w-fit">
                                   <Map className="w-3 h-3 shrink-0 text-slate-300"/>
-                                  <span className="text-[9px] font-bold uppercase text-slate-400 italic">Sem Link Maps</span>
+                                  <span className="text-[9px] font-bold uppercase text-slate-400 italic">{t('unitsTab.extra.noMapsLink')}</span>
                                   <Edit2 onClick={() => { setEditandoMapaId(u.id); setMapaInline(u.linkGoogleMaps || ""); }} className="w-3 h-3 opacity-0 group-hover/edit:opacity-100 cursor-pointer text-blue-500 ml-1"/>
                               </div>
                           )}
                           {!editandoMapaId && u.linkGoogleMaps && (
                                <div className="flex items-center gap-1.5 group/edit w-fit opacity-0 group-hover:opacity-100 transition-opacity">
-                                   <span className="text-[9px] font-bold uppercase text-slate-400">Alterar Link URL</span>
+                                   <span className="text-[9px] font-bold uppercase text-slate-400">{t('unitsTab.extra.changeLink')}</span>
                                    <Edit2 onClick={() => { setEditandoMapaId(u.id); setMapaInline(u.linkGoogleMaps || ""); }} className="w-3 h-3 cursor-pointer text-blue-500 ml-1"/>
                                </div>
                           )}
@@ -940,7 +940,7 @@ export function UnidadesTab() {
                       <td className="px-3 py-2">
                         <div className="text-xs font-bold text-slate-700 dark:text-slate-200">{u.estado}</div>
                         <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5 flex items-center gap-1">
-                            <FlagIcon pais={paisAtual} className="w-3 h-2" /> {PAIS_CONFIG[paisAtual]?.nome || u.pais}
+                            <FlagIcon pais={paisAtual} className="w-3 h-2" /> {PAIS_CONFIG[paisAtual] ? t(`common.countries.${paisAtual}`) : u.pais}
                         </div>
                       </td>
 
@@ -976,25 +976,25 @@ export function UnidadesTab() {
       {/* === 🟢 MODAL FLUTUANTE DE RECONCILIAÇÃO (COMPARADOR DE CONFLITOS) === */}
       <ResizableModal 
           isOpen={importModalAberto} onClose={() => setImportModalAberto(false)} 
-          title="FILA DE INJEÇÃO DE DADOS (CSV)" icon={ShieldAlert} headerColor="bg-slate-900 text-white border-slate-800"
+          title={t('unitsTab.extra.csv.queueTitle').toUpperCase()} icon={ShieldAlert} headerColor="bg-slate-900 text-white border-slate-800"
           pos={importPos} setPos={setImportPos} size={importSize} setSize={setImportSize} minW={700} minH={600}
       >
         <div className="p-6 flex flex-col h-full bg-white dark:bg-slate-800">
             <div className="bg-blue-50 dark:bg-blue-900/20 p-5 rounded-2xl border border-blue-100 dark:border-blue-800/50 mb-6 shrink-0 flex justify-between items-center">
                 <div>
-                    <h4 className="font-black text-blue-800 dark:text-blue-400 mb-1 text-sm">Resumo da Varredura (Raio-X)</h4>
-                    <p className="text-[10px] font-bold text-slate-500 uppercase">Compare os dados atuais com os novos do CSV antes de aprovar.</p>
+                    <h4 className="font-black text-blue-800 dark:text-blue-400 mb-1 text-sm">{t('unitsTab.extra.csv.scanSummary')}</h4>
+                    <p className="text-[10px] font-bold text-slate-500 uppercase">{t('unitsTab.extra.csv.compare')}</p>
                 </div>
                 {importData.matches.some(m => m.status === 'pendente') && (
                     <button onClick={aprovarTodosPendentes} disabled={importando} className="px-5 py-2.5 bg-blue-600 text-white text-[10px] font-black rounded-xl uppercase hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-lg shadow-blue-500/20">
-                        {importando ? <Loader2 className="w-3 h-3 animate-spin"/> : <><CheckCircle2 className="w-3 h-3"/> Aprovar Todos os Pendentes</>}
+                        {importando ? <Loader2 className="w-3 h-3 animate-spin"/> : <><CheckCircle2 className="w-3 h-3"/> {t('unitsTab.extra.csv.approveAll')}</>}
                     </button>
                 )}
             </div>
 
             <div className="flex-1 overflow-y-auto custom-scrollbar space-y-4 pr-2 pb-4">
                 {importData.matches.length === 0 ? (
-                    <div className="py-20 text-center text-slate-400 font-bold uppercase tracking-widest text-xs">Nenhum dado novo para atualizar. O banco já está idêntico ao CSV.</div>
+                    <div className="py-20 text-center text-slate-400 font-bold uppercase tracking-widest text-xs">{t('unitsTab.extra.csv.nothingNew')}</div>
                 ) : (
                     importData.matches.map((m, i) => {
                         const conflito = (m.enderecoAtual && m.novoEndereco && m.enderecoAtual !== m.novoEndereco) || (m.mapaAtual && m.novoLinkMaps && m.mapaAtual !== m.novoLinkMaps);
@@ -1007,12 +1007,12 @@ export function UnidadesTab() {
                                                 <FileSpreadsheet className="w-4 h-4 text-slate-400"/>
                                                 <p className="font-black text-slate-700 dark:text-slate-300 text-sm">CSV: <span className="text-blue-600 dark:text-blue-400">{m.csvNome}</span></p>
                                             </div>
-                                            {conflito && m.status === 'pendente' && <p className="text-[10px] font-black text-amber-600 dark:text-amber-500 uppercase tracking-widest flex items-center gap-1 mt-2"><AlertTriangle className="w-3 h-3"/> Alerta de Substituição de Dados</p>}
+                                            {conflito && m.status === 'pendente' && <p className="text-[10px] font-black text-amber-600 dark:text-amber-500 uppercase tracking-widest flex items-center gap-1 mt-2"><AlertTriangle className="w-3 h-3"/> {t('unitsTab.extra.csv.replaceAlert')}</p>}
                                         </div>
                                         <div className="text-right">
-                                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Vincular à Unidade no Sistema:</label>
+                                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">{t('unitsTab.extra.csv.linkToUnit')}</label>
                                             <select value={m.dbId || ""} onChange={(e) => handleRematch(i, e.target.value)} disabled={m.status !== 'pendente'} className="px-3 py-1.5 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold text-slate-700 dark:text-white outline-none w-64 uppercase">
-                                                <option value="">-- Ignorar (Não Vincular) --</option>
+                                                <option value="">{t('unitsTab.extra.csv.ignore')}</option>
                                                 {unidadesBase.map(u => <option key={u.id} value={u.id}>{u.nome}</option>)}
                                             </select>
                                         </div>
@@ -1020,17 +1020,17 @@ export function UnidadesTab() {
                                     {m.dbId && (
                                         <div className="grid grid-cols-2 gap-4">
                                             <div className="bg-slate-100 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-200 dark:border-slate-700">
-                                                <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 border-b border-slate-200 dark:border-slate-700 pb-1">Atual no Sistema</h5>
+                                                <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 border-b border-slate-200 dark:border-slate-700 pb-1">{t('unitsTab.extra.csv.current')}</h5>
                                                 <div className="space-y-2">
-                                                    <div><span className="text-[9px] font-bold text-slate-400 uppercase block">Endereço</span><span className="text-xs font-medium text-slate-600 dark:text-slate-400 truncate block">{m.enderecoAtual || "Vazio"}</span></div>
-                                                    <div><span className="text-[9px] font-bold text-slate-400 uppercase block">Link Maps</span><span className="text-xs font-medium text-slate-600 dark:text-slate-400 truncate block">{m.mapaAtual ? "Link Existe" : "Vazio"}</span></div>
+                                                    <div><span className="text-[9px] font-bold text-slate-400 uppercase block">{t('unitsTab.extra.csv.address')}</span><span className="text-xs font-medium text-slate-600 dark:text-slate-400 truncate block">{m.enderecoAtual || t('unitsTab.extra.csv.empty')}</span></div>
+                                                    <div><span className="text-[9px] font-bold text-slate-400 uppercase block">{t('unitsTab.extra.csv.mapsLink')}</span><span className="text-xs font-medium text-slate-600 dark:text-slate-400 truncate block">{m.mapaAtual ? t('unitsTab.extra.csv.linkExists') : t('unitsTab.extra.csv.empty')}</span></div>
                                                 </div>
                                             </div>
                                             <div className="bg-blue-50 dark:bg-blue-900/10 p-3 rounded-xl border border-blue-200 dark:border-blue-900/50">
-                                                <h5 className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-2 border-b border-blue-200 dark:border-blue-900/50 pb-1">Novo do Arquivo</h5>
+                                                <h5 className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-2 border-b border-blue-200 dark:border-blue-900/50 pb-1">{t('unitsTab.extra.csv.fromFile')}</h5>
                                                 <div className="space-y-2">
-                                                    <div><span className="text-[9px] font-bold text-blue-400 dark:text-blue-500 uppercase block">Endereço</span><span className={`text-xs font-black truncate block ${m.enderecoAtual !== m.novoEndereco && m.novoEndereco ? 'text-blue-700 dark:text-blue-300' : 'text-slate-500 dark:text-slate-400'}`}>{m.novoEndereco || "Nenhuma alteração"}</span></div>
-                                                    <div><span className="text-[9px] font-bold text-blue-400 dark:text-blue-500 uppercase block">Link Maps</span><span className={`text-xs font-black truncate block ${m.mapaAtual !== m.novoLinkMaps && m.novoLinkMaps ? 'text-blue-700 dark:text-blue-300' : 'text-slate-500 dark:text-slate-400'}`}>{m.novoLinkMaps ? "Injetar Novo Link" : "Nenhuma alteração"}</span></div>
+                                                    <div><span className="text-[9px] font-bold text-blue-400 dark:text-blue-500 uppercase block">{t('unitsTab.extra.csv.address')}</span><span className={`text-xs font-black truncate block ${m.enderecoAtual !== m.novoEndereco && m.novoEndereco ? 'text-blue-700 dark:text-blue-300' : 'text-slate-500 dark:text-slate-400'}`}>{m.novoEndereco || t('unitsTab.extra.csv.noChange')}</span></div>
+                                                    <div><span className="text-[9px] font-bold text-blue-400 dark:text-blue-500 uppercase block">{t('unitsTab.extra.csv.mapsLink')}</span><span className={`text-xs font-black truncate block ${m.mapaAtual !== m.novoLinkMaps && m.novoLinkMaps ? 'text-blue-700 dark:text-blue-300' : 'text-slate-500 dark:text-slate-400'}`}>{m.novoLinkMaps ? t('unitsTab.extra.csv.injectNewLink') : t('unitsTab.extra.csv.noChange')}</span></div>
                                                 </div>
                                             </div>
                                         </div>
@@ -1038,11 +1038,11 @@ export function UnidadesTab() {
                                     <div className="flex justify-end gap-2 mt-2">
                                         {m.status === 'pendente' ? (
                                             <>
-                                                <button onClick={() => descartarItem(i)} className="px-5 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200 dark:hover:bg-red-900/30 dark:hover:border-red-800 text-[10px] font-black uppercase rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm"><Ban className="w-3 h-3"/> Descartar</button>
-                                                <button onClick={() => aprovarItem(m, i)} disabled={!m.dbId} className="px-5 py-2 bg-emerald-500 text-white hover:bg-emerald-600 disabled:bg-slate-300 disabled:opacity-50 text-[10px] font-black uppercase rounded-lg transition-colors flex items-center gap-1.5 shadow-md shadow-emerald-500/20"><Check className="w-3 h-3"/> {conflito ? "Aprovar Substituição" : "Aprovar Injeção"}</button>
+                                                <button onClick={() => descartarItem(i)} className="px-5 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200 dark:hover:bg-red-900/30 dark:hover:border-red-800 text-[10px] font-black uppercase rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm"><Ban className="w-3 h-3"/> {t('unitsTab.extra.csv.discard')}</button>
+                                                <button onClick={() => aprovarItem(m, i)} disabled={!m.dbId} className="px-5 py-2 bg-emerald-500 text-white hover:bg-emerald-600 disabled:bg-slate-300 disabled:opacity-50 text-[10px] font-black uppercase rounded-lg transition-colors flex items-center gap-1.5 shadow-md shadow-emerald-500/20"><Check className="w-3 h-3"/> {conflito ? t('unitsTab.extra.csv.approveReplace') : t('unitsTab.extra.csv.approveInject')}</button>
                                             </>
                                         ) : (
-                                            <div className={`px-5 py-2 text-[10px] font-black uppercase rounded-lg flex items-center gap-1.5 ${m.status === 'aprovado' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'}`}>{m.status === 'aprovado' ? <><CheckCircle2 className="w-3 h-3"/> Aprovado no Banco</> : <><Ban className="w-3 h-3"/> Descartado</>}</div>
+                                            <div className={`px-5 py-2 text-[10px] font-black uppercase rounded-lg flex items-center gap-1.5 ${m.status === 'aprovado' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'}`}>{m.status === 'aprovado' ? <><CheckCircle2 className="w-3 h-3"/> {t('unitsTab.extra.csv.approved')}</> : <><Ban className="w-3 h-3"/> {t('unitsTab.extra.csv.discarded')}</>}</div>
                                         )}
                                     </div>
                                 </div>
@@ -1053,7 +1053,7 @@ export function UnidadesTab() {
             </div>
 
             <div className="flex justify-end pt-4 border-t border-slate-100 dark:border-slate-700 shrink-0">
-                <button onClick={() => setImportModalAberto(false)} className="px-8 py-3 bg-slate-900 dark:bg-slate-700 text-white rounded-xl font-black text-xs uppercase shadow-lg hover:bg-slate-800 dark:hover:bg-slate-600 transition-all flex items-center gap-2"><Check className="w-4 h-4"/> Finalizar Operação</button>
+                <button onClick={() => setImportModalAberto(false)} className="px-8 py-3 bg-slate-900 dark:bg-slate-700 text-white rounded-xl font-black text-xs uppercase shadow-lg hover:bg-slate-800 dark:hover:bg-slate-600 transition-all flex items-center gap-2"><Check className="w-4 h-4"/> {t('unitsTab.extra.csv.finish')}</button>
             </div>
         </div>
       </ResizableModal>
@@ -1080,7 +1080,7 @@ export function UnidadesTab() {
                       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-1 block">{t('unitsTab.modal.country', 'País')}</label>
                       <div className="relative">
                           <select value={pais} onChange={e=>{setPais(e.target.value); setEstado(""); setTelefone("");}} className="w-full pl-4 pr-10 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-red-500 rounded-xl text-sm font-bold outline-none appearance-none transition-all dark:text-white">
-                              {PAISES.map(p=><option key={p.id} value={p.id}>{p.nome}</option>)}
+                              {PAISES.map(p=><option key={p.id} value={p.id}>{t(`common.countries.${p.id}`, p.nome)}</option>)}
                           </select>
                           <ChevronDown className="absolute right-4 top-3.5 w-4 h-4 text-slate-400 pointer-events-none"/>
                       </div>
@@ -1191,7 +1191,7 @@ export function UnidadesTab() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {/* Endereço ocupa a linha inteira no mobile, ou 3 colunas no desktop */}
                   <div className="md:col-span-3">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-1 block">Endereço Completo</label>
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-1 block">{t('unitsTab.extra.form.fullAddress')}</label>
                       <div className="relative">
                           <MapPin className="absolute left-4 top-3.5 w-4 h-4 text-slate-400"/>
                           <input 
@@ -1204,7 +1204,7 @@ export function UnidadesTab() {
                   </div>
 
                   <div className="md:col-span-2">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-1 block">Link do Google Maps</label>
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-1 block">{t('unitsTab.extra.form.mapsLink')}</label>
                       <div className="relative">
                           <Map className="absolute left-4 top-3.5 w-4 h-4 text-slate-400"/>
                           <input 
@@ -1217,7 +1217,7 @@ export function UnidadesTab() {
                   </div>
                   
                   <div className="md:col-span-1">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-1 block">Metragem da Sala (m²)</label>
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-1 block">{t('unitsTab.extra.form.roomArea')}</label>
                       <div className="relative">
                           <Maximize className="absolute left-4 top-3.5 w-4 h-4 text-slate-400"/>
                           <input 
@@ -1225,7 +1225,7 @@ export function UnidadesTab() {
                               value={metragem} 
                               onChange={e=>setMetragem(e.target.value)} 
                               className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-emerald-500 rounded-xl text-sm font-bold outline-none transition-all dark:text-white" 
-                              placeholder="Ex: 80" 
+                              placeholder={t('unitsTab.extra.form.areaPlaceholder')} 
                           />
                       </div>
                   </div>

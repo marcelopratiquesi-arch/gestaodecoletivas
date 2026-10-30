@@ -1,0 +1,27 @@
+{
+  "title": "Schedule a Recess or Holiday",
+  "desc": "This will automatically cancel every class in the selected period.",
+  "eventName": "Event Name",
+  "eventPlaceholder": "E.g.: Carnival Recess",
+  "startDate": "Start Date",
+  "endDate": "End Date",
+  "type": "Type",
+  "types": {
+    "recess": "Recess",
+    "national": "National Holiday",
+    "municipal": "Local Holiday"
+  },
+  "processing": "Processing...",
+  "create": "Create Recess",
+  "calendar": "Days-Off Calendar",
+  "range": "{{start}} to {{end}}",
+  "none": "No recess or holiday registered.",
+  "messages": {
+    "fillRequired": "Fill in the name and the dates!",
+    "confirmCreate": "WARNING: This will AUTOMATICALLY CANCEL every class between {{start}} and {{end}}.\n\nDo you want to continue?",
+    "created": "Done! Recess created and {{count}} classes were canceled automatically.",
+    "saveError": "Error saving holiday.",
+    "confirmDelete": "Delete the recess \"{{name}}\"?\n\nNote: For safety, canceled classes will NOT be reactivated automatically. Remove them in the daily validation if needed.",
+    "deleteError": "Error deleting"
+  }
+}

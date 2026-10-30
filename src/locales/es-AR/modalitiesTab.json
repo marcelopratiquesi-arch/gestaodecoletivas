@@ -1,0 +1,39 @@
+{
+  "title": "Gestión de Modalidades",
+  "subtitle": "Catálogo global de clases colectivas ordenado por espectro de colores.",
+  "search": "Buscar modalidad...",
+  "new": "Nueva",
+  "noAccess": "Sin acceso.",
+  "m2PerStudent": "m²/alumno",
+  "editSpaceHint": "Hacé clic para editar el espacio por alumno",
+  "editFull": "Editar completo",
+  "deactivate": "Desactivar",
+  "activate": "Activar",
+  "deleteForever": "Eliminar definitivamente",
+  "none": "No se encontraron modalidades.",
+  "editTitle": "Editar Modalidad",
+  "newTitle": "Nueva Modalidad",
+  "name": "Nombre de la Modalidad",
+  "namePlaceholder": "Ej: FIT DANCE...",
+  "radarColor": "Color en el Radar",
+  "initialStatus": "Estado Inicial",
+  "activeVisible": "🟢 ACTIVA (VISIBLE)",
+  "inactiveHidden": "🔴 INACTIVA (OCULTA)",
+  "save": "Guardar Modalidad",
+  "status": {
+    "ativa": "Activa",
+    "inativa": "Inactiva"
+  },
+  "messages": {
+    "loadError": "Error al cargar los datos.",
+    "saveM2Error": "Error al guardar los m²",
+    "nameRequired": "El nombre es obligatorio.",
+    "updated": "¡Modalidad actualizada!",
+    "created": "¡Modalidad creada!",
+    "saveError": "Error al guardar.",
+    "statusError": "Error al cambiar el estado",
+    "deleteConfirm": "¿Eliminar {{name}}?",
+    "deleteError": "Error al eliminar"
+  },
+  "spaceLabel": "Espacio (m²/alumno)"
+}

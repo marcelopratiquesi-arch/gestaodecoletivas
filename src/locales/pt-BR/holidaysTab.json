@@ -1,0 +1,27 @@
+{
+  "title": "Agendar Recesso ou Feriado",
+  "desc": "Isso cancelará automaticamente todas as aulas no período selecionado.",
+  "eventName": "Nome do Evento",
+  "eventPlaceholder": "Ex: Recesso de Carnaval",
+  "startDate": "Data Início",
+  "endDate": "Data Fim",
+  "type": "Tipo",
+  "types": {
+    "recess": "Recesso",
+    "national": "Feriado Nacional",
+    "municipal": "Feriado Municipal"
+  },
+  "processing": "Processando...",
+  "create": "Criar Recesso",
+  "calendar": "Calendário de Folgas",
+  "range": "{{start}} até {{end}}",
+  "none": "Nenhum recesso ou feriado cadastrado.",
+  "messages": {
+    "fillRequired": "Preencha o nome e as datas!",
+    "confirmCreate": "ATENÇÃO: Isso irá CANCELAR AUTOMATICAMENTE todas as aulas entre {{start}} e {{end}}.\n\nDeseja continuar?",
+    "created": "Sucesso! Recesso criado e {{count}} aulas foram canceladas automaticamente.",
+    "saveError": "Erro ao salvar feriado.",
+    "confirmDelete": "Deseja excluir o recesso \"{{name}}\"?\n\nNota: As aulas que foram canceladas NÃO serão reativadas automaticamente por segurança. Você deve excluí-las na validação diária se necessário.",
+    "deleteError": "Erro ao excluir"
+  }
+}

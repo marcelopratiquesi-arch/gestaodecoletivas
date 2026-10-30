@@ -14,7 +14,11 @@
     "unit": "Unidad",
     "modality": "Modalidad",
     "teacher": "Profesor",
-    "shift": "Turno"
+    "shift": "Turno",
+    "until": "Hasta",
+    "shiftMorning": "Mañana (05:30 - 11:59)",
+    "shiftAfternoon": "Tarde (12:00 - 17:00)",
+    "shiftNight": "Noche (17:01 - 23:00)"
   },
   "kpis": {
     "vaultActivated": "Caja Fuerte Activada",
@@ -43,11 +47,43 @@
     "occupancyCol": "TASA OCUPACIÓN",
     "classValue": "VALOR CLASE",
     "toReceive": "A RECIBIR",
-    "noData": "NO SE ENCONTRARON DATOS PARA EL FILTRO ACTUAL."
+    "noData": "NO SE ENCONTRARON DATOS PARA EL FILTRO ACTUAL.",
+    "multipleTimes": "Varios horarios",
+    "multiple": "Varios",
+    "consolidatedTotal": "Total consolidado",
+    "substitute": "Suplente",
+    "specialClass": "Clase especial",
+    "noArea": "S/ M²",
+    "scheduleDetail": "Detalle de los horarios",
+    "completedCount": "{{count}} realizadas",
+    "occupancyPct": "{{value}}% ocupación",
+    "cancelShort": "Cancel",
+    "substShort": "Supl"
   },
   "buttons": {
     "load20": "CARGAR +20",
     "load50": "CARGAR +50",
     "loadAll": "VER TODOS"
+  },
+  "export": {
+    "excel": "Excel (XLSX)",
+    "csv": "CSV",
+    "country": "País",
+    "state": "Provincia",
+    "unit": "Sede",
+    "modality": "Modalidad",
+    "time": "Horario",
+    "teacher": "Profesor",
+    "type": "Tipo",
+    "completed": "Clases Realizadas",
+    "canceled": "Clases Canceladas",
+    "avgStudents": "Promedio Alumnos",
+    "occupancy": "Tasa de Ocupación",
+    "classValue": "Valor Hora Clase",
+    "toReceive": "Total a Cobrar",
+    "typeGrouped": "Agrupado",
+    "typeSpecial": "Clase Especial",
+    "typeSubstitute": "Suplente",
+    "typeHolder": "Titular"
   }
 }

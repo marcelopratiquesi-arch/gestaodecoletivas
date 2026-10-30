@@ -1,0 +1,156 @@
+{
+  "title": "Schedule Radar",
+  "restricted": "Restricted access.",
+  "groupClass": "Group class",
+  "classFallback": "Class",
+  "views": {
+    "matrix": "Global matrix",
+    "byUnit": "View by unit",
+    "global": "Global report",
+    "performance": "Schedule performance"
+  },
+  "shifts": {
+    "all": "All",
+    "morning": "Morning",
+    "afternoon": "Afternoon",
+    "night": "Evening"
+  },
+  "filters": {
+    "states": "States",
+    "mentors": "Mentors",
+    "units": "Units",
+    "allStates": "All states",
+    "allMentors": "All mentors",
+    "allUnits": "All units",
+    "select": "Select..."
+  },
+  "locked": {
+    "title": "Radar vault active",
+    "desc": "Select at least one advanced filter above to track idle gaps and performance indicators."
+  },
+  "matrix": {
+    "unitFlow": "Unit / Attendance",
+    "studentsPerClass": "{{count}} st/class",
+    "noData": "No data",
+    "schedule": "Class schedule",
+    "full": "Full",
+    "consult": "View",
+    "fullyBooked": "Schedule fully booked",
+    "selectOneUnit": "Select exactly 1 unit in the filter to generate the cards."
+  },
+  "idleModal": {
+    "title": "Idle-time X-ray: {{name}}",
+    "executive": "Executive X-ray (period: 1 month)",
+    "emptyWindows": "Empty slots",
+    "activeClasses": "Active classes",
+    "idleness": "Idle rate",
+    "groupRoom": "Group room",
+    "maxBase": "Maximum calculation base: 480 opportunity slots per month",
+    "dailyLeak": "Daily leak (monthly projection)",
+    "emptyClasses": "{{count}} empty classes",
+    "perWeek": "(Per month | {{count}} per week)",
+    "viewInMatrix": "View times in the unit matrix"
+  },
+  "perfModal": {
+    "title": "Performance X-ray: {{name}}",
+    "heading": "Class performance (students vs capacity)",
+    "occupancyAvg": "Occupancy (average)",
+    "vacancyMonth": "Vacancy (month)",
+    "whichClasses": "Which classes are filling up the gym?",
+    "noClasses": "No classes registered.",
+    "capacity": " / {{count}} st",
+    "fillRate": "{{value}}% full"
+  },
+  "preview": {
+    "title": "Preview: {{day}} ({{unit}})",
+    "noClassesDay": "No classes on this day.",
+    "teacher": "Teacher: {{name}}",
+    "studentsShort": "st",
+    "last30": "Last 30 days",
+    "fillSlot": "Fill empty slot"
+  },
+  "newClass": {
+    "title": "New class: {{unit}}",
+    "days": "Days of the week (recurrence)",
+    "modality": "Modality",
+    "selectModality": "Select the modality...",
+    "teacher": "Teacher (officially linked)",
+    "selectModalityFirst": "Select a modality first",
+    "noTeacherLinked": "No teacher linked to this unit",
+    "selectTeacher": "Select the teacher...",
+    "startDate": "Start date",
+    "startTime": "Start time",
+    "value": "Value ({{symbol}})",
+    "save": "Save new class",
+    "alerts": {
+      "fillRequired": "Fill in all required fields!",
+      "selectDay": "Select at least one day of the week for the class!",
+      "noRetroactive": "INTEGRITY ERROR: The start date cannot be in the past!",
+      "saved": "CLASS REGISTERED SUCCESSFULLY!",
+      "saveError": "Error saving the class to the database."
+    }
+  },
+  "floating": {
+    "title": "Class schedule: {{unit}}",
+    "noClasses": "No classes registered in this unit.",
+    "days30": "30 days"
+  },
+  "health": {
+    "title": "Unit health",
+    "globalAvg": "Unit overall average (90 days)",
+    "history": "Full history ({{count}} records)",
+    "noRecords": "No records found.",
+    "students": "Students",
+    "fullReport": "Full report"
+  },
+  "global": {
+    "calculating": "Calculating data...",
+    "howTitle": "How is the global data calculated? (monthly metric)",
+    "idleHoursTitle": "Idle hours across the network (monthly)",
+    "idleHoursDesc": "The <b>sum of all lost time</b> (without classes) projected to 1 month (4 weeks). We map the daily \"slots\" that stay empty for more than 60 minutes, convert them into 40-minute blocks and multiply by the whole month. <b>Pure math so the CEO knows exactly how many hours of revenue are going down the drain.</b>",
+    "biggestTitle": "Highest idle time",
+    "biggestDesc": "The ranking of gyms \"leaking\" the most revenue. The system scans the <b>16 daily operating hours</b> (6 am to 10 pm, Mon–Fri) and totals the <b>missed opportunities in the month</b>. We show the open wound as \"monthly empty slots\" for each unit.",
+    "optimizedTitle": "Optimized units",
+    "optimizedDesc": "The network's elite units. These gyms have <b>zero gaps in the schedule</b> throughout the 16-hour operating window. The ranking lists who is 100% optimized, led by whoever delivers the <b>highest absolute number of classes</b> in the month.",
+    "idleHoursCard": "Idle hours across the network",
+    "thisMonth": "This month",
+    "unitsCount": "{{count}} units",
+    "sparkTitle": "{{day}}: {{count}} empty classes in the month",
+    "windowsPerMonth": "{{count}} slots/month",
+    "windowsOpen": "<b>{{count}} slots</b> open this month",
+    "optimizedSub": "With high volume and a full monthly schedule",
+    "noneFull": "No unit is 100% full.",
+    "classesPerMonth": "{{count}} classes/month",
+    "showLess": "Show less",
+    "showMore": "Show more..."
+  },
+  "performance": {
+    "mapping": "Mapping occupancy data...",
+    "howTitle": "How is the performance data calculated? (monthly metric)",
+    "occTitle": "Room occupancy rate",
+    "occDesc": "The real attendance of classes, matching presence against the unit's floor plan. We divide the <b>average number of students present</b> by the <b>maximum room capacity</b>.",
+    "occFormula": "Capacity = (Actual area registered for the unit) ÷ (m² required by the modality). If the area is not provided, the system flags an error to avoid false data.",
+    "vacTitle": "Schedule vacancy rate",
+    "vacDesc": "The exact percentage of \"empty slots\" during the gym's operating hours over <b>the whole month (4 weeks)</b>.",
+    "vacFormula": "1 working month = 20 days of 16 hours = 320 hours or 480 possible class blocks. The rate shows how much of that is idle.",
+    "diagTitle": "Diagnosis and revenue bottleneck",
+    "diagDesc": "The red alert fires when the unit is <b>overcrowded</b> in the few classes it has (occupancy > 70%), but the gym still sits empty much of the time <b>(monthly vacancy > 30%)</b>.",
+    "diagAction": "CEO action: require new classes to be opened immediately in idle slots to relieve full rooms and increase revenue.",
+    "leaders": "Occupancy leaders",
+    "biggestVacancy": "Highest vacancy (monthly idle time)",
+    "bottlenecks": "Bottlenecks identified",
+    "bottlenecksSub": "High occupancy + empty schedule",
+    "detailedView": "Detailed performance view",
+    "colUnit": "Unit",
+    "colRoom": "Room size",
+    "colOccupancy": "Overall occupancy (average)",
+    "colVacancy": "Schedule vacancy (1 month)",
+    "colDiagnosis": "Diagnosis",
+    "noArea": "M² not registered",
+    "detailClasses": "Class details",
+    "windowsHours": "{{count}} slots / month (<b>{{hours}}H free</b>)",
+    "incomplete": "Incomplete data",
+    "revenueRisk": "Revenue risk",
+    "healthy": "Healthy"
+  }
+}

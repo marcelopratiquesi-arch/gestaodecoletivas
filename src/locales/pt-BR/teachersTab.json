@@ -83,5 +83,14 @@
     "fixConfirm": "⚠️ ATENÇÃO: Isso vai varrer todo o banco de dados e converter os e-mails dos professores para minúsculo.\n\nDeseja continuar?",
     "fixSuccess": "SUCESSO! {{count}} professores foram corrigidos para minúsculo.",
     "fixError": "Erro ao corrigir base. Verifique o console."
+  },
+  "extra": {
+    "statusError": "Erro ao mudar status",
+    "phoneInvalidHint": "Telefone ausente ou inválido para envios do WaSeller. Edite o cadastro.",
+    "linkOtherUnit": "Vincular a outra unidade",
+    "editData": "Editar dados",
+    "deactivateProfile": "Desativar perfil",
+    "activateProfile": "Ativar perfil",
+    "deleteNetwork": "Excluir definitivamente de toda a rede"
   }
 }

@@ -386,7 +386,7 @@ export default function PublicSchedule() {
                     <button 
                         onClick={(e) => { e.stopPropagation(); setIsLangMenuOpen(!isLangMenuOpen); }}
                         className={`flex items-center gap-2 p-2.5 md:px-3 md:py-2.5 rounded-full border transition-all hover:scale-105 ${isDarkMode ? 'bg-black/40 border-white/10 text-white hover:bg-black/60' : 'bg-white/80 border-gray-200 text-gray-700 hover:bg-white'}`}
-                        title="Mudar Idioma"
+                        title={t('sidebar.changeLanguage')}
                     >
                         <img src={currentLang.flag} alt="Lang" className="w-5 h-auto rounded-[2px] shadow-sm" />
                         <ChevronDown className="w-3 h-3 opacity-60 hidden md:block" />

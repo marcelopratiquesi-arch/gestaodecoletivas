@@ -6,7 +6,11 @@ import {
   writeBatch, query, where, serverTimestamp 
 } from 'firebase/firestore';
 import { Calendar, Plus, Trash2, AlertTriangle, Loader2, CalendarDays } from 'lucide-react';
-import { getDiaSemana } from '../../../utils/formatters';
+import { getDiaSemana, formatDate as formatarData } from '../../../utils/formatters';
+import { useTranslation } from 'react-i18next';
+
+// Tipo gravado no banco (português) -> chave de tradução.
+const TIPOS_FERIADO = { 'Recesso': 'recess', 'Feriado Nacional': 'national', 'Feriado Municipal': 'municipal' };
 
 // Helpers de Data
 
@@ -23,6 +27,7 @@ const getDatesInRange = (startDate, endDate) => {
 
 export function FeriadosTab() {
   const { userData } = useAuth(); // Pegando dados do Admin para Auditoria
+  const { t } = useTranslation();
   const userId = userData?.id || userData?.uid;
 
   const [feriados, setFeriados] = useState([]);
@@ -75,9 +80,9 @@ export function FeriadosTab() {
 
   async function handleSave(e) {
     e.preventDefault();
-    if (!form.nome || !form.dataInicio || !form.dataFim) return alert("Preencha o nome e as datas!");
+    if (!form.nome || !form.dataInicio || !form.dataFim) return alert(t('holidaysTab.messages.fillRequired'));
 
-    if (!window.confirm(`ATENÇÃO: Isso irá CANCELAR AUTOMATICAMENTE todas as aulas entre ${formatDate(form.dataInicio)} e ${formatDate(form.dataFim)}.\n\nDeseja continuar?`)) {
+    if (!window.confirm(t('holidaysTab.messages.confirmCreate', { start: formatDate(form.dataInicio), end: formatDate(form.dataFim) }))) {
       return;
     }
 
@@ -137,18 +142,18 @@ export function FeriadosTab() {
 
       setFeriados([...feriados, { id: feriadoDoc.id, ...form }]);
       setForm({ nome: '', dataInicio: '', dataFim: '', tipo: 'Recesso' });
-      alert(`Sucesso! Recesso criado e ${count} aulas foram canceladas automaticamente.`);
+      alert(t('holidaysTab.messages.created', { count }));
 
     } catch (e) { 
       console.error(e);
-      alert("Erro ao salvar feriado."); 
+      alert(t('holidaysTab.messages.saveError')); 
     } finally {
       setProcessando(false);
     }
   }
 
   async function handleDelete(id, nomeFeriado) {
-    if (!window.confirm(`Deseja excluir o recesso "${nomeFeriado}"?\n\nNota: As aulas que foram canceladas NÃO serão reativadas automaticamente por segurança. Você deve excluí-las na validação diária se necessário.`)) return;
+    if (!window.confirm(t('holidaysTab.messages.confirmDelete', { name: nomeFeriado }))) return;
     
     try {
       await deleteDoc(doc(db, "feriados", id));
@@ -157,14 +162,10 @@ export function FeriadosTab() {
       await registrarLogAuditoria('EXCLUÍDA', 'Evento removido do calendário.', nomeFeriado, 'O recesso/feriado foi deletado do sistema.');
 
       setFeriados(feriados.filter(f => f.id !== id));
-    } catch (e) { alert("Erro ao excluir"); }
+    } catch (e) { alert(t('holidaysTab.messages.deleteError')); }
   }
 
-  const formatDate = (date) => {
-    if(!date) return "";
-    const [y, m, d] = date.split('-');
-    return `${d}/${m}/${y}`;
-  }
+  const formatDate = (date) => (date ? formatarData(date) : "");
 
   return (
     <div className="p-6 animate-fade-in space-y-8">
@@ -175,43 +176,43 @@ export function FeriadosTab() {
         <div className="flex items-center gap-2 mb-6">
           <CalendarDays className="w-6 h-6 text-red-600" />
           <div>
-            <h3 className="font-bold text-slate-700 dark:text-white uppercase text-sm">Agendar Recesso ou Feriado</h3>
-            <p className="text-xs text-slate-400">Isso cancelará automaticamente todas as aulas no período selecionado.</p>
+            <h3 className="font-bold text-slate-700 dark:text-white uppercase text-sm">{t('holidaysTab.title')}</h3>
+            <p className="text-xs text-slate-400">{t('holidaysTab.desc')}</p>
           </div>
         </div>
         
         <form onSubmit={handleSave} className="flex flex-col xl:flex-row gap-4 items-end">
           <div className="flex-1 w-full">
-            <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1 block">Nome do Evento</label>
+            <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1 block">{t('holidaysTab.eventName')}</label>
             <input className="w-full p-3 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500" 
-                   value={form.nome} onChange={e => setForm({...form, nome: e.target.value})} placeholder="Ex: Recesso de Carnaval" />
+                   value={form.nome} onChange={e => setForm({...form, nome: e.target.value})} placeholder={t('holidaysTab.eventPlaceholder')} />
           </div>
           
           <div className="w-full xl:w-40">
-            <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1 block">Data Início</label>
+            <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1 block">{t('holidaysTab.startDate')}</label>
             <input type="date" className="w-full p-3 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 dark:text-white rounded-lg text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-red-500" 
                    value={form.dataInicio} onChange={e => setForm({...form, dataInicio: e.target.value})} />
           </div>
 
           <div className="w-full xl:w-40">
-            <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1 block">Data Fim</label>
+            <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1 block">{t('holidaysTab.endDate')}</label>
             <input type="date" className="w-full p-3 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 dark:text-white rounded-lg text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-red-500" 
                    value={form.dataFim} onChange={e => setForm({...form, dataFim: e.target.value})} />
           </div>
 
           <div className="w-full xl:w-40">
-            <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1 block">Tipo</label>
+            <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1 block">{t('holidaysTab.type')}</label>
             <select className="w-full p-3 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500" 
                     value={form.tipo} onChange={e => setForm({...form, tipo: e.target.value})}>
-              <option>Recesso</option>
-              <option>Feriado Nacional</option>
-              <option>Feriado Municipal</option>
+              <option value="Recesso">{t('holidaysTab.types.recess')}</option>
+              <option value="Feriado Nacional">{t('holidaysTab.types.national')}</option>
+              <option value="Feriado Municipal">{t('holidaysTab.types.municipal')}</option>
             </select>
           </div>
 
           <button disabled={processando} className="w-full xl:w-auto px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg text-sm shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50">
             {processando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-            {processando ? "Processando..." : "Criar Recesso"}
+            {processando ? t('holidaysTab.processing') : t('holidaysTab.create')}
           </button>
         </form>
       </div>
@@ -219,7 +220,7 @@ export function FeriadosTab() {
       {/* LISTA DE FERIADOS */}
       <div>
         <h4 className="font-bold text-slate-700 dark:text-white text-sm uppercase mb-4 pl-1 flex items-center gap-2">
-            <Calendar className="w-4 h-4"/> Calendário de Folgas
+            <Calendar className="w-4 h-4"/> {t('holidaysTab.calendar')}
         </h4>
         
         {loading ? (
@@ -232,13 +233,13 @@ export function FeriadosTab() {
                     <div>
                     <div className="flex items-center gap-2 mb-2">
                         <span className={`px-2 py-1 text-[10px] font-bold uppercase rounded border ${f.tipo.includes('Feriado') ? 'bg-blue-50 text-blue-700 border-blue-100 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-orange-50 text-orange-700 border-orange-100 dark:bg-orange-900/30 dark:text-orange-400'}`}>
-                        {f.tipo}
+                        {TIPOS_FERIADO[f.tipo] ? t(`holidaysTab.types.${TIPOS_FERIADO[f.tipo]}`) : f.tipo}
                         </span>
                     </div>
                     <h4 className="font-bold text-slate-800 dark:text-white text-lg mb-1">{f.nome}</h4>
                     <div className="text-sm font-medium text-slate-500 dark:text-slate-400 flex items-center gap-2">
                         <CalendarDays className="w-4 h-4"/>
-                        {formatDate(f.dataInicio)} até {formatDate(f.dataFim)}
+                        {t('holidaysTab.range', { start: formatDate(f.dataInicio), end: formatDate(f.dataFim) })}
                     </div>
                     </div>
                     <button onClick={() => handleDelete(f.id, f.nome)} className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
@@ -250,7 +251,7 @@ export function FeriadosTab() {
             {feriados.length === 0 && (
                 <div className="col-span-full py-12 text-center border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl text-slate-400">
                 <Calendar className="w-12 h-12 mx-auto mb-2 opacity-20"/>
-                Nenhum recesso ou feriado cadastrado.
+                {t('holidaysTab.none')}
                 </div>
             )}
             </div>
