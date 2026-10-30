@@ -280,7 +280,7 @@ export function MentoresTab() {
     setSalvando(true);
 
     if (!nome.trim()) { setSalvando(false); return setErro(t('mentorsTab.messages.nameRequired', 'Nome é obrigatório.')); }
-    if (!telefone.trim()) { setSalvando(false); return setErro("WhatsApp é obrigatório."); }
+    if (!telefone.trim()) { setSalvando(false); return setErro(t('mentorsTab.extra.whatsappRequired')); }
     if (!email.trim()) { setSalvando(false); return setErro(t('mentorsTab.messages.emailRequired', 'E-mail é obrigatório.')); }
     if (!mentorEditando && senha.length < 6) { setSalvando(false); return setErro(t('mentorsTab.messages.weakPassword', 'Senha mín. 6 dígitos.')); }
 
@@ -346,7 +346,7 @@ export function MentoresTab() {
 
   // EDICAO INLINE DO TELEFONE COM AUDITORIA
   async function salvarTelefoneInline(mentor) {
-      if (!telefoneInline.trim()) { alert("O telefone é obrigatório!"); return; }
+      if (!telefoneInline.trim()) { alert(t('mentorsTab.extra.phoneRequired')); return; }
       try {
           const telAntigo = mentor.telefone || "Sem telefone";
           await updateDoc(doc(db, "usuarios", mentor.id), { 
@@ -358,7 +358,7 @@ export function MentoresTab() {
           }
           setEditandoTelefoneId(null);
       } catch (error) { 
-          alert("Erro ao salvar telefone."); 
+          alert(t('mentorsTab.extra.savePhoneError')); 
       }
   }
 
@@ -411,17 +411,17 @@ export function MentoresTab() {
         <div className="flex gap-3 w-full md:w-auto">
             <div className="flex items-center gap-4 bg-white dark:bg-slate-800 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
                 <div className="text-center">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('mentorsTab.extra.total')}</p>
                     <p className="text-lg font-black text-slate-700 dark:text-white leading-none">{kpis.total}</p>
                 </div>
                 <div className="w-px h-8 bg-slate-200 dark:bg-slate-700"></div>
                 <div className="text-center">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Ativos</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('mentorsTab.extra.active')}</p>
                     <p className="text-lg font-black text-green-600 leading-none">{kpis.ativos}</p>
                 </div>
                 <div className="w-px h-8 bg-slate-200 dark:bg-slate-700"></div>
                 <div className="text-center">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Inativos</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('mentorsTab.extra.inactive')}</p>
                     <p className="text-lg font-black text-red-500 leading-none">{kpis.inativos}</p>
                 </div>
             </div>
@@ -455,8 +455,8 @@ export function MentoresTab() {
                   onChange={e => setPaisFiltro(e.target.value)} 
                   className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold uppercase outline-none appearance-none shadow-sm dark:text-white"
               >
-                  <option value="">TODOS OS PAÍSES</option>
-                  {PAISES.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
+                  <option value="">{t('mentorsTab.extra.allCountries').toUpperCase()}</option>
+                  {PAISES.map(p => <option key={p.id} value={p.id}>{t(`common.countries.${p.id}`, p.nome)}</option>)}
               </select>
               <ChevronDown className="absolute right-4 top-3.5 w-4 h-4 text-slate-400 pointer-events-none"/>
           </div>
@@ -533,10 +533,10 @@ export function MentoresTab() {
                                     onKeyDown={(e) => e.key === 'Enter' && salvarTelefoneInline(m)} 
                                     placeholder={getPhonePlaceholder(paisAtual)} 
                                 />
-                                <button onClick={() => salvarTelefoneInline(m)} className="p-1 bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400 rounded-md hover:bg-green-600 hover:text-white transition-colors" title="Salvar">
+                                <button onClick={() => salvarTelefoneInline(m)} className="p-1 bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400 rounded-md hover:bg-green-600 hover:text-white transition-colors" title={t('common.actions.save')}>
                                     <Check className="w-3.5 h-3.5"/>
                                 </button>
-                                <button onClick={() => setEditandoTelefoneId(null)} className="p-1 bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400 rounded-md hover:bg-slate-300 transition-colors" title="Cancelar">
+                                <button onClick={() => setEditandoTelefoneId(null)} className="p-1 bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400 rounded-md hover:bg-slate-300 transition-colors" title={t('common.actions.cancel')}>
                                     <X className="w-3.5 h-3.5"/>
                                 </button>
                             </div>
@@ -544,7 +544,7 @@ export function MentoresTab() {
                             <div 
                                 onClick={() => { setEditandoTelefoneId(m.id); setTelefoneInline(m.telefone ? m.telefone.replace(paisDDI, '').trim() : ""); }} 
                                 className="flex items-center gap-2 cursor-pointer p-1.5 -ml-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors group/edit w-fit" 
-                                title="Clique para editar rapidamente"
+                                title={t('mentorsTab.extra.quickEdit')}
                             >
                                 <Phone className={`w-3.5 h-3.5 ${m.telefone ? 'text-green-500 dark:text-green-400' : 'text-slate-300 dark:text-slate-600'}`}/>
                                 <span className={`font-mono text-sm font-bold flex items-center gap-1.5 ${m.telefone ? 'text-slate-700 dark:text-slate-300' : 'text-slate-400 dark:text-slate-500 italic font-normal text-xs'}`}>
@@ -614,7 +614,7 @@ export function MentoresTab() {
                           value={nome} 
                           onChange={e=>setNome(e.target.value)} 
                           className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-blue-500 rounded-xl text-sm font-bold outline-none dark:text-white" 
-                          placeholder="Nome completo" 
+                          placeholder={t('mentorsTab.extra.fullNamePlaceholder')} 
                       />
                   </div>
               </div>
@@ -629,7 +629,7 @@ export function MentoresTab() {
                               onChange={e => { setPais(e.target.value); setTelefone(formatarTelefone(telefone, e.target.value)); }}
                               className="w-full pl-4 pr-10 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-blue-500 rounded-xl text-sm font-bold outline-none appearance-none dark:text-white"
                           >
-                              {PAISES.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
+                              {PAISES.map(p => <option key={p.id} value={p.id}>{t(`common.countries.${p.id}`, p.nome)}</option>)}
                           </select>
                           <ChevronDown className="absolute right-4 top-3.5 w-4 h-4 text-slate-400 pointer-events-none"/>
                       </div>
@@ -693,7 +693,7 @@ export function MentoresTab() {
                               value={senha} 
                               onChange={e=>setSenha(e.target.value)} 
                               className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-blue-500 rounded-xl text-sm font-bold outline-none dark:text-white" 
-                              placeholder="Mínimo 6 dígitos" 
+                              placeholder={t('mentorsTab.extra.passwordPlaceholder')} 
                           />
                       </div>
                   </div>

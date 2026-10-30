@@ -1,0 +1,156 @@
+{
+  "title": "Radar de Grade",
+  "restricted": "Acesso restrito.",
+  "groupClass": "Aula coletiva",
+  "classFallback": "Aula",
+  "views": {
+    "matrix": "Matriz global",
+    "byUnit": "Visão por unidade",
+    "global": "Relatório global",
+    "performance": "Performance da grade"
+  },
+  "shifts": {
+    "all": "Todos",
+    "morning": "Manhã",
+    "afternoon": "Tarde",
+    "night": "Noite"
+  },
+  "filters": {
+    "states": "Estados",
+    "mentors": "Mentores",
+    "units": "Unidades",
+    "allStates": "Todos os estados",
+    "allMentors": "Todos os mentores",
+    "allUnits": "Todas as unidades",
+    "select": "Selecionar..."
+  },
+  "locked": {
+    "title": "Cofre do radar ativado",
+    "desc": "Selecione pelo menos um filtro avançado acima para rastrear os buracos de ociosidade e indicadores de performance."
+  },
+  "matrix": {
+    "unitFlow": "Unidade / Fluxo",
+    "studentsPerClass": "{{count}} al/aula",
+    "noData": "Sem dados",
+    "schedule": "Quadro de aulas",
+    "full": "Cheia",
+    "consult": "Consultar",
+    "fullyBooked": "Grade totalmente ocupada",
+    "selectOneUnit": "Selecione exatamente 1 unidade no filtro para gerar os cartões."
+  },
+  "idleModal": {
+    "title": "Raio-X de ociosidade: {{name}}",
+    "executive": "Raio-X executivo (período: 1 mês)",
+    "emptyWindows": "Janelas vazias",
+    "activeClasses": "Aulas ativas",
+    "idleness": "Ociosidade",
+    "groupRoom": "Sala coletiva",
+    "maxBase": "Base de cálculo máxima: 480 janelas de oportunidade por mês",
+    "dailyLeak": "Vazamento diário (projeção mensal)",
+    "emptyClasses": "{{count}} aulas vazias",
+    "perWeek": "(No mês | {{count}} por semana)",
+    "viewInMatrix": "Ver horários na matriz da unidade"
+  },
+  "perfModal": {
+    "title": "Raio-X de performance: {{name}}",
+    "heading": "Desempenho das aulas (alunos vs estrutura)",
+    "occupancyAvg": "Ocupação (média)",
+    "vacancyMonth": "Vacância (mês)",
+    "whichClasses": "Quais aulas estão lotando a academia?",
+    "noClasses": "Nenhuma aula cadastrada.",
+    "capacity": " / {{count}} al",
+    "fillRate": "{{value}}% lotação"
+  },
+  "preview": {
+    "title": "Prévia: {{day}} ({{unit}})",
+    "noClassesDay": "Nenhuma aula neste dia.",
+    "teacher": "Prof: {{name}}",
+    "studentsShort": "al",
+    "last30": "Últimos 30 dias",
+    "fillSlot": "Preencher horário vago"
+  },
+  "newClass": {
+    "title": "Nova aula: {{unit}}",
+    "days": "Dias da semana (recorrência)",
+    "modality": "Modalidade",
+    "selectModality": "Selecione a modalidade...",
+    "teacher": "Professor (vinculado oficial)",
+    "selectModalityFirst": "Selecione uma modalidade primeiro",
+    "noTeacherLinked": "Nenhum professor vinculado à unidade",
+    "selectTeacher": "Selecione o professor...",
+    "startDate": "Data de início",
+    "startTime": "Hora início",
+    "value": "Valor ({{symbol}})",
+    "save": "Salvar nova aula",
+    "alerts": {
+      "fillRequired": "Preencha todos os campos obrigatórios!",
+      "selectDay": "Selecione pelo menos um dia da semana para a aula!",
+      "noRetroactive": "ERRO DE INTEGRIDADE: A Data de Início não pode ser retroativa!",
+      "saved": "AULA CADASTRADA COM SUCESSO!",
+      "saveError": "Erro ao salvar aula no banco de dados."
+    }
+  },
+  "floating": {
+    "title": "Quadro de aulas: {{unit}}",
+    "noClasses": "Nenhuma aula cadastrada nesta unidade.",
+    "days30": "30 dias"
+  },
+  "health": {
+    "title": "Saúde da unidade",
+    "globalAvg": "Média global da unidade (90 dias)",
+    "history": "Histórico completo ({{count}} registros)",
+    "noRecords": "Nenhum registro encontrado.",
+    "students": "Alunos",
+    "fullReport": "Relatório completo"
+  },
+  "global": {
+    "calculating": "Calculando dados...",
+    "howTitle": "Como os dados globais são calculados? (métrica mensal)",
+    "idleHoursTitle": "Horas ociosas na rede (mensal)",
+    "idleHoursDesc": "Representa o <b>somatório de todo o tempo perdido</b> (sem aulas) projetado para 1 mês (4 semanas). Nós mapeamos as \"janelas\" diárias que ficam vazias por mais de 60 minutos, convertemos em blocos de 40 minutos e multiplicamos pelo mês inteiro. <b>Matemática pura para o CEO saber exatamente quantas horas de dinheiro estão indo para o ralo.</b>",
+    "biggestTitle": "Maior ociosidade",
+    "biggestDesc": "O ranking das academias que estão \"vazando\" maior quantidade de receita. O sistema varre as <b>16 horas de funcionamento diário</b> (06h às 22h, de seg. a sex.) e totaliza as <b>oportunidades perdidas no mês</b>. Mostramos a ferida aberta em \"janelas vazias mensais\" para cada unidade.",
+    "optimizedTitle": "Unidades otimizadas",
+    "optimizedDesc": "As unidades de elite da rede. São as academias que possuem <b>zero buracos na grade</b> durante todo o turno útil de 16 horas. O ranking organiza quem está 100% otimizado, liderado por quem entrega o <b>maior volume absoluto de aulas</b> no mês.",
+    "idleHoursCard": "Horas ociosas na rede",
+    "thisMonth": "Neste mês",
+    "unitsCount": "{{count}} unidades",
+    "sparkTitle": "{{day}}: {{count}} aulas vazias no mês",
+    "windowsPerMonth": "{{count}} janelas/mês",
+    "windowsOpen": "<b>{{count}} janelas</b> abertas neste mês",
+    "optimizedSub": "Com alto volume e grade mensal cheia",
+    "noneFull": "Nenhuma unidade 100% cheia.",
+    "classesPerMonth": "{{count}} aulas/mês",
+    "showLess": "Ver menos",
+    "showMore": "Ver mais..."
+  },
+  "performance": {
+    "mapping": "Mapeando dados de ocupação...",
+    "howTitle": "Como os dados de performance são calculados? (métrica mensal)",
+    "occTitle": "Taxa de ocupação da sala",
+    "occDesc": "Representa a lotação real das aulas, cruzando a presença com a planta da unidade. Dividimos a <b>média de alunos presentes</b> pela <b>capacidade máxima da sala</b>.",
+    "occFormula": "Capacidade = (Metragem real cadastrada na unidade) ÷ (m² exigido pela modalidade). Se a metragem não for informada, o sistema acusa erro para evitar dados falsos.",
+    "vacTitle": "Taxa de vacância da grade",
+    "vacDesc": "A porcentagem exata de \"janelas vazias\" durante o horário útil de funcionamento da academia ao longo de <b>todo o mês (4 semanas)</b>.",
+    "vacFormula": "1 mês útil = 20 dias de 16 horas = 320 horas ou 480 blocos de aula possíveis. A taxa expõe quanto disso está ocioso.",
+    "diagTitle": "Diagnóstico e gargalo de receita",
+    "diagDesc": "O alerta vermelho dispara na hora quando a unidade possui <b>superlotação</b> nas poucas aulas que tem (ocupação > 70%), mas a academia ainda fica muito tempo vazia <b>(vacância mensal > 30%)</b>.",
+    "diagAction": "Ação do CEO: exigir a abertura imediata de novas turmas nos horários ociosos para aliviar as salas cheias e faturar mais.",
+    "leaders": "Líderes de ocupação",
+    "biggestVacancy": "Maior vacância (ociosidade mensal)",
+    "bottlenecks": "Gargalos identificados",
+    "bottlenecksSub": "Lotação alta + grade vazia",
+    "detailedView": "Visão detalhada de performance",
+    "colUnit": "Unidade",
+    "colRoom": "Estrutura da sala",
+    "colOccupancy": "Ocupação global (média)",
+    "colVacancy": "Vacância da grade (1 mês)",
+    "colDiagnosis": "Diagnóstico",
+    "noArea": "M² não cadastrado",
+    "detailClasses": "Detalhar aulas",
+    "windowsHours": "{{count}} janelas / mês (<b>{{hours}}H livres</b>)",
+    "incomplete": "Dados incompletos",
+    "revenueRisk": "Risco de receita",
+    "healthy": "Saudável"
+  }
+}

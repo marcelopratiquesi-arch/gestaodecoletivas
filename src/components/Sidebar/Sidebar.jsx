@@ -2,9 +2,12 @@ import React, { useState, useEffect, useMemo } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { useTheme } from "../../contexts/ThemeContext";
+import { useCatalogs } from "../../contexts/CatalogContext";
 import { db } from "../../services/firebase";
 import { collection, query, where, getDocs, onSnapshot } from "firebase/firestore";
 import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
+import { LANGUAGES, getDiaSemana, formatDateTime, formatRole } from "../../utils/formatters";
+import { feriadoNoDia } from "../../utils/feriados";
 
 import { 
   LayoutDashboard, BarChart3, Calendar, CircleCheck, 
@@ -15,15 +18,9 @@ import {
   X, ArrowRight, Check
 } from "lucide-react";
 
-// 🌍 DADOS DAS BANDEIRAS
-const LANGUAGES = [
-  { code: 'pt-BR', name: 'Português', short: 'PT', flag: 'https://flagcdn.com/w40/br.png' },
-  { code: 'en-US', name: 'English', short: 'EN', flag: 'https://flagcdn.com/w40/us.png' },
-  { code: 'es-AR', name: 'Español', short: 'ES', flag: 'https://flagcdn.com/w40/ar.png' }
-];
-
 export default function Sidebar({ collapsed }) { 
   const { userData, logout } = useAuth();
+  const { catalogs, loadingCatalogs } = useCatalogs();
   const { theme, toggleTheme } = useTheme();
   const location = useLocation();
   const { t, i18n } = useTranslation(); // 🟢 CÉREBRO CONECTADO
@@ -66,38 +63,40 @@ export default function Sidebar({ collapsed }) {
   const isActive = (route) => path === route || path.startsWith(`${route}/`);
 
   // --- CÁLCULO DE PENDÊNCIAS ---
+  // Aulas e cadastros vêm da memória ao vivo (CatalogContext); só as validações de hoje são buscadas a cada minuto.
+  // Conta apenas aulas ativas hoje (não excluídas, dentro de início/fim) e fora de feriado (regra única).
   useEffect(() => {
+    if (loadingCatalogs) return;
     const fetchPendencias = async () => {
         try {
             const todayStr = new Date().toLocaleDateString('en-CA');
-            const diasSemanaMap = { 0: 'Domingo', 1: 'Segunda', 2: 'Terça', 3: 'Quarta', 4: 'Quinta', 5: 'Sexta', 6: 'Sábado' };
-            const diaSemanaHoje = diasSemanaMap[new Date().getDay()];
+            const diaSemanaHoje = getDiaSemana(new Date());
 
-            const qAulas = query(collection(db, "aulas"), where("dias", "array-contains", diaSemanaHoje));
-            const aulasSnap = await getDocs(qAulas);
-            
             const qValidacoes = query(collection(db, "validacoes"), where("data", "==", todayStr));
             const validacoesSnap = await getDocs(qValidacoes);
             const validacoesMap = new Set(validacoesSnap.docs.map(doc => doc.data().aulaId));
 
-            let unidadesMentorIds = [];
-            if (role === 'mentor') {
-                const uSnap = await getDocs(query(collection(db, "unidades"), where("mentorId", "==", userData.uid || userData.id)));
-                unidadesMentorIds = uSnap.docs.map(d => d.id);
-            }
+            const meuId = userData.uid || userData.id;
+            const unidadesPorId = new Map((catalogs.unidades || []).map(u => [String(u.id), u]));
+            const meuProfessorId = userData.professorId || (catalogs.professores || []).find(p => p.uidLogin === meuId)?.id;
 
             let count = 0;
-            aulasSnap.docs.forEach(doc => {
-                const aula = doc.data();
-                const aulaId = doc.id;
+            (catalogs.aulas || []).forEach(aula => {
+                if (!aula.dias?.includes(diaSemanaHoje)) return;
+                if (aula.dataInicio && todayStr < aula.dataInicio) return;
+                if (aula.dataFim && todayStr > aula.dataFim) return;
+
+                const unidade = unidadesPorId.get(String(aula.unidadeId));
                 let isMyResponsibility = false;
 
                 if (role === 'admin') isMyResponsibility = true;
                 else if (role === 'unidade' && String(aula.unidadeId) === String(userData.unidadeId)) isMyResponsibility = true;
-                else if (role === 'professor' && String(aula.professorId) === String(userData.uid || userData.id)) isMyResponsibility = true;
-                else if (role === 'mentor' && unidadesMentorIds.includes(String(aula.unidadeId))) isMyResponsibility = true;
+                else if (role === 'professor' && meuProfessorId && String(aula.professorId) === String(meuProfessorId)) isMyResponsibility = true;
+                else if (role === 'mentor' && unidade?.mentorId === meuId) isMyResponsibility = true;
 
-                if (isMyResponsibility && !validacoesMap.has(aulaId)) count++;
+                if (!isMyResponsibility || validacoesMap.has(aula.id)) return;
+                if (feriadoNoDia(todayStr, unidade || { id: aula.unidadeId }, catalogs.feriados || [])) return;
+                count++;
             });
             setPendencias(count);
         } catch (error) { console.error("Erro pendências:", error); }
@@ -105,7 +104,7 @@ export default function Sidebar({ collapsed }) {
     fetchPendencias();
     const interval = setInterval(fetchPendencias, 60000);
     return () => clearInterval(interval);
-  }, [role, userData]);
+  }, [role, userData, catalogs, loadingCatalogs]);
 
   // --- CÃO DE GUARDA EM TEMPO REAL ---
   useEffect(() => {
@@ -139,7 +138,7 @@ export default function Sidebar({ collapsed }) {
     const unsubConf = onSnapshot(qConf, (snap) => {
         confLogs = snap.docs.map(d => {
             const data = d.data();
-            return { id: d.id, type: 'EXPORT', title: 'Planilha LGPD Baixada', desc: `Por: ${data.usuarioAcaoNome}`, timestamp: getTimestamp(data.dataAcao) };
+            return { id: d.id, type: 'EXPORT', usuario: data.usuarioAcaoNome, timestamp: getTimestamp(data.dataAcao) };
         });
         processLogs();
     });
@@ -147,7 +146,7 @@ export default function Sidebar({ collapsed }) {
     const unsubCrono = onSnapshot(qCrono, (snap) => {
         cronoLogs = snap.docs.map(d => {
             const data = d.data();
-            return { id: d.id, type: 'Aula Ocultada (Lixeira)', desc: `Por: ${data.usuarioAcaoNome}`, timestamp: getTimestamp(data.dataAcao) };
+            return { id: d.id, type: 'TRASH', usuario: data.usuarioAcaoNome, timestamp: getTimestamp(data.dataAcao) };
         });
         processLogs();
     });
@@ -199,8 +198,8 @@ export default function Sidebar({ collapsed }) {
                       <Lock className={`w-10 h-10 ${pinError ? 'animate-bounce' : ''}`} />
                   </div>
                   
-                  <h2 className="text-2xl font-black uppercase tracking-tight text-slate-800 dark:text-white mb-2">Cofre Master</h2>
-                  <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mb-8">Digite o PIN para liberar o menu</p>
+                  <h2 className="text-2xl font-black uppercase tracking-tight text-slate-800 dark:text-white mb-2">{t('sidebar.vault.title')}</h2>
+                  <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mb-8">{t('sidebar.vault.pinPrompt')}</p>
                   
                   <form onSubmit={handleUnlockCofre}>
                       <input 
@@ -212,10 +211,10 @@ export default function Sidebar({ collapsed }) {
                           placeholder="••••"
                           maxLength={6}
                       />
-                      {pinError && <p className="text-[10px] font-black text-rose-500 uppercase mt-2 animate-pulse">PIN Incorreto</p>}
+                      {pinError && <p className="text-[10px] font-black text-rose-500 uppercase mt-2 animate-pulse">{t('sidebar.vault.wrongPin')}</p>}
                       
                       <button type="submit" className="mt-6 w-full bg-slate-800 dark:bg-slate-700 hover:bg-slate-900 dark:hover:bg-slate-600 text-white font-black uppercase tracking-widest text-xs py-4 rounded-2xl flex items-center justify-center gap-2 transition-transform active:scale-95 shadow-lg">
-                          Destravar Menu <ArrowRight className="w-4 h-4" />
+                          {t('sidebar.vault.unlock')} <ArrowRight className="w-4 h-4" />
                       </button>
                   </form>
               </div>
@@ -258,14 +257,14 @@ export default function Sidebar({ collapsed }) {
                   {showNotifications && (
                       <div className="absolute top-12 -right-2 w-80 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-4">
                           <div className="p-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 flex justify-between items-center">
-                              <span className="font-black text-slate-800 dark:text-white text-xs uppercase tracking-widest">Alertas Críticos</span>
+                              <span className="font-black text-slate-800 dark:text-white text-xs uppercase tracking-widest">{t('sidebar.alerts.title')}</span>
                               <span className="bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 text-[9px] font-black px-2 py-0.5 rounded-full uppercase">
-                                  {alertas.length} Ações
+                                  {t('sidebar.alerts.actions', { count: alertas.length })}
                               </span>
                           </div>
                           <div className="max-h-[50vh] overflow-y-auto custom-scrollbar p-2">
                               {alertas.length === 0 ? (
-                                  <div className="p-6 text-center text-xs font-bold text-slate-400 uppercase tracking-widest">Nenhum alerta recente.</div>
+                                  <div className="p-6 text-center text-xs font-bold text-slate-400 uppercase tracking-widest">{t('sidebar.alerts.none')}</div>
                               ) : (
                                   alertas.map(alerta => (
                                       <div key={alerta.id} className="p-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-xl transition-colors mb-1 cursor-default group flex gap-3 items-start">
@@ -273,10 +272,10 @@ export default function Sidebar({ collapsed }) {
                                               {alerta.type === 'EXPORT' ? <Download className="w-4 h-4"/> : <Trash2 className="w-4 h-4"/>}
                                           </div>
                                           <div className="min-w-0 flex-1">
-                                              <p className="text-xs font-black text-slate-800 dark:text-white uppercase truncate">{alerta.title}</p>
-                                              <p className="text-[10px] font-bold text-slate-500 uppercase truncate mt-0.5">{alerta.desc}</p>
+                                              <p className="text-xs font-black text-slate-800 dark:text-white uppercase truncate">{alerta.type === 'EXPORT' ? t('sidebar.alerts.lgpdExport') : t('sidebar.alerts.hiddenClass')}</p>
+                                              <p className="text-[10px] font-bold text-slate-500 uppercase truncate mt-0.5">{t('sidebar.alerts.by', { name: alerta.usuario })}</p>
                                               <p className="mt-1.5 text-[9px] font-bold text-slate-400 tracking-wider">
-                                                  {new Date(alerta.timestamp).toLocaleString('pt-BR')}
+                                                  {formatDateTime(alerta.timestamp)}
                                               </p>
                                           </div>
                                       </div>
@@ -285,7 +284,7 @@ export default function Sidebar({ collapsed }) {
                           </div>
                           <div className="p-3 border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-center">
                               <Link to="/app/auditoria" onClick={() => setShowNotifications(false)} className="text-[10px] font-black text-blue-600 dark:text-blue-400 hover:underline uppercase tracking-widest flex items-center justify-center gap-1">
-                                  <Activity className="w-3 h-3"/> Abrir Auditoria Completa
+                                  <Activity className="w-3 h-3"/> {t('sidebar.alerts.openAudit')}
                               </Link>
                           </div>
                       </div>
@@ -301,7 +300,7 @@ export default function Sidebar({ collapsed }) {
               <button 
                   onClick={(e) => { e.stopPropagation(); setIsLangMenuOpen(!isLangMenuOpen); setShowNotifications(false); }}
                   className={`w-full flex items-center justify-between p-3 rounded-xl transition-all border shadow-sm ${isLangMenuOpen ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-900/30' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50'} ${collapsed ? 'justify-center' : ''}`}
-                  title="Mudar Idioma"
+                  title={t('sidebar.changeLanguage')}
               >
                   <div className="flex items-center gap-3">
                       <img src={currentLang.flag} alt="Lang" className="w-6 h-auto rounded-[2px] shadow-sm shrink-0" />
@@ -342,7 +341,7 @@ export default function Sidebar({ collapsed }) {
                   <NavItem to="/app/cronograma" icon={Calendar} label={t('sidebar.items.cronograma', 'Cronograma')} collapsed={collapsed} active={isActive("/app/cronograma")} />
               }
               {["admin", "mentor", "unidade", "professor"].includes(role) && 
-                  <NavItem to="/app/pratique-play" icon={Headphones} label="Pratique Play" collapsed={collapsed} active={isActive("/app/pratique-play")} />
+                  <NavItem to="/app/pratique-play" icon={Headphones} label={t('sidebar.items.pratiquePlay')} collapsed={collapsed} active={isActive("/app/pratique-play")} />
               }
               <NavItem to="/horarios" icon={Globe} label={t('sidebar.items.linkAluno', 'Link do Aluno')} collapsed={collapsed} active={false} target="_blank" />
           </div>
@@ -357,7 +356,7 @@ export default function Sidebar({ collapsed }) {
               {!collapsed && <p className="px-4 text-[9px] font-black text-slate-400/60 uppercase tracking-widest mb-2">{t('sidebar.sections.gestao', 'Gestão')}</p>}
               {["admin", "mentor"].includes(role) && <NavItem to="/app/financeiro" icon={TrendingUp} label={t('sidebar.items.performanceFinanceira', 'Financeiro')} collapsed={collapsed} active={isActive("/app/financeiro")} />}
               <NavItem to="/app/relatorio-gerencial" icon={BarChart3} label={t('sidebar.items.relatorios', 'Relatórios')} collapsed={collapsed} active={isActive("/app/relatorio-gerencial")} />
-              {["admin", "mentor"].includes(role) && <NavItem to="/app/comunicacao" icon={Megaphone} label="Comunicados" collapsed={collapsed} active={isActive("/app/comunicacao")} />}
+              {["admin", "mentor"].includes(role) && <NavItem to="/app/comunicacao" icon={Megaphone} label={t('sidebar.items.comunicados')} collapsed={collapsed} active={isActive("/app/comunicacao")} />}
               {["admin", "mentor", "unidade"].includes(role) && <NavItem to="/app/configuracoes" icon={Settings} label={t('sidebar.items.configuracoes', 'Configurações')} collapsed={collapsed} active={isActive("/app/configuracoes")} />}
           </div>
 
@@ -370,7 +369,7 @@ export default function Sidebar({ collapsed }) {
                   >
                       <div className="flex items-center gap-3">
                           {cofreUnlocked ? <Lock className="w-5 h-5 text-rose-500 shrink-0" /> : <Lock className="w-5 h-5 shrink-0" />}
-                          {!collapsed && <span className={`text-sm font-black uppercase tracking-wider ${cofreUnlocked ? 'text-rose-600 dark:text-rose-400' : ''}`}>Cofre Master</span>}
+                          {!collapsed && <span className={`text-sm font-black uppercase tracking-wider ${cofreUnlocked ? 'text-rose-600 dark:text-rose-400' : ''}`}>{t('sidebar.vault.title')}</span>}
                       </div>
                       {!collapsed && (
                           <ChevronDown className={`w-4 h-4 transition-transform shrink-0 ${cofreAberto ? 'rotate-180 text-rose-500' : ''}`} />
@@ -379,10 +378,10 @@ export default function Sidebar({ collapsed }) {
 
                   {cofreAberto && cofreUnlocked && (
                       <div className={`mt-2 space-y-1 animate-in slide-in-from-top-2 fade-in duration-200 ${collapsed ? 'flex flex-col items-center' : 'pl-2 border-l-2 border-rose-200 dark:border-rose-900/30 ml-4'}`}>
-                          <NavItem to="/app/ociosidade" icon={Target} label="Radar de Grade" collapsed={collapsed} active={isActive("/app/ociosidade")} />
-                          <NavItem to="/app/workshops" icon={ShoppingBag} label="Loja & Eventos" collapsed={collapsed} active={isActive("/app/workshops")} />
-                          <NavItem to="/app/auditoria" icon={FileSearch} label="Auditoria" collapsed={collapsed} active={isActive("/app/auditoria")} />
-                          <NavItem to="/app/acessos" icon={Key} label="Acessos" collapsed={collapsed} active={isActive("/app/acessos")} />
+                          <NavItem to="/app/ociosidade" icon={Target} label={t('sidebar.items.radarGrade')} collapsed={collapsed} active={isActive("/app/ociosidade")} />
+                          <NavItem to="/app/workshops" icon={ShoppingBag} label={t('sidebar.items.lojaEventos')} collapsed={collapsed} active={isActive("/app/workshops")} />
+                          <NavItem to="/app/auditoria" icon={FileSearch} label={t('sidebar.items.auditoria')} collapsed={collapsed} active={isActive("/app/auditoria")} />
+                          <NavItem to="/app/acessos" icon={Key} label={t('sidebar.items.acessos')} collapsed={collapsed} active={isActive("/app/acessos")} />
                       </div>
                   )}
               </div>
@@ -400,16 +399,16 @@ export default function Sidebar({ collapsed }) {
             {!collapsed && (
               <div className="overflow-hidden">
                 <p className="text-sm font-bold text-slate-800 dark:text-white truncate">{userData.nome?.split(' ')[0]}</p>
-                <p className="text-[10px] text-slate-400 font-bold uppercase">{role}</p>
+                <p className="text-[10px] text-slate-400 font-bold uppercase">{formatRole(role)}</p>
               </div>
             )}
           </div>
           
           <div className={`flex gap-2 ${collapsed ? 'flex-col' : ''}`}>
-              <button onClick={toggleTheme} title="Mudar Tema" className="flex-1 p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 transition-colors">
+              <button onClick={toggleTheme} title={t('sidebar.changeTheme')} className="flex-1 p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 transition-colors">
                   <IconWrapper icon={theme === 'dark' ? Sun : Moon} />
               </button>
-              <button onClick={logout} title="Sair" className="flex-1 p-2 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 transition-colors">
+              <button onClick={logout} title={t('sidebar.logout')} className="flex-1 p-2 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 transition-colors">
                   <IconWrapper icon={LogOut} />
               </button>
           </div>

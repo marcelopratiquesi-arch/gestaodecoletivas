@@ -1,0 +1,73 @@
+{
+  "title": "Class Schedule",
+  "subtitle": "Grid and Schedule Management",
+  "subtitleReadOnly": "Check the schedules of all units",
+  "closedBadge": "Closed",
+  "closedClassTitle": "Closed Class (History Only)",
+  "activeClassTitle": "Active Class",
+  "filters": {
+    "state": "State",
+    "allStates": "All States",
+    "unit": "Unit",
+    "allUnits": "Select...",
+    "searchInGrid": "Filter in this grid",
+    "searchEverywhere": "Search Modality in all units",
+    "searchPlaceholderInGrid": "Ex: Spinning...",
+    "searchPlaceholderEverywhere": "Ex: Type 'Pilates' to see where it's available..."
+  },
+  "buttons": {
+    "showHistory": "View Finished",
+    "hideHistory": "Hide Finished",
+    "add": "Add"
+  },
+  "placeholders": {
+    "startSearchTitle": "Start your search",
+    "startSearchDesc": "Select a Unit to view the calendar or type a Modality to search all.",
+    "resultsFor": "Results for",
+    "noClassesFound": "No classes found with this name.",
+    "emptyGrid": "The current grid is empty. Try clicking 'View Finished'.",
+    "noClassesInUnit": "No classes registered in this unit.",
+    "createFirstClass": "Create first class"
+  },
+  "modal": {
+    "newTitle": "CREATE NEW CLASS",
+    "editTitle": "EDIT CLASS",
+    "modality": "Modality",
+    "teacher": "Main Teacher",
+    "time": "Time",
+    "value": "Class/Hour Rate",
+    "daysOfWeek": "Days of the Week",
+    "startDate": "Class Registered starting from",
+    "endDate": "Permanently End on",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "saveEdit": "Save Changes",
+    "selectUnitAlert": "Select a unit",
+    "noTeacherLinked": "None linked"
+  },
+  "splitModal": {
+    "title": "Grid Alteration",
+    "desc": "You have changed important data for this class. How do you want the system to apply these changes to the database?",
+    "recommendedBadge": "RECOMMENDED (Preserves the Past)",
+    "newPhaseTitle": "Create New Phase",
+    "newPhaseDesc": "Invisibly closes the old class and creates the new one. No past reports or attendance will be lost. Ideal for changing schedules, days, or teachers.",
+    "startDateLabel": "THE NEW CONFIGURATION TAKES EFFECT ON:",
+    "applyChange": "Apply Change",
+    "or": "OR",
+    "directFixTitle": "Correct Typing Error",
+    "directFixDesc": "Replaces the data directly. Attention: This alters the teacher's name and schedules in the past. Use only if the class was registered incorrectly just now.",
+    "justReplace": "Just Replace Data",
+    "backToForm": "Back to form",
+    "selectDateAlert": "Select the exact date the new configuration takes effect."
+  },
+  "alerts": {
+    "fillRequired": "❌ Fill in all required fields.",
+    "invalidDates": "❌ The end date cannot be earlier than the start date.",
+    "deleteConfirm": "🗑️ SMART TRASH:\n\nDo you want to hide this class from the grid? It will be removed from everyone's view, but the history and database will be preserved (Soft Delete).",
+    "deleteError": "Error sending the class to the trash.",
+    "saveError": "Error saving."
+  },
+  "unknownModality": "Unknown",
+  "unknownUnit": "Unknown Unit"
+}

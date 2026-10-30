@@ -1,0 +1,83 @@
+{
+  "greeting": {
+    "morning": "Good morning",
+    "afternoon": "Good afternoon",
+    "night": "Good evening"
+  },
+  "roles": {
+    "admin": "Administrator",
+    "professor": "Teacher",
+    "mentor": "Mentor",
+    "unidade": "Unit"
+  },
+  "systemOnline": "System Online",
+  "cardDefaults": {
+    "access": "Access"
+  },
+  "cards": {
+    "reports": {
+      "title": "Management Report",
+      "subtitle": "Financial Performance",
+      "revenueYesterday": "YESTERDAY'S REVENUE",
+      "monthlyForecast": "MONTHLY FORECAST",
+      "footer": "View Details",
+      "monthlyEstimate": "Monthly Estimate (Est.)"
+    },
+    "schedule": {
+      "title": "Schedule",
+      "subtitle": "Class Grid",
+      "footer": "View Full Grid",
+      "next": "Next",
+      "unit": "Unit",
+      "teacher": "Teacher",
+      "noMoreClasses": "No more classes today",
+      "defaultModality": "Group Class",
+      "defaultTeacher": "Instructor"
+    },
+    "validation": {
+      "title": "Daily Validation",
+      "subtitle": "ATTENDANCE CONTROL",
+      "resolveNow": "Resolve Now",
+      "history": "History",
+      "classes": "Classes",
+      "pending": "Pending",
+      "allValidated": "All Validated!"
+    },
+    "monitoring": {
+      "title": "Validation Monitoring",
+      "subtitle": "Yesterday's Status",
+      "footer": "View Ranking",
+      "status": {
+        "goalMet": "Goal Met",
+        "highAdhesion": "High Adhesion",
+        "attention": "ATTENTION",
+        "critical": "Critical",
+        "excellent": "EXCELLENT",
+        "inProgress": "IN PROGRESS"
+      },
+      "validatedOf": "{{validated}} of {{total}} validated"
+    },
+    "pratiquePlay": {
+      "title": "PRATIQUE PLAY",
+      "subtitle": "CLASS MUSIC",
+      "footer": "Access Play",
+      "insideLine1": "GROUP CLASS",
+      "insideLine2": "PLAYLISTS"
+    },
+    "linkAluno": {
+      "title": "STUDENT LINK",
+      "subtitle": "EXTERNAL ACCESS",
+      "footer": "Open Portal",
+      "insideLine1": "STUDENT",
+      "insideLine2": "PORTAL"
+    },
+    "settings": {
+      "title": "Settings",
+      "subtitle": "Admin Panel",
+      "footer": "Manage",
+      "units": "Units",
+      "mods": "Mods",
+      "profs": "Profs"
+    }
+  }
+}

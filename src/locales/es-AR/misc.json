@@ -1,0 +1,57 @@
+{
+  "play": {
+    "subtitle": "La biblioteca de la red",
+    "albums": "Álbumes",
+    "favorites": "Favoritas",
+    "noFavorites": "Todavía no hay favoritas",
+    "noFavoritesHint": "Recorré los álbumes y tocá el corazón.",
+    "cover": "Portada",
+    "playlist": "Playlist",
+    "tracksCount": "{{count}} temas",
+    "groupClasses": "Clases Colectivas",
+    "loadingTrack": "Cargando tema...",
+    "clickToExpand": "Hacé clic para expandir"
+  },
+  "sleep": {
+    "title": "Sistema en reposo",
+    "desc": "La conexión de datos se pausó por inactividad para evitar consumo innecesario del servidor.",
+    "reconnect": "Reconectar sistema"
+  },
+  "secure": {
+    "restricted": "Área Restringida",
+    "confirmPin": "Confirmá tu PIN de seguridad",
+    "wrongPin": "Contraseña Incorrecta"
+  },
+  "access": {
+    "title": "Control de Accesos",
+    "subtitle": "Gestioná jerarquías, permisos y contraseñas de todos los usuarios de la red.",
+    "search": "Buscar usuario o e-mail...",
+    "deniedTitle": "Acceso Denegado",
+    "deniedDesc": "Área restringida a la Dirección (Master) del sistema.",
+    "colName": "Nombre del Usuario",
+    "colEmail": "E-mail de Login",
+    "colRole": "Nivel de Acceso (Cargo)",
+    "colActions": "Acciones de Seguridad",
+    "noName": "Nombre no registrado",
+    "notFound": "No encontrado",
+    "resetPassword": "Restablecer Contraseña",
+    "empty": "No se encontraron usuarios en la base de datos.",
+    "roles": {
+      "admin": "Admin (Master)",
+      "mentor": "Mentor",
+      "unidade": "Sede (Líder)",
+      "professor": "Profesor",
+      "bloqueado": "Sin Acceso (Bloqueado)"
+    },
+    "messages": {
+      "loadError": "Error al buscar usuarios en la base de datos.",
+      "confirmRole": "¿Seguro que querés cambiar el acceso de {{name}} a {{role}}?",
+      "roleUpdated": "✅ ¡Permiso de {{name}} actualizado con éxito!",
+      "roleError": "Error al cambiar el permiso.",
+      "noEmail": "Este usuario no tiene un e-mail de login válido registrado.",
+      "confirmReset": "¿Enviar link para restablecer la contraseña al e-mail: {{email}}?",
+      "resetSent": "✅ ¡Link de recuperación enviado a {{email}}!",
+      "resetError": "Error al enviar el e-mail. Revisá que el e-mail sea correcto en Firebase Auth."
+    }
+  }
+}

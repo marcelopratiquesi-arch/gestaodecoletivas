@@ -13,10 +13,12 @@ import {
 
 // Bibliotecas Externas
 import * as XLSX from 'xlsx';
+import { formatCurrency, formatPercent } from '../../utils/formatters';
+import { deduplicarValidacoes } from '../../utils/validacoes';
+import { valorDaValidacao } from '../../utils/valores';
+import { useTranslation } from 'react-i18next';
 
 // --- HELPERS ---
-const formatCurrency = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
-const formatPercent = (val) => new Intl.NumberFormat('pt-BR', { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(val / 100);
 
 const getPreviousMonthStr = () => {
     const d = new Date();
@@ -30,6 +32,7 @@ const getPreviousMonthStr = () => {
 
 // 🟢 COMPONENTE CUSTOMIZADO MULTI-SELECT (CAIXINHAS)
 const MultiSelectDropdown = ({ options, selectedValues, onChange, placeholder, icon: Icon }) => {
+    const { t } = useTranslation();
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef(null);
 
@@ -57,10 +60,10 @@ const MultiSelectDropdown = ({ options, selectedValues, onChange, placeholder, i
     const displayText = selectedValues.length === 0 
         ? placeholder
         : selectedValues.includes('todos') || (selectedValues.length === options.length && options.length > 0)
-            ? `TODOS SELECIONADOS`
+            ? t('common.multiSelect.allSelected')
             : selectedValues.length === 1 
                 ? options.find(o => o.value === selectedValues[0])?.label 
-                : `${selectedValues.length} SELECIONADOS`;
+                : t('common.multiSelect.selected', { count: selectedValues.length });
 
     return (
         <div className="relative w-full sm:w-56" ref={dropdownRef}>
@@ -76,11 +79,11 @@ const MultiSelectDropdown = ({ options, selectedValues, onChange, placeholder, i
             {isOpen && (
                 <div className="absolute top-full left-0 mt-1 w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 shadow-xl rounded-xl z-50 max-h-60 flex flex-col overflow-hidden">
                     <div className="p-2 border-b border-slate-100 dark:border-slate-700 flex justify-between shrink-0 bg-slate-50 dark:bg-slate-900">
-                        <button onClick={selectAll} className="text-[10px] font-black text-purple-600 dark:text-purple-400 px-2 py-1 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded uppercase transition-colors">SELECIONAR TODOS</button>
-                        <button onClick={clearAll} className="text-[10px] font-black text-rose-600 dark:text-rose-400 px-2 py-1 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded uppercase transition-colors">LIMPAR</button>
+                        <button onClick={selectAll} className="text-[10px] font-black text-purple-600 dark:text-purple-400 px-2 py-1 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded uppercase transition-colors">{t('common.multiSelect.selectAll')}</button>
+                        <button onClick={clearAll} className="text-[10px] font-black text-rose-600 dark:text-rose-400 px-2 py-1 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded uppercase transition-colors">{t('common.multiSelect.clear')}</button>
                     </div>
                     <div className="overflow-y-auto p-1 custom-scrollbar">
-                        {options.length === 0 && <div className="p-2 text-xs text-slate-400 text-center font-bold uppercase">NENHUMA OPÇÃO</div>}
+                        {options.length === 0 && <div className="p-2 text-xs text-slate-400 text-center font-bold uppercase">{t('common.multiSelect.noResults')}</div>}
                         {options.map(o => (
                             <label key={o.value} className="flex items-center gap-2 p-2 hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer rounded-md transition-colors">
                                 <input 
@@ -100,26 +103,27 @@ const MultiSelectDropdown = ({ options, selectedValues, onChange, placeholder, i
 };
 
 const AlertasInteligentes = ({ dados }) => {
+    const { t } = useTranslation();
     const semFolha = dados.filter(d => d.folha === 0);
 
     return (
         <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-4 flex flex-col h-full overflow-y-auto custom-scrollbar uppercase">
             <h3 className="text-xs font-bold text-slate-500 mb-4 flex items-center gap-2 tracking-wider">
-                <AlertTriangle className="w-4 h-4 text-amber-500"/> PENDÊNCIAS DE PREENCHIMENTO
+                <AlertTriangle className="w-4 h-4 text-amber-500"/> {t('finance.alerts.title')}
             </h3>
             {semFolha.length === 0 ? (
                 <div className="flex-1 flex flex-col items-center justify-center text-emerald-500 opacity-80">
                     <Check className="w-8 h-8 mb-2"/>
-                    <p className="text-xs font-black tracking-wider">100% PREENCHIDO</p>
+                    <p className="text-xs font-black tracking-wider">{t('finance.alerts.allFilled')}</p>
                 </div>
             ) : (
                 <div className="space-y-3">
                     <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800 rounded-lg">
                         <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 font-bold text-sm mb-1">
-                            <Wallet className="w-4 h-4"/> {semFolha.length} {semFolha.length === 1 ? 'FOLHA PENDENTE' : 'FOLHAS PENDENTES'}
+                            <Wallet className="w-4 h-4"/> {t('finance.alerts.pendingSheets', { count: semFolha.length })}
                         </div>
                         <p className="text-xs text-amber-600/80 font-medium">
-                            UNIDADES SEM LANÇAMENTO FINANCEIRO NESTE PERÍODO:<br/>
+                            {t('finance.alerts.unitsWithout')}<br/>
                             <strong className="mt-1 block text-amber-700 dark:text-amber-500">
                                 {semFolha.slice(0, 3).map(u => u.unidade.nome).join(', ')}{semFolha.length > 3 && '...'}
                             </strong>
@@ -131,7 +135,7 @@ const AlertasInteligentes = ({ dados }) => {
     );
 };
 
-const RankingCard = ({ title, items, icon: Icon, colorClass, type }) => (
+const RankingCard = ({ title, emptyText, items, icon: Icon, colorClass, type }) => (
     <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden flex-1 uppercase">
         <div className={`p-3 border-b border-slate-100 dark:border-slate-700 flex items-center gap-2 ${colorClass.bgHeader}`}>
             <Icon className={`w-4 h-4 ${colorClass.icon}`} />
@@ -139,7 +143,7 @@ const RankingCard = ({ title, items, icon: Icon, colorClass, type }) => (
         </div>
         <div className="divide-y divide-slate-100 dark:divide-slate-700">
             {items.length === 0 ? (
-                <div className="p-4 text-center text-[10px] text-slate-400 font-bold tracking-widest">SEM DADOS SUFICIENTES</div>
+                <div className="p-4 text-center text-[10px] text-slate-400 font-bold tracking-widest">{emptyText}</div>
             ) : (
                 items.map((item, idx) => (
                     <div key={item.unidade.id} className="p-3 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
@@ -180,6 +184,7 @@ const SortableHeader = ({ label, field, currentSort, onSort, align = "left" }) =
 );
 
 const PerformanceRow = ({ unidade, mentorNome, custoAuto, folhaManualInicial, onSave }) => {
+    const { t } = useTranslation();
     const [isEditing, setIsEditing] = useState(false);
     const [tempValue, setTempValue] = useState(folhaManualInicial || 0);
     const [saving, setSaving] = useState(false);
@@ -205,7 +210,7 @@ const PerformanceRow = ({ unidade, mentorNome, custoAuto, folhaManualInicial, on
             </td>
             <td className="p-4 text-xs font-bold text-slate-500 hidden md:table-cell">{mentorNome}</td>
             <td className="p-4 text-right">
-                <div className="font-bold text-slate-700 dark:text-slate-300 text-sm">{formatCurrency(custoAuto)}</div>
+                <div className="font-bold text-slate-700 dark:text-slate-300 text-sm">{formatCurrency(custoAuto, unidade.pais)}</div>
             </td>
             <td className="p-4 text-right">
                 <div className="flex items-center justify-end gap-2">
@@ -226,7 +231,7 @@ const PerformanceRow = ({ unidade, mentorNome, custoAuto, folhaManualInicial, on
                     ) : (
                         <div className="flex items-center gap-2 group/edit cursor-pointer" onClick={() => setIsEditing(true)}>
                             <span className={`text-sm font-bold ${folhaManualInicial === 0 ? 'text-slate-300 italic' : 'text-slate-600 dark:text-slate-300'}`}>
-                                {folhaManualInicial > 0 ? formatCurrency(folhaManualInicial) : "DEFINIR VALOR"}
+                                {folhaManualInicial > 0 ? formatCurrency(folhaManualInicial, unidade.pais) : t('finance.table.setValue')}
                             </span>
                             <div className="p-1.5 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-blue-50 transition-colors opacity-0 group-hover/edit:opacity-100">
                                 <Edit2 className="w-3.5 h-3.5"/>
@@ -253,6 +258,7 @@ const PerformanceRow = ({ unidade, mentorNome, custoAuto, folhaManualInicial, on
 
 export default function PerformanceFinanceiraPage() {
   const { userData } = useAuth();
+  const { t } = useTranslation();
   const role = String(userData?.role || "").toLowerCase();
   const userId = userData?.id || userData?.uid;
 
@@ -297,10 +303,10 @@ export default function PerformanceFinanceiraPage() {
   // --- OPÇÕES PARA MULTI-SELECT ---
   const mentoresOptions = useMemo(() => {
       return [
-          { value: 'todos', label: 'TODOS OS MENTORES' },
+          { value: 'todos', label: t('finance.allMentors').toUpperCase() },
           ...mentores.map(m => ({ value: m.id, label: m.nome.toUpperCase() }))
       ];
-  }, [mentores]);
+  }, [mentores, t]);
 
   // ==========================================
   // 2. MOTOR DE TEMPO REAL BLINDADO (O COFRE & SANGUE)
@@ -323,7 +329,8 @@ export default function PerformanceFinanceiraPage() {
         try {
             // MAPA DE AULAS LOCAL
             const aulasMap = {};
-            (globalCatalogs.aulas || []).forEach(d => aulasMap[d.id] = d);
+            // Inclui aulas excluídas: o custo que elas geraram no passado não pode sumir.
+            (globalCatalogs.aulasTodas || globalCatalogs.aulas || []).forEach(d => aulasMap[d.id] = d);
 
             // 🟢 CORREÇÃO O(1): Usar SET para performance máxima
             const unidadesSet = new Set(unidades.map(u => u.id));
@@ -336,16 +343,13 @@ export default function PerformanceFinanceiraPage() {
                 const valSnap = await getDocs(qVal);
                 
                 const custosMap = {};
-                valSnap.docs.forEach(d => {
-                    const val = d.data();
+                deduplicarValidacoes(valSnap.docs.map(d => d.data())).forEach(val => {
                     // 🟢 OTIMIZAÇÃO: Busca no SET é 100x mais rápida que o .some() num array
                     if (unidadesSet.has(val.unidadeId)) {
-                        const aula = aulasMap[val.aulaId];
-                        if (aula) {
-                            const valor = parseFloat(aula.valor) || 0;
-                            if (!custosMap[val.unidadeId]) custosMap[val.unidadeId] = 0;
-                            custosMap[val.unidadeId] += valor;
-                        }
+                        // Valor em vigor no dia da aula (regra única em src/utils/valores.js); aulões entram pelo valorPago.
+                        const valor = valorDaValidacao(val, aulasMap[val.aulaId]);
+                        if (!custosMap[val.unidadeId]) custosMap[val.unidadeId] = 0;
+                        custosMap[val.unidadeId] += valor;
                     }
                 });
                 return custosMap;
@@ -415,7 +419,7 @@ export default function PerformanceFinanceiraPage() {
         });
 
         setDadosFinanceiros(prev => ({...prev, [unidadeId]: valorNumerico}));
-    } catch (e) { alert("ERRO AO SALVAR O VALOR!"); }
+    } catch (e) { alert(t('finance.error.save')); }
   };
 
   // --- PROCESSAMENTO DA LISTA ---
@@ -479,12 +483,12 @@ export default function PerformanceFinanceiraPage() {
   // --- EXPORTAR EXCEL ---
   const exportarRelatorio = () => {
       const dadosExport = tabelaDados.map(row => ({
-          'UNIDADE': row.unidade.nome.toUpperCase(),
-          'CIDADE': row.unidade.cidade?.toUpperCase() || "",
-          'MENTOR': row.mentor.toUpperCase(),
-          'CUSTO COLETIVA': row.custo,
-          'FOLHA PAGAMENTO': row.folha,
-          'IMPACTO %': (row.percent / 100).toFixed(4)
+          [t('finance.export.unit')]: row.unidade.nome.toUpperCase(),
+          [t('finance.export.city')]: row.unidade.cidade?.toUpperCase() || "",
+          [t('finance.export.mentor')]: row.mentor.toUpperCase(),
+          [t('finance.export.groupCost')]: row.custo,
+          [t('finance.export.payroll')]: row.folha,
+          [t('finance.export.impact')]: (row.percent / 100).toFixed(4)
       }));
 
       const wb = XLSX.utils.book_new();
@@ -493,7 +497,7 @@ export default function PerformanceFinanceiraPage() {
       const wscols = [{wch:30}, {wch:15}, {wch:20}, {wch:15}, {wch:15}, {wch:10}];
       ws['!cols'] = wscols;
 
-      XLSX.utils.book_append_sheet(wb, ws, "FINANCEIRO");
+      XLSX.utils.book_append_sheet(wb, ws, t('finance.export.sheet'));
       XLSX.writeFile(wb, `PERFORMANCE_FINANCEIRA_${mesFiltro}.xlsx`);
   };
 
@@ -513,8 +517,8 @@ export default function PerformanceFinanceiraPage() {
       return (
           <div className="flex h-screen items-center justify-center flex-col gap-4 text-slate-400 uppercase">
               <div className="bg-slate-100 p-6 rounded-full"><Lock className="w-12 h-12 text-slate-300" /></div>
-              <h2 className="text-xl font-black text-slate-600 tracking-wider">ACESSO RESTRITO</h2>
-              <p className="font-bold">APENAS GESTORES TÊM ACESSO À PERFORMANCE FINANCEIRA.</p>
+              <h2 className="text-xl font-black text-slate-600 tracking-wider">{t('finance.restricted.title')}</h2>
+              <p className="font-bold">{t('finance.restricted.desc')}</p>
           </div>
       );
   }
@@ -524,17 +528,17 @@ export default function PerformanceFinanceiraPage() {
       return (
           <div className="flex h-[80vh] items-center justify-center flex-col gap-4 text-rose-500 uppercase animate-fade-in">
               <div className="bg-rose-50 p-6 rounded-full border border-rose-200 shadow-inner"><AlertTriangle className="w-12 h-12 text-rose-500" /></div>
-              <h2 className="text-xl font-black tracking-wider text-slate-800">FALHA DE COMUNICAÇÃO</h2>
-              <p className="font-bold text-slate-500">NÃO FOI POSSÍVEL CARREGAR OS DADOS FINANCEIROS. TENTE NOVAMENTE.</p>
+              <h2 className="text-xl font-black tracking-wider text-slate-800">{t('finance.error.title')}</h2>
+              <p className="font-bold text-slate-500">{t('finance.error.desc')}</p>
               <button onClick={() => window.location.reload()} className="mt-4 px-6 py-3 bg-rose-500 text-white rounded-xl font-black shadow-lg shadow-rose-500/30 hover:bg-rose-600 transition-colors active:scale-95">
-                  ATUALIZAR PÁGINA
+                  {t('finance.error.reload')}
               </button>
           </div>
       );
   }
 
   // Loading principal que aguarda a Memória Global baixar pela primeira vez
-  if (loadingCatalogs) return <div className="flex h-screen items-center justify-center text-slate-400 gap-2 font-bold uppercase tracking-wider"><Loader2 className="w-8 h-8 animate-spin"/> CARREGANDO MEMÓRIA GLOBAL...</div>;
+  if (loadingCatalogs) return <div className="flex h-screen items-center justify-center text-slate-400 gap-2 font-bold uppercase tracking-wider"><Loader2 className="w-8 h-8 animate-spin"/> {t('finance.loadingMemory')}</div>;
 
   return (
     <div className="p-6 md:p-10 animate-fade-in max-w-[1920px] mx-auto space-y-8 uppercase">
@@ -546,9 +550,9 @@ export default function PerformanceFinanceiraPage() {
                 <span className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-2.5 rounded-xl shadow-lg shadow-purple-500/20">
                     <TrendingUp className="w-6 h-6"/>
                 </span>
-                PERFORMANCE FINANCEIRA
+                {t('finance.title')}
             </h1>
-            <p className="text-slate-500 dark:text-slate-400 mt-1 font-bold text-xs">CONTROLE ESTRATÉGICO DE CUSTOS E EFICIÊNCIA.</p>
+            <p className="text-slate-500 dark:text-slate-400 mt-1 font-bold text-xs uppercase">{t('finance.subtitle')}</p>
         </div>
         
         {/* Container de Filtros Agrupado */}
@@ -559,7 +563,7 @@ export default function PerformanceFinanceiraPage() {
                 <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400 group-focus-within:text-purple-500"/>
                 <input 
                     type="text" 
-                    placeholder="BUSCAR UNIDADE..." 
+                    placeholder={t('finance.searchUnit').toUpperCase()} 
                     value={busca}
                     onChange={(e) => setBusca(e.target.value)}
                     className="w-full pl-9 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-white shadow-sm outline-none focus:ring-2 focus:ring-purple-500 transition-all uppercase placeholder:normal-case h-[38px]"
@@ -572,7 +576,7 @@ export default function PerformanceFinanceiraPage() {
                     options={mentoresOptions} 
                     selectedValues={filtroMentor} 
                     onChange={setFiltroMentor} 
-                    placeholder="NENHUM MENTOR"
+                    placeholder={t('finance.noMentor')}
                     icon={Users}
                 />
             )}
@@ -584,8 +588,8 @@ export default function PerformanceFinanceiraPage() {
                     <input type="month" value={mesFiltro} onChange={(e) => setMesFiltro(e.target.value)} className="bg-transparent border-none outline-none text-sm font-bold text-slate-700 dark:text-white uppercase cursor-pointer w-full"/>
                 </div>
                 
-                <button onClick={exportarRelatorio} className="px-4 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 transition-colors shadow-sm h-[38px] flex items-center justify-center gap-2 font-bold text-xs" title="EXPORTAR EXCEL">
-                    <FileSpreadsheet className="w-4 h-4"/> EXCEL
+                <button onClick={exportarRelatorio} className="px-4 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 transition-colors shadow-sm h-[38px] flex items-center justify-center gap-2 font-bold text-xs" title={t('finance.exportExcel')}>
+                    <FileSpreadsheet className="w-4 h-4"/> {t('finance.excel').toUpperCase()}
                 </button>
             </div>
 
@@ -599,26 +603,26 @@ export default function PerformanceFinanceiraPage() {
                   <TrendingUp className="w-10 h-10 text-purple-500 animate-pulse"/>
               </div>
               <h3 className="text-2xl font-black text-slate-700 dark:text-white mb-3 uppercase tracking-wider">
-                  SELECIONE UM MENTOR PARA INICIAR
+                  {t('finance.locked.title')}
               </h3>
               <p className="text-slate-500 dark:text-slate-400 text-sm font-bold max-w-lg mx-auto leading-relaxed uppercase">
-                  SELECIONE UM OU MAIS MENTORES NO FILTRO ACIMA PARA OBTER O RELATÓRIO FINANCEIRO.
+                  {t('finance.locked.desc')}
               </p>
           </div>
       ) : loadingRealtime ? (
-          <div className="flex h-64 items-center justify-center text-slate-400 gap-2 font-bold uppercase tracking-wider"><Loader2 className="w-8 h-8 animate-spin"/> PROCESSANDO DADOS...</div>
+          <div className="flex h-64 items-center justify-center text-slate-400 gap-2 font-bold uppercase tracking-wider"><Loader2 className="w-8 h-8 animate-spin"/> {t('finance.processing')}</div>
       ) : (
           <>
             {/* 2. KPI CARDS */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-start justify-between">
                     <div>
-                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">CUSTO COLETIVA</p>
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">{t('finance.kpis.groupCost')}</p>
                         <h3 className="text-2xl font-black text-slate-800 dark:text-white">{formatCurrency(totais.totalColetiva)}</h3>
                         <div className="flex items-center gap-2 mt-1">
                             <span className={`text-[10px] font-black px-1.5 py-0.5 rounded flex items-center gap-1 uppercase ${totais.variacao > 0 ? 'bg-rose-100 text-rose-600' : 'bg-emerald-100 text-emerald-600'}`}>
                                 {totais.variacao > 0 ? <TrendingUp className="w-3 h-3"/> : <TrendingDown className="w-3 h-3"/>}
-                                {Math.abs(totais.variacao)}% VS ANO ANT.
+                                {t('finance.kpis.vsLastYear', { value: Math.abs(totais.variacao) })}
                             </span>
                         </div>
                     </div>
@@ -626,17 +630,17 @@ export default function PerformanceFinanceiraPage() {
                 </div>
                 <div className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-start justify-between">
                     <div>
-                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">FOLHA TOTAL</p>
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">{t('finance.kpis.totalPayroll')}</p>
                         <h3 className="text-2xl font-black text-slate-800 dark:text-white">{formatCurrency(totais.totalFolha)}</h3>
-                        <div className="flex items-center gap-2 mt-1"><span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">TOTAL DECLARADO</span></div>
+                        <div className="flex items-center gap-2 mt-1"><span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t('finance.kpis.totalDeclared')}</span></div>
                     </div>
                     <div className="p-3 rounded-lg bg-blue-50 text-blue-600 shadow-inner"><Wallet className="w-6 h-6" /></div>
                 </div>
                 <div className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-start justify-between">
                     <div>
-                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">IMPACTO MÉDIO</p>
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">{t('finance.kpis.avgImpact')}</p>
                         <h3 className="text-2xl font-black text-slate-800 dark:text-white">{formatPercent(totais.percentualGeral)}</h3>
-                        <div className="flex items-center gap-2 mt-1"><span className={`text-[10px] font-black tracking-wider uppercase ${totais.percentualGeral > 25 ? 'text-rose-500' : 'text-emerald-500'}`}>{totais.percentualGeral > 25 ? "ALTO CUSTO" : "SAUDÁVEL"}</span></div>
+                        <div className="flex items-center gap-2 mt-1"><span className={`text-[10px] font-black tracking-wider uppercase ${totais.percentualGeral > 25 ? 'text-rose-500' : 'text-emerald-500'}`}>{totais.percentualGeral > 25 ? t('finance.kpis.highCost') : t('finance.kpis.healthy')}</span></div>
                     </div>
                     <div className={`p-3 rounded-lg shadow-inner ${totais.percentualGeral > 25 ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600'}`}><PieChart className="w-6 h-6" /></div>
                 </div>
@@ -648,7 +652,7 @@ export default function PerformanceFinanceiraPage() {
                     <AlertasInteligentes dados={tabelaDados} />
                 </div>
                 <div className="h-full flex flex-col gap-4">
-                    <RankingCard title="TOP EFICIÊNCIA 🏆" items={rankings.topSaudaveis} icon={Trophy} colorClass={{bgHeader: 'bg-emerald-50 dark:bg-emerald-900/20', textTitle: 'text-emerald-700 dark:text-emerald-400', icon: 'text-emerald-600'}} type="good"/>
+                    <RankingCard title={t('finance.ranking.topEfficiency')} emptyText={t('finance.ranking.noData')} items={rankings.topSaudaveis} icon={Trophy} colorClass={{bgHeader: 'bg-emerald-50 dark:bg-emerald-900/20', textTitle: 'text-emerald-700 dark:text-emerald-400', icon: 'text-emerald-600'}} type="good"/>
                 </div>
             </div>
 
@@ -656,20 +660,20 @@ export default function PerformanceFinanceiraPage() {
             <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
                 <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
                     <h3 className="font-black text-slate-700 dark:text-white flex items-center gap-2 uppercase tracking-wide">
-                        <Building2 className="w-5 h-5 text-slate-400"/> DETALHAMENTO OPERACIONAL
+                        <Building2 className="w-5 h-5 text-slate-400"/> {t('finance.table.title')}
                     </h3>
-                    <span className="text-xs font-black text-slate-500 bg-slate-200 dark:bg-slate-700 px-3 py-1 rounded-full uppercase">{tabelaDados.length} UNIDADES</span>
+                    <span className="text-xs font-black text-slate-500 bg-slate-200 dark:bg-slate-700 px-3 py-1 rounded-full uppercase">{t('finance.table.unitsCount', { count: tabelaDados.length })}</span>
                 </div>
                 
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead className="bg-slate-100 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10">
                             <tr>
-                                <SortableHeader label="UNIDADE" field="unidade" currentSort={sortConfig} onSort={handleSort} />
-                                <SortableHeader label="MENTOR" field="mentor" currentSort={sortConfig} onSort={handleSort} />
-                                <SortableHeader label="CUSTO COLETIVA" field="custo" currentSort={sortConfig} onSort={handleSort} align="right" />
-                                <SortableHeader label="FOLHA TOTAL" field="folha" currentSort={sortConfig} onSort={handleSort} align="right" />
-                                <SortableHeader label="IMPACTO %" field="percent" currentSort={sortConfig} onSort={handleSort} align="center" />
+                                <SortableHeader label={t('finance.table.unit')} field="unidade" currentSort={sortConfig} onSort={handleSort} />
+                                <SortableHeader label={t('finance.table.mentor')} field="mentor" currentSort={sortConfig} onSort={handleSort} />
+                                <SortableHeader label={t('finance.table.groupCost')} field="custo" currentSort={sortConfig} onSort={handleSort} align="right" />
+                                <SortableHeader label={t('finance.table.totalPayroll')} field="folha" currentSort={sortConfig} onSort={handleSort} align="right" />
+                                <SortableHeader label={t('finance.table.impact')} field="percent" currentSort={sortConfig} onSort={handleSort} align="center" />
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
@@ -680,7 +684,7 @@ export default function PerformanceFinanceiraPage() {
                                 />
                             ))}
                             {dadosVisiveis.length === 0 && (
-                                <tr><td colSpan="5" className="p-12 text-center text-slate-400 font-bold uppercase tracking-widest">NENHUMA UNIDADE ENCONTRADA.</td></tr>
+                                <tr><td colSpan="5" className="p-12 text-center text-slate-400 font-bold uppercase tracking-widest">{t('finance.table.noUnits')}</td></tr>
                             )}
                         </tbody>
                     </table>
@@ -690,9 +694,9 @@ export default function PerformanceFinanceiraPage() {
             {/* 5. PAGINAÇÃO */}
             {itensVisiveis < tabelaDados.length && (
                 <div className="flex flex-wrap justify-center gap-3 pb-4 animate-fade-in">
-                    <button onClick={() => handleCarregarMais(12)} className="px-5 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-black text-slate-600 dark:text-slate-300 hover:bg-slate-50 shadow-sm flex items-center gap-2 uppercase tracking-wide"><ArrowDown className="w-4 h-4"/> CARREGAR +12</button>
-                    <button onClick={() => handleCarregarMais(50)} className="px-5 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-black text-slate-600 dark:text-slate-300 hover:bg-slate-50 shadow-sm uppercase tracking-wide">CARREGAR +50</button>
-                    <button onClick={() => handleCarregarMais('todos')} className="px-5 py-2.5 bg-slate-100 dark:bg-slate-700 border border-transparent rounded-xl text-xs font-black text-slate-700 dark:text-white hover:bg-slate-200 shadow-sm flex items-center gap-2 uppercase tracking-wide"><DownloadCloud className="w-4 h-4"/> VER TODOS ({tabelaDados.length})</button>
+                    <button onClick={() => handleCarregarMais(12)} className="px-5 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-black text-slate-600 dark:text-slate-300 hover:bg-slate-50 shadow-sm flex items-center gap-2 uppercase tracking-wide"><ArrowDown className="w-4 h-4"/> {t('common.actions.loadMore', { count: 12 })}</button>
+                    <button onClick={() => handleCarregarMais(50)} className="px-5 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-black text-slate-600 dark:text-slate-300 hover:bg-slate-50 shadow-sm uppercase tracking-wide">{t('common.actions.loadMore', { count: 50 })}</button>
+                    <button onClick={() => handleCarregarMais('todos')} className="px-5 py-2.5 bg-slate-100 dark:bg-slate-700 border border-transparent rounded-xl text-xs font-black text-slate-700 dark:text-white hover:bg-slate-200 shadow-sm flex items-center gap-2 uppercase tracking-wide"><DownloadCloud className="w-4 h-4"/> {t('finance.table.viewAllCount', { count: tabelaDados.length })}</button>
                 </div>
             )}
           </>

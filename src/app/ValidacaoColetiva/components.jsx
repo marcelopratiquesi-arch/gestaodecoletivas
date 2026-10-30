@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Trophy, CheckCircle2, Activity, Construction, CalendarClock, AlertCircle, Palmtree, Clock, ChevronDown, ArrowUpDown, Search, Users } from 'lucide-react';
 
-export const diasSemanaMap = { 0: 'Domingo', 1: 'Segunda', 2: 'Terça', 3: 'Quarta', 4: 'Quinta', 5: 'Sexta', 6: 'Sábado' };
+import { useTranslation } from 'react-i18next';
+import i18n from '../../i18n';
+import { formatDate, formatPeriod } from '../../utils/formatters';
 export const getTodayStr = () => new Date().toLocaleDateString('en-CA'); 
 
 export const normalizeDate = (d) => {
@@ -28,19 +30,9 @@ export const getDatesInRange = (startDate, endDate) => {
   return dates;
 };
 
-export const formatDateShort = (dateStr) => {
-    if (!dateStr) return '';
-    const parts = dateStr.split('-');
-    return parts.length === 3 ? `${parts[2]}/${parts[1]}` : dateStr;
-};
+export const formatDateShort = (dateStr) => (dateStr ? formatDate(dateStr, 'dayMonth') : '');
 
-export const formatHeaderPeriodo = (inicio, fim) => {
-    if (!inicio || !fim) return '';
-    const d1 = new Date(inicio + 'T12:00:00'); 
-    const d2 = new Date(fim + 'T12:00:00');
-    if (inicio === fim) return d1.toLocaleDateString('pt-BR');
-    return `${d1.toLocaleDateString('pt-BR')} A ${d2.toLocaleDateString('pt-BR')}`;
-};
+export const formatHeaderPeriodo = (inicio, fim) => formatPeriod(inicio, fim);
 
 export const getFirstLast = (fullName) => {
     if (!fullName) return '-';
@@ -49,7 +41,7 @@ export const getFirstLast = (fullName) => {
 };
 
 export const sendWhatsApp = (telefone, mensagem) => {
-    if (!telefone) { alert("⚠️ TELEFONE NÃO CADASTRADO!"); return; }
+    if (!telefone) { alert(i18n.t('groupValidation.alerts.noPhone')); return; }
     const numeroLimpo = telefone.replace(/\D/g, '');
     window.open(`https://api.whatsapp.com/send?phone=${numeroLimpo}&text=${encodeURIComponent(mensagem)}`, '_blank');
 };
@@ -73,7 +65,7 @@ export const getColorClassByPercent = (percent) => {
 
 export const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
-    alert('TEXTO COPIADO COM SUCESSO!');
+    alert(i18n.t('groupValidation.alerts.copied'));
 };
 
 export const filterPendingDates = (pendencias) => {
@@ -110,13 +102,23 @@ export const KPICard = ({ title, value, icon: Icon, colorClass, iconBg, subTitle
   </div>
 );
 
+// Códigos de status usados internamente (em português) -> chave de tradução do selo.
+const STATUS_BADGE_KEYS = {
+    'PARABÉNS!': 'congrats', 'TUDO OK!': 'allOk', 'EM ANDAMENTO': 'inProgress', 'EM CONSTRUÇÃO': 'underConstruction',
+    'AGUARDANDO INÍCIO': 'awaitingStart', 'AGUARDANDO': 'awaiting', 'REALIZADA': 'done', 'VALIDADA': 'validated',
+    'CANCELADA': 'canceled', 'FERIADO': 'holiday', 'ATRASADO': 'late', 'PENDENTE': 'pending', 'FUTURO': 'future'
+};
+
 export const StatusBadge = ({ type }) => {
+    const { t } = useTranslation();
     const configs = {
         'PARABÉNS!': 'bg-emerald-100 text-emerald-700 border-emerald-200',
         'TUDO OK!': 'bg-emerald-100 text-emerald-700 border-emerald-200',
         'EM ANDAMENTO': 'bg-blue-50 text-blue-600 border-blue-100',
         'EM CONSTRUÇÃO': 'bg-slate-100 text-slate-500 border-slate-200',
         'AGUARDANDO INÍCIO': 'bg-amber-50 text-amber-600 border-amber-100',
+        'AGUARDANDO': 'bg-amber-50 text-amber-600 border-amber-100',
+        'VALIDADA': 'bg-emerald-50 text-emerald-700 border-emerald-200',
         'REALIZADA': 'bg-emerald-50 text-emerald-700 border-emerald-200',
         'CANCELADA': 'bg-rose-50 text-rose-700 border-rose-200',
         'FERIADO': 'bg-purple-50 text-purple-700 border-purple-200',
@@ -137,12 +139,13 @@ export const StatusBadge = ({ type }) => {
 
     return (
         <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase border flex items-center justify-center gap-1.5 shadow-sm w-fit mx-auto whitespace-nowrap ${configs[upperType] || configs['FUTURO']}`}>
-            <IconComp className="w-3 h-3" /> {upperType}
+            <IconComp className="w-3 h-3" /> {STATUS_BADGE_KEYS[upperType] ? t(`groupValidation.badges.${STATUS_BADGE_KEYS[upperType]}`) : upperType}
         </span>
     );
 };
 
 export const MultiSelectDropdown = ({ options, selectedValues, onChange, placeholder, icon: Icon }) => {
+    const { t } = useTranslation();
     const [isOpen, setIsOpen] = useState(false);
     const [buscaInterna, setBuscaInterna] = useState('');
     const dropdownRef = useRef(null);
@@ -170,10 +173,10 @@ export const MultiSelectDropdown = ({ options, selectedValues, onChange, placeho
     const displayText = selectedValues.length === 0 
         ? placeholder
         : selectedValues.includes('todos') || (selectedValues.length === options.length && options.length > 0)
-            ? `TODOS SELECIONADOS`
+            ? t('common.multiSelect.allSelected')
             : selectedValues.length === 1 
                 ? options.find(o => o.value === selectedValues[0])?.label 
-                : `${selectedValues.length} SELECIONADOS`;
+                : t('common.multiSelect.selected', { count: selectedValues.length });
 
     return (
         <div className="relative w-full sm:flex-1" ref={dropdownRef}>
@@ -186,15 +189,15 @@ export const MultiSelectDropdown = ({ options, selectedValues, onChange, placeho
             {isOpen && (
                 <div className="absolute top-12 left-0 w-full min-w-[250px] bg-white border border-slate-200 shadow-xl rounded-xl z-50 overflow-hidden flex flex-col">
                     <div className="p-2 border-b border-slate-100 bg-slate-50 flex gap-2">
-                        <button onClick={selectAll} className="text-[9px] font-black text-blue-600 px-3 py-1.5 hover:bg-blue-100 rounded-md uppercase transition-colors flex-1">TODOS</button>
-                        <button onClick={clearAll} className="text-[9px] font-black text-rose-600 px-3 py-1.5 hover:bg-rose-100 rounded-md uppercase transition-colors flex-1">LIMPAR</button>
+                        <button onClick={selectAll} className="text-[9px] font-black text-blue-600 px-3 py-1.5 hover:bg-blue-100 rounded-md uppercase transition-colors flex-1">{t('common.multiSelect.all')}</button>
+                        <button onClick={clearAll} className="text-[9px] font-black text-rose-600 px-3 py-1.5 hover:bg-rose-100 rounded-md uppercase transition-colors flex-1">{t('common.multiSelect.clear')}</button>
                     </div>
                     <div className="p-2 bg-slate-50 border-b border-slate-100 relative">
                         <Search className="w-3 h-3 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"/>
-                        <input type="text" placeholder="PESQUISAR..." value={buscaInterna} onChange={(e) => setBuscaInterna(e.target.value)} className="w-full pl-8 pr-2 py-1.5 text-[10px] font-bold uppercase rounded border border-slate-200 outline-none focus:border-blue-500"/>
+                        <input type="text" placeholder={t('common.multiSelect.search')} value={buscaInterna} onChange={(e) => setBuscaInterna(e.target.value)} className="w-full pl-8 pr-2 py-1.5 text-[10px] font-bold uppercase rounded border border-slate-200 outline-none focus:border-blue-500"/>
                     </div>
                     <div className="overflow-y-auto max-h-60 p-1 custom-scrollbar">
-                        {filteredOptions.length === 0 && <div className="p-3 text-[10px] text-slate-400 text-center font-bold uppercase">NENHUM RESULTADO</div>}
+                        {filteredOptions.length === 0 && <div className="p-3 text-[10px] text-slate-400 text-center font-bold uppercase">{t('common.multiSelect.noResults')}</div>}
                         {filteredOptions.map(o => (
                             <label key={o.value} className="flex items-center gap-2 p-2.5 hover:bg-slate-50 cursor-pointer rounded-lg transition-colors">
                                 <input type="checkbox" checked={selectedValues.includes(o.value)} onChange={() => toggleOption(o.value)} className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"/>

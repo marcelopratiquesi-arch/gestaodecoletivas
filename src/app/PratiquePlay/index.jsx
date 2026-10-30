@@ -4,8 +4,10 @@ import { collection, getDocs, query, orderBy, onSnapshot, setDoc, deleteDoc, doc
 import { usePlayer } from "../../contexts/PlayerContext";
 import { useAuth } from "../../contexts/AuthContext";
 import { Play, Pause, Headphones, ChevronLeft, Music, Loader2, Heart } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export default function PratiquePlay() {
+    const { t } = useTranslation();
     const { userData } = useAuth();
     const { faixaAtual, isPlaying, tocarFaixa } = usePlayer();
     
@@ -81,7 +83,7 @@ export default function PratiquePlay() {
                     </div>
                     <div>
                         <h1 className="text-2xl md:text-3xl font-black text-white tracking-tighter">Pratique Play</h1>
-                        <p className="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-widest">A biblioteca da rede</p>
+                        <p className="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-widest">{t('misc.play.subtitle')}</p>
                     </div>
                 </div>
 
@@ -91,13 +93,13 @@ export default function PratiquePlay() {
                         onClick={() => setAbaAtiva('explorar')}
                         className={`px-5 py-2 rounded-full text-sm font-bold transition-all ${abaAtiva === 'explorar' ? 'bg-[#1DB954] text-black' : 'bg-[#282828] text-white hover:bg-[#333]'}`}
                     >
-                        Álbuns
+                        {t('misc.play.albums')}
                     </button>
                     <button 
                         onClick={() => setAbaAtiva('favoritas')}
                         className={`px-5 py-2 rounded-full text-sm font-bold transition-all ${abaAtiva === 'favoritas' ? 'bg-[#1DB954] text-black' : 'bg-[#282828] text-white hover:bg-[#333]'}`}
                     >
-                        Favoritas
+                        {t('misc.play.favorites')}
                     </button>
                 </div>
 
@@ -135,8 +137,8 @@ export default function PratiquePlay() {
                         {faixasFavoritas.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-20 opacity-50">
                                 <Heart className="w-16 h-16 text-gray-500 mb-4" />
-                                <h2 className="text-white font-bold text-lg">Nenhuma favorita ainda</h2>
-                                <p className="text-gray-400 text-sm mt-1">Navegue pelos álbuns e clique no coração.</p>
+                                <h2 className="text-white font-bold text-lg">{t('misc.play.noFavorites')}</h2>
+                                <p className="text-gray-400 text-sm mt-1">{t('misc.play.noFavoritesHint')}</p>
                             </div>
                         ) : (
                             <>
@@ -183,12 +185,12 @@ export default function PratiquePlay() {
 
                 <div className="flex flex-col md:flex-row items-center md:items-end gap-6 relative z-10 text-center md:text-left">
                     <div className="w-48 h-48 md:w-56 md:h-56 bg-gradient-to-br from-slate-800 to-black rounded-sm shadow-[0_16px_40px_rgba(0,0,0,0.7)] flex items-center justify-center flex-shrink-0 overflow-hidden">
-                         {modalidadeAtiva.capaUrl ? <img src={modalidadeAtiva.capaUrl} alt="Capa" className="w-full h-full object-cover" /> : <Music className="w-20 h-20 text-slate-700" />}
+                         {modalidadeAtiva.capaUrl ? <img src={modalidadeAtiva.capaUrl} alt={t('misc.play.cover')} className="w-full h-full object-cover" /> : <Music className="w-20 h-20 text-slate-700" />}
                     </div>
                     <div>
-                        <p className="text-white/80 text-[10px] font-black uppercase tracking-[0.3em] mb-1">Playlist</p>
+                        <p className="text-white/80 text-[10px] font-black uppercase tracking-[0.3em] mb-1">{t('misc.play.playlist')}</p>
                         <h1 className="text-4xl md:text-7xl font-black text-white uppercase tracking-tighter drop-shadow-md leading-none mb-2">{modalidadeAtiva.nome}</h1>
-                        <p className="text-gray-400 font-bold uppercase text-xs tracking-widest">{faixasDaModalidade.length} músicas</p>
+                        <p className="text-gray-400 font-bold uppercase text-xs tracking-widest">{t('misc.play.tracksCount', { count: faixasDaModalidade.length })}</p>
                     </div>
                 </div>
             </div>

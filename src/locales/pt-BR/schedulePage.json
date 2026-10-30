@@ -1,0 +1,73 @@
+{
+  "title": "Agenda de Coletivas",
+  "subtitle": "Gerenciamento de Grade e Horário",
+  "subtitleReadOnly": "Consulte os horários de todas as unidades",
+  "closedBadge": "Encerrada",
+  "closedClassTitle": "Aula Encerrada (Apenas Histórico)",
+  "activeClassTitle": "Aula Ativa",
+  "filters": {
+    "state": "Estado",
+    "allStates": "Todos os Estados",
+    "unit": "Unidade",
+    "allUnits": "Selecione...",
+    "searchInGrid": "Filtrar nesta grade",
+    "searchEverywhere": "Buscar Modalidade em todas as unidades",
+    "searchPlaceholderInGrid": "Ex: Spinning...",
+    "searchPlaceholderEverywhere": "Ex: Digite 'Pilates' para ver onde tem..."
+  },
+  "buttons": {
+    "showHistory": "Ver Encerradas",
+    "hideHistory": "Ocultar Encerradas",
+    "add": "Adicionar"
+  },
+  "placeholders": {
+    "startSearchTitle": "Comece sua busca",
+    "startSearchDesc": "Selecione uma Unidade para ver o calendário ou digite uma Modalidade para buscar em todas.",
+    "resultsFor": "Resultados para",
+    "noClassesFound": "Nenhuma aula encontrada com este nome.",
+    "emptyGrid": "A grade atual está vazia. Tente clicar em 'Ver Encerradas'.",
+    "noClassesInUnit": "Nenhuma aula cadastrada nesta unidade.",
+    "createFirstClass": "Criar primeira aula"
+  },
+  "modal": {
+    "newTitle": "CRIAR NOVA AULA",
+    "editTitle": "EDITAR AULA",
+    "modality": "Modalidade",
+    "teacher": "Professor Titular",
+    "time": "Horário",
+    "value": "Valor Hora/Aula",
+    "daysOfWeek": "Dias da Semana",
+    "startDate": "Aula Registrada a partir de",
+    "endDate": "Encerrar Permanentemente em",
+    "cancel": "Cancelar",
+    "save": "Salvar",
+    "delete": "Excluir",
+    "saveEdit": "Salvar Alterações",
+    "selectUnitAlert": "Selecione a unidade",
+    "noTeacherLinked": "Nenhum vinculado"
+  },
+  "splitModal": {
+    "title": "Alteração de Grade",
+    "desc": "Você alterou dados importantes da aula. Como deseja que o sistema aplique essas mudanças no banco de dados?",
+    "recommendedBadge": "RECOMENDADO (Preserva o Passado)",
+    "newPhaseTitle": "Criar Nova Fase",
+    "newPhaseDesc": "Encerra a aula antiga de forma invisível e cria a nova. Nenhum relatório ou presença passada será perdida. Ideal para troca de horários, dias ou professores.",
+    "startDateLabel": "A NOVA CONFIGURAÇÃO PASSA A VALER NO DIA:",
+    "applyChange": "Aplicar Troca",
+    "or": "OU",
+    "directFixTitle": "Corrigir Erro de Digitação",
+    "directFixDesc": "Substitui os dados diretamente. Atenção: Isso altera o nome do professor e horários no passado. Use apenas se a aula foi cadastrada errada agora mesmo.",
+    "justReplace": "Apenas Substituir Dados",
+    "backToForm": "Voltar para o formulário",
+    "selectDateAlert": "Selecione a data exata em que a nova configuração começa a valer."
+  },
+  "alerts": {
+    "fillRequired": "❌ Preencha todos os campos obrigatórios.",
+    "invalidDates": "❌ A data de encerramento não pode ser anterior à data de início.",
+    "deleteConfirm": "🗑️ LIXEIRA INTELIGENTE:\n\nDeseja ocultar esta aula da grade? Ela será removida da visualização de todos, mas o histórico e o banco de dados serão preservados (Soft Delete).",
+    "deleteError": "Erro ao enviar a aula para a lixeira.",
+    "saveError": "Erro ao salvar."
+  },
+  "unknownModality": "Desconhecido",
+  "unknownUnit": "Unidade Desconhecida"
+}

@@ -7,9 +7,11 @@ import { ShieldAlert, Users, Key, ShieldCheck, Mail, Loader2, Search, Edit } fro
 
 // 🟢 IMPORTANDO O NOSSO ESCUDO DE SENHA
 import SecurePanel from '../../components/SecurePanel';
+import { useTranslation } from 'react-i18next';
 
 export default function ControleAcessosPage() {
     const { userData, user } = useAuth();
+    const { t } = useTranslation();
     const [usuarios, setUsuarios] = useState([]);
     const [loading, setLoading] = useState(true);
     const [processando, setProcessando] = useState(null);
@@ -27,7 +29,7 @@ export default function ControleAcessosPage() {
             setUsuarios(lista);
         } catch (error) {
             console.error("Erro ao buscar usuários", error);
-            alert("Erro ao buscar usuários no banco de dados.");
+            alert(t('misc.access.messages.loadError'));
         } finally {
             setLoading(false);
         }
@@ -35,6 +37,7 @@ export default function ControleAcessosPage() {
 
     useEffect(() => {
         if (isAdmin) carregarUsuarios();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isAdmin]);
 
     // 🟢 O X-9 INTEGRADO (O Olho Que Tudo Vê)
@@ -58,7 +61,7 @@ export default function ControleAcessosPage() {
 
     const alterarRole = async (userId, userNome, oldRole, newRole) => {
         if (oldRole === newRole) return;
-        if (!window.confirm(`Tem certeza que deseja alterar o acesso de ${userNome} para ${newRole.toUpperCase()}?`)) return;
+        if (!window.confirm(t('misc.access.messages.confirmRole', { name: userNome, role: t(`misc.access.roles.${newRole}`, newRole).toUpperCase() }))) return;
 
         setProcessando(userId);
         try {
@@ -73,19 +76,19 @@ export default function ControleAcessosPage() {
                 newRole
             );
 
-            alert(`✅ Permissão de ${userNome} atualizada com sucesso!`);
+            alert(t('misc.access.messages.roleUpdated', { name: userNome }));
             carregarUsuarios(); 
         } catch (error) {
             console.error(error);
-            alert("Erro ao alterar permissão.");
+            alert(t('misc.access.messages.roleError'));
         } finally {
             setProcessando(null);
         }
     };
 
     const dispararResetSenha = async (email, nome) => {
-        if (!email) return alert("Este usuário não tem um e-mail de login válido cadastrado.");
-        if (!window.confirm(`Enviar link de redefinição de senha para o e-mail: ${email}?`)) return;
+        if (!email) return alert(t('misc.access.messages.noEmail'));
+        if (!window.confirm(t('misc.access.messages.confirmReset', { email }))) return;
 
         setProcessando(email);
         try {
@@ -100,10 +103,10 @@ export default function ControleAcessosPage() {
                 null
             );
 
-            alert(`✅ Link de recuperação enviado para ${email}!`);
+            alert(t('misc.access.messages.resetSent', { email }));
         } catch (error) {
             console.error(error);
-            alert("Erro ao enviar e-mail. Verifique se o e-mail está correto no Firebase Auth.");
+            alert(t('misc.access.messages.resetError'));
         } finally {
             setProcessando(null);
         }
@@ -113,8 +116,8 @@ export default function ControleAcessosPage() {
         return (
             <div className="flex flex-col items-center justify-center h-[80vh] text-slate-500">
                 <ShieldAlert className="w-20 h-20 mb-4 text-rose-500 opacity-50" />
-                <h2 className="text-2xl font-black uppercase tracking-widest text-slate-700">Acesso Negado</h2>
-                <p className="mt-2 text-sm font-bold uppercase">Área restrita à Diretoria (Master) do Sistema.</p>
+                <h2 className="text-2xl font-black uppercase tracking-widest text-slate-700">{t('misc.access.deniedTitle')}</h2>
+                <p className="mt-2 text-sm font-bold uppercase">{t('misc.access.deniedDesc')}</p>
             </div>
         );
     }
@@ -126,7 +129,7 @@ export default function ControleAcessosPage() {
 
     return (
         // 🟢 ENVELOPANDO A PÁGINA COM O ESCUDO
-        <SecurePanel pinCorreto="7788" titulo="Controle de Acessos">
+        <SecurePanel pinCorreto="7788" titulo={t('misc.access.title')}>
             <div className="p-8 max-w-[1600px] mx-auto animate-fade-in space-y-6">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-slate-200 dark:border-slate-800 pb-6">
                     <div>
@@ -134,10 +137,10 @@ export default function ControleAcessosPage() {
                             <span className="bg-slate-900 text-white p-2.5 rounded-xl shadow-lg">
                                 <Key className="w-7 h-7" />
                             </span>
-                            Controle de Acessos
+                            {t('misc.access.title')}
                         </h1>
                         <p className="text-slate-500 dark:text-slate-400 mt-2 font-bold text-sm uppercase">
-                            Gerencie hierarquias, permissões e senhas de todos os usuários da rede.
+                            {t('misc.access.subtitle')}
                         </p>
                     </div>
                     
@@ -145,7 +148,7 @@ export default function ControleAcessosPage() {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                         <input 
                             type="text" 
-                            placeholder="BUSCAR USUÁRIO OU E-MAIL..." 
+                            placeholder={t('misc.access.search').toUpperCase()} 
                             className="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-black outline-none focus:border-blue-500 transition-colors shadow-sm uppercase"
                             value={busca}
                             onChange={e => setBusca(e.target.value)}
@@ -161,10 +164,10 @@ export default function ControleAcessosPage() {
                             <table className="w-full text-left text-sm">
                                 <thead className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700 text-[10px] font-black text-slate-500 uppercase tracking-widest">
                                     <tr>
-                                        <th className="p-5">Nome do Usuário</th>
-                                        <th className="p-5">E-mail de Login</th>
-                                        <th className="p-5">Nível de Acesso (Cargo)</th>
-                                        <th className="p-5 text-right">Ações de Segurança</th>
+                                        <th className="p-5">{t('misc.access.colName')}</th>
+                                        <th className="p-5">{t('misc.access.colEmail')}</th>
+                                        <th className="p-5">{t('misc.access.colRole')}</th>
+                                        <th className="p-5 text-right">{t('misc.access.colActions')}</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
@@ -180,7 +183,7 @@ export default function ControleAcessosPage() {
                                                             {roleAtual === 'admin' ? <ShieldCheck className="w-5 h-5"/> : <Users className="w-5 h-5"/>}
                                                         </div>
                                                         <div>
-                                                            <span className="font-black text-slate-800 dark:text-slate-200 text-sm uppercase block">{u.nome || 'NOME NÃO CADASTRADO'}</span>
+                                                            <span className="font-black text-slate-800 dark:text-slate-200 text-sm uppercase block">{u.nome || t('misc.access.noName')}</span>
                                                             <span className="text-[10px] font-mono text-slate-400 font-bold block mt-0.5">ID: {u.id}</span>
                                                         </div>
                                                     </div>
@@ -188,7 +191,7 @@ export default function ControleAcessosPage() {
 
                                                 <td className="p-5">
                                                     <span className="font-bold text-slate-600 dark:text-slate-400 text-xs">
-                                                        {u.emailAuth || u.email || 'NÃO ENCONTRADO'}
+                                                        {u.emailAuth || u.email || t('misc.access.notFound')}
                                                     </span>
                                                 </td>
 
@@ -205,11 +208,11 @@ export default function ControleAcessosPage() {
                                                             onChange={(e) => alterarRole(u.id, u.nome, roleAtual, e.target.value)}
                                                             disabled={processando === u.id}
                                                         >
-                                                            <option value="admin">Admin (Master)</option>
-                                                            <option value="mentor">Mentor</option>
-                                                            <option value="unidade">Unidade (Líder)</option>
-                                                            <option value="professor">Professor</option>
-                                                            <option value="bloqueado">Sem Acesso (Bloqueado)</option>
+                                                            <option value="admin">{t('misc.access.roles.admin')}</option>
+                                                            <option value="mentor">{t('misc.access.roles.mentor')}</option>
+                                                            <option value="unidade">{t('misc.access.roles.unidade')}</option>
+                                                            <option value="professor">{t('misc.access.roles.professor')}</option>
+                                                            <option value="bloqueado">{t('misc.access.roles.bloqueado')}</option>
                                                         </select>
                                                         <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
                                                             {processando === u.id ? <Loader2 className="w-3 h-3 animate-spin text-slate-400"/> : <Edit className="w-3 h-3 opacity-50"/>}
@@ -224,7 +227,7 @@ export default function ControleAcessosPage() {
                                                         className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-[10px] font-black uppercase transition-all shadow-sm disabled:opacity-50"
                                                     >
                                                         {processando === (u.emailAuth || u.email) ? <Loader2 className="w-3.5 h-3.5 animate-spin"/> : <Mail className="w-3.5 h-3.5"/>}
-                                                        Resetar Senha
+                                                        {t('misc.access.resetPassword')}
                                                     </button>
                                                 </td>
                                             </tr>
@@ -235,7 +238,7 @@ export default function ControleAcessosPage() {
                             
                             {usuariosFiltrados.length === 0 && (
                                 <div className="p-10 text-center font-bold text-slate-400 uppercase text-xs tracking-widest">
-                                    NENHUM USUÁRIO ENCONTRADO NA BASE DE DADOS.
+                                    {t('misc.access.empty')}
                                 </div>
                             )}
                         </div>

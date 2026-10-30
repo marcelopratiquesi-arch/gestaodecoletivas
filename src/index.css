@@ -8,6 +8,3 @@ html, body, #root {
   padding: 0;
   background-color: #f8fafc;
 }
-body {
-  outline: 5px solid red !important;
-}

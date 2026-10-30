@@ -1,0 +1,57 @@
+{
+  "play": {
+    "subtitle": "A biblioteca da rede",
+    "albums": "Álbuns",
+    "favorites": "Favoritas",
+    "noFavorites": "Nenhuma favorita ainda",
+    "noFavoritesHint": "Navegue pelos álbuns e clique no coração.",
+    "cover": "Capa",
+    "playlist": "Playlist",
+    "tracksCount": "{{count}} músicas",
+    "groupClasses": "Aulas Coletivas",
+    "loadingTrack": "Carregando faixa...",
+    "clickToExpand": "Clique para expandir"
+  },
+  "sleep": {
+    "title": "Sistema em soneca",
+    "desc": "A conexão de dados foi pausada por inatividade para evitar consumo desnecessário de servidor.",
+    "reconnect": "Reconectar sistema"
+  },
+  "secure": {
+    "restricted": "Área Restrita",
+    "confirmPin": "Confirme seu PIN de segurança",
+    "wrongPin": "Senha Incorreta"
+  },
+  "access": {
+    "title": "Controle de Acessos",
+    "subtitle": "Gerencie hierarquias, permissões e senhas de todos os usuários da rede.",
+    "search": "Buscar usuário ou e-mail...",
+    "deniedTitle": "Acesso Negado",
+    "deniedDesc": "Área restrita à Diretoria (Master) do Sistema.",
+    "colName": "Nome do Usuário",
+    "colEmail": "E-mail de Login",
+    "colRole": "Nível de Acesso (Cargo)",
+    "colActions": "Ações de Segurança",
+    "noName": "Nome não cadastrado",
+    "notFound": "Não encontrado",
+    "resetPassword": "Resetar Senha",
+    "empty": "Nenhum usuário encontrado na base de dados.",
+    "roles": {
+      "admin": "Admin (Master)",
+      "mentor": "Mentor",
+      "unidade": "Unidade (Líder)",
+      "professor": "Professor",
+      "bloqueado": "Sem Acesso (Bloqueado)"
+    },
+    "messages": {
+      "loadError": "Erro ao buscar usuários no banco de dados.",
+      "confirmRole": "Tem certeza que deseja alterar o acesso de {{name}} para {{role}}?",
+      "roleUpdated": "✅ Permissão de {{name}} atualizada com sucesso!",
+      "roleError": "Erro ao alterar permissão.",
+      "noEmail": "Este usuário não tem um e-mail de login válido cadastrado.",
+      "confirmReset": "Enviar link de redefinição de senha para o e-mail: {{email}}?",
+      "resetSent": "✅ Link de recuperação enviado para {{email}}!",
+      "resetError": "Erro ao enviar e-mail. Verifique se o e-mail está correto no Firebase Auth."
+    }
+  }
+}

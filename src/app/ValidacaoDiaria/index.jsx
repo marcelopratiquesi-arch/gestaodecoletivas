@@ -3,7 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useCatalogs } from '../../contexts/CatalogContext'; 
 import { db } from '../../services/firebase';
 import { 
-  collection, query, where, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, deleteDoc 
+  collection, query, where, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, deleteDoc, setDoc 
 } from 'firebase/firestore';
 import { 
   Calendar, CircleCheck, CircleX, TriangleAlert, 
@@ -13,6 +13,10 @@ import {
 
 import { AulaCard } from './AulaCard';
 import { ValidationModal } from './ValidationModal';
+import { getDiaSemana, formatCurrency } from '../../utils/formatters';
+import { idValidacao, deduplicarValidacoes } from '../../utils/validacoes';
+import { feriadoNoDia } from '../../utils/feriados';
+import { useTranslation } from 'react-i18next';
 
 // --- HELPERS ---
 const getTodayStr = () => new Date().toLocaleDateString('en-CA'); 
@@ -27,8 +31,6 @@ const getMonthDates = (year, month) => {
   return dates;
 };
 
-const diasSemanaMap = { 0: 'Domingo', 1: 'Segunda', 2: 'Terça', 3: 'Quarta', 4: 'Quinta', 5: 'Sexta', 6: 'Sábado' };
-
 const getFirstLast = (fullName) => {
     if (!fullName) return '';
     const parts = fullName.trim().split(' ');
@@ -39,6 +41,7 @@ const getFirstLast = (fullName) => {
 // COMPONENTE: MULTI-SELECT COMPACTO (ESPECIAL PARA A BARRA DE FILTROS)
 // ============================================================================
 const FilterMultiSelect = ({ options, selected, onChange, placeholder, icon: Icon, searchable = false }) => {
+    const { t } = useTranslation();
     const [isOpen, setIsOpen] = useState(false);
     const [searchTxt, setSearchTxt] = useState('');
     const wrapperRef = useRef(null);
@@ -77,7 +80,7 @@ const FilterMultiSelect = ({ options, selected, onChange, placeholder, icon: Ico
                 onClick={() => { setIsOpen(!isOpen); if (isOpen) setSearchTxt(''); }}
             >
                 <span className="truncate pr-2 uppercase">
-                    {selected.length === 0 ? <span className="font-bold">{placeholder}</span> : selected.length === options.length && options.length > 0 ? <span className="text-emerald-600 dark:text-emerald-400 font-black">TODOS</span> : <span className="text-emerald-600 dark:text-emerald-400 font-black">{selected.length} SELECIONADO(S)</span>}
+                    {selected.length === 0 ? <span className="font-bold">{placeholder}</span> : selected.length === options.length && options.length > 0 ? <span className="text-emerald-600 dark:text-emerald-400 font-black">{t('common.multiSelect.all')}</span> : <span className="text-emerald-600 dark:text-emerald-400 font-black">{t('common.multiSelect.selected', { count: selected.length })}</span>}
                 </span>
                 <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}/>
             </div>
@@ -88,18 +91,18 @@ const FilterMultiSelect = ({ options, selected, onChange, placeholder, icon: Ico
                         <div className="p-2 border-b border-slate-100 dark:border-slate-700 shrink-0 bg-slate-50 dark:bg-slate-900/50">
                             <div className="relative">
                                 <Search className="absolute left-2.5 top-2 w-3.5 h-3.5 text-slate-400" />
-                                <input type="text" placeholder="BUSCAR..." className="w-full pl-8 pr-2 py-1.5 text-[10px] font-bold uppercase bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg outline-none focus:border-emerald-500 dark:text-white" value={searchTxt} onChange={(e) => setSearchTxt(e.target.value)} onClick={(e) => e.stopPropagation()} />
+                                <input type="text" placeholder={t('common.multiSelect.search')} className="w-full pl-8 pr-2 py-1.5 text-[10px] font-bold uppercase bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg outline-none focus:border-emerald-500 dark:text-white" value={searchTxt} onChange={(e) => setSearchTxt(e.target.value)} onClick={(e) => e.stopPropagation()} />
                             </div>
                         </div>
                     )}
                     <div className="p-1.5 sticky top-0 bg-white dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700 z-10 shrink-0">
                         <button type="button" onClick={toggleAll} className="w-full text-left px-2 py-1.5 text-[10px] font-black text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-md flex items-center gap-1.5 transition-colors uppercase">
-                            {isAllFilteredSelected ? <CheckSquare className="w-3.5 h-3.5"/> : <Square className="w-3.5 h-3.5"/>} MARCAR TODOS
+                            {isAllFilteredSelected ? <CheckSquare className="w-3.5 h-3.5"/> : <Square className="w-3.5 h-3.5"/>} {t('common.multiSelect.selectAll')}
                         </button>
                     </div>
                     <div className="p-1 flex flex-col gap-0.5 overflow-y-auto custom-scrollbar">
                         {filteredOptions.length === 0 ? (
-                            <div className="text-center text-[10px] font-bold text-slate-400 py-3 uppercase">Nenhum resultado</div>
+                            <div className="text-center text-[10px] font-bold text-slate-400 py-3 uppercase">{t('common.multiSelect.noResults')}</div>
                         ) : (
                             filteredOptions.map(opt => {
                                 const isSelected = selected.includes(opt.id);
@@ -123,6 +126,7 @@ const FilterMultiSelect = ({ options, selected, onChange, placeholder, icon: Ico
 // ============================================================================
 export default function ValidacaoDiariaPage() {
   const { userData } = useAuth();
+  const { t } = useTranslation();
   
   // 🟢 ACESSANDO A MEMÓRIA GLOBAL DO SISTEMA
   const { catalogs: globalCatalogs, loadingCatalogs } = useCatalogs();
@@ -296,7 +300,7 @@ export default function ValidacaoDiariaPage() {
     }
 
     const unsubValidacoes = onSnapshot(qValidacoes, (snap) => {
-        setValidacoesRealtime(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        setValidacoesRealtime(deduplicarValidacoes(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
         setLoading(false); 
     });
 
@@ -322,25 +326,11 @@ export default function ValidacaoDiariaPage() {
         if (meuPerfil) meuProfessorId = meuPerfil.id;
     }
 
-    const checkIsFeriado = (dateString) => {
-        const targetDate = new Date(dateString + 'T00:00:00');
-        return catalogs.feriados.some(f => {
-            if (f.data === dateString) return true;
-            if (f.dataInicio && f.dataFim) {
-                const inicio = new Date(f.dataInicio + 'T00:00:00');
-                const fim = new Date(f.dataFim + 'T00:00:00');
-                return targetDate >= inicio && targetDate <= fim;
-            }
-            return false;
-        });
-    };
-
     let gradeFinal = [];
 
     datasParaVerificar.forEach(dataObj => {
       const dataString = dataObj.toISOString().split('T')[0];
-      const diaSemanaNome = diasSemanaMap[dataObj.getDay()];
-      const isFeriadoGlobal = checkIsFeriado(dataString);
+      const diaSemanaNome = getDiaSemana(dataObj);
 
       const aulasDoDia = catalogs.aulas.filter(aula => aula.dias && aula.dias.includes(diaSemanaNome));
 
@@ -365,8 +355,8 @@ export default function ValidacaoDiariaPage() {
         const profDoCatalogo = catalogs.professores.find(p => String(p.id) === String(aula.professorId));
         const modDoCatalogo = catalogs.modalidades.find(m => String(m.id) === String(aula.modalidadeId));
 
-        let professorExibicao = profDoCatalogo ? { ...profDoCatalogo } : { nome: "Professor Excluído" }; 
-        let modalidadeExibicao = modDoCatalogo ? { ...modDoCatalogo } : { nome: "Modalidade Excluída" };
+        let professorExibicao = profDoCatalogo ? { ...profDoCatalogo } : { nome: t('common.unknown.deletedTeacher') }; 
+        let modalidadeExibicao = modDoCatalogo ? { ...modDoCatalogo } : { nome: t('common.unknown.deletedModality') };
 
         if (validacao) {
             if (validacao.professorNomeEfetivo) professorExibicao.nome = validacao.professorNomeEfetivo;
@@ -390,7 +380,8 @@ export default function ValidacaoDiariaPage() {
 
         if (validacao) {
             status = validacao.status;
-        } else if (isFeriadoGlobal) {
+        } else if (feriadoNoDia(dataString, unidadeValida, catalogs.feriados)) {
+            // Regra única de feriado (src/utils/feriados.js): só a unidade dentro da abrangência do feriado.
             status = 'cancelada';
             dadosValidacao = { motivoCancelamento: 'Recesso/Feriado', status: 'cancelada' };
         }
@@ -416,8 +407,8 @@ export default function ValidacaoDiariaPage() {
          }
          if (filtroModalidade.length > 0 && !filtroModalidade.includes(String(v.modalidadeId))) return;
 
-         let profAulao = { nome: v.professorNomeEfetivo || "Professor Desconhecido" };
-         let modAulao = { nome: v.modalidadeNomeEfetiva || "Modalidade Desconhecida" };
+         let profAulao = { nome: v.professorNomeEfetivo || t('common.unknown.teacher') };
+         let modAulao = { nome: v.modalidadeNomeEfetiva || t('common.unknown.modality') };
 
          if (filtroProfessor && profAulao.nome) {
             const termo = filtroProfessor.toLowerCase();
@@ -440,7 +431,7 @@ export default function ValidacaoDiariaPage() {
 
     setGradeGerada(gradeFinal);
 
-  }, [validacoesRealtime, loading, loadingCatalogs, catalogs, filtroUnidade, filtroModalidade, filtroProfessor, filtroEstado, filtroMentor, dataFiltro, mesFiltro, modoFiltro, role, userId, isCofreFechado]);
+  }, [validacoesRealtime, loading, loadingCatalogs, catalogs, filtroUnidade, filtroModalidade, filtroProfessor, filtroEstado, filtroMentor, dataFiltro, mesFiltro, modoFiltro, role, userId, isCofreFechado, t]);
 
   // CONTADORES E PAGINAÇÃO
   const counts = useMemo(() => {
@@ -472,29 +463,29 @@ export default function ValidacaoDiariaPage() {
   };
 
   const abrirModal = (tipo, item) => {
-    if (tipo !== 'aulao' && verificarFuturo(item.data)) return alert("Aulas futuras não podem ser validadas.");
+    if (tipo !== 'aulao' && verificarFuturo(item.data)) return alert(t('dailyValidation.alerts.futureClass'));
     if (item && item.status === 'cancelada' && !isMaster) {
-        if (item.validacao?.motivoCancelamento === 'Recesso/Feriado') return alert("ℹ️ INFORMAÇÃO\n\nEsta aula foi cancelada automaticamente devido ao Recesso/Feriado cadastrado no sistema.");
-        return alert("⛔ AÇÃO BLOQUEADA\n\nEsta aula foi cancelada. Apenas a Mentoria ou a Administração podem reverter este status.");
+        if (item.validacao?.motivoCancelamento === 'Recesso/Feriado') return alert(t('dailyValidation.alerts.holidayInfo'));
+        return alert(t('dailyValidation.alerts.blockedCanceled'));
     }
     setAcaoAtual({ tipo, item }); setModalOpen(true);
   };
 
   const handleReverterCancelamento = async () => {
-      if (!acaoAtual.item.validacao?.id && acaoAtual.item.validacao?.motivoCancelamento === 'Recesso/Feriado') return alert("Esta aula é Feriado Automático. Para acontecer, clique em 'Voltar' e 'Validar'.");
+      if (!acaoAtual.item.validacao?.id && acaoAtual.item.validacao?.motivoCancelamento === 'Recesso/Feriado') return alert(t('dailyValidation.alerts.autoHolidayRevert'));
       if (!acaoAtual || !acaoAtual.item.validacao?.id) return;
-      if (!window.confirm("Tem certeza que deseja reverter este cancelamento manual?")) return;
+      if (!window.confirm(t('dailyValidation.alerts.confirmRevert'))) return;
 
       setProcessando(true);
       try {
           await deleteDoc(doc(db, 'validacoes', acaoAtual.item.validacao.id));
           await registrarLogAuditoria('EXCLUÍDA', `Cancelamento revertido.`, acaoAtual.item, `Cancelamento por motivo de "${acaoAtual.item.validacao?.motivoCancelamento}" desfeito.`);
-      } catch (error) { alert("Erro ao reverter cancelamento."); } 
+      } catch (error) { alert(t('dailyValidation.alerts.revertError')); } 
       finally { setProcessando(false); setModalOpen(false); }
   };
 
   const handleNovoAulao = () => {
-      if (filtroUnidade.length !== 1) return alert("Selecione exatamente UMA Unidade no filtro para adicionar um Aulão.");
+      if (filtroUnidade.length !== 1) return alert(t('dailyValidation.alerts.selectOneUnit'));
       const unidadeObj = catalogs.unidades.find(u => String(u.id) === String(filtroUnidade[0]));
       abrirModal('aulao', { unidade: unidadeObj, data: dataFiltro });
   };
@@ -502,8 +493,8 @@ export default function ValidacaoDiariaPage() {
   const confirmarAcao = async (dadosFormulario) => {
     const { inputValor, inputObs, isSubstituicao, substitutoId, motivoSubstituicao, aulaoModalidadeId, aulaoHora, aulaoValor, aulaoData, professorNomeEfetivo, modalidadeNomeEfetiva, valorEfetivo } = dadosFormulario;
     
-    if (acaoAtual.tipo === 'validar' && !inputValor) return alert("Informe o número de alunos.");
-    if (acaoAtual.tipo === 'aulao' && (!aulaoModalidadeId || !inputValor || !substitutoId || !aulaoData)) return alert("Preencha todos os campos do Aulão.");
+    if (acaoAtual.tipo === 'validar' && !inputValor) return alert(t('dailyValidation.alerts.informStudents'));
+    if (acaoAtual.tipo === 'aulao' && (!aulaoModalidadeId || !inputValor || !substitutoId || !aulaoData)) return alert(t('dailyValidation.alerts.fillSpecialClass'));
 
     setProcessando(true);
     try {
@@ -524,7 +515,7 @@ export default function ValidacaoDiariaPage() {
           payload.valorPago = aulaoValor ? parseFloat(aulaoValor) : 0; payload.substituicao = false; 
           
           await addDoc(collection(db, 'validacoes'), payload);
-          await registrarLogAuditoria('NOVA', `Aulão Especial registrado.`, { unidade: item.unidade, professor: {nome: professorNomeEfetivo}, modalidade: {nome: modalidadeNomeEfetiva}, aulaBase: {hora: aulaoHora}, diaSemana: aulaoData }, `Qtd Alunos: ${inputValor} | Valor: R$ ${aulaoValor}`);
+          await registrarLogAuditoria('NOVA', `Aulão Especial registrado.`, { unidade: item.unidade, professor: {nome: professorNomeEfetivo}, modalidade: {nome: modalidadeNomeEfetiva}, aulaBase: {hora: aulaoHora}, diaSemana: aulaoData }, `Qtd Alunos: ${inputValor} | Valor: ${formatCurrency(aulaoValor, item.unidade?.pais)}`);
       } else {
           payload.aulaId = item.aulaBase.id; payload.unidadeId = item.aulaBase.unidadeId;
           payload.professorId = (tipo === 'validar' && isSubstituicao) ? substitutoId : item.aulaBase.professorId;
@@ -545,15 +536,18 @@ export default function ValidacaoDiariaPage() {
           }
 
           if (item.validacao?.id) {
+            // Editar uma validação não muda o valor da época: mantém o valor gravado quando a aula foi validada.
+            if (item.validacao.valorEfetivo !== undefined && item.validacao.valorEfetivo !== null) payload.valorEfetivo = item.validacao.valorEfetivo;
             if (tipo === 'validar' && item.validacao.alunos !== payload.alunos) diffLog.push(`Edição Alunos: de ${item.validacao.alunos} para ${payload.alunos}`);
             await updateDoc(doc(db, 'validacoes', item.validacao.id), payload);
             await registrarLogAuditoria('ALTERADA', tipo === 'validar' ? `Validação editada.` : `Cancelamento editado.`, item, diffLog.join(' | '));
           } else {
-            await addDoc(collection(db, 'validacoes'), payload);
+            // ID fixo por aula/dia: se outra pessoa validar ao mesmo tempo, atualiza o mesmo registro (sem duplicar).
+            await setDoc(doc(db, 'validacoes', idValidacao(payload.aulaId, payload.data)), payload);
             await registrarLogAuditoria('NOVA', tipo === 'validar' ? `Aula validada.` : `Aula cancelada.`, item, diffLog.join(' | '));
           }
       }
-    } catch (error) { alert("Erro ao salvar no banco de dados."); } 
+    } catch (error) { alert(t('dailyValidation.alerts.saveError')); } 
     finally { setProcessando(false); setModalOpen(false); setAcaoAtual(null); }
   };
 
@@ -566,31 +560,31 @@ export default function ValidacaoDiariaPage() {
                     <span className="bg-gradient-to-tr from-emerald-500 to-green-600 text-white p-2.5 rounded-xl shadow-lg shadow-emerald-500/20">
                     <CircleCheck className="w-6 h-6 md:w-7 md:h-7" />
                     </span>
-                    Validação Diária
+                    {t('dailyValidation.title')}
                 </h1>
-                <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium text-sm md:text-base">Gestão operacional e controle de frequência.</p>
+                <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium text-sm md:text-base">{t('dailyValidation.subtitle')}</p>
             </div>
 
             <div className="flex gap-4">
                 <div className="w-full md:w-auto grid grid-cols-3 gap-3">
                     <button onClick={() => { setFiltroStatus('todos'); setItensVisiveis(12); }} className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all duration-300 shadow-sm hover:shadow-md ${filtroStatus === 'todos' ? 'bg-slate-800 text-white border-slate-900 ring-2 ring-slate-800 ring-offset-2' : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'}`}>
                         <span className="text-2xl font-black">{counts.total}</span>
-                        <span className="text-[10px] uppercase font-bold tracking-wider flex items-center gap-1"><List className="w-3 h-3"/> Todos</span>
+                        <span className="text-[10px] uppercase font-bold tracking-wider flex items-center gap-1"><List className="w-3 h-3"/> {t('dailyValidation.counters.all')}</span>
                     </button>
                     <button onClick={() => { setFiltroStatus('pendente'); setItensVisiveis(12); }} className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all duration-300 shadow-sm hover:shadow-md ${filtroStatus === 'pendente' ? 'bg-amber-500 text-white border-amber-600 ring-2 ring-amber-500 ring-offset-2' : 'bg-white border-amber-100 text-amber-500 hover:bg-amber-50'}`}>
                         <span className="text-2xl font-black">{counts.pendentes}</span>
-                        <span className="text-[10px] uppercase font-bold tracking-wider flex items-center gap-1"><TriangleAlert className="w-3 h-3"/> Pendentes</span>
+                        <span className="text-[10px] uppercase font-bold tracking-wider flex items-center gap-1"><TriangleAlert className="w-3 h-3"/> {t('dailyValidation.counters.pending')}</span>
                     </button>
                     <button onClick={() => { setFiltroStatus('cancelada'); setItensVisiveis(12); }} className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all duration-300 shadow-sm hover:shadow-md ${filtroStatus === 'cancelada' ? 'bg-rose-600 text-white border-rose-700 ring-2 ring-rose-600 ring-offset-2' : 'bg-white border-rose-100 text-rose-500 hover:bg-rose-50'}`}>
                         <span className="text-2xl font-black">{counts.canceladas}</span>
-                        <span className="text-[10px] uppercase font-bold tracking-wider flex items-center gap-1"><CircleX className="w-3 h-3"/> Canceladas</span>
+                        <span className="text-[10px] uppercase font-bold tracking-wider flex items-center gap-1"><CircleX className="w-3 h-3"/> {t('dailyValidation.counters.canceled')}</span>
                     </button>
                 </div>
 
                 {role !== 'professor' && (
                     <button onClick={handleNovoAulao} className="hidden md:flex flex-col items-center justify-center p-3 rounded-2xl border border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100 hover:border-purple-300 transition-all shadow-sm hover:shadow-md min-w-[100px]">
                         <Star className="w-6 h-6 mb-1" />
-                        <span className="text-[10px] uppercase font-bold tracking-wider text-center leading-tight">Adicionar<br/>Aulão</span>
+                        <span className="text-[10px] uppercase font-bold tracking-wider text-center leading-tight">{t('dailyValidation.addSpecialClass')}</span>
                     </button>
                 )}
             </div>
@@ -599,8 +593,8 @@ export default function ValidacaoDiariaPage() {
         <div className="bg-white dark:bg-slate-800 p-3 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm w-full">
             <div className="flex flex-wrap gap-2 items-center">
                 <div className="flex bg-slate-100 dark:bg-slate-700 rounded-xl p-1 h-10 shrink-0">
-                    <button onClick={() => setModoFiltro('dia')} className={`px-3 text-xs font-bold uppercase tracking-wide rounded-lg transition-all ${modoFiltro === 'dia' ? 'bg-white dark:bg-slate-600 shadow text-emerald-700 dark:text-white' : 'text-slate-500 hover:text-slate-700'}`}>Dia</button>
-                    <button onClick={() => setModoFiltro('mes')} className={`px-3 text-xs font-bold uppercase tracking-wide rounded-lg transition-all ${modoFiltro === 'mes' ? 'bg-white dark:bg-slate-600 shadow text-emerald-700 dark:text-white' : 'text-slate-500 hover:text-slate-700'}`}>Mês</button>
+                    <button onClick={() => setModoFiltro('dia')} className={`px-3 text-xs font-bold uppercase tracking-wide rounded-lg transition-all ${modoFiltro === 'dia' ? 'bg-white dark:bg-slate-600 shadow text-emerald-700 dark:text-white' : 'text-slate-500 hover:text-slate-700'}`}>{t('common.period.day')}</button>
+                    <button onClick={() => setModoFiltro('mes')} className={`px-3 text-xs font-bold uppercase tracking-wide rounded-lg transition-all ${modoFiltro === 'mes' ? 'bg-white dark:bg-slate-600 shadow text-emerald-700 dark:text-white' : 'text-slate-500 hover:text-slate-700'}`}>{t('common.period.month')}</button>
                 </div>
                 <div className="relative h-10 w-[140px] shrink-0">
                     <Calendar className="absolute left-3 top-2.5 w-4 h-4 text-emerald-500"/>
@@ -613,27 +607,27 @@ export default function ValidacaoDiariaPage() {
 
                 {role === 'admin' && (
                     <>
-                        <FilterMultiSelect options={estadosOptions} selected={filtroEstado} onChange={handleEstadoChange} placeholder="ESTADOS" icon={MapIcon} />
-                        <FilterMultiSelect options={mentoresOptions} selected={filtroMentor} onChange={handleMentorChange} placeholder="MENTORES" icon={UserCog} searchable={true} />
+                        <FilterMultiSelect options={estadosOptions} selected={filtroEstado} onChange={handleEstadoChange} placeholder={t('dailyValidation.filters.states')} icon={MapIcon} />
+                        <FilterMultiSelect options={mentoresOptions} selected={filtroMentor} onChange={handleMentorChange} placeholder={t('dailyValidation.filters.mentors')} icon={UserCog} searchable={true} />
                     </>
                 )}
                 
                 {role !== 'unidade' && (
-                    <FilterMultiSelect options={unidadesFiltradasSelect} selected={filtroUnidade} onChange={setFiltroUnidade} placeholder="UNIDADES" icon={MapPin} searchable={true} />
+                    <FilterMultiSelect options={unidadesFiltradasSelect} selected={filtroUnidade} onChange={setFiltroUnidade} placeholder={t('dailyValidation.filters.units')} icon={MapPin} searchable={true} />
                 )}
 
-                <FilterMultiSelect options={modalidadesOptions} selected={filtroModalidade} onChange={setFiltroModalidade} placeholder="MODALIDADES" icon={Filter} searchable={true} />
+                <FilterMultiSelect options={modalidadesOptions} selected={filtroModalidade} onChange={setFiltroModalidade} placeholder={t('dailyValidation.filters.modalities')} icon={Filter} searchable={true} />
 
                 {(role === 'admin' || role === 'mentor') && (
                     <div className="relative h-10 flex-1 min-w-[160px] max-w-[200px]">
                         <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400"/>
-                        <input type="text" placeholder="PROFESSOR..." value={filtroProfessor} onChange={e => setFiltroProfessor(e.target.value)} className="w-full h-full pl-9 pr-2 border-0 bg-slate-50 dark:bg-slate-900 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none uppercase placeholder:normal-case" />
+                        <input type="text" placeholder={t('dailyValidation.filters.teacherPlaceholder')} value={filtroProfessor} onChange={e => setFiltroProfessor(e.target.value)} className="w-full h-full pl-9 pr-2 border-0 bg-slate-50 dark:bg-slate-900 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none uppercase placeholder:normal-case" />
                     </div>
                 )}
 
                 {role !== 'professor' && (
                     <button onClick={handleNovoAulao} className="md:hidden w-full h-10 px-4 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold uppercase shadow-md flex justify-center items-center gap-2 transition-all mt-2">
-                        <Star className="w-4 h-4" /> Adicionar Aulão Especial
+                        <Star className="w-4 h-4" /> {t('dailyValidation.addSpecialClassLong')}
                     </button>
                 )}
             </div>
@@ -646,16 +640,16 @@ export default function ValidacaoDiariaPage() {
               <MapPin className="w-8 h-8 text-emerald-500 animate-bounce"/>
             </div>
             <h3 className="text-xl font-black text-slate-700 dark:text-white mb-2 uppercase">
-                {role === 'admin' ? "Nenhum Filtro Selecionado" : "Nenhuma Unidade Selecionada"}
+                {role === 'admin' ? t('dailyValidation.empty.noFilterTitle') : t('dailyValidation.empty.noUnitTitle')}
             </h3>
             <p className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-widest max-w-md mx-auto">
-                {role === 'admin' ? "Selecione um Estado, Mentor ou Unidade para carregar a grade de aulas." : "No filtro acima, marque uma ou mais unidades para carregar a grade de aulas correspondente."}
+                {role === 'admin' ? t('dailyValidation.empty.noFilterDesc') : t('dailyValidation.empty.noUnitDesc')}
             </p>
           </div>
       ) : (loading || loadingCatalogs) ? (
         <div className="h-64 flex flex-col items-center justify-center text-slate-400">
           <Loader2 className="w-8 h-8 animate-spin mb-2 text-emerald-500"/>
-          <p className="text-xs font-bold uppercase tracking-widest">Carregando dados ao vivo...</p>
+          <p className="text-xs font-bold uppercase tracking-widest">{t('dailyValidation.empty.loading')}</p>
         </div>
       ) : listaFiltradaTotal.length === 0 ? (
         <div className="py-24 text-center bg-white dark:bg-slate-800 rounded-3xl border border-dashed border-slate-300 dark:border-slate-700 animate-fade-in">
@@ -663,10 +657,10 @@ export default function ValidacaoDiariaPage() {
             <LayoutDashboard className="w-8 h-8 text-slate-300"/>
           </div>
           <h3 className="text-lg font-bold text-slate-700 dark:text-white uppercase tracking-tight">
-              {filtroStatus === 'pendente' ? "Tudo Validado!" : filtroStatus === 'cancelada' ? "Nenhum cancelamento" : "Nenhuma aula encontrada"}
+              {filtroStatus === 'pendente' ? t('dailyValidation.empty.allValidatedTitle') : filtroStatus === 'cancelada' ? t('dailyValidation.empty.noCancellationsTitle') : t('dailyValidation.empty.noClassesTitle')}
           </h3>
           <p className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-widest mt-2">
-              {filtroStatus === 'pendente' ? "Parabéns, não há pendências nesta data." : "Tente ajustar os filtros ou a data selecionada."}
+              {filtroStatus === 'pendente' ? t('dailyValidation.empty.allValidatedDesc') : t('dailyValidation.empty.adjustFiltersDesc')}
           </p>
         </div>
       ) : (
@@ -684,8 +678,8 @@ export default function ValidacaoDiariaPage() {
 
             {itensVisiveis < listaFiltradaTotal.length && (
                 <div className="flex flex-wrap justify-center gap-3 pt-6 pb-4 animate-fade-in">
-                    <button onClick={() => handleCarregarMais(12)} className="px-5 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-black uppercase text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-sm flex items-center gap-2 transition-all"><ArrowDown className="w-4 h-4"/> Carregar +12</button>
-                    <button onClick={() => handleCarregarMais('todos')} className="px-5 py-2.5 bg-slate-100 dark:bg-slate-700 border border-transparent rounded-xl text-xs font-black uppercase text-slate-700 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-600 shadow-sm flex items-center gap-2 transition-all"><DownloadCloud className="w-4 h-4"/> Ver Todos</button>
+                    <button onClick={() => handleCarregarMais(12)} className="px-5 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-black uppercase text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-sm flex items-center gap-2 transition-all"><ArrowDown className="w-4 h-4"/> {t('common.actions.loadMore', { count: 12 })}</button>
+                    <button onClick={() => handleCarregarMais('todos')} className="px-5 py-2.5 bg-slate-100 dark:bg-slate-700 border border-transparent rounded-xl text-xs font-black uppercase text-slate-700 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-600 shadow-sm flex items-center gap-2 transition-all"><DownloadCloud className="w-4 h-4"/> {t('common.actions.viewAll')}</button>
                 </div>
             )}
         </div>

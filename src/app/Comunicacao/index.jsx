@@ -9,6 +9,8 @@ import {
   Tags, ChevronDown, Filter, Building2, Clock, MessageSquare, 
   Check, UserCog, Eraser, RefreshCw, GraduationCap, Crown
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import i18n from '../../i18n';
 
 // --- HELPERS E CONSTANTES GLOBAIS ---
 const CACHE_TTL = 5 * 60 * 1000; 
@@ -33,9 +35,9 @@ const getPrimeiroNome = (fullName) => {
 
 const getSaudacao = () => {
     const hora = new Date().getHours();
-    if (hora < 12) return "Bom dia";
-    if (hora < 18) return "Boa tarde";
-    return "Boa noite";
+    if (hora < 12) return i18n.t('comms.greetings.morning');
+    if (hora < 18) return i18n.t('comms.greetings.afternoon');
+    return i18n.t('comms.greetings.evening');
 };
 
 const formatarParaWaSeller = (telefoneRaw) => {
@@ -49,6 +51,7 @@ const formatarParaWaSeller = (telefoneRaw) => {
 // COMPONENTE: MULTI-SELECT COMPACTO E PROFISSIONAL
 // ============================================================================
 const MultiSelect = ({ label, options, selected, onChange, icon: Icon, searchable = false }) => {
+    const { t } = useTranslation();
     const [isOpen, setIsOpen] = useState(false);
     const [searchTxt, setSearchTxt] = useState('');
     const wrapperRef = useRef(null);
@@ -98,7 +101,7 @@ const MultiSelect = ({ label, options, selected, onChange, icon: Icon, searchabl
                 onClick={() => { if (isOpen) { setIsOpen(false); setSearchTxt(''); } else { setIsOpen(true); } }}
             >
                 <span className="truncate pr-4 uppercase">
-                    {selected.length === 0 ? <span className="text-slate-400 font-normal">Todos selecionados</span> : <span className="font-bold text-blue-600">{selected.length} selecionado(s)</span>}
+                    {selected.length === 0 ? <span className="text-slate-400 font-normal">{t('common.multiSelect.allSelected')}</span> : <span className="font-bold text-blue-600">{t('common.multiSelect.selected', { count: selected.length })}</span>}
                 </span>
                 <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}/>
             </div>
@@ -109,7 +112,7 @@ const MultiSelect = ({ label, options, selected, onChange, icon: Icon, searchabl
                         <div className="p-2 border-b border-slate-100 dark:border-slate-700 shrink-0 bg-slate-50 dark:bg-slate-900/50">
                             <div className="relative">
                                 <Search className="absolute left-2.5 top-2 w-3.5 h-3.5 text-slate-400" />
-                                <input type="text" placeholder="Buscar..." className="w-full pl-8 pr-3 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-md outline-none focus:border-blue-500 dark:text-white uppercase" value={searchTxt} onChange={(e) => setSearchTxt(e.target.value)} onClick={(e) => e.stopPropagation()} />
+                                <input type="text" placeholder={t('common.multiSelect.search')} className="w-full pl-8 pr-3 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-md outline-none focus:border-blue-500 dark:text-white uppercase" value={searchTxt} onChange={(e) => setSearchTxt(e.target.value)} onClick={(e) => e.stopPropagation()} />
                             </div>
                         </div>
                     )}
@@ -122,7 +125,7 @@ const MultiSelect = ({ label, options, selected, onChange, icon: Icon, searchabl
                     
                     <div className="p-1 flex flex-col gap-0.5 overflow-y-auto custom-scrollbar">
                         {filteredOptions.length === 0 ? (
-                            <div className="text-center text-[10px] font-bold text-slate-400 py-3 uppercase">Nenhum resultado</div>
+                            <div className="text-center text-[10px] font-bold text-slate-400 py-3 uppercase">{t('common.multiSelect.noResults')}</div>
                         ) : (
                             filteredOptions.map(opt => {
                                 const isSelected = selected.includes(opt.id);
@@ -146,6 +149,7 @@ const MultiSelect = ({ label, options, selected, onChange, icon: Icon, searchabl
 // ============================================================================
 export default function CentralComunicacao() {
     const { userData } = useAuth();
+    const { t } = useTranslation();
     const role = String(userData?.role || "").trim().toLowerCase();
     const userId = userData?.id || userData?.uid;
 
@@ -183,7 +187,7 @@ export default function CentralComunicacao() {
     }, [publicoAlvo]);
 
     const resultadoDesatualizado = buscaRealizada && filtrosNaBusca !== JSON.stringify({...filtros, publicoAlvo});
-    const [mensagem, setMensagem] = useState("Olá [PRIMEIRO_NOME], tudo bem?\n\nAqui é da gestão Pratique.");
+    const [mensagem, setMensagem] = useState(() => i18n.t('comms.defaultMessage'));
 
     // CARREGAMENTO INICIAL
     useEffect(() => {
@@ -292,7 +296,7 @@ export default function CentralComunicacao() {
                             relacaoProfessor[aula.professorId].unidades.add(unidade.nome);
                             relacaoProfessor[aula.professorId].exportUnits.set(unidade.id, { 
                                 unidade: unidade.nome, 
-                                estado: unidade.estado || 'NÃO INFORMADO' 
+                                estado: unidade.estado || t('comms.details.notInformed').toUpperCase() 
                             });
                         }
                     }
@@ -336,10 +340,10 @@ export default function CentralComunicacao() {
                             id: u.id,
                             nome: u.nome,
                             telefoneFormatado: phoneFinal,
-                            detalhe1: `LÍDER DE UNIDADE`,
-                            detalhe2: u.estado || 'ESTADO NÃO DEFINIDO',
+                            detalhe1: t('comms.details.unitLeader').toUpperCase(),
+                            detalhe2: u.estado || t('comms.details.noState').toUpperCase(),
                             exportData: [{ 
-                                estado: u.estado || 'NÃO INFORMADO', 
+                                estado: u.estado || t('comms.details.notInformed').toUpperCase(), 
                                 unidade: u.nome, 
                                 nome: u.nome, 
                                 telefone: phoneFinal 
@@ -362,11 +366,11 @@ export default function CentralComunicacao() {
                             id: m.id,
                             nome: m.nome,
                             telefoneFormatado: phoneFinal,
-                            detalhe1: 'MENTOR REGIONAL',
-                            detalhe2: 'GESTÃO PRATIQUE',
+                            detalhe1: t('comms.details.regionalMentor').toUpperCase(),
+                            detalhe2: t('comms.details.management').toUpperCase(),
                             exportData: [{ 
-                                estado: 'NÃO INFORMADO', 
-                                unidade: 'GESTÃO PRATIQUE', 
+                                estado: t('comms.details.notInformed').toUpperCase(), 
+                                unidade: t('comms.details.management').toUpperCase(), 
                                 nome: m.nome, 
                                 telefone: phoneFinal 
                             }]
@@ -383,7 +387,7 @@ export default function CentralComunicacao() {
 
         } catch (error) {
             console.error("Erro ao cruzar dados:", error);
-            alert("Erro ao processar a lista. Tente novamente.");
+            alert(t('comms.messages.processError'));
         } finally {
             if (currentBuscaId === buscaRef.current) setProcessing(false);
         }
@@ -424,7 +428,7 @@ export default function CentralComunicacao() {
             await navigator.clipboard.writeText(text);
             setCopiado(true);
             setTimeout(() => setCopiado(false), 3000);
-        } catch (err) { alert("❌ Permissão negada. Use o botão Baixar CSV."); }
+        } catch (err) { alert(t('comms.messages.permissionDenied')); }
     };
 
     // 🟢 EXPORTAÇÃO ANTIGA MANTIDA INTACTA
@@ -473,7 +477,7 @@ export default function CentralComunicacao() {
 
         const ordenados = ordenarListaExportacao(dadosParaExportar, ordemExportacao);
 
-        const headers = "Estado;Unidade;Nome;Telefone\n";
+        const headers = ['state', 'unit', 'name', 'phone'].map(k => t(`comms.exportHeaders.${k}`)).join(';') + "\n";
         
         // 🟢 FIX: O telefone recebe a fórmula de texto para o Excel entender: ="NUMERO"
         const rows = ordenados.map(r => 
@@ -498,7 +502,7 @@ export default function CentralComunicacao() {
     };
 
     if (role !== 'admin' && role !== 'mentor') {
-        return <div className="p-10 text-center text-slate-500 font-bold uppercase tracking-widest text-sm">Acesso Restrito: Apenas Gestão.</div>;
+        return <div className="p-10 text-center text-slate-500 font-bold uppercase tracking-widest text-sm">{t('comms.restricted')}</div>;
     }
 
     return (
@@ -511,9 +515,9 @@ export default function CentralComunicacao() {
                         <span className="bg-slate-800 text-white p-1.5 rounded-lg shadow-sm">
                             <Megaphone className="w-5 h-5" />
                         </span>
-                        Central de Comunicação
+                        {t('comms.title')}
                     </h1>
-                    <p className="text-slate-500 dark:text-slate-400 mt-1 font-bold text-[11px] uppercase tracking-widest">Segmente e extraia listas para o WaSeller</p>
+                    <p className="text-slate-500 dark:text-slate-400 mt-1 font-bold text-[11px] uppercase tracking-widest">{t('comms.subtitle')}</p>
                 </div>
             </div>
 
@@ -523,20 +527,20 @@ export default function CentralComunicacao() {
                     onClick={() => setPublicoAlvo('professores')} 
                     className={`flex-1 sm:flex-none px-6 py-2 text-xs font-black uppercase rounded-lg flex items-center justify-center gap-2 transition-all ${publicoAlvo === 'professores' ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                 >
-                    <GraduationCap className="w-4 h-4"/> Professores
+                    <GraduationCap className="w-4 h-4"/> {t('comms.audience.professores')}
                 </button>
                 <button 
                     onClick={() => setPublicoAlvo('lideres')} 
                     className={`flex-1 sm:flex-none px-6 py-2 text-xs font-black uppercase rounded-lg flex items-center justify-center gap-2 transition-all ${publicoAlvo === 'lideres' ? 'bg-white dark:bg-slate-700 text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                 >
-                    <Building2 className="w-4 h-4"/> Líderes (Unidades)
+                    <Building2 className="w-4 h-4"/> {t('comms.audience.lideres')}
                 </button>
                 {role === 'admin' && (
                     <button 
                         onClick={() => setPublicoAlvo('mentores')} 
                         className={`flex-1 sm:flex-none px-6 py-2 text-xs font-black uppercase rounded-lg flex items-center justify-center gap-2 transition-all ${publicoAlvo === 'mentores' ? 'bg-white dark:bg-slate-700 text-amber-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                     >
-                        <Crown className="w-4 h-4"/> Mentores
+                        <Crown className="w-4 h-4"/> {t('comms.audience.mentores')}
                     </button>
                 )}
             </div>
@@ -547,33 +551,33 @@ export default function CentralComunicacao() {
                 <div className="lg:col-span-4 space-y-5">
                     <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
                         <h2 className="font-black text-slate-800 dark:text-white uppercase flex items-center gap-2 border-b border-slate-100 dark:border-slate-700 pb-3 mb-4 text-xs tracking-widest">
-                            <Filter className="w-4 h-4 text-blue-500"/> 1. Refine a Busca
+                            <Filter className="w-4 h-4 text-blue-500"/> {t('comms.step1')}
                         </h2>
                         
                         {loadingDb ? (
                             <div className="flex justify-center py-6 text-slate-400"><Loader2 className="w-5 h-5 animate-spin"/></div>
                         ) : (
                             <div className="space-y-4">
-                                <MultiSelect label="ESTADOS (REGIONAL)" options={estadosOptions} selected={filtros.estados} onChange={v => setFiltros({...filtros, estados: v})} icon={MapPin} />
+                                <MultiSelect label={t('comms.filters.states').toUpperCase()} options={estadosOptions} selected={filtros.estados} onChange={v => setFiltros({...filtros, estados: v})} icon={MapPin} />
                                 
                                 {(publicoAlvo === 'professores' || publicoAlvo === 'lideres') && role === 'admin' && (
-                                    <MultiSelect label="MENTORES (REDE)" options={mentoresOptions} selected={filtros.mentores} onChange={v => setFiltros({...filtros, mentores: v})} icon={UserCog} searchable={true} />
+                                    <MultiSelect label={t('comms.filters.mentors').toUpperCase()} options={mentoresOptions} selected={filtros.mentores} onChange={v => setFiltros({...filtros, mentores: v})} icon={UserCog} searchable={true} />
                                 )}
 
                                 {publicoAlvo === 'professores' && (
                                     <>
-                                        <MultiSelect label="UNIDADES" options={unidadesOptions} selected={filtros.unidades} onChange={v => setFiltros({...filtros, unidades: v})} icon={Building2} searchable={true} />
-                                        <MultiSelect label="MODALIDADES" options={modalidadesOptions} selected={filtros.modalidades} onChange={v => setFiltros({...filtros, modalidades: v})} icon={Users} searchable={true} />
-                                        <MultiSelect label="TURNOS" options={TURNOS_OPTIONS} selected={filtros.turnos} onChange={v => setFiltros({...filtros, turnos: v})} icon={Clock} />
+                                        <MultiSelect label={t('comms.filters.units').toUpperCase()} options={unidadesOptions} selected={filtros.unidades} onChange={v => setFiltros({...filtros, unidades: v})} icon={Building2} searchable={true} />
+                                        <MultiSelect label={t('comms.filters.modalities').toUpperCase()} options={modalidadesOptions} selected={filtros.modalidades} onChange={v => setFiltros({...filtros, modalidades: v})} icon={Users} searchable={true} />
+                                        <MultiSelect label={t('comms.filters.shifts').toUpperCase()} options={TURNOS_OPTIONS.map(o => ({ ...o, nome: t(`comms.shifts.${o.id}`) }))} selected={filtros.turnos} onChange={v => setFiltros({...filtros, turnos: v})} icon={Clock} />
                                     </>
                                 )}
 
                                 <div className="flex gap-2 pt-3 border-t border-slate-100 dark:border-slate-700 mt-2">
                                     <button onClick={() => limparFiltros(false)} className="w-[30%] py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-[10px] uppercase rounded-lg flex items-center justify-center gap-1.5 transition-colors shadow-sm">
-                                        <Eraser className="w-3.5 h-3.5"/> Limpar
+                                        <Eraser className="w-3.5 h-3.5"/> {t('comms.clear')}
                                     </button>
                                     <button onClick={buscarPublico} disabled={processing} className="w-[70%] bg-slate-800 hover:bg-blue-600 text-white font-black text-[11px] uppercase tracking-widest py-2.5 rounded-lg flex items-center justify-center gap-2 shadow-md transition-all active:scale-95 disabled:opacity-50">
-                                        {processing ? <Loader2 className="w-4 h-4 animate-spin"/> : <Search className="w-4 h-4"/>} Processar Lista
+                                        {processing ? <Loader2 className="w-4 h-4 animate-spin"/> : <Search className="w-4 h-4"/>} {t('comms.process')}
                                     </button>
                                 </div>
                             </div>
@@ -585,28 +589,28 @@ export default function CentralComunicacao() {
                 <div className="lg:col-span-8 space-y-5">
                     <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
                         <h2 className="font-black text-slate-800 dark:text-white uppercase flex items-center gap-2 border-b border-slate-100 dark:border-slate-700 pb-3 mb-4 text-xs tracking-widest">
-                            <MessageSquare className="w-4 h-4 text-green-500"/> 2. Rascunho da Mensagem
+                            <MessageSquare className="w-4 h-4 text-green-500"/> {t('comms.step2')}
                         </h2>
                         
                         <div className="mb-3">
                             <div className="flex flex-wrap gap-2">
-                                {[ { tag: '[PRIMEIRO_NOME]', label: 'Nome / Unidade' }, { tag: '[SAUDACAO]', label: 'Bom dia/tarde' }].map(t => (
-                                    <button key={t.tag} onClick={() => addTag(t.tag)} className="bg-slate-50 hover:bg-blue-50 text-slate-600 text-[10px] font-bold uppercase px-3 py-1.5 rounded-md flex items-center gap-1.5 border border-slate-200 transition-colors shadow-sm">
-                                        <Tags className="w-3 h-3 text-blue-500"/> {t.label}
+                                {[ { tag: '[PRIMEIRO_NOME]', label: t('comms.tagName') }, { tag: '[SAUDACAO]', label: t('comms.tagGreeting') }].map(tagItem => (
+                                    <button key={tagItem.tag} onClick={() => addTag(tagItem.tag)} className="bg-slate-50 hover:bg-blue-50 text-slate-600 text-[10px] font-bold uppercase px-3 py-1.5 rounded-md flex items-center gap-1.5 border border-slate-200 transition-colors shadow-sm">
+                                        <Tags className="w-3 h-3 text-blue-500"/> {tagItem.label}
                                     </button>
                                 ))}
                             </div>
                         </div>
 
-                        <textarea ref={textareaRef} className="w-full h-28 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-800 dark:text-white font-medium focus:border-blue-500 outline-none resize-none custom-scrollbar" value={mensagem} onChange={(e) => setMensagem(e.target.value)} placeholder="Digite sua mensagem aqui..."></textarea>
+                        <textarea ref={textareaRef} className="w-full h-28 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-800 dark:text-white font-medium focus:border-blue-500 outline-none resize-none custom-scrollbar" value={mensagem} onChange={(e) => setMensagem(e.target.value)} placeholder={t('comms.messagePlaceholder')}></textarea>
                     </div>
 
                     {resultadoDesatualizado && (
                         <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl flex items-start gap-3 shadow-sm animate-in fade-in">
                             <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0" />
                             <div>
-                                <h3 className="text-xs font-black text-amber-800 uppercase tracking-tight">Filtros Alterados</h3>
-                                <p className="text-[10px] text-amber-700 mt-0.5 font-bold uppercase tracking-widest">A lista abaixo pode estar desatualizada. Clique em "Processar Lista".</p>
+                                <h3 className="text-xs font-black text-amber-800 uppercase tracking-tight">{t('comms.outdatedTitle')}</h3>
+                                <p className="text-[10px] text-amber-700 mt-0.5 font-bold uppercase tracking-widest">{t('comms.outdatedDesc')}</p>
                             </div>
                         </div>
                     )}
@@ -616,32 +620,32 @@ export default function CentralComunicacao() {
                             <div className="bg-slate-50 dark:bg-slate-900/50 p-4 border-b border-slate-200 dark:border-slate-700 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
                                 <div>
                                     <h2 className="font-black text-slate-800 dark:text-white uppercase flex items-center gap-2 text-xs tracking-widest">
-                                        <Users className="w-4 h-4 text-indigo-500"/> 3. Lista Final ({publicoAlvo})
+                                        <Users className="w-4 h-4 text-indigo-500"/> {t('comms.step3', { audience: t(`comms.audience.${publicoAlvo}`) })}
                                     </h2>
                                     <p className="text-[10px] text-slate-500 font-bold uppercase mt-1 tracking-widest">
-                                        {resultadosBusca.length} CONTATOS VÁLIDOS
+                                        {t('comms.validContacts', { count: resultadosBusca.length }).toUpperCase()}
                                     </p>
                                 </div>
                                 
                                 {/* 🟢 BOTÕES DE AÇÃO COM NOVA EXPORTAÇÃO */}
                                 <div className="flex flex-wrap gap-2 w-full xl:w-auto">
-                                    <button onClick={exportarCSV} disabled={resultadoDesatualizado} className="flex-1 md:flex-none px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-slate-700 rounded-lg text-[10px] font-black uppercase flex items-center justify-center gap-2 transition-colors shadow-sm disabled:opacity-50" title="CSV Simples (WaSeller)">
-                                        <FileSpreadsheet className="w-3.5 h-3.5"/> Baixar CSV
+                                    <button onClick={exportarCSV} disabled={resultadoDesatualizado} className="flex-1 md:flex-none px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-slate-700 rounded-lg text-[10px] font-black uppercase flex items-center justify-center gap-2 transition-colors shadow-sm disabled:opacity-50" title={t('comms.csvTitle')}>
+                                        <FileSpreadsheet className="w-3.5 h-3.5"/> {t('comms.downloadCsv')}
                                     </button>
 
                                     {/* 🟢 GRUPO DA NOVA EXPORTAÇÃO PROFISSIONAL */}
                                     <div className="flex flex-1 md:flex-none flex-row gap-1 border border-slate-200 dark:border-slate-700 p-0.5 rounded-lg bg-slate-50 dark:bg-slate-800">
                                         <button onClick={exportarListaCompleta} disabled={resultadoDesatualizado} className="flex-1 md:flex-none px-4 py-1.5 bg-emerald-600 text-white hover:bg-emerald-700 rounded-md text-[10px] font-black uppercase flex items-center justify-center gap-2 transition-colors shadow-sm disabled:opacity-50">
-                                            <FileSpreadsheet className="w-3.5 h-3.5"/> Exportar Lista
+                                            <FileSpreadsheet className="w-3.5 h-3.5"/> {t('comms.exportList')}
                                         </button>
-                                        <button onClick={() => setOrdemExportacao(prev => prev === 'asc' ? 'desc' : 'asc')} disabled={resultadoDesatualizado} className="px-3 py-1.5 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 rounded-md text-[10px] font-black uppercase flex items-center justify-center transition-colors shadow-sm disabled:opacity-50" title={`Ordenação atual: ${ordemExportacao === 'asc' ? 'A-Z' : 'Z-A'}`}>
+                                        <button onClick={() => setOrdemExportacao(prev => prev === 'asc' ? 'desc' : 'asc')} disabled={resultadoDesatualizado} className="px-3 py-1.5 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 rounded-md text-[10px] font-black uppercase flex items-center justify-center transition-colors shadow-sm disabled:opacity-50" title={t('comms.sortTitle', { order: ordemExportacao === 'asc' ? 'A-Z' : 'Z-A' })}>
                                             <Filter className="w-3 h-3 mr-1"/> {ordemExportacao === 'asc' ? 'A-Z' : 'Z-A'}
                                         </button>
                                     </div>
 
                                     <button onClick={copiarParaDisparador} disabled={resultadoDesatualizado} className={`flex-1 md:flex-none px-4 py-2 text-white rounded-lg text-[10px] font-black uppercase flex items-center justify-center gap-2 transition-colors shadow-sm disabled:opacity-50 ${copiado ? 'bg-green-500' : 'bg-indigo-600 hover:bg-indigo-700'}`}>
                                         {copiado ? <Check className="w-3.5 h-3.5"/> : <Copy className="w-3.5 h-3.5"/>} 
-                                        {copiado ? 'COPIADO! ✅' : 'COPIAR (WASELLER)'}
+                                        {copiado ? t('comms.copied').toUpperCase() : t('comms.copyWaseller').toUpperCase()}
                                     </button>
                                 </div>
                             </div>
@@ -650,17 +654,17 @@ export default function CentralComunicacao() {
                                 <table className="w-full text-left text-sm whitespace-nowrap">
                                     <thead className="bg-white dark:bg-slate-700 text-slate-400 font-black uppercase text-[9px] tracking-widest sticky top-0 z-10 border-b border-slate-100">
                                         <tr>
-                                            <th className="p-3 pl-5">{publicoAlvo === 'professores' ? 'Professor' : publicoAlvo === 'lideres' ? 'Unidade' : 'Mentor'}</th>
-                                            <th className="p-3">{publicoAlvo === 'professores' ? 'Modalidades' : 'Perfil'}</th>
-                                            <th className="p-3">WhatsApp</th>
-                                            <th className="p-3 pr-5 text-center">Teste Rápido</th>
+                                            <th className="p-3 pl-5">{publicoAlvo === 'professores' ? t('comms.colTeacher') : publicoAlvo === 'lideres' ? t('comms.colUnit') : t('comms.colMentor')}</th>
+                                            <th className="p-3">{publicoAlvo === 'professores' ? t('comms.colModalities') : t('comms.colProfile')}</th>
+                                            <th className="p-3">{t('comms.colWhatsapp')}</th>
+                                            <th className="p-3 pr-5 text-center">{t('comms.colQuickTest')}</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-50 dark:divide-slate-700/50">
                                         {resultadosBusca.length === 0 ? (
                                             <tr>
                                                 <td colSpan="4" className="p-10 text-center text-slate-400 font-bold uppercase tracking-widest text-xs">
-                                                    Nenhum contato encontrado.
+                                                    {t('comms.noContacts')}
                                                 </td>
                                             </tr>
                                         ) : (
@@ -674,7 +678,7 @@ export default function CentralComunicacao() {
                                                     <td className="p-3 font-mono font-medium text-xs text-slate-500">{p.telefoneFormatado}</td>
                                                     <td className="p-3 pr-5 text-center">
                                                         <button onClick={() => dispararIndividual(p)} className="p-1.5 bg-slate-100 text-slate-600 hover:bg-green-500 hover:text-white rounded-md transition-colors inline-flex items-center gap-1.5 shadow-sm font-bold text-[9px] uppercase border border-slate-200 hover:border-transparent">
-                                                            <Smartphone className="w-3.5 h-3.5"/> Enviar
+                                                            <Smartphone className="w-3.5 h-3.5"/> {t('comms.send')}
                                                         </button>
                                                     </td>
                                                 </tr>

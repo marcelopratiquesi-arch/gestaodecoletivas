@@ -1,0 +1,12 @@
+{
+  "subtitle": "Gestión de Colectivas",
+  "emailLabel": "Usuario / Correo",
+  "emailPlaceholder": "tu@correo.com",
+  "passwordLabel": "Contraseña",
+  "passwordPlaceholder": "••••••••",
+  "button": "INGRESAR AL SISTEMA",
+  "loading": "Accediendo...",
+  "forgotPassword": "¿Olvidaste tu contraseña?",
+  "support": "Contacta al soporte",
+  "version": "v2.5.0 • Pratique Fitness"
+}

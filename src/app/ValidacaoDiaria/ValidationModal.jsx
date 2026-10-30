@@ -5,11 +5,18 @@ import {
 } from 'lucide-react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../services/firebase'; 
+import { useTranslation, Trans } from 'react-i18next';
+import { getCurrencySymbol, formatCancelReason, formatSubstitutionReason } from '../../utils/formatters';
+
+// Valores gravados no banco (em português); o texto exibido vem da tradução.
+const OPCOES_CANCELAMENTO = ["Feriado", "Férias Professor", "Atestado Médico", "Manutenção Unidade", "Falta sem Justificativa", "Chuva/Clima"];
+const OPCOES_SUBSTITUICAO = ["Atestado do Titular", "Férias", "Folga Programada", "Emergência", "Outros"];
 
 export function ValidationModal({ 
     isOpen, onClose, onConfirm, onRevert, 
     acaoAtual, catalogs, processando, isMaster 
 }) {
+    const { t } = useTranslation();
     // --- ESTADOS GERAIS ---
     const [inputValor, setInputValor] = useState(""); 
     const [inputObs, setInputObs] = useState(""); 
@@ -64,8 +71,7 @@ export function ValidationModal({
                 } else {
                     if(item.status === 'cancelada') {
                         const motivo = item.validacao.motivoCancelamento || "";
-                        const motivosPadrao = ["Feriado", "Férias Professor", "Atestado Médico", "Manutenção Unidade", "Falta sem Justificativa", "Chuva/Clima"];
-                        if (motivosPadrao.includes(motivo)) {
+                        if (OPCOES_CANCELAMENTO.includes(motivo)) {
                             setInputValor(motivo);
                         } else {
                             setInputValor("Outros");
@@ -82,7 +88,7 @@ export function ValidationModal({
     // --- FUNÇÃO DE BUSCA NO BANCO DE DADOS ---
     const handleBuscarProfessor = async () => {
         if (!emailBusca.trim()) {
-            setErroBusca("Digite o e-mail do professor.");
+            setErroBusca(t('dailyValidation.search.typeEmail'));
             return;
         }
 
@@ -95,7 +101,7 @@ export function ValidationModal({
             const querySnapshot = await getDocs(q);
 
             if (querySnapshot.empty) {
-                setErroBusca("Professor não encontrado com este e-mail.");
+                setErroBusca(t('dailyValidation.search.notFound'));
             } else {
                 const docData = querySnapshot.docs[0].data();
                 setProfessorEncontrado({
@@ -105,7 +111,7 @@ export function ValidationModal({
             }
         } catch (error) {
             console.error("Erro ao buscar professor:", error);
-            setErroBusca("Erro ao conectar com o banco de dados.");
+            setErroBusca(t('dailyValidation.search.connectionError'));
         } finally {
             setBuscandoProf(false);
         }
@@ -118,15 +124,15 @@ export function ValidationModal({
         
         // Validação Aulão
         if (acaoAtual.tipo === 'aulao') {
-            if (!professorEncontrado) return alert("Busque e selecione o professor.");
-            if (!aulaoModalidadeId) return alert("Selecione a modalidade.");
-            if (!aulaoData) return alert("Selecione a data.");
-            if (!inputValor) return alert("Informe a quantidade de alunos.");
+            if (!professorEncontrado) return alert(t('dailyValidation.alerts.searchTeacher'));
+            if (!aulaoModalidadeId) return alert(t('dailyValidation.alerts.selectModality'));
+            if (!aulaoData) return alert(t('dailyValidation.alerts.selectDate'));
+            if (!inputValor) return alert(t('dailyValidation.alerts.informStudentCount'));
         }
 
         // Validação Substituição
         if (acaoAtual.tipo === 'validar' && isSubstituicao && !professorEncontrado) {
-            alert("Por favor, busque e confirme o professor substituto pelo e-mail.");
+            alert(t('dailyValidation.alerts.confirmSubstitute'));
             return;
         }
 
@@ -177,11 +183,11 @@ export function ValidationModal({
     // Configuração de cores e ícones baseada no tipo
     const getHeaderConfig = () => {
         switch(acaoAtual.tipo) {
-            case 'validar': return { bg: 'bg-emerald-50 dark:bg-emerald-900/20', text: 'text-emerald-700 dark:text-emerald-400', icon: <CircleCheck className="w-8 h-8"/>, title: 'Validar Aula' };
-            case 'cancelar': return { bg: 'bg-rose-50 dark:bg-rose-900/20', text: 'text-rose-700 dark:text-rose-400', icon: <CircleX className="w-8 h-8"/>, title: 'Cancelar Aula' };
+            case 'validar': return { bg: 'bg-emerald-50 dark:bg-emerald-900/20', text: 'text-emerald-700 dark:text-emerald-400', icon: <CircleCheck className="w-8 h-8"/>, title: t('dailyValidation.modal.validateTitle') };
+            case 'cancelar': return { bg: 'bg-rose-50 dark:bg-rose-900/20', text: 'text-rose-700 dark:text-rose-400', icon: <CircleX className="w-8 h-8"/>, title: t('dailyValidation.modal.cancelTitle') };
             case 'aulao': 
-                if (etapaAulao === 'aviso') return { bg: 'bg-amber-50 dark:bg-amber-900/20', text: 'text-amber-600', icon: <AlertTriangle className="w-8 h-8"/>, title: 'Atenção!' };
-                return { bg: 'bg-purple-50 dark:bg-purple-900/20', text: 'text-purple-700 dark:text-purple-400', icon: <Star className="w-8 h-8"/>, title: 'Registrar Aulão' };
+                if (etapaAulao === 'aviso') return { bg: 'bg-amber-50 dark:bg-amber-900/20', text: 'text-amber-600', icon: <AlertTriangle className="w-8 h-8"/>, title: t('dailyValidation.modal.attentionTitle') };
+                return { bg: 'bg-purple-50 dark:bg-purple-900/20', text: 'text-purple-700 dark:text-purple-400', icon: <Star className="w-8 h-8"/>, title: t('dailyValidation.modal.specialClassTitle') };
             default: return {};
         }
     }
@@ -198,7 +204,7 @@ export function ValidationModal({
                     {config.icon}
                 </div>
                 <h3 className="font-black text-xl text-slate-800 dark:text-white">
-                    {acaoAtual.item?.status === 'cancelada' ? 'Detalhes do Cancelamento' : config.title}
+                    {acaoAtual.item?.status === 'cancelada' ? t('dailyValidation.modal.cancellationDetailsTitle') : config.title}
                 </h3>
                 {acaoAtual.tipo !== 'aulao' && (
                     <p className="text-xs font-bold text-slate-400 uppercase mt-1 tracking-wide">{acaoAtual.item.modalidade?.nome} • {acaoAtual.item.professorTitular?.nome}</p>
@@ -214,17 +220,17 @@ export function ValidationModal({
                     <div className="space-y-6 text-center">
                         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-left">
                             <p className="text-sm text-amber-800 font-medium leading-relaxed">
-                                Você tem certeza que deseja cadastrar este <strong>Aulão Especial</strong>?
+                                <Trans i18nKey="dailyValidation.modal.specialWarningQuestion" components={{ strong: <strong /> }} />
                             </p>
                             <p className="text-xs text-amber-700 mt-2">
-                                • Esta aula <strong>NÃO</strong> faz parte do cronograma fixo.<br/>
-                                • Verifique se realmente é um dia/horário especial.<br/>
-                                • Se a aula existe na grade, use a validação normal.
+                                • <Trans i18nKey="dailyValidation.modal.specialWarningNotInSchedule" components={{ strong: <strong /> }} /><br/>
+                                • {t('dailyValidation.modal.specialWarningCheckDay')}<br/>
+                                • {t('dailyValidation.modal.specialWarningUseNormal')}
                             </p>
                         </div>
                         <div className="flex gap-3">
-                            <button onClick={onClose} className="flex-1 py-3 border border-slate-300 rounded-xl text-slate-600 font-bold text-xs uppercase hover:bg-slate-50">Cancelar</button>
-                            <button onClick={() => setEtapaAulao('form')} className="flex-1 py-3 bg-amber-500 text-white rounded-xl font-bold text-xs uppercase hover:bg-amber-600 shadow-lg shadow-amber-500/20">Sim, é Especial</button>
+                            <button onClick={onClose} className="flex-1 py-3 border border-slate-300 rounded-xl text-slate-600 font-bold text-xs uppercase hover:bg-slate-50">{t('common.actions.cancel')}</button>
+                            <button onClick={() => setEtapaAulao('form')} className="flex-1 py-3 bg-amber-500 text-white rounded-xl font-bold text-xs uppercase hover:bg-amber-600 shadow-lg shadow-amber-500/20">{t('dailyValidation.modal.yesSpecial')}</button>
                         </div>
                     </div>
                 )}
@@ -235,7 +241,7 @@ export function ValidationModal({
                         
                         {/* 1. Buscar Professor */}
                         <div className="p-4 border-2 border-purple-100 bg-purple-50/30 rounded-xl space-y-3">
-                            <label className="block text-[10px] font-bold text-purple-600 uppercase mb-1">Quem dará o aulão? (E-mail)</label>
+                            <label className="block text-[10px] font-bold text-purple-600 uppercase mb-1">{t('dailyValidation.modal.whoTeaches')}</label>
                             <div className="flex gap-2">
                                 <div className="relative flex-1">
                                     <Mail className="absolute left-3 top-2.5 w-4 h-4 text-purple-400"/>
@@ -262,7 +268,7 @@ export function ValidationModal({
                             {professorEncontrado && (
                                 <div className="flex items-center gap-3 p-2 bg-white rounded-lg border border-purple-200 shadow-sm animate-in fade-in">
                                     <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center overflow-hidden">
-                                        {professorEncontrado.fotoUrl ? <img src={professorEncontrado.fotoUrl} alt="Foto" className="w-full h-full object-cover"/> : <User className="w-4 h-4 text-slate-400"/>}
+                                        {professorEncontrado.fotoUrl ? <img src={professorEncontrado.fotoUrl} alt={t('dailyValidation.modal.photoAlt')} className="w-full h-full object-cover"/> : <User className="w-4 h-4 text-slate-400"/>}
                                     </div>
                                     <p className="text-sm font-black text-slate-800 truncate flex-1">{professorEncontrado.nome}</p>
                                     <Check className="w-4 h-4 text-purple-500"/>
@@ -273,14 +279,14 @@ export function ValidationModal({
                         {/* 2. Data e Hora */}
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Data</label>
+                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{t('dailyValidation.modal.date')}</label>
                                 <div className="relative">
                                     <Calendar className="absolute left-3 top-2.5 w-4 h-4 text-slate-400"/>
                                     <input type="date" className="w-full pl-9 p-2.5 border rounded-xl text-sm font-bold bg-slate-50" value={aulaoData} onChange={e => setAulaoData(e.target.value)} />
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Horário</label>
+                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{t('dailyValidation.modal.time')}</label>
                                 <div className="relative">
                                     <Clock className="absolute left-3 top-2.5 w-4 h-4 text-slate-400"/>
                                     <input type="time" className="w-full pl-9 p-2.5 border rounded-xl text-sm font-bold bg-slate-50" value={aulaoHora} onChange={e => setAulaoHora(e.target.value)} />
@@ -290,23 +296,23 @@ export function ValidationModal({
 
                         {/* 3. Modalidade e Detalhes */}
                         <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Modalidade</label>
+                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{t('dailyValidation.modal.modality')}</label>
                             <select className="w-full p-2.5 border rounded-xl text-sm font-bold bg-white" value={aulaoModalidadeId} onChange={e => setAulaoModalidadeId(e.target.value)}>
-                                <option value="">Selecione...</option>
+                                <option value="">{t('common.actions.select')}</option>
                                 {catalogs.modalidades.map(m => <option key={m.id} value={m.id}>{m.nome}</option>)}
                             </select>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Valor Pago (R$)</label>
+                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{t('dailyValidation.modal.amountPaid', { symbol: getCurrencySymbol(acaoAtual.item?.unidade?.pais) })}</label>
                                 <div className="relative">
                                     <DollarSign className="absolute left-3 top-2.5 w-4 h-4 text-slate-400"/>
                                     <input type="number" placeholder="0,00" className="w-full pl-9 p-2.5 border rounded-xl text-sm font-bold" value={aulaoValor} onChange={e => setAulaoValor(e.target.value)} />
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Qtd. Alunos</label>
+                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{t('dailyValidation.modal.studentCount')}</label>
                                 <div className="relative">
                                     <Users className="absolute left-3 top-2.5 w-4 h-4 text-slate-400"/>
                                     <input type="number" placeholder="0" className="w-full pl-9 p-2.5 border rounded-xl text-sm font-bold" value={inputValor} onChange={e => setInputValor(e.target.value)} />
@@ -328,8 +334,8 @@ export function ValidationModal({
                                         </div>
                                         <input type="checkbox" className="hidden" checked={isSubstituicao} onChange={(e) => setIsSubstituicao(e.target.checked)}/>
                                         <div className="flex-1">
-                                            <span className={`block font-bold text-sm ${isSubstituicao ? 'text-blue-700' : 'text-slate-600'}`}>Substituição de Professor</span>
-                                            <span className="text-[10px] text-slate-400">Marque se outro professor deu esta aula</span>
+                                            <span className={`block font-bold text-sm ${isSubstituicao ? 'text-blue-700' : 'text-slate-600'}`}>{t('dailyValidation.modal.substitution')}</span>
+                                            <span className="text-[10px] text-slate-400">{t('dailyValidation.modal.substitutionHint')}</span>
                                         </div>
                                         <ArrowRightLeft className={`w-5 h-5 ${isSubstituicao ? 'text-blue-500' : 'text-slate-300'}`}/>
                                     </label>
@@ -338,7 +344,7 @@ export function ValidationModal({
                                         <div className="px-4 pb-4 space-y-3 animate-in slide-in-from-top-2">
                                             <div className="h-px w-full bg-blue-200 mb-3"></div>
                                             <div>
-                                                <label className="block text-[10px] font-bold text-blue-600 uppercase mb-1">E-mail do Substituto</label>
+                                                <label className="block text-[10px] font-bold text-blue-600 uppercase mb-1">{t('dailyValidation.modal.substituteEmail')}</label>
                                                 <div className="flex gap-2">
                                                     <div className="relative flex-1">
                                                         <Mail className="absolute left-3 top-2.5 w-4 h-4 text-blue-400"/>
@@ -358,7 +364,7 @@ export function ValidationModal({
                                                         className="bg-blue-600 text-white px-3 rounded-lg font-bold text-xs hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1"
                                                     >
                                                         {buscandoProf ? <Loader2 className="w-3 h-3 animate-spin"/> : <Search className="w-3 h-3"/>}
-                                                        Buscar
+                                                        {t('dailyValidation.modal.search')}
                                                     </button>
                                                 </div>
                                                 {erroBusca && <p className="text-[10px] text-red-500 font-bold mt-1 ml-1">{erroBusca}</p>}
@@ -368,13 +374,13 @@ export function ValidationModal({
                                                 <div className="flex items-center gap-3 p-3 bg-white rounded-xl border border-blue-200 shadow-sm animate-in fade-in">
                                                     <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center overflow-hidden border border-slate-300">
                                                         {professorEncontrado.fotoUrl ? (
-                                                            <img src={professorEncontrado.fotoUrl} alt="Foto" className="w-full h-full object-cover"/>
+                                                            <img src={professorEncontrado.fotoUrl} alt={t('dailyValidation.modal.photoAlt')} className="w-full h-full object-cover"/>
                                                         ) : (
                                                             <User className="w-5 h-5 text-slate-400"/>
                                                         )}
                                                     </div>
                                                     <div className="min-w-0">
-                                                        <p className="text-[10px] font-bold text-blue-600 uppercase">Substituto Confirmado</p>
+                                                        <p className="text-[10px] font-bold text-blue-600 uppercase">{t('dailyValidation.modal.substituteConfirmed')}</p>
                                                         <p className="text-sm font-black text-slate-800 truncate">{professorEncontrado.nome}</p>
                                                     </div>
                                                     <Check className="w-5 h-5 text-emerald-500 ml-auto"/>
@@ -382,15 +388,11 @@ export function ValidationModal({
                                             )}
 
                                             <div>
-                                                <label className="block text-[10px] font-bold text-blue-600 uppercase mb-1">Motivo da Troca</label>
+                                                <label className="block text-[10px] font-bold text-blue-600 uppercase mb-1">{t('dailyValidation.modal.substitutionReason')}</label>
                                                 <div className="relative">
                                                     <select className="w-full p-2.5 bg-white border border-blue-200 rounded-xl text-sm font-semibold text-slate-700 focus:ring-2 focus:ring-blue-500 outline-none appearance-none" value={motivoSubstituicao} onChange={(e) => setMotivoSubstituicao(e.target.value)}>
-                                                        <option value="">Selecione...</option>
-                                                        <option value="Atestado do Titular">Atestado do Titular</option>
-                                                        <option value="Férias">Férias</option>
-                                                        <option value="Folga Programada">Folga Programada</option>
-                                                        <option value="Emergência">Emergência</option>
-                                                        <option value="Outros">Outros</option>
+                                                        <option value="">{t('common.actions.select')}</option>
+                                                        {OPCOES_SUBSTITUICAO.map(m => <option key={m} value={m}>{formatSubstitutionReason(m)}</option>)}
                                                     </select>
                                                     <ChevronDown className="absolute right-3 top-3 w-4 h-4 text-blue-400 pointer-events-none"/>
                                                 </div>
@@ -400,7 +402,7 @@ export function ValidationModal({
                                 </div>
 
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2 ml-1">Quantidade de Alunos</label>
+                                    <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2 ml-1">{t('dailyValidation.modal.numberOfStudents')}</label>
                                     <div className="relative group">
                                         <Users className="absolute left-4 top-3.5 w-5 h-5 text-slate-300 group-focus-within:text-emerald-500 transition-colors"/>
                                         <input type="number" min="0" className="w-full pl-12 p-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-emerald-500 rounded-xl text-xl font-bold text-slate-800 dark:text-white outline-none transition-all placeholder:text-slate-300" value={inputValor} onChange={e => setInputValor(e.target.value)} placeholder="00" autoFocus />
@@ -411,7 +413,7 @@ export function ValidationModal({
                             <div className="space-y-4">
                                 {/* Select de Cancelamento */}
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2 ml-1">Motivo do Cancelamento</label>
+                                    <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2 ml-1">{t('dailyValidation.modal.cancelReason')}</label>
                                     <div className="relative">
                                         <select 
                                             className={`w-full p-3 bg-slate-50 border-2 border-transparent rounded-xl text-sm font-bold text-slate-700 outline-none appearance-none ${acaoAtual.item.status === 'cancelada' ? 'cursor-not-allowed opacity-70' : 'focus:border-rose-500'}`} 
@@ -419,34 +421,29 @@ export function ValidationModal({
                                             onChange={e => setInputValor(e.target.value)}
                                             disabled={acaoAtual.item.status === 'cancelada'}
                                         >
-                                        <option value="">Selecione o motivo...</option>
-                                        <option value="Feriado">Feriado</option>
-                                        <option value="Férias Professor">Férias Professor</option>
-                                        <option value="Atestado Médico">Atestado Médico</option>
-                                        <option value="Manutenção Unidade">Manutenção Unidade</option>
-                                        <option value="Falta sem Justificativa">Falta sem Justificativa</option>
-                                        <option value="Chuva/Clima">Chuva/Clima</option>
-                                        <option value="Outros">Outros (Descrever)</option>
+                                        <option value="">{t('dailyValidation.modal.selectReason')}</option>
+                                        {OPCOES_CANCELAMENTO.map(m => <option key={m} value={m}>{formatCancelReason(m)}</option>)}
+                                        <option value="Outros">{t('dailyValidation.modal.otherDescribe')}</option>
                                         </select>
                                         <ChevronDown className="absolute right-4 top-4 w-4 h-4 text-slate-400 pointer-events-none"/>
                                     </div>
                                 </div>
                                 {(inputValor === 'Outros' || inputObs) && (
                                     <div className="animate-fade-in">
-                                        <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2 ml-1">Descrição do motivo</label>
+                                        <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2 ml-1">{t('dailyValidation.modal.reasonDescription')}</label>
                                         <textarea 
                                             className="w-full p-3 bg-slate-50 border-2 border-transparent rounded-xl text-sm font-medium text-slate-700 outline-none resize-none disabled:opacity-70" 
                                             rows="3" 
                                             value={inputObs} 
                                             onChange={e => setInputObs(e.target.value)} 
-                                            placeholder="Descrição..."
+                                            placeholder={t('dailyValidation.modal.descriptionPlaceholder')}
                                             disabled={acaoAtual.item.status === 'cancelada'}
                                         />
                                     </div>
                                 )}
                                 <div className="p-3 bg-rose-50 border border-rose-100 rounded-lg text-rose-600 text-xs flex gap-2">
                                     <AlertTriangle className="w-4 h-4 shrink-0" />
-                                    <p>Atenção: Aulas canceladas não geram pagamento para o professor titular.</p>
+                                    <p>{t('dailyValidation.modal.cancelWarning')}</p>
                                 </div>
                             </div>
                         )}
@@ -459,21 +456,21 @@ export function ValidationModal({
                 <div className="p-6 border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 flex gap-3 shrink-0">
                     {acaoAtual.item?.status === 'cancelada' ? (
                         <>
-                            <button type="button" onClick={onClose} className="flex-1 py-3.5 text-slate-500 font-bold hover:bg-slate-50 rounded-xl transition-colors">Fechar</button>
+                            <button type="button" onClick={onClose} className="flex-1 py-3.5 text-slate-500 font-bold hover:bg-slate-50 rounded-xl transition-colors">{t('common.actions.close')}</button>
                             {isMaster && (
                                 <button type="button" onClick={onRevert} disabled={processando} className="flex-[2] py-3.5 text-white font-bold rounded-xl shadow-lg flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 shadow-amber-500/30 transition-all">
-                                    {processando ? <Loader2 className="w-5 h-5 animate-spin"/> : <><Undo2 className="w-5 h-5"/> Reverter Cancelamento</>}
+                                    {processando ? <Loader2 className="w-5 h-5 animate-spin"/> : <><Undo2 className="w-5 h-5"/> {t('dailyValidation.modal.revertCancellation')}</>}
                                 </button>
                             )}
                         </>
                     ) : (
                         <>
-                            <button type="button" onClick={onClose} className="flex-1 py-3.5 text-slate-500 font-bold hover:bg-slate-50 rounded-xl transition-colors">Cancelar</button>
+                            <button type="button" onClick={onClose} className="flex-1 py-3.5 text-slate-500 font-bold hover:bg-slate-50 rounded-xl transition-colors">{t('common.actions.cancel')}</button>
                             <button type="submit" form="form-validacao" disabled={processando} className={`flex-[2] py-3.5 text-white font-bold rounded-xl shadow-lg flex items-center justify-center gap-2 transform active:scale-95 transition-all ${
                                 acaoAtual.tipo === 'validar' ? 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/30' : 
                                 acaoAtual.tipo === 'aulao' ? 'bg-purple-600 hover:bg-purple-700 shadow-purple-500/30' :
                                 'bg-rose-500 hover:bg-rose-600 shadow-rose-500/30'}`}>
-                                {processando ? <Loader2 className="w-5 h-5 animate-spin"/> : 'Confirmar'}
+                                {processando ? <Loader2 className="w-5 h-5 animate-spin"/> : t('common.actions.confirm')}
                             </button>
                         </>
                     )}

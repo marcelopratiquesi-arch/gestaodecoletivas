@@ -1,0 +1,12 @@
+{
+  "subtitle": "Group Classes Management",
+  "emailLabel": "Username / Email",
+  "emailPlaceholder": "your@email.com",
+  "passwordLabel": "Password",
+  "passwordPlaceholder": "••••••••",
+  "button": "LOGIN TO SYSTEM",
+  "loading": "Accessing...",
+  "forgotPassword": "Forgot your password?",
+  "support": "Contact support",
+  "version": "v2.5.0 • Pratique Fitness"
+}

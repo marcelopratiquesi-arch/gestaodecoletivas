@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Moon, Power, Activity } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import i18n from '../i18n';
 
 export default function VigiaNoturno({ children, timeoutMinutes = 15 }) {
+    useTranslation(); // re-renderiza ao trocar o idioma
     const [isIdle, setIsIdle] = useState(false);
 
     useEffect(() => {
@@ -51,11 +54,11 @@ export default function VigiaNoturno({ children, timeoutMinutes = 15 }) {
                     </div>
                     
                     <h2 className="text-2xl font-black text-white uppercase tracking-widest mb-3">
-                        SISTEMA EM SONECA
+                        {i18n.t('misc.sleep.title')}
                     </h2>
                     
                     <p className="text-slate-400 text-sm font-bold leading-relaxed mb-8 uppercase tracking-wide px-2">
-                        A CONEXÃO DE DADOS FOI PAUSADA POR INATIVIDADE PARA EVITAR CONSUMO DESNECESSÁRIO DE SERVIDOR. 
+                        {i18n.t('misc.sleep.desc')}
                     </p>
                     
                     <button 
@@ -63,7 +66,7 @@ export default function VigiaNoturno({ children, timeoutMinutes = 15 }) {
                         className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-black text-sm rounded-xl transition-all shadow-lg shadow-blue-600/20 flex items-center justify-center gap-3 uppercase tracking-widest group"
                     >
                         <Power className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                        RECONECTAR SISTEMA
+                        {i18n.t('misc.sleep.reconnect')}
                     </button>
 
                     <div className="mt-6 flex items-center gap-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest">

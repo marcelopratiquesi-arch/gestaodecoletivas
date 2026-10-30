@@ -1,0 +1,57 @@
+{
+  "play": {
+    "subtitle": "The network library",
+    "albums": "Albums",
+    "favorites": "Favorites",
+    "noFavorites": "No favorites yet",
+    "noFavoritesHint": "Browse the albums and tap the heart.",
+    "cover": "Cover",
+    "playlist": "Playlist",
+    "tracksCount": "{{count}} tracks",
+    "groupClasses": "Group Classes",
+    "loadingTrack": "Loading track...",
+    "clickToExpand": "Click to expand"
+  },
+  "sleep": {
+    "title": "System asleep",
+    "desc": "The data connection was paused due to inactivity to avoid unnecessary server usage.",
+    "reconnect": "Reconnect system"
+  },
+  "secure": {
+    "restricted": "Restricted Area",
+    "confirmPin": "Confirm your security PIN",
+    "wrongPin": "Wrong Password"
+  },
+  "access": {
+    "title": "Access Control",
+    "subtitle": "Manage hierarchies, permissions and passwords for every user in the network.",
+    "search": "Search user or e-mail...",
+    "deniedTitle": "Access Denied",
+    "deniedDesc": "Area restricted to the system Board (Master).",
+    "colName": "User Name",
+    "colEmail": "Login E-mail",
+    "colRole": "Access Level (Role)",
+    "colActions": "Security Actions",
+    "noName": "Name not registered",
+    "notFound": "Not found",
+    "resetPassword": "Reset Password",
+    "empty": "No users found in the database.",
+    "roles": {
+      "admin": "Admin (Master)",
+      "mentor": "Mentor",
+      "unidade": "Unit (Leader)",
+      "professor": "Teacher",
+      "bloqueado": "No Access (Blocked)"
+    },
+    "messages": {
+      "loadError": "Error fetching users from the database.",
+      "confirmRole": "Are you sure you want to change the access of {{name}} to {{role}}?",
+      "roleUpdated": "✅ Permission for {{name}} updated successfully!",
+      "roleError": "Error changing permission.",
+      "noEmail": "This user has no valid login e-mail registered.",
+      "confirmReset": "Send a password reset link to the e-mail: {{email}}?",
+      "resetSent": "✅ Recovery link sent to {{email}}!",
+      "resetError": "Error sending e-mail. Check that the e-mail is correct in Firebase Auth."
+    }
+  }
+}

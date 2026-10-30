@@ -1,0 +1,133 @@
+{
+  "syncing": "Sincronizando sistema...",
+  "title": "Validação Coletiva",
+  "subtitle": "Monitoramento de adesão e auditoria em tempo real",
+  "exportCsv": "Exportar CSV",
+  "filters": {
+    "states": "Estados",
+    "mentors": "Mentores",
+    "units": "Unidades"
+  },
+  "locked": {
+    "title": "Selecione um filtro para iniciar",
+    "desc": "Selecione um Estado, Mentor ou Unidade no filtro acima para carregar os dados do sistema."
+  },
+  "kpis": {
+    "expectedClasses": "Aulas Esperadas",
+    "units100": "Unidades 100%",
+    "ofUnits": "De {{count}} unidades",
+    "pendingUnits": "Unidades Pendentes"
+  },
+  "tabs": {
+    "ranking": "Ranking",
+    "status": "Status Detalhado",
+    "collection": "Central de Cobrança"
+  },
+  "badges": {
+    "congrats": "Parabéns!",
+    "allOk": "Tudo OK!",
+    "inProgress": "Em Andamento",
+    "underConstruction": "Em Construção",
+    "awaitingStart": "Aguardando Início",
+    "awaiting": "Aguardando",
+    "done": "Realizada",
+    "validated": "Validada",
+    "canceled": "Cancelada",
+    "holiday": "Feriado",
+    "late": "Atrasado",
+    "pending": "Pendente",
+    "future": "Futuro"
+  },
+  "ranking": {
+    "classesCount": "{{done}}/{{expected}} aulas",
+    "unitsCount": "{{count}} unidades",
+    "score": "Score",
+    "pendencies": "Pendências",
+    "absences_one": "{{count}} falta",
+    "absences_other": "{{count}} faltas",
+    "status": "Status",
+    "allOk": "Tudo OK",
+    "waiting": "Aguardando dados..."
+  },
+  "status": {
+    "title": "Detalhamento por unidade",
+    "hint": "Clique na linha para expandir as aulas",
+    "showAll": "Mostrar todas",
+    "filterIssues": "Filtrar pendências",
+    "colUnitMentor": "Unidade / Mentor",
+    "colProgress": "Progresso",
+    "colStatus": "Status",
+    "colLastUpdate": "Última atualização",
+    "colResponsible": "Responsável",
+    "colActions": "Ações",
+    "noSchedule": "Sem cronograma",
+    "ok100": "100% OK",
+    "pendencies": "{{count}} pendência(s)",
+    "waiting": "Aguardando...",
+    "copyMessage": "Copiar mensagem",
+    "sendWhatsApp": "Enviar no WhatsApp",
+    "colDateTime": "Data / Hora",
+    "colModality": "Modalidade",
+    "colTeacher": "Professor",
+    "colStatusFlow": "Status / Fluxo",
+    "colValidationData": "Dados da validação",
+    "students": "{{count}} alunos",
+    "atTime": "às {{time}}",
+    "recessHoliday": "Recesso / Feriado",
+    "noUnits": "Nenhuma unidade encontrada.",
+    "loadMore": "Carregar mais dados"
+  },
+  "collection": {
+    "title": "Relatório geral ({{scope}})",
+    "scopeMyUnits": "Minhas unidades",
+    "scopeMentors": "Grupo de mentores",
+    "subtitle": "Resumo consolidado para cobrança em massa.",
+    "copyReport": "Copiar relatório",
+    "colUnit": "Unidade",
+    "colMentor": "Mentor",
+    "colScore": "Score",
+    "colPendencies": "Pendências detalhadas",
+    "colActions": "Ações de cobrança",
+    "copy": "Copiar",
+    "whatsapp": "WhatsApp",
+    "noPendencies": "Nenhuma pendência encontrada. A rede está 100%!"
+  },
+  "alerts": {
+    "noPhone": "⚠️ TELEFONE NÃO CADASTRADO!",
+    "copied": "TEXTO COPIADO COM SUCESSO!"
+  },
+  "csv": {
+    "unit": "UNIDADE",
+    "mentor": "MENTOR",
+    "done": "REALIZADO",
+    "expected": "ESPERADO",
+    "status": "STATUS",
+    "progress": "PROGRESSO",
+    "pendencies": "PENDÊNCIAS"
+  },
+  "messages": {
+    "adminToMentor": {
+      "greeting": "OLÁ LÍDER {{name}}, TUDO BEM? 🚀",
+      "intro": "ESTOU ACOMPANHANDO O PLACAR DE VALIDAÇÕES DAS SUAS UNIDADES COLETIVAS:",
+      "congratsTitle": "🏆 *PARABÉNS (100% OK):*",
+      "pendingTitle": "🚨 *PRECISAM DE ATENÇÃO (PENDÊNCIAS):*",
+      "pendingLine": "⚠️ *{{unit}}* (FALTAM {{count}} AULAS: {{dates}})",
+      "pendingClosing": "CONSEGUE VERIFICAR COM OS LÍDERES DESSAS UNIDADES PARA REGULARIZAREM HOJE? CONTO COM A SUA GESTÃO! 👊",
+      "allDone": "SUA REDE ESTÁ 100% IMPECÁVEL! PARABÉNS PELO ACOMPANHAMENTO! 🏆👏"
+    },
+    "mentorToUnit": "FALA LÍDER *{{unit}}*, IDENTIFICAMOS PENDÊNCIAS NA VALIDAÇÃO DAS COLETIVAS.\nDIAS: {{dates}}\nCONSEGUE REGULARIZAR HOJE? 🚀",
+    "generalTitle": "📢 *STATUS VALIDAÇÃO COLETIVA - {{period}}*",
+    "adminGeneral": {
+      "congratsTitle": "🏆 *PARABÉNS (100% VALIDADO):*",
+      "pendingTitle": "⚠️ *PENDENTES DE VALIDAÇÃO:*",
+      "line": "{{emoji}} {{name}} ({{count}} FALTAS)",
+      "footer": "GESTÃO DE COLETIVAS - PRATIQUE FITNESS 💪"
+    },
+    "mentorGeneral": {
+      "congratsTitle": "🏆 *UNIDADES EM DIA (100%):*",
+      "pendingTitle": "⚠️ *ATENÇÃO (PENDÊNCIAS):*",
+      "line": "{{emoji}} {{name}} ({{count}} FALTAS)",
+      "footer": "BORA REGULARIZAR E GARANTIR A EXCELÊNCIA NAS AULAS! CONTO COM TODOS. 🚀"
+    }
+  }
+}

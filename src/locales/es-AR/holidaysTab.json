@@ -1,0 +1,55 @@
+{
+  "title": "Programar Receso o Feriado",
+  "desc": "Las clases del lugar elegido aparecen como canceladas (feriado) en el período: sin pago y sin pendientes.",
+  "eventName": "Nombre del Evento",
+  "eventPlaceholder": "Ej: Receso de Carnaval",
+  "startDate": "Fecha Inicio",
+  "endDate": "Fecha Fin",
+  "type": "Tipo",
+  "types": {
+    "recess": "Receso",
+    "national": "Feriado Nacional",
+    "municipal": "Feriado Municipal"
+  },
+  "processing": "Procesando...",
+  "create": "Crear Receso",
+  "calendar": "Calendario de Descansos",
+  "range": "{{start}} al {{end}}",
+  "none": "No hay recesos ni feriados registrados.",
+  "messages": {
+    "fillRequired": "¡Completá el nombre y las fechas!",
+    "confirmCreate": "ATENCIÓN: las clases de {{scope}} entre el {{start}} y el {{end}} van a aparecer como canceladas (feriado).\n\n¿Querés continuar?",
+    "created": "¡Feriado registrado! Las clases de {{scope}} en ese período aparecen como canceladas.",
+    "saveError": "Error al guardar el feriado.",
+    "confirmDelete": "¿Querés eliminar el feriado \"{{name}}\"?\n\nLas clases de ese período vuelven a aparecer normalmente. Las validaciones hechas por personas no se modifican.",
+    "deleteError": "Error al eliminar",
+    "invalidRange": "La fecha final no puede ser anterior a la inicial.",
+    "selectScopeTarget": "Elegí dónde aplica el feriado (provincia, ciudad o sedes)."
+  },
+  "scope": "Dónde aplica el feriado",
+  "scopes": {
+    "rede": "Toda la red",
+    "pais": "País",
+    "estado": "Provincia",
+    "cidade": "Ciudad",
+    "unidades": "Sedes específicas"
+  },
+  "country": "País",
+  "state": "Provincia",
+  "city": "Ciudad",
+  "cityPlaceholder": "Ej: Córdoba",
+  "cityHint": "Sugerimos las sedes con esa ciudad en la dirección. Revisá y marcá/desmarcá abajo.",
+  "units": "Sedes",
+  "searchUnits": "Buscar sede...",
+  "selectedUnits_one": "{{count}} sede seleccionada",
+  "selectedUnits_other": "{{count}} sedes seleccionadas",
+  "scopeLabel": {
+    "rede": "Toda la red",
+    "pais": "País: {{value}}",
+    "estado": "Provincia: {{value}}",
+    "cidade_one": "Ciudad: {{value}} ({{count}} sede)",
+    "cidade_other": "Ciudad: {{value}} ({{count}} sedes)",
+    "unidades_one": "{{count}} sede",
+    "unidades_other": "{{count}} sedes"
+  }
+}

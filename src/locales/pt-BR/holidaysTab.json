@@ -1,0 +1,55 @@
+{
+  "title": "Agendar Recesso ou Feriado",
+  "desc": "As aulas do local escolhido aparecem como canceladas (feriado) no período: sem pagamento e sem pendência.",
+  "eventName": "Nome do Evento",
+  "eventPlaceholder": "Ex: Recesso de Carnaval",
+  "startDate": "Data Início",
+  "endDate": "Data Fim",
+  "type": "Tipo",
+  "types": {
+    "recess": "Recesso",
+    "national": "Feriado Nacional",
+    "municipal": "Feriado Municipal"
+  },
+  "processing": "Processando...",
+  "create": "Criar Recesso",
+  "calendar": "Calendário de Folgas",
+  "range": "{{start}} até {{end}}",
+  "none": "Nenhum recesso ou feriado cadastrado.",
+  "messages": {
+    "fillRequired": "Preencha o nome e as datas!",
+    "confirmCreate": "ATENÇÃO: as aulas de {{scope}} entre {{start}} e {{end}} vão aparecer como canceladas (feriado).\n\nDeseja continuar?",
+    "created": "Feriado cadastrado! As aulas de {{scope}} nesse período aparecem como canceladas.",
+    "saveError": "Erro ao salvar feriado.",
+    "confirmDelete": "Deseja excluir o feriado \"{{name}}\"?\n\nAs aulas desse período voltam a aparecer normalmente. Validações feitas por pessoas não são alteradas.",
+    "deleteError": "Erro ao excluir",
+    "invalidRange": "A data final não pode ser antes da data inicial.",
+    "selectScopeTarget": "Escolha onde vale o feriado (estado, cidade ou unidades)."
+  },
+  "scope": "Onde vale o feriado",
+  "scopes": {
+    "rede": "Rede inteira",
+    "pais": "País",
+    "estado": "Estado",
+    "cidade": "Cidade",
+    "unidades": "Unidades específicas"
+  },
+  "country": "País",
+  "state": "Estado",
+  "city": "Cidade",
+  "cityPlaceholder": "Ex: Belo Horizonte",
+  "cityHint": "Sugerimos as unidades com essa cidade no endereço. Confira e marque/desmarque abaixo.",
+  "units": "Unidades",
+  "searchUnits": "Buscar unidade...",
+  "selectedUnits_one": "{{count}} unidade selecionada",
+  "selectedUnits_other": "{{count}} unidades selecionadas",
+  "scopeLabel": {
+    "rede": "Rede inteira",
+    "pais": "País: {{value}}",
+    "estado": "Estado: {{value}}",
+    "cidade_one": "Cidade: {{value}} ({{count}} unidade)",
+    "cidade_other": "Cidade: {{value}} ({{count}} unidades)",
+    "unidades_one": "{{count}} unidade",
+    "unidades_other": "{{count}} unidades"
+  }
+}

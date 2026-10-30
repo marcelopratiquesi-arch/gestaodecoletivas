@@ -1,0 +1,93 @@
+{
+  "weekdays": {
+    "Segunda": "Monday",
+    "Terça": "Tuesday",
+    "Quarta": "Wednesday",
+    "Quinta": "Thursday",
+    "Sexta": "Friday",
+    "Sábado": "Saturday",
+    "Domingo": "Sunday"
+  },
+  "weekdaysShort": {
+    "Segunda": "Mon",
+    "Terça": "Tue",
+    "Quarta": "Wed",
+    "Quinta": "Thu",
+    "Sexta": "Fri",
+    "Sábado": "Sat",
+    "Domingo": "Sun"
+  },
+  "status": {
+    "realizada": "Completed",
+    "cancelada": "Canceled",
+    "pendente": "Pending"
+  },
+  "cancelReasons": {
+    "holiday": "Holiday",
+    "teacherVacation": "Teacher Vacation",
+    "medicalLeave": "Medical Leave",
+    "unitMaintenance": "Unit Maintenance",
+    "unjustifiedAbsence": "Unexcused Absence",
+    "weather": "Rain/Weather",
+    "other": "Other",
+    "recessHoliday": "Recess/Holiday",
+    "autoRecess": "Automatic Recess/Holiday",
+    "recessNamed": "Recess: {{name}}",
+    "recess": "Recess"
+  },
+  "substitutionReasons": {
+    "holderMedicalLeave": "Main Teacher on Medical Leave",
+    "vacation": "Vacation",
+    "scheduledDayOff": "Scheduled Day Off",
+    "emergency": "Emergency",
+    "other": "Other"
+  },
+  "roles": {
+    "admin": "Administrator",
+    "mentor": "Mentor",
+    "unidade": "Unit",
+    "professor": "Teacher",
+    "system": "System"
+  },
+  "actions": {
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "close": "Close",
+    "select": "Select...",
+    "copy": "Copy",
+    "loadMore": "Load +{{count}}",
+    "viewAll": "View All",
+    "save": "Save"
+  },
+  "multiSelect": {
+    "all": "All",
+    "allSelected": "All selected",
+    "selected": "{{count}} selected",
+    "selectAll": "Select all",
+    "clear": "Clear",
+    "search": "Search...",
+    "noResults": "No results"
+  },
+  "unknown": {
+    "teacher": "Unknown Teacher",
+    "modality": "Unknown Modality",
+    "unit": "Unknown Unit",
+    "deletedTeacher": "Deleted Teacher",
+    "deletedModality": "Deleted Modality",
+    "noTeacher": "No Teacher",
+    "noMentor": "No Mentor",
+    "general": "General",
+    "reception": "Front Desk / System",
+    "generic": "Unknown"
+  },
+  "period": {
+    "day": "Day",
+    "month": "Month",
+    "range": "Range"
+  },
+  "countries": {
+    "BR": "Brazil",
+    "AR": "Argentina",
+    "US": "United States"
+  }
+}

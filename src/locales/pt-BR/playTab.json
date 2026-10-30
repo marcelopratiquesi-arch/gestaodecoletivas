@@ -1,0 +1,26 @@
+{
+  "title": "Gestão Pratique Play (Vimeo)",
+  "subtitle": "Cadastre os links das aulas hospedadas no Vimeo.",
+  "linkNew": "Vincular Nova Aula",
+  "album": "Álbum / Modalidade",
+  "vimeoLink": "Link do Vimeo",
+  "trackName": "Nome da Faixa",
+  "trackPlaceholder": "Ex: Mix Aquecimento 01",
+  "bpm": "BPM (Opcional)",
+  "bpmPlaceholder": "Ex: 145",
+  "save": "Salvar Faixa",
+  "library": "Biblioteca Ativa",
+  "tracksCount": "{{count}} Músicas",
+  "none": "Nenhuma música cadastrada",
+  "noneHint": "Cole o link do Vimeo ao lado para começar.",
+  "testLink": "Testar Link no Vimeo",
+  "deleteTrack": "Excluir Faixa Definitivamente",
+  "messages": {
+    "fillRequired": "Preencha o título e cole o link do Vimeo.",
+    "invalidLink": "Link inválido. Exemplo correto: https://vimeo.com/123456789",
+    "added": "Música adicionada com sucesso!",
+    "saveError": "Erro ao salvar: {{error}}",
+    "confirmDelete": "Tem certeza que deseja excluir a música \"{{name}}\"?",
+    "deleteError": "Erro ao excluir: {{error}}"
+  }
+}

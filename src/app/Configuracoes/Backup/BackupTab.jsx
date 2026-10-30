@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { db } from '../../../services/firebase';
 import { collection, getDocs, writeBatch, doc } from 'firebase/firestore';
 import * as XLSX from 'xlsx'; 
+import { useTranslation, Trans } from 'react-i18next';
 import { 
   Database, Download, Upload, FileJson, FileSpreadsheet, 
   TriangleAlert, CircleCheck, Loader2, ShieldAlert, Archive 
@@ -26,14 +27,17 @@ const COLLECTIONS_TO_BACKUP = [
 ];
 
 export default function BackupTab() {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [statusMsg, setStatusMsg] = useState("");
+  const [statusErro, setStatusErro] = useState(false); // antes era detectado procurando "Erro" no texto
   const [progress, setProgress] = useState(0);
 
   // === FUNÇÃO 1: EXPORTAR (BACKUP BLINDADO) ===
   const handleExport = async (format) => {
     setLoading(true);
-    setStatusMsg("Iniciando varredura completa do sistema...");
+    setStatusErro(false);
+    setStatusMsg(t('backupTab.status.starting'));
     setProgress(0);
 
     try {
@@ -48,7 +52,7 @@ export default function BackupTab() {
       // 1. Busca dados de todas as coleções
       for (let i = 0; i < COLLECTIONS_TO_BACKUP.length; i++) {
         const colName = COLLECTIONS_TO_BACKUP[i];
-        setStatusMsg(`Extraindo dados da tabela: ${colName}...`);
+        setStatusMsg(t('backupTab.status.extracting', { name: colName }));
         
         try {
             const querySnapshot = await getDocs(collection(db, colName));
@@ -69,7 +73,7 @@ export default function BackupTab() {
         setProgress(Math.round(((i + 1) / COLLECTIONS_TO_BACKUP.length) * 100));
       }
 
-      setStatusMsg("Compactando e gerando arquivo...");
+      setStatusMsg(t('backupTab.status.compressing'));
 
       if (format === 'json') {
         // --- EXPORTAR JSON (Formato Ouro para Migração SQL/Supabase) ---
@@ -110,11 +114,12 @@ export default function BackupTab() {
         XLSX.writeFile(wb, `${fileName}.xlsx`);
       }
 
-      setStatusMsg("Backup finalizado com sucesso!");
+      setStatusMsg(t('backupTab.status.done'));
 
     } catch (error) {
       console.error("Erro no backup:", error);
-      setStatusMsg("Erro crítico ao gerar backup. Verifique o console.");
+      setStatusErro(true);
+      setStatusMsg(t('backupTab.status.criticalError'));
     } finally {
       setLoading(false);
       setTimeout(() => setStatusMsg(""), 5000);
@@ -126,12 +131,13 @@ export default function BackupTab() {
     const file = event.target.files[0];
     if (!file) return;
 
-    if (!window.confirm("⚠️ ALERTA DE SEGURANÇA MÁXIMA ⚠️\n\nVocê está prestes a RESTAURAR o banco de dados.\nIsso irá SOBRESCREVER as informações atuais.\n\nTem certeza absoluta?")) {
+    if (!window.confirm(t('backupTab.confirmRestore'))) {
       return;
     }
 
     setLoading(true);
-    setStatusMsg("Lendo arquivo de backup...");
+    setStatusErro(false);
+    setStatusMsg(t('backupTab.status.reading'));
     
     const reader = new FileReader();
     reader.onload = async (e) => {
@@ -143,7 +149,7 @@ export default function BackupTab() {
 
         collections.forEach(col => totalDocs += backupData[col].length);
 
-        setStatusMsg(`Restaurando ${collections.length} coleções...`);
+        setStatusMsg(t('backupTab.status.restoringCollections', { count: collections.length }));
 
         let batch = writeBatch(db);
         let batchCount = 0;
@@ -168,7 +174,7 @@ export default function BackupTab() {
                         await batch.commit();
                         batch = writeBatch(db);
                         batchCount = 0;
-                        setStatusMsg(`Restaurando... ${Math.round((processedDocs / totalDocs) * 100)}%`);
+                        setStatusMsg(t('backupTab.status.restoringPct', { pct: Math.round((processedDocs / totalDocs) * 100) }));
                     }
                 }
             }
@@ -178,14 +184,15 @@ export default function BackupTab() {
             await batch.commit();
         }
 
-        setStatusMsg("SISTEMA RESTAURADO COM SUCESSO!");
-        alert("Restauração concluída. A página será recarregada.");
+        setStatusMsg(t('backupTab.status.restored'));
+        alert(t('backupTab.restoreDone'));
         window.location.reload();
 
       } catch (error) {
         console.error("Erro na importação:", error);
-        setStatusMsg("Arquivo corrompido ou formato inválido.");
-        alert("Erro ao importar.");
+        setStatusErro(true);
+        setStatusMsg(t('backupTab.status.corrupted'));
+        alert(t('backupTab.importError'));
       } finally {
         setLoading(false);
       }
@@ -203,9 +210,9 @@ export default function BackupTab() {
             <Database className="w-8 h-8 text-blue-600 dark:text-blue-400" />
         </div>
         <div className="flex-1">
-            <h2 className="text-xl font-bold text-slate-800 dark:text-white">Central de Backup & Migração</h2>
+            <h2 className="text-xl font-bold text-slate-800 dark:text-white">{t('backupTab.title')}</h2>
             <p className="text-sm text-slate-500 dark:text-slate-400">
-                Gere cópias de segurança 100% fiéis para fins de auditoria ou migração de servidor.
+                {t('backupTab.subtitle')}
             </p>
         </div>
         {loading && (
@@ -221,8 +228,8 @@ export default function BackupTab() {
       </div>
 
       {statusMsg && (
-          <div className={`p-4 rounded-lg font-bold text-sm flex items-center gap-2 ${statusMsg.includes("Erro") ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"}`}>
-            {statusMsg.includes("Erro") ? <TriangleAlert className="w-4 h-4"/> : <CircleCheck className="w-4 h-4"/>}
+          <div className={`p-4 rounded-lg font-bold text-sm flex items-center gap-2 ${statusErro ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"}`}>
+            {statusErro ? <TriangleAlert className="w-4 h-4"/> : <CircleCheck className="w-4 h-4"/>}
             {statusMsg}
           </div>
       )}
@@ -233,10 +240,10 @@ export default function BackupTab() {
         <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
             <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
                 <Download className="w-5 h-5 text-green-600" />
-                Exportar Dados (Backup)
+                {t('backupTab.exportTitle')}
             </h3>
             <p className="text-sm text-slate-500 mb-6 min-h-[40px]">
-                Selecione o formato desejado. Para migração de sistema (SQL/Supabase), use sempre <strong>JSON</strong>.
+                <Trans i18nKey="backupTab.exportDesc" />
             </p>
 
             <div className="space-y-3">
@@ -246,8 +253,8 @@ export default function BackupTab() {
                     className="w-full py-3 px-4 border border-blue-200 bg-blue-50/50 dark:bg-blue-900/10 dark:border-blue-800 rounded-lg flex items-center justify-center gap-3 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors font-bold text-blue-700 dark:text-blue-300"
                 >
                     <FileJson className="w-5 h-5" />
-                    Baixar JSON (Completo p/ Migração)
-                    <span className="text-[10px] bg-blue-200 text-blue-800 px-1.5 py-0.5 rounded">Recomendado</span>
+                    {t('backupTab.downloadJson')}
+                    <span className="text-[10px] bg-blue-200 text-blue-800 px-1.5 py-0.5 rounded">{t('backupTab.recommended')}</span>
                 </button>
 
                 <button 
@@ -256,7 +263,7 @@ export default function BackupTab() {
                     className="w-full py-3 px-4 border border-slate-300 dark:border-slate-600 rounded-lg flex items-center justify-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors font-bold text-slate-700 dark:text-slate-200"
                 >
                     <FileSpreadsheet className="w-5 h-5 text-green-600" />
-                    Baixar Excel (Visualização)
+                    {t('backupTab.downloadExcel')}
                 </button>
             </div>
         </div>
@@ -269,10 +276,10 @@ export default function BackupTab() {
             
             <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
                 <Upload className="w-5 h-5 text-red-600" />
-                Restaurar do Arquivo
+                {t('backupTab.restoreTitle')}
             </h3>
             <p className="text-sm text-slate-500 mb-6 min-h-[40px]">
-                Restaura o sistema para o estado exato de um arquivo <strong>.JSON</strong> salvo anteriormente.
+                <Trans i18nKey="backupTab.restoreDesc" />
             </p>
 
             <div className="relative">
@@ -288,16 +295,16 @@ export default function BackupTab() {
                     className="w-full py-3 px-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center justify-center gap-3 text-red-700 dark:text-red-400 font-bold hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
                 >
                     <Archive className="w-5 h-5" />
-                    Selecionar Backup (.json)
+                    {t('backupTab.selectBackup')}
                 </button>
             </div>
-            <p className="text-center text-[10px] text-slate-400 mt-2">Apenas arquivos gerados pelo botão de exportar JSON.</p>
+            <p className="text-center text-[10px] text-slate-400 mt-2">{t('backupTab.onlyJson')}</p>
         </div>
 
       </div>
 
       <div className="text-center text-xs text-slate-400 mt-8">
-        <p>Sistema de Backup Seguro v2.0 • Pratique Gestão</p>
+        <p>{t('backupTab.footer')}</p>
       </div>
     </div>
   );

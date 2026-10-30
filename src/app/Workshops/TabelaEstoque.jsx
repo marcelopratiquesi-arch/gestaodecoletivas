@@ -4,34 +4,37 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 
-const formatCurrency = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
+import { formatCurrency, formatDate, getCurrencySymbol } from '../../utils/formatters';
+import { useTranslation } from 'react-i18next';
+import { traduzirMotivoSaida } from './labels';
 const TAMANHOS_PADRAO = ['PP', 'P', 'M', 'G', 'GG', 'XG', 'XGG', '3G'];
 
 const TabelaEstoque = ({
     kpis, filtroEstoque, setFiltroEstoque, abrirModalNovoStock,
     stockLedgerFiltrado, abrirModalEditarStock, handleExcluirStock
 }) => {
+    const { t } = useTranslation();
 
     const exportarPDF = () => {
         try {
             const doc = new jsPDF();
-            doc.text("Relatório de Inventário ERP", 14, 15);
+            doc.text(t('shop.stockPdf.title'), 14, 15);
             
-            const tableColumn = ["Data", "Operação", "Modalidade", "Qtd", "Fornecedor / Motivo", "Financeiro"];
+            const tableColumn = ['date', 'operation', 'modality', 'qty', 'supplierReason', 'financial'].map(k => t(`shop.stockPdf.${k}`));
             const tableRows = [];
 
             stockLedgerFiltrado.forEach(item => {
-                const data = item.data?.toDate ? item.data.toDate().toLocaleDateString('pt-BR') : 'Hoje';
-                const fornecedor = item.tipo === 'entrada' ? item.fornecedorNome : item.motivoSaida;
-                const financeiro = item.tipo === 'entrada' ? `Custo: ${formatCurrency(item.custoTotal)}` : `Venda: ${formatCurrency(item.valorVenda)}`;
-                tableRows.push([data, item.tipo.toUpperCase(), item.modalidade, item.quantidadeTotal, fornecedor, financeiro]);
+                const data = item.data?.toDate ? formatDate(item.data) : t('shop.stock.today');
+                const fornecedor = item.tipo === 'entrada' ? item.fornecedorNome : traduzirMotivoSaida(item.motivoSaida);
+                const financeiro = item.tipo === 'entrada' ? t('shop.stockPdf.cost', { value: formatCurrency(item.custoTotal) }) : t('shop.stockPdf.sale', { value: formatCurrency(item.valorVenda) });
+                tableRows.push([data, t(`shop.stockTypes.${item.tipo}`, item.tipo).toUpperCase(), item.modalidade, item.quantidadeTotal, fornecedor, financeiro]);
             });
 
             autoTable(doc, {
                 head: [tableColumn], body: tableRows, startY: 20, styles: { fontSize: 8 }, headStyles: { fillColor: [16, 185, 129] }
             });
             doc.save(`Inventario_${new Date().getTime()}.pdf`);
-        } catch (error) { console.error("Erro ao gerar PDF:", error); alert("Erro ao gerar PDF. O motor falhou."); }
+        } catch (error) { console.error("Erro ao gerar PDF:", error); alert(t('shop.stock.pdfError')); }
     };
 
     // 🟢 O NOVO MOTOR EXCEL (COMPLETO COM ENTRADAS E SAÍDAS SEPARADAS)
@@ -45,26 +48,27 @@ const TabelaEstoque = ({
                 .filter(([k, v]) => v > 0)
                 .map(([k, v]) => `${k}(${v})`).join(', ');
 
+            const c = (k) => t(`shop.stockExcel.${k}`, { s: getCurrencySymbol() });
             return {
-                'Data Registo': item.data?.toDate ? item.data.toDate().toLocaleDateString('pt-BR') : 'Hoje',
-                'Operação': item.tipo.toUpperCase(),
-                'Modalidade (Produto)': item.modalidade,
-                'Qtd. Peças': item.quantidadeTotal,
-                'Grade / Tamanhos': detalhesTamanhos,
-                'Origem / Motivo': isEntrada ? (item.fornecedorNome || 'S/ Fornecedor') : item.motivoSaida,
-                'Nota Fiscal': item.numeroNF || '-',
-                'Vinculado a Evento?': item.workshopId ? 'Sim (Evento)' : 'Estoque Geral',
-                'Custo Unitário (R$)': isEntrada ? Number(item.valorUnitario || 0) : 0,
-                'CUSTO TOTAL (R$)': isEntrada ? Number(item.custoTotal || 0) : 0,
-                'Venda Unitária (R$)': isSaida ? Number(item.valorUnitarioVenda || 0) : 0,
-                'ARRECADAÇÃO TOTAL (R$)': isSaida ? Number(item.valorVenda || 0) : 0,
-                'Lucro Estimado Venda (R$)': isSaida ? Number(item.lucroEstimado || 0) : 0
+                [c('date')]: item.data?.toDate ? formatDate(item.data) : t('shop.stock.today'),
+                [c('operation')]: t(`shop.stockTypes.${item.tipo}`, item.tipo).toUpperCase(),
+                [c('product')]: item.modalidade,
+                [c('pieces')]: item.quantidadeTotal,
+                [c('sizes')]: detalhesTamanhos,
+                [c('origin')]: isEntrada ? (item.fornecedorNome || t('shop.stock.noSupplier')) : traduzirMotivoSaida(item.motivoSaida),
+                [c('invoice')]: item.numeroNF || '-',
+                [c('linked')]: item.workshopId ? c('linkedYes') : c('generalStock'),
+                [c('unitCost')]: isEntrada ? Number(item.valorUnitario || 0) : 0,
+                [c('totalCost')]: isEntrada ? Number(item.custoTotal || 0) : 0,
+                [c('unitSale')]: isSaida ? Number(item.valorUnitarioVenda || 0) : 0,
+                [c('totalSale')]: isSaida ? Number(item.valorVenda || 0) : 0,
+                [c('estProfit')]: isSaida ? Number(item.lucroEstimado || 0) : 0
             };
         });
         
         const worksheet = XLSX.utils.json_to_sheet(dados);
         const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "Inventário Consolidado");
+        XLSX.utils.book_append_sheet(workbook, worksheet, t('shop.stockExcel.sheet'));
         XLSX.writeFile(workbook, `Relatorio_Estoque_${new Date().getTime()}.xlsx`);
     };
 
@@ -75,26 +79,26 @@ const TabelaEstoque = ({
                     <div className="flex items-center gap-3">
                         <div className="p-3 bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400 rounded-xl"><Shirt className="w-6 h-6"/></div>
                         <div>
-                            <h2 className="text-xl font-black text-slate-800 dark:text-white uppercase">Inventário Consolidado</h2>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{kpis.totalPecas} peças totais no armazém</p>
+                            <h2 className="text-xl font-black text-slate-800 dark:text-white uppercase">{t('shop.stock.title')}</h2>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('shop.stock.totalPieces', { count: kpis.totalPecas })}</p>
                         </div>
                     </div>
                     <div className="flex flex-wrap gap-2">
                         {filtroEstoque && (
                             <button onClick={() => setFiltroEstoque('')} className="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl text-[10px] font-black uppercase flex items-center gap-1 hover:bg-slate-200">
-                                <X className="w-3 h-3"/> Limpar Filtro
+                                <X className="w-3 h-3"/> {t('shop.stock.clearFilter')}
                             </button>
                         )}
                         
                         {stockLedgerFiltrado.length > 0 && (
                             <div className="flex gap-2 mr-2 border-r border-slate-200 pr-4">
-                                <button onClick={exportarPDF} className="px-3 py-2 bg-red-50 text-red-600 rounded-xl text-[10px] font-black uppercase flex items-center gap-1 hover:bg-red-100 transition-colors" title="Baixar PDF"><Download className="w-3 h-3"/> PDF</button>
-                                <button onClick={exportarExcel} className="px-3 py-2 bg-emerald-50 text-emerald-600 rounded-xl text-[10px] font-black uppercase flex items-center gap-1 hover:bg-emerald-100 transition-colors" title="Baixar Planilha Excel Completa"><Download className="w-3 h-3"/> XLS</button>
+                                <button onClick={exportarPDF} className="px-3 py-2 bg-red-50 text-red-600 rounded-xl text-[10px] font-black uppercase flex items-center gap-1 hover:bg-red-100 transition-colors" title={t('shop.stock.downloadPdf')}><Download className="w-3 h-3"/> PDF</button>
+                                <button onClick={exportarExcel} className="px-3 py-2 bg-emerald-50 text-emerald-600 rounded-xl text-[10px] font-black uppercase flex items-center gap-1 hover:bg-emerald-100 transition-colors" title={t('shop.stock.downloadExcel')}><Download className="w-3 h-3"/> XLS</button>
                             </div>
                         )}
 
                         <button onClick={abrirModalNovoStock} className="px-5 py-3 bg-emerald-600 text-white rounded-xl font-black text-xs uppercase tracking-wide hover:bg-emerald-700 shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition-transform active:scale-95 w-full sm:w-auto">
-                            <Plus className="w-4 h-4"/> Lançar Entrada/Saída
+                            <Plus className="w-4 h-4"/> {t('shop.stock.launchInOut')}
                         </button>
                     </div>
                 </div>
@@ -116,7 +120,7 @@ const TabelaEstoque = ({
                                     <h3 className="text-lg font-black text-slate-800 dark:text-white uppercase">{modalidade}</h3>
                                 </div>
                                 <span className={`px-3 py-1 text-xs font-black uppercase rounded-lg ${totalModalidade > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
-                                    Total: {totalModalidade}
+                                    {t('shop.stock.total', { count: totalModalidade })}
                                 </span>
                             </div>
                             <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
@@ -139,37 +143,37 @@ const TabelaEstoque = ({
                 <div className="p-5 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
                     <h3 className="text-sm font-black uppercase tracking-widest text-slate-700 dark:text-slate-300 flex items-center gap-2">
                         <FileText className="w-4 h-4 text-emerald-600"/> 
-                        Histórico de Movimentos (Estoque)
-                        {filtroEstoque && <span className="ml-2 px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] rounded-md flex items-center gap-1"><Filter className="w-3 h-3"/> Filtrado: {filtroEstoque}</span>}
+                        {t('shop.stock.history')}
+                        {filtroEstoque && <span className="ml-2 px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] rounded-md flex items-center gap-1"><Filter className="w-3 h-3"/> {t('shop.stock.filtered', { name: filtroEstoque })}</span>}
                     </h3>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="border-b border-slate-200 dark:border-slate-700 text-[10px] font-black uppercase tracking-widest text-slate-400 bg-slate-50/50 dark:bg-slate-900/20">
-                                <th className="p-4">Data</th>
-                                <th className="p-4">Tipo</th>
-                                <th className="p-4">Modalidade</th>
-                                <th className="p-4 text-center">Peças</th>
-                                <th className="p-4">Fornecedor / Financeiro</th>
-                                <th className="p-4 text-right">Ações</th>
+                                <th className="p-4">{t('shop.stock.colDate')}</th>
+                                <th className="p-4">{t('shop.stock.colType')}</th>
+                                <th className="p-4">{t('shop.stock.colModality')}</th>
+                                <th className="p-4 text-center">{t('shop.stock.colPieces')}</th>
+                                <th className="p-4">{t('shop.stock.colSupplier')}</th>
+                                <th className="p-4 text-right">{t('shop.stock.colActions')}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                             {stockLedgerFiltrado.map(item => (
                                 <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors group">
                                     <td className="p-4 text-xs font-bold text-slate-500 whitespace-nowrap">
-                                        {item.data?.toDate ? item.data.toDate().toLocaleDateString('pt-BR') : 'Hoje'}
+                                        {item.data?.toDate ? formatDate(item.data) : t('shop.stock.today')}
                                     </td>
                                     <td className="p-4">
                                         <span className={`px-2 py-1 text-[9px] font-black uppercase rounded-md ${item.tipo === 'entrada' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'}`}>
-                                            {item.tipo}
+                                            {t(`shop.stockTypes.${item.tipo}`, item.tipo)}
                                         </span>
                                     </td>
                                     <td className="p-4 text-sm font-black text-slate-700 dark:text-white uppercase whitespace-nowrap">
                                         {item.modalidade}
                                         {/* 🟢 Mostra se está vinculado no histórico visual */}
-                                        {item.workshopId && <span className="block mt-1 text-[8px] text-blue-500 bg-blue-50 px-1 py-0.5 rounded border border-blue-200 w-fit">Vinc. Evento</span>}
+                                        {item.workshopId && <span className="block mt-1 text-[8px] text-blue-500 bg-blue-50 px-1 py-0.5 rounded border border-blue-200 w-fit">{t('shop.stock.linkedEvent')}</span>}
                                     </td>
                                     <td className="p-4 text-center text-sm font-black text-slate-600 dark:text-slate-300">
                                         {item.quantidadeTotal}
@@ -177,40 +181,40 @@ const TabelaEstoque = ({
                                     <td className="p-4 text-xs font-bold text-slate-500">
                                         {item.tipo === 'entrada' ? (
                                             <div className="flex flex-col gap-1 items-start">
-                                                <span className="text-slate-700 dark:text-white truncate max-w-[250px]">{item.fornecedorNome ? `${item.fornecedorNome} (NF: ${item.numeroNF || 'S/N'})` : 'S/ Fornecedor'}</span>
+                                                <span className="text-slate-700 dark:text-white truncate max-w-[250px]">{item.fornecedorNome ? t('shop.stock.invoiceRef', { name: item.fornecedorNome, nf: item.numeroNF || t('shop.stock.invoiceNa') }) : t('shop.stock.noSupplier')}</span>
                                                 <div className="flex flex-wrap items-center gap-2">
-                                                    <span className="text-[9px] text-red-500 font-black uppercase">Custo: {formatCurrency(item.custoTotal)}</span>
+                                                    <span className="text-[9px] text-red-500 font-black uppercase">{t('shop.stock.cost', { value: formatCurrency(item.custoTotal) })}</span>
                                                     {item.comprovanteUrl && (
                                                         <a href={item.comprovanteUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[9px] font-black uppercase bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded border border-blue-200 hover:bg-blue-100 transition-colors">
-                                                            <ExternalLink className="w-3 h-3"/> Fatura
+                                                            <ExternalLink className="w-3 h-3"/> {t('shop.stock.invoice')}
                                                         </a>
                                                     )}
                                                 </div>
                                             </div>
                                         ) : (
                                             <div className="flex flex-col gap-1 items-start">
-                                                <span className="text-slate-700 dark:text-white">{item.motivoSaida || 'Saída'}</span>
+                                                <span className="text-slate-700 dark:text-white">{traduzirMotivoSaida(item.motivoSaida) || t('shop.stock.exit')}</span>
                                                 {item.motivoSaida.includes('Venda') && (
                                                     <div className="flex flex-col">
-                                                        <span className="text-[10px] text-emerald-600 font-black uppercase">Venda: {formatCurrency(item.valorVenda)}</span>
-                                                        <span className="text-[8px] text-blue-500 font-bold uppercase">Lucro Est.: {formatCurrency(item.lucroEstimado)}</span>
+                                                        <span className="text-[10px] text-emerald-600 font-black uppercase">{t('shop.stock.sale', { value: formatCurrency(item.valorVenda) })}</span>
+                                                        <span className="text-[8px] text-blue-500 font-bold uppercase">{t('shop.stock.estProfit', { value: formatCurrency(item.lucroEstimado) })}</span>
                                                     </div>
                                                 )}
                                             </div>
                                         )}
                                     </td>
                                     <td className="p-4 text-right space-x-2 whitespace-nowrap">
-                                        <button onClick={() => abrirModalEditarStock(item)} className="p-2 bg-slate-100 dark:bg-slate-700 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-600 hover:text-white transition-colors" title="Editar Movimento">
+                                        <button onClick={() => abrirModalEditarStock(item)} className="p-2 bg-slate-100 dark:bg-slate-700 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-600 hover:text-white transition-colors" title={t('shop.stock.editMovement')}>
                                             <Edit className="w-4 h-4"/>
                                         </button>
-                                        <button onClick={() => handleExcluirStock(item.id)} className="p-2 bg-red-50 dark:bg-red-900/30 text-red-500 rounded-lg hover:bg-red-600 hover:text-white transition-colors" title="Excluir Movimento">
+                                        <button onClick={() => handleExcluirStock(item.id)} className="p-2 bg-red-50 dark:bg-red-900/30 text-red-500 rounded-lg hover:bg-red-600 hover:text-white transition-colors" title={t('shop.stock.deleteMovement')}>
                                             <Trash2 className="w-4 h-4"/>
                                         </button>
                                     </td>
                                 </tr>
                             ))}
                             {stockLedgerFiltrado.length === 0 && (
-                                <tr><td colSpan="6" className="p-8 text-center text-slate-400 text-xs font-bold uppercase tracking-widest">Sem registros encontrados.</td></tr>
+                                <tr><td colSpan="6" className="p-8 text-center text-slate-400 text-xs font-bold uppercase tracking-widest">{t('shop.stock.none')}</td></tr>
                             )}
                         </tbody>
                     </table>

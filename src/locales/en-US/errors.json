@@ -1,0 +1,8 @@
+{
+  "invalidCredential": "Incorrect email or password.",
+  "userNotFound": "User not found.",
+  "wrongPassword": "Incorrect password.",
+  "tooManyRequests": "Too many attempts. Try again later.",
+  "userDisabled": "Account disabled. Contact support.",
+  "default": "Access error. Try again."
+}

@@ -1,0 +1,93 @@
+{
+  "weekdays": {
+    "Segunda": "Lunes",
+    "Terça": "Martes",
+    "Quarta": "Miércoles",
+    "Quinta": "Jueves",
+    "Sexta": "Viernes",
+    "Sábado": "Sábado",
+    "Domingo": "Domingo"
+  },
+  "weekdaysShort": {
+    "Segunda": "Lun",
+    "Terça": "Mar",
+    "Quarta": "Mié",
+    "Quinta": "Jue",
+    "Sexta": "Vie",
+    "Sábado": "Sáb",
+    "Domingo": "Dom"
+  },
+  "status": {
+    "realizada": "Realizada",
+    "cancelada": "Cancelada",
+    "pendente": "Pendiente"
+  },
+  "cancelReasons": {
+    "holiday": "Feriado",
+    "teacherVacation": "Vacaciones del Profesor",
+    "medicalLeave": "Certificado Médico",
+    "unitMaintenance": "Mantenimiento de la Sede",
+    "unjustifiedAbsence": "Falta sin Justificación",
+    "weather": "Lluvia/Clima",
+    "other": "Otros",
+    "recessHoliday": "Receso/Feriado",
+    "autoRecess": "Receso/Feriado automático",
+    "recessNamed": "Receso: {{name}}",
+    "recess": "Receso"
+  },
+  "substitutionReasons": {
+    "holderMedicalLeave": "Certificado del Titular",
+    "vacation": "Vacaciones",
+    "scheduledDayOff": "Franco Programado",
+    "emergency": "Emergencia",
+    "other": "Otros"
+  },
+  "roles": {
+    "admin": "Administrador",
+    "mentor": "Mentor",
+    "unidade": "Sede",
+    "professor": "Profesor",
+    "system": "Sistema"
+  },
+  "actions": {
+    "cancel": "Cancelar",
+    "confirm": "Confirmar",
+    "close": "Cerrar",
+    "select": "Seleccioná...",
+    "copy": "Copiar",
+    "loadMore": "Cargar +{{count}}",
+    "viewAll": "Ver Todos",
+    "save": "Guardar"
+  },
+  "multiSelect": {
+    "all": "Todos",
+    "allSelected": "Todos seleccionados",
+    "selected": "{{count}} seleccionado(s)",
+    "selectAll": "Marcar todos",
+    "clear": "Limpiar",
+    "search": "Buscar...",
+    "noResults": "Sin resultados"
+  },
+  "unknown": {
+    "teacher": "Profesor Desconocido",
+    "modality": "Modalidad Desconocida",
+    "unit": "Sede Desconocida",
+    "deletedTeacher": "Profesor Eliminado",
+    "deletedModality": "Modalidad Eliminada",
+    "noTeacher": "Sin Profesor",
+    "noMentor": "Sin Mentor",
+    "general": "General",
+    "reception": "Recepción / Sistema",
+    "generic": "Desconocido"
+  },
+  "period": {
+    "day": "Día",
+    "month": "Mes",
+    "range": "Período"
+  },
+  "countries": {
+    "BR": "Brasil",
+    "AR": "Argentina",
+    "US": "Estados Unidos"
+  }
+}

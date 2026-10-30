@@ -1,0 +1,133 @@
+{
+  "syncing": "Sincronizando sistema...",
+  "title": "Validación Colectiva",
+  "subtitle": "Monitoreo de adhesión y auditoría en tiempo real",
+  "exportCsv": "Exportar CSV",
+  "filters": {
+    "states": "Provincias",
+    "mentors": "Mentores",
+    "units": "Sedes"
+  },
+  "locked": {
+    "title": "Seleccioná un filtro para comenzar",
+    "desc": "Seleccioná una Provincia, Mentor o Sede en el filtro de arriba para cargar los datos del sistema."
+  },
+  "kpis": {
+    "expectedClasses": "Clases Esperadas",
+    "units100": "Sedes al 100%",
+    "ofUnits": "De {{count}} sedes",
+    "pendingUnits": "Sedes Pendientes"
+  },
+  "tabs": {
+    "ranking": "Ranking",
+    "status": "Estado Detallado",
+    "collection": "Central de Cobro"
+  },
+  "badges": {
+    "congrats": "¡Felicitaciones!",
+    "allOk": "¡Todo OK!",
+    "inProgress": "En Curso",
+    "underConstruction": "En Construcción",
+    "awaitingStart": "Esperando Inicio",
+    "awaiting": "Esperando",
+    "done": "Realizada",
+    "validated": "Validada",
+    "canceled": "Cancelada",
+    "holiday": "Feriado",
+    "late": "Atrasada",
+    "pending": "Pendiente",
+    "future": "Futura"
+  },
+  "ranking": {
+    "classesCount": "{{done}}/{{expected}} clases",
+    "unitsCount": "{{count}} sedes",
+    "score": "Puntaje",
+    "pendencies": "Pendientes",
+    "absences_one": "{{count}} falta",
+    "absences_other": "{{count}} faltas",
+    "status": "Estado",
+    "allOk": "Todo OK",
+    "waiting": "Esperando datos..."
+  },
+  "status": {
+    "title": "Detalle por sede",
+    "hint": "Hacé clic en la fila para expandir las clases",
+    "showAll": "Mostrar todas",
+    "filterIssues": "Filtrar pendientes",
+    "colUnitMentor": "Sede / Mentor",
+    "colProgress": "Progreso",
+    "colStatus": "Estado",
+    "colLastUpdate": "Última actualización",
+    "colResponsible": "Responsable",
+    "colActions": "Acciones",
+    "noSchedule": "Sin grilla",
+    "ok100": "100% OK",
+    "pendencies": "{{count}} pendiente(s)",
+    "waiting": "Esperando...",
+    "copyMessage": "Copiar mensaje",
+    "sendWhatsApp": "Enviar por WhatsApp",
+    "colDateTime": "Fecha / Hora",
+    "colModality": "Modalidad",
+    "colTeacher": "Profesor",
+    "colStatusFlow": "Estado / Flujo",
+    "colValidationData": "Datos de la validación",
+    "students": "{{count}} alumnos",
+    "atTime": "a las {{time}}",
+    "recessHoliday": "Receso / Feriado",
+    "noUnits": "No se encontraron sedes.",
+    "loadMore": "Cargar más datos"
+  },
+  "collection": {
+    "title": "Informe general ({{scope}})",
+    "scopeMyUnits": "Mis sedes",
+    "scopeMentors": "Grupo de mentores",
+    "subtitle": "Resumen consolidado para cobro masivo.",
+    "copyReport": "Copiar informe",
+    "colUnit": "Sede",
+    "colMentor": "Mentor",
+    "colScore": "Puntaje",
+    "colPendencies": "Pendientes detallados",
+    "colActions": "Acciones de cobro",
+    "copy": "Copiar",
+    "whatsapp": "WhatsApp",
+    "noPendencies": "No se encontraron pendientes. ¡La red está al 100%!"
+  },
+  "alerts": {
+    "noPhone": "⚠️ ¡TELÉFONO NO REGISTRADO!",
+    "copied": "¡TEXTO COPIADO CON ÉXITO!"
+  },
+  "csv": {
+    "unit": "SEDE",
+    "mentor": "MENTOR",
+    "done": "REALIZADO",
+    "expected": "ESPERADO",
+    "status": "ESTADO",
+    "progress": "PROGRESO",
+    "pendencies": "PENDIENTES"
+  },
+  "messages": {
+    "adminToMentor": {
+      "greeting": "¡HOLA LÍDER {{name}}! ¿TODO BIEN? 🚀",
+      "intro": "ESTOY SIGUIENDO EL MARCADOR DE VALIDACIONES DE TUS SEDES DE CLASES COLECTIVAS:",
+      "congratsTitle": "🏆 *¡FELICITACIONES (100% OK)!:*",
+      "pendingTitle": "🚨 *NECESITAN ATENCIÓN (PENDIENTES):*",
+      "pendingLine": "⚠️ *{{unit}}* (FALTAN {{count}} CLASES: {{dates}})",
+      "pendingClosing": "¿PODÉS HABLAR CON LOS LÍDERES DE ESAS SEDES PARA QUE LO REGULARICEN HOY? ¡CUENTO CON TU GESTIÓN! 👊",
+      "allDone": "¡TU RED ESTÁ 100% IMPECABLE! ¡FELICITACIONES POR EL SEGUIMIENTO! 🏆👏"
+    },
+    "mentorToUnit": "¡HOLA LÍDER *{{unit}}*! DETECTAMOS PENDIENTES EN LA VALIDACIÓN DE LAS CLASES COLECTIVAS.\nDÍAS: {{dates}}\n¿PODÉS REGULARIZARLO HOY? 🚀",
+    "generalTitle": "📢 *ESTADO VALIDACIÓN COLECTIVA - {{period}}*",
+    "adminGeneral": {
+      "congratsTitle": "🏆 *¡FELICITACIONES (100% VALIDADO)!:*",
+      "pendingTitle": "⚠️ *PENDIENTES DE VALIDACIÓN:*",
+      "line": "{{emoji}} {{name}} ({{count}} FALTAS)",
+      "footer": "GESTIÓN DE CLASES COLECTIVAS - PRATIQUE FITNESS 💪"
+    },
+    "mentorGeneral": {
+      "congratsTitle": "🏆 *SEDES AL DÍA (100%):*",
+      "pendingTitle": "⚠️ *ATENCIÓN (PENDIENTES):*",
+      "line": "{{emoji}} {{name}} ({{count}} FALTAS)",
+      "footer": "¡VAMOS A REGULARIZAR Y GARANTIZAR LA EXCELENCIA EN LAS CLASES! CUENTO CON TODOS. 🚀"
+    }
+  }
+}

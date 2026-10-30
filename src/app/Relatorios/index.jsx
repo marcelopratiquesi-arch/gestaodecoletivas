@@ -3,6 +3,10 @@ import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../services/firebase';
 import { collection, getDocs, onSnapshot, query, where, documentId, orderBy } from 'firebase/firestore'; 
 import { useTranslation } from "react-i18next"; // 🟢 MOTOR DE IDIOMAS ACIONADO
+import { deduplicarValidacoes } from '../../utils/validacoes';
+import { feriadoNoDia } from '../../utils/feriados';
+import { valorDaValidacao } from '../../utils/valores';
+import { DIAS_SEMANA as diasSemanaMap, getDiaSemana, formatCurrency, formatDate, formatWeekday, formatCancelReason } from '../../utils/formatters';
 
 import { 
   BarChart2, Filter, DollarSign, Users, Calendar, 
@@ -13,7 +17,6 @@ import {
 } from 'lucide-react';
 
 // --- HELPERS E MÁSCARAS ---
-const diasSemanaMap = { 0: 'Domingo', 1: 'Segunda', 2: 'Terça', 3: 'Quarta', 4: 'Quinta', 5: 'Sexta', 6: 'Sábado' };
 const DIAS_UTEIS = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta']; 
 const DURACAO_AULA_PADRAO = 40; 
 const GAP_MINIMO_OCIOSO = 60; 
@@ -31,21 +34,7 @@ const timeToMins = (timeStr) => { if (!timeStr) return 0; const [h, m] = timeStr
 const minsToTime = (mins) => { const h = Math.floor(mins / 60).toString().padStart(2, '0'); const m = (mins % 60).toString().padStart(2, '0'); return `${h}:${m}`; };
 
 // 🟢 MÁSCARA INTELIGENTE DE MOEDA (Smart Currency)
-const formatSmartCurrency = (val, pais) => {
-    const p = (pais || '').toUpperCase();
-    let locale = 'pt-BR';
-    let currency = 'BRL';
-
-    if (p === 'AR' || p === 'ARGENTINA') {
-        locale = 'es-AR';
-        currency = 'ARS';
-    } else if (p === 'US' || p === 'ESTADOS UNIDOS') {
-        locale = 'en-US';
-        currency = 'USD';
-    }
-
-    return new Intl.NumberFormat(locale, { style: 'currency', currency }).format(val);
-};
+const formatSmartCurrency = (val, pais) => formatCurrency(val, pais);
 
 const getTurnoFromTime = (timeStr) => {
     if (!timeStr) return null;
@@ -147,7 +136,7 @@ const MultiSelectDropdown = ({ label, options, selected, onChange, placeholder }
         <div className="relative w-full">
             <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase mb-1.5 block tracking-widest">{label}</label>
             <div onClick={() => setIsOpen(!isOpen)} className={`w-full p-3 bg-slate-50 dark:bg-slate-900 border ${isOpen ? 'border-blue-500 ring-2 ring-blue-100 dark:ring-blue-900/30' : 'border-slate-200 dark:border-slate-700'} rounded-xl text-[10px] font-black outline-none cursor-pointer flex justify-between items-center transition-all uppercase shadow-sm`}>
-                <span className="truncate text-slate-700 dark:text-slate-300">{selected.length === 0 ? placeholder : selected.length === 1 ? options.find(o => o.id === selected[0])?.label : `${selected.length} SELECIONADOS`}</span>
+                <span className="truncate text-slate-700 dark:text-slate-300">{selected.length === 0 ? placeholder : selected.length === 1 ? options.find(o => o.id === selected[0])?.label : t('common.multiSelect.selected', { count: selected.length })}</span>
                 <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180 text-blue-500' : ''}`} />
             </div>
             {isOpen && (
@@ -155,18 +144,18 @@ const MultiSelectDropdown = ({ label, options, selected, onChange, placeholder }
                     <div className="fixed inset-0 z-[40]" onClick={() => setIsOpen(false)} />
                     <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl z-[50] overflow-hidden flex flex-col max-h-[350px]">
                         <div className="p-2 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 shrink-0">
-                            <div className="relative"><Search className="w-3 h-3 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" /><input type="text" placeholder="BUSCAR..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg pl-8 pr-3 py-2 text-[10px] font-black uppercase outline-none focus:border-blue-500 dark:text-white placeholder-slate-300 dark:placeholder-slate-600"/></div>
+                            <div className="relative"><Search className="w-3 h-3 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" /><input type="text" placeholder={t('common.multiSelect.search')} value={search} onChange={(e) => setSearch(e.target.value)} className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg pl-8 pr-3 py-2 text-[10px] font-black uppercase outline-none focus:border-blue-500 dark:text-white placeholder-slate-300 dark:placeholder-slate-600"/></div>
                         </div>
                         <div className="overflow-y-auto custom-scrollbar p-2 flex-1 space-y-1">
-                            {filteredOptions.length === 0 ? <div className="p-3 text-center text-[10px] font-bold text-slate-400 uppercase">NENHUM RESULTADO</div> : filteredOptions.map(opt => (
+                            {filteredOptions.length === 0 ? <div className="p-3 text-center text-[10px] font-bold text-slate-400 uppercase">{t('common.multiSelect.noResults')}</div> : filteredOptions.map(opt => (
                                 <div key={opt.id} onClick={() => toggle(opt.id)} className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors ${selected.includes(opt.id) ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-600 dark:text-slate-300'}`}>
                                     {selected.includes(opt.id) ? <CheckSquare className="w-4 h-4 text-blue-500 shrink-0" /> : <Square className="w-4 h-4 text-slate-300 dark:text-slate-600 shrink-0" />}<span className="text-[10px] font-black uppercase truncate">{opt.label}</span>
                                 </div>
                             ))}
                         </div>
                         <div className="p-2 border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 shrink-0 flex gap-2">
-                            <button onClick={handleSelectAll} className="flex-1 py-2 text-[9px] font-black text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded uppercase transition-colors">TODOS</button>
-                            {selected.length > 0 && <button onClick={() => onChange([])} className="flex-1 py-2 text-[9px] font-black text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded uppercase transition-colors">LIMPAR</button>}
+                            <button onClick={handleSelectAll} className="flex-1 py-2 text-[9px] font-black text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded uppercase transition-colors">{t('common.multiSelect.all')}</button>
+                            {selected.length > 0 && <button onClick={() => onChange([])} className="flex-1 py-2 text-[9px] font-black text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded uppercase transition-colors">{t('common.multiSelect.clear')}</button>}
                         </div>
                     </div>
                 </>
@@ -312,8 +301,8 @@ export default function RelatorioPage() {
       }
 
       const unsubAulas = onSnapshot(qAulas, (snap) => setAulasRealtime(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
-      const unsubValidacoes = onSnapshot(qValidacoes, (snap) => setValidacoesRealtime(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
-      const unsubValidacoesYTD = onSnapshot(qValidacoesYTD, (snap) => setValidacoesYTD(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+      const unsubValidacoes = onSnapshot(qValidacoes, (snap) => setValidacoesRealtime(deduplicarValidacoes(snap.docs.map(d => ({ id: d.id, ...d.data() })))));
+      const unsubValidacoesYTD = onSnapshot(qValidacoesYTD, (snap) => setValidacoesYTD(deduplicarValidacoes(snap.docs.map(d => ({ id: d.id, ...d.data() })))));
 
       return () => { unsubAulas(); unsubValidacoes(); unsubValidacoesYTD(); };
   }, [role, userData.unidadeId, period, isCofreFechado, catalogs.professores, userId]);
@@ -332,11 +321,11 @@ export default function RelatorioPage() {
     const mentorIds = [...new Set(units.map(u => u.mentorId).filter(Boolean))];
     const mentores = mentorIds.map(id => {
         const user = catalogs.users.find(u => u.id === id || u.uid === id); 
-        return { id, nome: (user?.nome || 'DESCONHECIDO').toUpperCase() };
+        return { id, nome: (user?.nome || t('common.unknown.generic')).toUpperCase() };
     }).sort((a, b) => a.nome.localeCompare(b.nome));
 
     return { paises, estados, mentores, unidadesFiltradas: units };
-  }, [catalogs, paisesFiltro, estadosFiltro, mentoresFiltro]);
+  }, [catalogs, paisesFiltro, estadosFiltro, mentoresFiltro, t]);
 
   // 3. PROCESSAMENTO CORE 
   const processamentoBase = useMemo(() => {
@@ -362,15 +351,10 @@ export default function RelatorioPage() {
         }
     });
 
+    // Regra única de feriado (src/utils/feriados.js)
     const checkIsFeriado = (dateStr, unidadeId) => {
-        const dObj = new Date(dateStr + 'T00:00:00');
-        return (catalogs.feriados || []).some(f => {
-            const aplica = !f.unidadeId || String(f.unidadeId) === String(unidadeId);
-            if (!aplica) return false;
-            if (f.data === dateStr) return true;
-            if (f.dataInicio && f.dataFim) { return dObj >= new Date(f.dataInicio + 'T00:00:00') && dObj <= new Date(f.dataFim + 'T00:00:00'); }
-            return false;
-        });
+        const unidade = (catalogs.unidades || []).find(u => String(u.id) === String(unidadeId)) || { id: unidadeId };
+        return Boolean(feriadoNoDia(dateStr, unidade, catalogs.feriados || []));
     };
 
     const buildHistoricoComFeriados = (aula, validacoesExistentes) => {
@@ -411,7 +395,7 @@ export default function RelatorioPage() {
     });
 
     auloes.forEach(v => {
-        const diaSemana = diasSemanaMap[new Date(v.data + 'T00:00:00').getDay()];
+        const diaSemana = getDiaSemana(v.data);
         todasLinhas.push({ tipo: 'aulao', aulaBase: { id: `aulao_${v.id}`, unidadeId: v.unidadeId, modalidadeId: v.modalidadeId, professorId: v.professorId, hora: v.hora || "00:00", valor: v.valorPago || 0, dias: [diaSemana] }, professorId: v.professorId, validacoes: [v], validacoesSubstituido: [] });
     });
 
@@ -445,8 +429,9 @@ export default function RelatorioPage() {
         const totalAlunos = historicoSeguro.filter(v => v.status === 'realizada').reduce((acc, v) => acc + (Number(v.alunos) || 0), 0);
         const mediaAlunos = aulasRealizadas > 0 ? Math.round(totalAlunos / aulasRealizadas) : 0;
         
+        // "Valor aula" mostra o valor atual; o "A receber" soma o valor em vigor no dia de cada aula realizada.
         const valorHora = parseFloat(aulaBase.valor) || 0;
-        const totalReceber = aulasRealizadas * valorHora; 
+        const totalReceber = historicoSeguro.reduce((acc, v) => acc + valorDaValidacao(v, aulaBase), 0);
 
         const metragem = Number(unidade.metragemSalaColetiva) || 0;
         const indiceMod = Number(modalidade?.indiceOcupacao) || 3;
@@ -459,9 +444,9 @@ export default function RelatorioPage() {
             unidadeNome: (unidade.nome || '').toUpperCase(), 
             unidadeEstado: (unidade.estado || '').toUpperCase(), 
             unidadePais: (unidade.pais || 'BR').toUpperCase(), // 🟢 CARREGANDO PAÍS SEGURO
-            professorNome: (professor?.nome || 'SEM PROFESSOR').toUpperCase(),
+            professorNome: (professor?.nome || t('common.unknown.noTeacher')).toUpperCase(),
             tipoLinha: item.tipo,
-            modalidadeNome: (modalidade?.nome || 'DESCONHECIDA').toUpperCase(), 
+            modalidadeNome: (modalidade?.nome || t('common.unknown.modality')).toUpperCase(), 
             modalidadeCor: modalidade?.cor || '#ccc',
             dias: aulaBase.dias || [], horario: aulaBase.hora,
             aulasRealizadas, aulasCanceladas, mediaAlunos, totalAlunos, valorHora, totalReceber,
@@ -470,7 +455,7 @@ export default function RelatorioPage() {
             aulaBase
         };
     }).filter(Boolean);
-  }, [catalogs, aulasRealtime, validacoesRealtime, period, paisesFiltro, estadosFiltro, mentoresFiltro, unidadesFiltro, modalidadesFiltro, professoresFiltro, turnosFiltro, filtroKPI, role, userId, isCofreFechado]);
+  }, [catalogs, aulasRealtime, validacoesRealtime, period, paisesFiltro, estadosFiltro, mentoresFiltro, unidadesFiltro, modalidadesFiltro, professoresFiltro, turnosFiltro, filtroKPI, role, userId, isCofreFechado, t]);
 
   const relatorioFinal = useMemo(() => {
       let resultado = [];
@@ -516,7 +501,8 @@ export default function RelatorioPage() {
     const totalFinanceiro = baseSegura.reduce((acc, r) => acc + (r.totalReceber || 0), 0);
     const somaAlunos = baseSegura.reduce((acc, r) => acc + (r.totalAlunos || 0), 0);
     const mediaAlunos = totalRealizadas > 0 ? Math.round(somaAlunos / totalRealizadas) : 0;
-    const custoMedio = baseSegura.length > 0 ? baseSegura.reduce((acc, r) => acc + (r.valorHora || 0), 0) / baseSegura.length : 0;
+    // Valor médio realmente pago por aula realizada no período
+    const custoMedio = totalRealizadas > 0 ? totalFinanceiro / totalRealizadas : 0;
     
     const itensComAulaRealizada = baseSegura.filter(r => r.aulasRealizadas > 0 && r.metragem > 0);
     const mediaOcupacao = itensComAulaRealizada.length > 0 ? itensComAulaRealizada.reduce((acc, r) => acc + (r.ocupacao || 0), 0) / itensComAulaRealizada.length : 0;
@@ -553,7 +539,7 @@ export default function RelatorioPage() {
 
     const currentYear = new Date(period.start + 'T00:00:00').getFullYear();
     const currentMonthIdx = new Date(period.start + 'T00:00:00').getMonth(); 
-    const mesesNomes = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    const mesesNomes = Array.from({ length: 12 }, (_, idx) => idx); // nome do mês é formatado na tela, no idioma atual
     
     const historicoYTD = mesesNomes.map((nome, idx) => {
         let valor = 0; let status = 'pendente'; 
@@ -564,7 +550,9 @@ export default function RelatorioPage() {
             
             const valsMes = (validacoesYTD || []).filter(v => v.data && v.data.startsWith(prefix) && v.status === 'realizada');
             valsMes.forEach(v => {
-                const aula = (aulasRealtime || []).find(a => String(a.id) === String(v.aulaId));
+                // Aulões não têm aula na grade: usam os próprios dados da validação.
+                const aula = (aulasRealtime || []).find(a => String(a.id) === String(v.aulaId))
+                    || (v.isAulao ? { unidadeId: v.unidadeId, modalidadeId: v.modalidadeId, professorId: v.professorId, hora: v.hora } : null);
                 if (!aula) return;
                 
                 const u = (catalogs.unidades || []).find(x => String(x.id) === String(aula.unidadeId));
@@ -577,7 +565,7 @@ export default function RelatorioPage() {
                 if (professoresFiltro.length > 0 && !professoresFiltro.includes(aula.professorId)) return;
                 if (turnosFiltro.length > 0 && !checkTurno(aula.hora, turnosFiltro)) return;
 
-                valor += (parseFloat(aula.valor) || 0);
+                valor += valorDaValidacao(v, aula);
             });
             status = 'fechado';
 
@@ -603,9 +591,9 @@ export default function RelatorioPage() {
 
   const handleExport = (type) => {
     setShowExportMenu(false);
-    const headers = ["País", "Estado", "Unidade", "Modalidade", "Horário", "Professor", "Tipo", "Aulas Realizadas", "Aulas Canceladas", "Média Alunos", "Taxa Ocupação", "Valor Hora Aula", "Total a Receber"];
+    const headers = ['country', 'state', 'unit', 'modality', 'time', 'teacher', 'type', 'completed', 'canceled', 'avgStudents', 'occupancy', 'classValue', 'toReceive'].map(k => t(`reports.export.${k}`));
     const rows = relatorioFinal.map(r => {
-        return [ r.unidadePais||"-", r.unidadeEstado||"-", r.unidadeNome, r.modalidadeNome, r.horario, r.professorNome, r.isGroup ? "AGRUPADO" : (r.tipoLinha === 'aulao' ? "AULÃO" : (r.tipoLinha === 'substituto' ? "SUBSTITUTO" : "TITULAR")), r.aulasRealizadas, r.aulasCanceladas, r.mediaAlunos, `${(r.ocupacao || 0).toFixed(1)}%`, formatSmartCurrency(r.valorHora, r.unidadePais), formatSmartCurrency(r.totalReceber, r.unidadePais) ];
+        return [ r.unidadePais||"-", r.unidadeEstado||"-", r.unidadeNome, r.modalidadeNome, r.horario === 'VÁRIOS HORÁRIOS' ? t('reports.table.multipleTimes') : r.horario, r.professorNome, t(`reports.export.${r.isGroup ? 'typeGrouped' : r.tipoLinha === 'aulao' ? 'typeSpecial' : r.tipoLinha === 'substituto' ? 'typeSubstitute' : 'typeHolder'}`), r.aulasRealizadas, r.aulasCanceladas, r.mediaAlunos, `${(r.ocupacao || 0).toFixed(1)}%`, formatSmartCurrency(r.valorHora, r.unidadePais), formatSmartCurrency(r.totalReceber, r.unidadePais) ];
     });
 
     if (type === 'csv' || type === 'excel') {
@@ -650,7 +638,7 @@ export default function RelatorioPage() {
             {modoFiltro === 'periodo' && (
                 <>
                   <input type="date" value={dataInicioFiltro} onChange={e => setDataInicioFiltro(e.target.value)} className="bg-transparent font-bold text-slate-700 dark:text-white outline-none text-sm p-1"/>
-                  <span className="text-[10px] font-black text-slate-400">ATÉ</span>
+                  <span className="text-[10px] font-black text-slate-400">{t('reports.filters.until')}</span>
                   <input type="date" value={dataFimFiltro} onChange={e => setDataFimFiltro(e.target.value)} className="bg-transparent font-bold text-slate-700 dark:text-white outline-none text-sm p-1"/>
                 </>
             )}
@@ -675,17 +663,17 @@ export default function RelatorioPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-4">
                 {role === 'admin' && (
                     <>
-                        <MultiSelectDropdown label={t('reports.filters.country', 'País')} options={(listasFiltros.paises || []).map(p => ({id: p, label: p}))} selected={paisesFiltro} onChange={setPaisesFiltro} placeholder="TODOS" />
-                        <MultiSelectDropdown label={t('reports.filters.state', 'Estado')} options={(listasFiltros.estados || []).map(e => ({id: e, label: e}))} selected={estadosFiltro} onChange={setEstadosFiltro} placeholder="TODOS" />
-                        <MultiSelectDropdown label={t('reports.filters.mentor', 'Mentor')} options={(listasFiltros.mentores || []).map(m => ({id: m.id, label: m.nome}))} selected={mentoresFiltro} onChange={setMentoresFiltro} placeholder="TODOS" />
+                        <MultiSelectDropdown label={t('reports.filters.country', 'País')} options={(listasFiltros.paises || []).map(p => ({id: p, label: p}))} selected={paisesFiltro} onChange={setPaisesFiltro} placeholder={t('common.multiSelect.all')} />
+                        <MultiSelectDropdown label={t('reports.filters.state', 'Estado')} options={(listasFiltros.estados || []).map(e => ({id: e, label: e}))} selected={estadosFiltro} onChange={setEstadosFiltro} placeholder={t('common.multiSelect.all')} />
+                        <MultiSelectDropdown label={t('reports.filters.mentor', 'Mentor')} options={(listasFiltros.mentores || []).map(m => ({id: m.id, label: m.nome}))} selected={mentoresFiltro} onChange={setMentoresFiltro} placeholder={t('common.multiSelect.all')} />
                     </>
                 )}
                 {role !== 'unidade' && (
-                    <MultiSelectDropdown label={t('reports.filters.unit', 'Unidade')} options={(listasFiltros.unidadesFiltradas || []).map(u => ({id: u.id, label: u.nome.toUpperCase()}))} selected={unidadesFiltro} onChange={setUnidadesFiltro} placeholder="TODAS" />
+                    <MultiSelectDropdown label={t('reports.filters.unit', 'Unidade')} options={(listasFiltros.unidadesFiltradas || []).map(u => ({id: u.id, label: u.nome.toUpperCase()}))} selected={unidadesFiltro} onChange={setUnidadesFiltro} placeholder={t('common.multiSelect.all')} />
                 )}
-                <MultiSelectDropdown label={t('reports.filters.modality', 'Modalidade')} options={(catalogs.modalidades || []).map(m => ({id: m.id, label: m.nome.toUpperCase()}))} selected={modalidadesFiltro} onChange={setModalidadesFiltro} placeholder="TODAS" />
-                <MultiSelectDropdown label={t('reports.filters.teacher', 'Professor')} options={(catalogs.professores || []).map(p => ({id: p.id, label: p.nome.toUpperCase()}))} selected={professoresFiltro} onChange={setProfessoresFiltro} placeholder="TODOS" />
-                <MultiSelectDropdown label={t('reports.filters.shift', 'Turno')} options={[{id: 'Manhã', label: 'MANHÃ (05:30 - 11:59)'}, {id: 'Tarde', label: 'TARDE (12:00 - 17:00)'}, {id: 'Noite', label: 'NOITE (17:01 - 23:00)'}]} selected={turnosFiltro} onChange={setTurnosFiltro} placeholder="TODOS" />
+                <MultiSelectDropdown label={t('reports.filters.modality', 'Modalidade')} options={(catalogs.modalidades || []).map(m => ({id: m.id, label: m.nome.toUpperCase()}))} selected={modalidadesFiltro} onChange={setModalidadesFiltro} placeholder={t('common.multiSelect.all')} />
+                <MultiSelectDropdown label={t('reports.filters.teacher', 'Professor')} options={(catalogs.professores || []).map(p => ({id: p.id, label: p.nome.toUpperCase()}))} selected={professoresFiltro} onChange={setProfessoresFiltro} placeholder={t('common.multiSelect.all')} />
+                <MultiSelectDropdown label={t('reports.filters.shift', 'Turno')} options={[{id: 'Manhã', label: t('reports.filters.shiftMorning').toUpperCase()}, {id: 'Tarde', label: t('reports.filters.shiftAfternoon').toUpperCase()}, {id: 'Noite', label: t('reports.filters.shiftNight').toUpperCase()}]} selected={turnosFiltro} onChange={setTurnosFiltro} placeholder={t('common.multiSelect.all')} />
             </div>
         </div>
       )}
@@ -728,7 +716,7 @@ export default function RelatorioPage() {
                   <div className="relative z-10 flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-2.5">
                       {(kpis.historicoYTD || []).map((item, i) => (
                           <div key={i} className="flex items-center gap-3 group">
-                              <span className={`w-8 text-[9px] font-black uppercase tracking-widest ${item.status === 'atual' ? 'text-emerald-400' : item.status === 'fechado' ? 'text-slate-300 group-hover:text-emerald-400 transition-colors' : 'text-slate-600'}`}>{item.mes}</span>
+                              <span className={`w-8 text-[9px] font-black uppercase tracking-widest ${item.status === 'atual' ? 'text-emerald-400' : item.status === 'fechado' ? 'text-slate-300 group-hover:text-emerald-400 transition-colors' : 'text-slate-600'}`}>{formatDate(new Date(2000, item.mes, 1), { month: 'short' }).replace('.', '')}</span>
                               <div className="flex-1 h-3.5 bg-slate-800/50 rounded-sm overflow-hidden flex items-center relative">
                                   <div 
                                       className={`h-full transition-all duration-1000 ${item.status === 'atual' ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]' : item.status === 'fechado' ? 'bg-slate-500 group-hover:bg-emerald-400' : 'bg-transparent'}`} 
@@ -900,7 +888,7 @@ export default function RelatorioPage() {
                                 </td>
                                 <td className="p-3 font-mono text-slate-600 dark:text-slate-400 text-xs">
                                     {row.isGroup && row.horario === 'VÁRIOS HORÁRIOS' ? (
-                                        <span className="text-[10px] bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded font-bold uppercase">VÁRIOS</span>
+                                        <span className="text-[10px] bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded font-bold uppercase">{t('reports.table.multiple')}</span>
                                     ) : row.horario}
                                 </td>
                                 <td className="p-3">
@@ -913,9 +901,9 @@ export default function RelatorioPage() {
                                         </div>
                                         <div>
                                             <span className={`font-bold uppercase ${row.tipoLinha === 'substituto' ? 'text-blue-600 dark:text-blue-400' : row.tipoLinha === 'aulao' ? 'text-purple-600 dark:text-purple-400' : 'text-slate-800 dark:text-white'}`}>{row.professorNome}</span>
-                                            {row.isGroup && <span className="block text-[8px] uppercase font-black text-slate-400">TOTAL CONSOLIDADO</span>}
-                                            {!row.isGroup && row.tipoLinha === 'substituto' && <span className="block text-[8px] uppercase font-black text-blue-400 flex items-center gap-0.5"><ArrowRightLeft className="w-2 h-2"/> SUBSTITUTO</span>}
-                                            {!row.isGroup && row.tipoLinha === 'aulao' && <span className="block text-[8px] uppercase font-black text-purple-400 flex items-center gap-0.5"><Star className="w-2 h-2"/> AULÃO ESPECIAL</span>}
+                                            {row.isGroup && <span className="block text-[8px] uppercase font-black text-slate-400">{t('reports.table.consolidatedTotal')}</span>}
+                                            {!row.isGroup && row.tipoLinha === 'substituto' && <span className="block text-[8px] uppercase font-black text-blue-400 flex items-center gap-0.5"><ArrowRightLeft className="w-2 h-2"/> {t('reports.table.substitute')}</span>}
+                                            {!row.isGroup && row.tipoLinha === 'aulao' && <span className="block text-[8px] uppercase font-black text-purple-400 flex items-center gap-0.5"><Star className="w-2 h-2"/> {t('reports.table.specialClass')}</span>}
                                         </div>
                                     </div>
                                 </td>
@@ -930,7 +918,7 @@ export default function RelatorioPage() {
 
                                 <td className="p-3 align-middle min-w-[120px]">
                                     {row.metragem === 0 ? (
-                                        <span className="text-[9px] font-black bg-slate-100 dark:bg-slate-800 text-slate-400 px-2 py-1 rounded block text-center">S/ M²</span>
+                                        <span className="text-[9px] font-black bg-slate-100 dark:bg-slate-800 text-slate-400 px-2 py-1 rounded block text-center">{t('reports.table.noArea')}</span>
                                     ) : (
                                         <div className="flex flex-col gap-1 w-full max-w-[90px] mx-auto">
                                             <div className="flex justify-between items-end">
@@ -955,7 +943,7 @@ export default function RelatorioPage() {
                                   <td colSpan="11" className="p-4 pl-12">
                                     {row.isGroup ? (
                                         <div className="space-y-4">
-                                            <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-wider">DETALHAMENTO DOS HORÁRIOS</h4>
+                                            <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-wider">{t('reports.table.scheduleDetail')}</h4>
                                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                                                 {(row.aulasFilhas || []).map(filha => {
                                                     const filhaOcupTheme = getOcupacaoTheme(filha.ocupacao || 0);
@@ -966,8 +954,8 @@ export default function RelatorioPage() {
                                                             <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{(filha.dias || []).join(', ').toUpperCase()}</div>
                                                         </div>
                                                         <div className="text-right flex flex-col items-end">
-                                                            <div className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded uppercase">{filha.aulasRealizadas} REALIZADAS</div>
-                                                            <div className={`text-[10px] font-bold ${filhaOcupTheme.text} bg-slate-100 dark:bg-slate-700 mt-1 px-2 py-0.5 rounded uppercase`}>{filha.metragem > 0 ? `${(filha.ocupacao || 0).toFixed(0)}% OCUPAÇÃO` : 'S/ M²'}</div>
+                                                            <div className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded uppercase">{t('reports.table.completedCount', { count: filha.aulasRealizadas })}</div>
+                                                            <div className={`text-[10px] font-bold ${filhaOcupTheme.text} bg-slate-100 dark:bg-slate-700 mt-1 px-2 py-0.5 rounded uppercase`}>{filha.metragem > 0 ? t('reports.table.occupancyPct', { value: (filha.ocupacao || 0).toFixed(0) }) : t('reports.table.noArea')}</div>
                                                             <div className="text-xs font-black text-slate-700 dark:text-slate-300 mt-1">{formatSmartCurrency(filha.totalReceber, row.unidadePais)}</div>
                                                         </div>
                                                     </div>
@@ -982,7 +970,7 @@ export default function RelatorioPage() {
                                                 return (
                                                     <div key={dia} className="flex-1 min-w-[130px] max-w-[180px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden flex flex-col shadow-sm">
                                                         <div className="bg-slate-100 dark:bg-slate-700 px-3 py-1.5 text-center border-b border-slate-200 dark:border-slate-600">
-                                                            <span className="text-[10px] font-black text-slate-600 dark:text-slate-300 uppercase">{dia.toUpperCase()}</span>
+                                                            <span className="text-[10px] font-black text-slate-600 dark:text-slate-300 uppercase">{formatWeekday(dia).toUpperCase()}</span>
                                                         </div>
                                                         <div className="p-2 space-y-1.5 flex-1 min-h-[50px]">
                                                             {(datasDoDia || []).length === 0 && <span className="text-[10px] text-slate-300 text-center block">-</span>}
@@ -993,7 +981,7 @@ export default function RelatorioPage() {
                                                                 if (row.aulaBase.dataInicio && dataStr < row.aulaBase.dataInicio) return null;
                                                                 if (row.aulaBase.dataFim && dataStr > row.aulaBase.dataFim) return null;
 
-                                                                const diaMes = new Date(dataStr + 'T00:00:00').toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit'});
+                                                                const diaMes = formatDate(dataStr, 'dayMonth');
                                                                 
                                                                 const itemClass = validacao 
                                                                     ? (validacao.status === 'cancelada' 
@@ -1009,18 +997,18 @@ export default function RelatorioPage() {
                                                                             <span className="font-bold">{diaMes}</span>
                                                                             {validacao ? (
                                                                                 validacao.status === 'cancelada' 
-                                                                                ? <span className="font-bold text-[8px] uppercase">CANCEL</span> 
+                                                                                ? <span className="font-bold text-[8px] uppercase">{t('reports.table.cancelShort')}</span> 
                                                                                 : <span className="font-bold flex items-center gap-1"><Users className="w-3 h-3"/> {validacao.alunos}</span>
                                                                             ) : (
                                                                                 foiSubstituido 
-                                                                                ? <span className="font-bold text-[8px] uppercase flex items-center gap-1"><ArrowRightLeft className="w-2.5 h-2.5"/> SUBST</span> 
+                                                                                ? <span className="font-bold text-[8px] uppercase flex items-center gap-1"><ArrowRightLeft className="w-2.5 h-2.5"/> {t('reports.table.substShort')}</span> 
                                                                                 : <span>--</span>
                                                                             )}
                                                                         </div>
                                                                         {validacao && validacao.status === 'cancelada' && (
                                                                             <div className="text-[8px] font-bold border-t border-red-200 dark:border-red-800 pt-1 mt-0.5 flex items-center gap-1">
                                                                                 <AlertTriangle className="w-2.5 h-2.5 flex-shrink-0"/>
-                                                                                <span className="truncate max-w-[100px] uppercase" title={validacao.motivoCancelamento}>{validacao.motivoCancelamento}</span>
+                                                                                <span className="truncate max-w-[100px] uppercase" title={formatCancelReason(validacao.motivoCancelamento)}>{formatCancelReason(validacao.motivoCancelamento)}</span>
                                                                             </div>
                                                                         )}
                                                                     </div>

@@ -1,0 +1,83 @@
+{
+  "greeting": {
+    "morning": "Buenos días",
+    "afternoon": "Buenas tardes",
+    "night": "Buenas noches"
+  },
+  "roles": {
+    "admin": "Administrador",
+    "professor": "Profesor",
+    "mentor": "Mentor",
+    "unidade": "Unidad"
+  },
+  "systemOnline": "Sistema en Línea",
+  "cardDefaults": {
+    "access": "Acceder"
+  },
+  "cards": {
+    "reports": {
+      "title": "Informe Gerencial",
+      "subtitle": "Rendimiento Financiero",
+      "revenueYesterday": "INGRESOS DE AYER",
+      "monthlyForecast": "PREVISIÓN MENSUAL",
+      "footer": "Ver Detalles",
+      "monthlyEstimate": "Estimación Mensual (Est.)"
+    },
+    "schedule": {
+      "title": "Cronograma",
+      "subtitle": "Grilla de clases",
+      "footer": "Ver Grilla Completa",
+      "next": "Próxima",
+      "unit": "Unidad",
+      "teacher": "Profesor",
+      "noMoreClasses": "No hay más clases hoy",
+      "defaultModality": "Clase Grupal",
+      "defaultTeacher": "Instructor"
+    },
+    "validation": {
+      "title": "Validación Diaria",
+      "subtitle": "CONTROL DE ASISTENCIA",
+      "resolveNow": "Resolver Ahora",
+      "history": "Historial",
+      "classes": "Clases",
+      "pending": "Pendientes",
+      "allValidated": "¡Todo Validado!"
+    },
+    "monitoring": {
+      "title": "Monitoreo de Validación",
+      "subtitle": "Estado de Ayer",
+      "footer": "Ver Ranking",
+      "status": {
+        "goalMet": "Meta Alcanzada",
+        "highAdhesion": "Alta Adhesión",
+        "attention": "ATENCIÓN",
+        "critical": "Crítico",
+        "excellent": "EXCELENTE",
+        "inProgress": "EN CURSO"
+      },
+      "validatedOf": "{{validated}} de {{total}} validadas"
+    },
+    "pratiquePlay": {
+      "title": "PRATIQUE PLAY",
+      "subtitle": "MÚSICA PARA CLASES",
+      "footer": "Acceder a Play",
+      "insideLine1": "PLAYLISTS DE",
+      "insideLine2": "CLASES"
+    },
+    "linkAluno": {
+      "title": "ENLACE DEL ALUMNO",
+      "subtitle": "ACCESO EXTERNO",
+      "footer": "Abrir Portal",
+      "insideLine1": "PORTAL DE",
+      "insideLine2": "ALUMNOS"
+    },
+    "settings": {
+      "title": "Configuración",
+      "subtitle": "Panel Administrativo",
+      "footer": "Gestionar",
+      "units": "Unidades",
+      "mods": "Mods",
+      "profs": "Profs"
+    }
+  }
+}

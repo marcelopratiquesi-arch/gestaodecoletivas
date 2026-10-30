@@ -1,0 +1,73 @@
+{
+  "title": "Agenda de Clases",
+  "subtitle": "Gestión de Grilla y Horarios",
+  "subtitleReadOnly": "Consulta los horarios de todas las unidades",
+  "closedBadge": "Cerrada",
+  "closedClassTitle": "Clase Cerrada (Solo Historial)",
+  "activeClassTitle": "Clase Activa",
+  "filters": {
+    "state": "Provincia",
+    "allStates": "Todas las Provincias",
+    "unit": "Unidad",
+    "allUnits": "Seleccione...",
+    "searchInGrid": "Filtrar en esta grilla",
+    "searchEverywhere": "Buscar Modalidad en todas las unidades",
+    "searchPlaceholderInGrid": "Ej: Spinning...",
+    "searchPlaceholderEverywhere": "Ej: Escribe 'Pilates' para ver dónde hay..."
+  },
+  "buttons": {
+    "showHistory": "Ver Finalizadas",
+    "hideHistory": "Ocultar Finalizadas",
+    "add": "Agregar"
+  },
+  "placeholders": {
+    "startSearchTitle": "Comienza tu búsqueda",
+    "startSearchDesc": "Selecciona una Unidad para ver el calendario o escribe una Modalidad para buscar en todas.",
+    "resultsFor": "Resultados para",
+    "noClassesFound": "No se encontró ninguna clase con este nombre.",
+    "emptyGrid": "La grilla actual está vacía. Intenta hacer clic en 'Ver Finalizadas'.",
+    "noClassesInUnit": "No hay clases registradas en esta unidad.",
+    "createFirstClass": "Crear primera clase"
+  },
+  "modal": {
+    "newTitle": "CREAR NUEVA CLASE",
+    "editTitle": "EDITAR CLASE",
+    "modality": "Modalidad",
+    "teacher": "Profesor Titular",
+    "time": "Horario",
+    "value": "Valor Hora/Clase",
+    "daysOfWeek": "Días de la Semana",
+    "startDate": "Clase Registrada a partir de",
+    "endDate": "Finalizar Permanentemente en",
+    "cancel": "Cancelar",
+    "save": "Guardar",
+    "delete": "Eliminar",
+    "saveEdit": "Guardar Cambios",
+    "selectUnitAlert": "Seleccione la unidad",
+    "noTeacherLinked": "Ninguno vinculado"
+  },
+  "splitModal": {
+    "title": "Alteración de Grilla",
+    "desc": "Has cambiado datos importantes de la clase. ¿Cómo deseas que el sistema aplique estos cambios en la base de datos?",
+    "recommendedBadge": "RECOMENDADO (Preserva el Pasado)",
+    "newPhaseTitle": "Crear Nueva Fase",
+    "newPhaseDesc": "Cierra la clase antigua de forma invisible y crea la nueva. Ningún reporte o asistencia pasada se perderá. Ideal para cambio de horarios, días o profesores.",
+    "startDateLabel": "LA NUEVA CONFIGURACIÓN EMPIEZA A VALER EL DÍA:",
+    "applyChange": "Aplicar Cambio",
+    "or": "O",
+    "directFixTitle": "Corregir Error de Escritura",
+    "directFixDesc": "Reemplaza los datos directamente. Atención: Esto altera el nombre del profesor y horarios en el pasado. Úsalo solo si la clase fue registrada incorrectamente justo ahora.",
+    "justReplace": "Solo Reemplazar Datos",
+    "backToForm": "Volver al formulario",
+    "selectDateAlert": "Selecciona la fecha exacta en la que la nueva configuración empieza a valer."
+  },
+  "alerts": {
+    "fillRequired": "❌ Completa todos los campos obligatorios.",
+    "invalidDates": "❌ La fecha de finalización no puede ser anterior a la fecha de inicio.",
+    "deleteConfirm": "🗑️ PAPELERA INTELIGENTE:\n\n¿Deseas ocultar esta clase de la grilla? Será removida de la vista de todos, pero el historial y la base de datos se preservarán (Soft Delete).",
+    "deleteError": "Error al enviar la clase a la papelera.",
+    "saveError": "Error al guardar."
+  },
+  "unknownModality": "Desconocida",
+  "unknownUnit": "Sede Desconocida"
+}

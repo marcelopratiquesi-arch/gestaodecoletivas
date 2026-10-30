@@ -1,0 +1,42 @@
+{
+  "brandSubtitle": "Group Classes Management",
+  "sections": {
+    "principal": "Main",
+    "operacional": "Operational",
+    "gestao": "Management"
+  },
+  "items": {
+    "inicio": "Home",
+    "cronograma": "Schedule",
+    "linkAluno": "Student Link",
+    "validacaoDiaria": "Daily Validation",
+    "validacaoColetiva": "Group Validation",
+    "performanceFinanceira": "Financial Performance",
+    "relatorios": "Reports",
+    "configuracoes": "Settings",
+    "pratiquePlay": "Pratique Play",
+    "comunicados": "Announcements",
+    "radarGrade": "Schedule Radar",
+    "lojaEventos": "Store & Events",
+    "auditoria": "Audit",
+    "acessos": "Access"
+  },
+  "vault": {
+    "title": "Master Vault",
+    "pinPrompt": "Enter the PIN to unlock the menu",
+    "wrongPin": "Wrong PIN",
+    "unlock": "Unlock Menu"
+  },
+  "alerts": {
+    "title": "Critical Alerts",
+    "actions": "{{count}} Actions",
+    "none": "No recent alerts.",
+    "openAudit": "Open Full Audit",
+    "lgpdExport": "Data Sheet Downloaded",
+    "hiddenClass": "Class Hidden (Trash)",
+    "by": "By: {{name}}"
+  },
+  "changeLanguage": "Change Language",
+  "changeTheme": "Change Theme",
+  "logout": "Log out"
+}

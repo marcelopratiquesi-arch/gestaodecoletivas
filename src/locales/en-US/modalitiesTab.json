@@ -1,0 +1,39 @@
+{
+  "title": "Modality Management",
+  "subtitle": "Global catalog of group classes sorted by color spectrum.",
+  "search": "Search modality...",
+  "new": "New",
+  "noAccess": "No access.",
+  "m2PerStudent": "m²/student",
+  "editSpaceHint": "Click to edit the space per student",
+  "editFull": "Edit all",
+  "deactivate": "Deactivate",
+  "activate": "Activate",
+  "deleteForever": "Delete permanently",
+  "none": "No modalities found.",
+  "editTitle": "Edit Modality",
+  "newTitle": "New Modality",
+  "name": "Modality Name",
+  "namePlaceholder": "E.g.: FIT DANCE...",
+  "radarColor": "Radar Color",
+  "initialStatus": "Initial Status",
+  "activeVisible": "🟢 ACTIVE (VISIBLE)",
+  "inactiveHidden": "🔴 INACTIVE (HIDDEN)",
+  "save": "Save Modality",
+  "status": {
+    "ativa": "Active",
+    "inativa": "Inactive"
+  },
+  "messages": {
+    "loadError": "Error loading data.",
+    "saveM2Error": "Error saving m²",
+    "nameRequired": "Name is required.",
+    "updated": "Modality updated!",
+    "created": "Modality created!",
+    "saveError": "Error saving.",
+    "statusError": "Error changing status",
+    "deleteConfirm": "Delete {{name}}?",
+    "deleteError": "Error deleting"
+  },
+  "spaceLabel": "Space (m²/student)"
+}

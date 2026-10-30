@@ -1,0 +1,133 @@
+{
+  "syncing": "Syncing system...",
+  "title": "Group Validation",
+  "subtitle": "Real-time adherence monitoring and auditing",
+  "exportCsv": "Export CSV",
+  "filters": {
+    "states": "States",
+    "mentors": "Mentors",
+    "units": "Units"
+  },
+  "locked": {
+    "title": "Select a filter to start",
+    "desc": "Select a State, Mentor or Unit in the filter above to load the system data."
+  },
+  "kpis": {
+    "expectedClasses": "Expected Classes",
+    "units100": "Units at 100%",
+    "ofUnits": "Of {{count}} units",
+    "pendingUnits": "Pending Units"
+  },
+  "tabs": {
+    "ranking": "Ranking",
+    "status": "Detailed Status",
+    "collection": "Follow-up Center"
+  },
+  "badges": {
+    "congrats": "Congrats!",
+    "allOk": "All OK!",
+    "inProgress": "In Progress",
+    "underConstruction": "Under Construction",
+    "awaitingStart": "Awaiting Start",
+    "awaiting": "Awaiting",
+    "done": "Completed",
+    "validated": "Validated",
+    "canceled": "Canceled",
+    "holiday": "Holiday",
+    "late": "Late",
+    "pending": "Pending",
+    "future": "Upcoming"
+  },
+  "ranking": {
+    "classesCount": "{{done}}/{{expected}} classes",
+    "unitsCount": "{{count}} units",
+    "score": "Score",
+    "pendencies": "Pending",
+    "absences_one": "{{count}} missing",
+    "absences_other": "{{count}} missing",
+    "status": "Status",
+    "allOk": "All OK",
+    "waiting": "Waiting for data..."
+  },
+  "status": {
+    "title": "Breakdown by unit",
+    "hint": "Click a row to expand its classes",
+    "showAll": "Show all",
+    "filterIssues": "Show pending only",
+    "colUnitMentor": "Unit / Mentor",
+    "colProgress": "Progress",
+    "colStatus": "Status",
+    "colLastUpdate": "Last update",
+    "colResponsible": "Responsible",
+    "colActions": "Actions",
+    "noSchedule": "No schedule",
+    "ok100": "100% OK",
+    "pendencies": "{{count}} pending",
+    "waiting": "Waiting...",
+    "copyMessage": "Copy message",
+    "sendWhatsApp": "Send on WhatsApp",
+    "colDateTime": "Date / Time",
+    "colModality": "Modality",
+    "colTeacher": "Teacher",
+    "colStatusFlow": "Status / Attendance",
+    "colValidationData": "Validation data",
+    "students": "{{count}} students",
+    "atTime": "at {{time}}",
+    "recessHoliday": "Recess / Holiday",
+    "noUnits": "No units found.",
+    "loadMore": "Load more data"
+  },
+  "collection": {
+    "title": "General report ({{scope}})",
+    "scopeMyUnits": "My units",
+    "scopeMentors": "Mentor group",
+    "subtitle": "Consolidated summary for bulk follow-up.",
+    "copyReport": "Copy report",
+    "colUnit": "Unit",
+    "colMentor": "Mentor",
+    "colScore": "Score",
+    "colPendencies": "Pending details",
+    "colActions": "Follow-up actions",
+    "copy": "Copy",
+    "whatsapp": "WhatsApp",
+    "noPendencies": "Nothing pending. The network is at 100%!"
+  },
+  "alerts": {
+    "noPhone": "⚠️ NO PHONE NUMBER REGISTERED!",
+    "copied": "TEXT COPIED SUCCESSFULLY!"
+  },
+  "csv": {
+    "unit": "UNIT",
+    "mentor": "MENTOR",
+    "done": "COMPLETED",
+    "expected": "EXPECTED",
+    "status": "STATUS",
+    "progress": "PROGRESS",
+    "pendencies": "PENDING"
+  },
+  "messages": {
+    "adminToMentor": {
+      "greeting": "HI LEADER {{name}}, HOW ARE YOU? 🚀",
+      "intro": "I'M TRACKING THE VALIDATION SCOREBOARD FOR YOUR GROUP CLASS UNITS:",
+      "congratsTitle": "🏆 *CONGRATS (100% OK):*",
+      "pendingTitle": "🚨 *NEED ATTENTION (PENDING):*",
+      "pendingLine": "⚠️ *{{unit}}* ({{count}} CLASSES MISSING: {{dates}})",
+      "pendingClosing": "CAN YOU CHECK WITH THE LEADERS OF THESE UNITS SO THEY CATCH UP TODAY? I'M COUNTING ON YOU! 👊",
+      "allDone": "YOUR NETWORK IS 100% SPOTLESS! GREAT JOB FOLLOWING UP! 🏆👏"
+    },
+    "mentorToUnit": "HI LEADER *{{unit}}*, WE FOUND PENDING GROUP CLASS VALIDATIONS.\nDAYS: {{dates}}\nCAN YOU CATCH UP TODAY? 🚀",
+    "generalTitle": "📢 *GROUP VALIDATION STATUS - {{period}}*",
+    "adminGeneral": {
+      "congratsTitle": "🏆 *CONGRATS (100% VALIDATED):*",
+      "pendingTitle": "⚠️ *PENDING VALIDATION:*",
+      "line": "{{emoji}} {{name}} ({{count}} MISSING)",
+      "footer": "GROUP CLASS MANAGEMENT - PRATIQUE FITNESS 💪"
+    },
+    "mentorGeneral": {
+      "congratsTitle": "🏆 *UNITS UP TO DATE (100%):*",
+      "pendingTitle": "⚠️ *ATTENTION (PENDING):*",
+      "line": "{{emoji}} {{name}} ({{count}} MISSING)",
+      "footer": "LET'S CATCH UP AND KEEP OUR CLASSES EXCELLENT! COUNTING ON EVERYONE. 🚀"
+    }
+  }
+}

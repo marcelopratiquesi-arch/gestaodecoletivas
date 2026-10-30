@@ -1,0 +1,29 @@
+{
+  "title": "Central de Backup y Migración",
+  "subtitle": "Generá copias de seguridad 100% fieles para auditoría o migración de servidor.",
+  "exportTitle": "Exportar Datos (Backup)",
+  "exportDesc": "Seleccioná el formato deseado. Para migración de sistema (SQL/Supabase), usá siempre <strong>JSON</strong>.",
+  "downloadJson": "Descargar JSON (Completo p/ Migración)",
+  "recommended": "Recomendado",
+  "downloadExcel": "Descargar Excel (Visualización)",
+  "restoreTitle": "Restaurar desde Archivo",
+  "restoreDesc": "Restaura el sistema al estado exacto de un archivo <strong>.JSON</strong> guardado anteriormente.",
+  "selectBackup": "Seleccionar Backup (.json)",
+  "onlyJson": "Solo archivos generados con el botón de exportar JSON.",
+  "footer": "Sistema de Backup Seguro v2.0 • Pratique Gestión",
+  "status": {
+    "starting": "Iniciando escaneo completo del sistema...",
+    "extracting": "Extrayendo datos de la tabla: {{name}}...",
+    "compressing": "Comprimiendo y generando archivo...",
+    "done": "¡Backup finalizado con éxito!",
+    "criticalError": "Error crítico al generar el backup. Revisá la consola.",
+    "reading": "Leyendo archivo de backup...",
+    "restoringCollections": "Restaurando {{count}} colecciones...",
+    "restoringPct": "Restaurando... {{pct}}%",
+    "restored": "¡SISTEMA RESTAURADO CON ÉXITO!",
+    "corrupted": "Archivo dañado o formato inválido."
+  },
+  "confirmRestore": "⚠️ ALERTA DE SEGURIDAD MÁXIMA ⚠️\n\nEstás por RESTAURAR la base de datos.\nEsto va a SOBRESCRIBIR la información actual.\n\n¿Estás completamente seguro?",
+  "restoreDone": "Restauración completada. La página se va a recargar.",
+  "importError": "Error al importar."
+}

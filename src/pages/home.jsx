@@ -10,6 +10,9 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
+import { getDiaSemana, formatCurrency } from "../utils/formatters";
+import { deduplicarValidacoes } from "../utils/validacoes";
+import { valorDaValidacao } from "../utils/valores";
 
 // 🟢 CACHE GLOBAL DA HOME (Fica fora do componente para não ser destruído ao trocar de aba)
 let homeDashboardCache = {
@@ -121,7 +124,7 @@ const DashboardCard = ({ title, subtitle, icon: Icon, theme, onClick, footerText
 export default function Home() {
   const { userData } = useAuth();
   const navigate = useNavigate();
-  const { t, i18n } = useTranslation(); // 🟢 MOTOR ACIONADO NA HOME
+  const { t } = useTranslation(); // 🟢 MOTOR ACIONADO NA HOME
   
   const { catalogs, loadingCatalogs } = useCatalogs();
 
@@ -161,7 +164,6 @@ export default function Home() {
       setLoading(true);
       
       try {
-        const weekDayMap = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
         
         const d = new Date();
         const y = d.getFullYear();
@@ -169,8 +171,8 @@ export default function Home() {
         const day = String(d.getDate()).padStart(2, '0');
         
         const todayStr = `${y}-${m}-${day}`;
-        const todayWeekDay = weekDayMap[d.getDay()];
-        const nowTime = d.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
+        const todayWeekDay = getDiaSemana(d);
+        const nowTime = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; // comparado com aula.hora ("HH:MM")
 
         const ontemData = new Date(d);
         if (d.getDay() === 1) { 
@@ -184,7 +186,7 @@ export default function Home() {
         const dayO = String(ontemData.getDate()).padStart(2, '0');
         
         const ontemStr = `${yO}-${mO}-${dayO}`;
-        const ontemWeekDay = weekDayMap[ontemData.getDay()];
+        const ontemWeekDay = getDiaSemana(ontemData);
 
         const unidadesMap = {};
         const unidadesMentorIds = []; 
@@ -205,7 +207,6 @@ export default function Home() {
 
         let aulasSnapDocs = catalogs.aulas || [];
         
-        let totalValorOntem = 0;
         let totalValorMesProf = 0;
         let totalAulasOntem = 0; 
         let idsAulasOntem = []; 
@@ -235,9 +236,6 @@ export default function Home() {
             if (aula.dias && aula.dias.includes(ontemWeekDay)) {
                 totalAulasOntem++;
                 idsAulasOntem.push(aula.id);
-                if (role !== 'professor') {
-                    totalValorOntem += (parseFloat(aula.valor) || 0); 
-                }
             }
 
             if (aula.dias && aula.dias.includes(todayWeekDay)) {
@@ -259,30 +257,30 @@ export default function Home() {
             }
         });
 
-        if (role === 'professor') {
-            setResumoRelatorio({ valor: totalValorMesProf, labelKey: "monthlyForecast" });
-        } else {
-            setResumoRelatorio({ valor: totalValorOntem, labelKey: "revenueYesterday" });
-        }
-        
         setResumoCronograma({ proximaAula: nextClass });
 
         let validacoesRealizadasOntem = 0;
         let validacoesRealizadasHoje = 0;
-        
+        // Receita de ontem = aulas realmente validadas como realizadas ontem, no valor em vigor no dia (src/utils/valores.js).
+        let receitaOntem = 0;
+
         const cacheDoMesmoDia = homeDashboardCache.todayStr === todayStr;
 
         if (Date.now() - homeDashboardCache.timestamp < CACHE_TTL && cacheDoMesmoDia) {
              validacoesRealizadasOntem = homeDashboardCache.validacoesRealizadasOntem;
              validacoesRealizadasHoje = homeDashboardCache.validacoesRealizadasHoje;
+             receitaOntem = homeDashboardCache.receitaOntem || 0;
         } else {
              if (idsAulasOntem.length > 0 || idsAulasHoje.length > 0) {
                  const qVal = query(collection(db, "validacoes"), where("data", "in", [todayStr, ontemStr]));
                  const valSnap = await getDocs(qVal);
                  
-                 valSnap.forEach(doc => {
-                     const val = doc.data();
-                     if (val.data === ontemStr && idsAulasOntem.includes(val.aulaId)) validacoesRealizadasOntem++;
+                 const aulasPorId = new Map((catalogs.aulasTodas || catalogs.aulas || []).map(a => [a.id, a]));
+                 deduplicarValidacoes(valSnap.docs.map(d => d.data())).forEach(val => {
+                     if (val.data === ontemStr && idsAulasOntem.includes(val.aulaId)) {
+                         validacoesRealizadasOntem++;
+                         receitaOntem += valorDaValidacao(val, aulasPorId.get(val.aulaId));
+                     }
                      if (val.data === todayStr && idsAulasHoje.includes(val.aulaId)) validacoesRealizadasHoje++;
                  });
 
@@ -290,9 +288,16 @@ export default function Home() {
                      timestamp: Date.now(),
                      todayStr: todayStr,
                      validacoesRealizadasOntem,
-                     validacoesRealizadasHoje
+                     validacoesRealizadasHoje,
+                     receitaOntem
                  };
              }
+        }
+
+        if (role === 'professor') {
+            setResumoRelatorio({ valor: totalValorMesProf, labelKey: "monthlyForecast" });
+        } else {
+            setResumoRelatorio({ valor: receitaOntem, labelKey: "revenueYesterday" });
         }
 
         const pendentesHoje = Math.max(0, totalAulasHoje - validacoesRealizadasHoje);
@@ -367,7 +372,7 @@ export default function Home() {
                     {loading || loadingCatalogs ? <Loader2 className="w-6 h-6 animate-spin text-blue-500"/> : (
                         <h4 className="text-3xl font-black text-blue-700 dark:text-blue-300 tracking-tight">
                             {/* 🟢 Adaptação Mágica de Moeda para o idioma selecionado */}
-                            {new Intl.NumberFormat(i18n.language || 'pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(resumoRelatorio.valor)}
+                            {formatCurrency(resumoRelatorio.valor, catalogs.unidades?.find(u => String(u.id) === String(userData?.unidadeId))?.pais, { maximumFractionDigits: 0 })}
                         </h4>
                     )}
                 </div>
