@@ -10,6 +10,7 @@ import { KPICard, MultiSelectDropdown, getTodayStr, normalizeDate, getDatesInRan
 import { RankingTab, StatusTab, CobrancaTab } from './Tabs';
 import { getDiaSemana, toDate, formatDate, formatTime } from '../../utils/formatters';
 import { deduplicarValidacoes } from '../../utils/validacoes';
+import { feriadoNoDia, ehCancelamentoAutomaticoDeFeriado } from '../../utils/feriados';
 import { useTranslation } from 'react-i18next';
 
 export default function ValidacaoColetiva() {
@@ -77,10 +78,6 @@ export default function ValidacaoColetiva() {
   const professoresBase = catalogs?.professores || [];
   const aulasBase = catalogs?.aulas || [];
 
-  const feriadosBase = useMemo(() => {
-      return (catalogs?.feriados || []).map(f => ({ id: f.id, ...f, inicio: normalizeDate(f.dataInicio || f.inicio || f.data), fim: normalizeDate(f.dataFim || f.fim || f.data) }));
-  }, [catalogs?.feriados]);
-
   useEffect(() => {
     if (!userId || loadingCatalogs) return;
     if (isCofreGlobalFechado) { setValidacoesBase([]); setLoadingRealtime(false); return; }
@@ -118,7 +115,6 @@ export default function ValidacaoColetiva() {
         
         datas.forEach(dStr => {
             if (dStr > todayStr) return;
-            const isFer = feriadosBase.some(f => (!f.unidadeId || String(f.unidadeId) === String(unidade.id)) && (dStr >= normalizeDate(f.inicio) && dStr <= normalizeDate(f.fim)));
             const diaSem = getDiaSemana(dStr);
             
             const aulasDia = grade.filter(a => {
@@ -132,11 +128,19 @@ export default function ValidacaoColetiva() {
                 const [h, m] = aula.hora.split(':');
                 const dHa = toDate(dStr); dHa.setHours(parseInt(h), parseInt(m), 59);
                 if (dStr < todayStr || (dStr === todayStr && dHa < now)) {
-                    totalEsp++;
-                    if (isFer) { totalVal++; hist.push({ key: aula.id + dStr, data: formatDate(dStr), dia: diaSem, horaAula: aula.hora, modalidade: modMap[aula.modalidadeId] || t('common.unknown.general'), professor: profMap[aula.professorId] || t('common.unknown.noTeacher'), status: 'FERIADO', responsavelNome: t('common.roles.system'), timestampOrdenacao: dHa }); return; }
                     
                     const pool = [...(vIndex[`${unidade.id}_${dStr}`] || [])];
                     let fIdx = pool.findIndex(v => String(v.aulaId) === String(aula.id) || v.hora === aula.hora);
+
+                    // Regra única de feriado (src/utils/feriados.js): sem validação de pessoa, dia de feriado não entra
+                    // no total esperado nem vira pendência; aparece no histórico como FERIADO.
+                    const validacaoAchada = fIdx !== -1 ? pool[fIdx] : null;
+                    const feriadoDoDia = feriadoNoDia(dStr, unidade, catalogs?.feriados || []);
+                    if ((!validacaoAchada && feriadoDoDia) || ehCancelamentoAutomaticoDeFeriado(validacaoAchada)) {
+                        hist.push({ key: aula.id + dStr, data: formatDate(dStr), dia: diaSem, horaAula: aula.hora, modalidade: modMap[aula.modalidadeId] || t('common.unknown.general'), professor: profMap[aula.professorId] || t('common.unknown.noTeacher'), status: 'FERIADO', responsavelNome: t('common.roles.system'), timestampOrdenacao: dHa });
+                        return;
+                    }
+                    totalEsp++;
                     
                     if (fIdx !== -1) {
                         totalVal++;

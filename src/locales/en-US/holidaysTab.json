@@ -1,6 +1,6 @@
 {
   "title": "Schedule a Recess or Holiday",
-  "desc": "This will automatically cancel every class in the selected period.",
+  "desc": "Classes at the chosen location show as canceled (holiday) during the period: no payment and nothing pending.",
   "eventName": "Event Name",
   "eventPlaceholder": "E.g.: Carnival Recess",
   "startDate": "Start Date",
@@ -18,10 +18,38 @@
   "none": "No recess or holiday registered.",
   "messages": {
     "fillRequired": "Fill in the name and the dates!",
-    "confirmCreate": "WARNING: This will AUTOMATICALLY CANCEL every class between {{start}} and {{end}}.\n\nDo you want to continue?",
-    "created": "Done! Recess created and {{count}} classes were canceled automatically.",
+    "confirmCreate": "WARNING: classes at {{scope}} between {{start}} and {{end}} will show as canceled (holiday).\n\nDo you want to continue?",
+    "created": "Holiday saved! Classes at {{scope}} in this period show as canceled.",
     "saveError": "Error saving holiday.",
-    "confirmDelete": "Delete the recess \"{{name}}\"?\n\nNote: For safety, canceled classes will NOT be reactivated automatically. Remove them in the daily validation if needed.",
-    "deleteError": "Error deleting"
+    "confirmDelete": "Delete the holiday \"{{name}}\"?\n\nClasses in this period go back to normal. Validations made by people are not changed.",
+    "deleteError": "Error deleting",
+    "invalidRange": "The end date cannot be before the start date.",
+    "selectScopeTarget": "Choose where the holiday applies (state, city or units)."
+  },
+  "scope": "Where the holiday applies",
+  "scopes": {
+    "rede": "Whole network",
+    "pais": "Country",
+    "estado": "State",
+    "cidade": "City",
+    "unidades": "Specific units"
+  },
+  "country": "Country",
+  "state": "State",
+  "city": "City",
+  "cityPlaceholder": "E.g.: Miami",
+  "cityHint": "We suggest units with this city in their address. Review and check/uncheck below.",
+  "units": "Units",
+  "searchUnits": "Search unit...",
+  "selectedUnits_one": "{{count}} unit selected",
+  "selectedUnits_other": "{{count}} units selected",
+  "scopeLabel": {
+    "rede": "Whole network",
+    "pais": "Country: {{value}}",
+    "estado": "State: {{value}}",
+    "cidade_one": "City: {{value}} ({{count}} unit)",
+    "cidade_other": "City: {{value}} ({{count}} units)",
+    "unidades_one": "{{count}} unit",
+    "unidades_other": "{{count}} units"
   }
 }

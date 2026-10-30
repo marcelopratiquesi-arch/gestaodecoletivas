@@ -4,6 +4,7 @@ import { db } from '../../services/firebase';
 import { collection, getDocs, onSnapshot, query, where, documentId, orderBy } from 'firebase/firestore'; 
 import { useTranslation } from "react-i18next"; // 🟢 MOTOR DE IDIOMAS ACIONADO
 import { deduplicarValidacoes } from '../../utils/validacoes';
+import { feriadoNoDia } from '../../utils/feriados';
 import { DIAS_SEMANA as diasSemanaMap, getDiaSemana, formatCurrency, formatDate, formatWeekday, formatCancelReason } from '../../utils/formatters';
 
 import { 
@@ -349,15 +350,10 @@ export default function RelatorioPage() {
         }
     });
 
+    // Regra única de feriado (src/utils/feriados.js)
     const checkIsFeriado = (dateStr, unidadeId) => {
-        const dObj = new Date(dateStr + 'T00:00:00');
-        return (catalogs.feriados || []).some(f => {
-            const aplica = !f.unidadeId || String(f.unidadeId) === String(unidadeId);
-            if (!aplica) return false;
-            if (f.data === dateStr) return true;
-            if (f.dataInicio && f.dataFim) { return dObj >= new Date(f.dataInicio + 'T00:00:00') && dObj <= new Date(f.dataFim + 'T00:00:00'); }
-            return false;
-        });
+        const unidade = (catalogs.unidades || []).find(u => String(u.id) === String(unidadeId)) || { id: unidadeId };
+        return Boolean(feriadoNoDia(dateStr, unidade, catalogs.feriados || []));
     };
 
     const buildHistoricoComFeriados = (aula, validacoesExistentes) => {

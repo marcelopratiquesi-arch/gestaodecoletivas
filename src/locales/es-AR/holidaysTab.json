@@ -1,6 +1,6 @@
 {
   "title": "Programar Receso o Feriado",
-  "desc": "Esto cancelará automáticamente todas las clases del período seleccionado.",
+  "desc": "Las clases del lugar elegido aparecen como canceladas (feriado) en el período: sin pago y sin pendientes.",
   "eventName": "Nombre del Evento",
   "eventPlaceholder": "Ej: Receso de Carnaval",
   "startDate": "Fecha Inicio",
@@ -18,10 +18,38 @@
   "none": "No hay recesos ni feriados registrados.",
   "messages": {
     "fillRequired": "¡Completá el nombre y las fechas!",
-    "confirmCreate": "ATENCIÓN: Esto va a CANCELAR AUTOMÁTICAMENTE todas las clases entre el {{start}} y el {{end}}.\n\n¿Querés continuar?",
-    "created": "¡Listo! Receso creado y {{count}} clases fueron canceladas automáticamente.",
+    "confirmCreate": "ATENCIÓN: las clases de {{scope}} entre el {{start}} y el {{end}} van a aparecer como canceladas (feriado).\n\n¿Querés continuar?",
+    "created": "¡Feriado registrado! Las clases de {{scope}} en ese período aparecen como canceladas.",
     "saveError": "Error al guardar el feriado.",
-    "confirmDelete": "¿Querés eliminar el receso \"{{name}}\"?\n\nNota: Por seguridad, las clases canceladas NO se reactivarán automáticamente. Si hace falta, eliminá las cancelaciones en la validación diaria.",
-    "deleteError": "Error al eliminar"
+    "confirmDelete": "¿Querés eliminar el feriado \"{{name}}\"?\n\nLas clases de ese período vuelven a aparecer normalmente. Las validaciones hechas por personas no se modifican.",
+    "deleteError": "Error al eliminar",
+    "invalidRange": "La fecha final no puede ser anterior a la inicial.",
+    "selectScopeTarget": "Elegí dónde aplica el feriado (provincia, ciudad o sedes)."
+  },
+  "scope": "Dónde aplica el feriado",
+  "scopes": {
+    "rede": "Toda la red",
+    "pais": "País",
+    "estado": "Provincia",
+    "cidade": "Ciudad",
+    "unidades": "Sedes específicas"
+  },
+  "country": "País",
+  "state": "Provincia",
+  "city": "Ciudad",
+  "cityPlaceholder": "Ej: Córdoba",
+  "cityHint": "Sugerimos las sedes con esa ciudad en la dirección. Revisá y marcá/desmarcá abajo.",
+  "units": "Sedes",
+  "searchUnits": "Buscar sede...",
+  "selectedUnits_one": "{{count}} sede seleccionada",
+  "selectedUnits_other": "{{count}} sedes seleccionadas",
+  "scopeLabel": {
+    "rede": "Toda la red",
+    "pais": "País: {{value}}",
+    "estado": "Provincia: {{value}}",
+    "cidade_one": "Ciudad: {{value}} ({{count}} sede)",
+    "cidade_other": "Ciudad: {{value}} ({{count}} sedes)",
+    "unidades_one": "{{count}} sede",
+    "unidades_other": "{{count}} sedes"
   }
 }

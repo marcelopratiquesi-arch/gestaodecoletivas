@@ -2,10 +2,12 @@ import React, { useState, useEffect, useMemo } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { useTheme } from "../../contexts/ThemeContext";
+import { useCatalogs } from "../../contexts/CatalogContext";
 import { db } from "../../services/firebase";
 import { collection, query, where, getDocs, onSnapshot } from "firebase/firestore";
 import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
 import { LANGUAGES, getDiaSemana, formatDateTime, formatRole } from "../../utils/formatters";
+import { feriadoNoDia } from "../../utils/feriados";
 
 import { 
   LayoutDashboard, BarChart3, Calendar, CircleCheck, 
@@ -18,6 +20,7 @@ import {
 
 export default function Sidebar({ collapsed }) { 
   const { userData, logout } = useAuth();
+  const { catalogs, loadingCatalogs } = useCatalogs();
   const { theme, toggleTheme } = useTheme();
   const location = useLocation();
   const { t, i18n } = useTranslation(); // 🟢 CÉREBRO CONECTADO
@@ -60,37 +63,40 @@ export default function Sidebar({ collapsed }) {
   const isActive = (route) => path === route || path.startsWith(`${route}/`);
 
   // --- CÁLCULO DE PENDÊNCIAS ---
+  // Aulas e cadastros vêm da memória ao vivo (CatalogContext); só as validações de hoje são buscadas a cada minuto.
+  // Conta apenas aulas ativas hoje (não excluídas, dentro de início/fim) e fora de feriado (regra única).
   useEffect(() => {
+    if (loadingCatalogs) return;
     const fetchPendencias = async () => {
         try {
             const todayStr = new Date().toLocaleDateString('en-CA');
             const diaSemanaHoje = getDiaSemana(new Date());
 
-            const qAulas = query(collection(db, "aulas"), where("dias", "array-contains", diaSemanaHoje));
-            const aulasSnap = await getDocs(qAulas);
-            
             const qValidacoes = query(collection(db, "validacoes"), where("data", "==", todayStr));
             const validacoesSnap = await getDocs(qValidacoes);
             const validacoesMap = new Set(validacoesSnap.docs.map(doc => doc.data().aulaId));
 
-            let unidadesMentorIds = [];
-            if (role === 'mentor') {
-                const uSnap = await getDocs(query(collection(db, "unidades"), where("mentorId", "==", userData.uid || userData.id)));
-                unidadesMentorIds = uSnap.docs.map(d => d.id);
-            }
+            const meuId = userData.uid || userData.id;
+            const unidadesPorId = new Map((catalogs.unidades || []).map(u => [String(u.id), u]));
+            const meuProfessorId = userData.professorId || (catalogs.professores || []).find(p => p.uidLogin === meuId)?.id;
 
             let count = 0;
-            aulasSnap.docs.forEach(doc => {
-                const aula = doc.data();
-                const aulaId = doc.id;
+            (catalogs.aulas || []).forEach(aula => {
+                if (!aula.dias?.includes(diaSemanaHoje)) return;
+                if (aula.dataInicio && todayStr < aula.dataInicio) return;
+                if (aula.dataFim && todayStr > aula.dataFim) return;
+
+                const unidade = unidadesPorId.get(String(aula.unidadeId));
                 let isMyResponsibility = false;
 
                 if (role === 'admin') isMyResponsibility = true;
                 else if (role === 'unidade' && String(aula.unidadeId) === String(userData.unidadeId)) isMyResponsibility = true;
-                else if (role === 'professor' && String(aula.professorId) === String(userData.uid || userData.id)) isMyResponsibility = true;
-                else if (role === 'mentor' && unidadesMentorIds.includes(String(aula.unidadeId))) isMyResponsibility = true;
+                else if (role === 'professor' && meuProfessorId && String(aula.professorId) === String(meuProfessorId)) isMyResponsibility = true;
+                else if (role === 'mentor' && unidade?.mentorId === meuId) isMyResponsibility = true;
 
-                if (isMyResponsibility && !validacoesMap.has(aulaId)) count++;
+                if (!isMyResponsibility || validacoesMap.has(aula.id)) return;
+                if (feriadoNoDia(todayStr, unidade || { id: aula.unidadeId }, catalogs.feriados || [])) return;
+                count++;
             });
             setPendencias(count);
         } catch (error) { console.error("Erro pendências:", error); }
@@ -98,7 +104,7 @@ export default function Sidebar({ collapsed }) {
     fetchPendencias();
     const interval = setInterval(fetchPendencias, 60000);
     return () => clearInterval(interval);
-  }, [role, userData]);
+  }, [role, userData, catalogs, loadingCatalogs]);
 
   // --- CÃO DE GUARDA EM TEMPO REAL ---
   useEffect(() => {

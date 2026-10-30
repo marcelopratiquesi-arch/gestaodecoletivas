@@ -15,6 +15,7 @@ import { AulaCard } from './AulaCard';
 import { ValidationModal } from './ValidationModal';
 import { getDiaSemana, formatCurrency } from '../../utils/formatters';
 import { idValidacao, deduplicarValidacoes } from '../../utils/validacoes';
+import { feriadoNoDia } from '../../utils/feriados';
 import { useTranslation } from 'react-i18next';
 
 // --- HELPERS ---
@@ -325,25 +326,11 @@ export default function ValidacaoDiariaPage() {
         if (meuPerfil) meuProfessorId = meuPerfil.id;
     }
 
-    const checkIsFeriado = (dateString) => {
-        const targetDate = new Date(dateString + 'T00:00:00');
-        return catalogs.feriados.some(f => {
-            if (f.data === dateString) return true;
-            if (f.dataInicio && f.dataFim) {
-                const inicio = new Date(f.dataInicio + 'T00:00:00');
-                const fim = new Date(f.dataFim + 'T00:00:00');
-                return targetDate >= inicio && targetDate <= fim;
-            }
-            return false;
-        });
-    };
-
     let gradeFinal = [];
 
     datasParaVerificar.forEach(dataObj => {
       const dataString = dataObj.toISOString().split('T')[0];
       const diaSemanaNome = getDiaSemana(dataObj);
-      const isFeriadoGlobal = checkIsFeriado(dataString);
 
       const aulasDoDia = catalogs.aulas.filter(aula => aula.dias && aula.dias.includes(diaSemanaNome));
 
@@ -393,7 +380,8 @@ export default function ValidacaoDiariaPage() {
 
         if (validacao) {
             status = validacao.status;
-        } else if (isFeriadoGlobal) {
+        } else if (feriadoNoDia(dataString, unidadeValida, catalogs.feriados)) {
+            // Regra única de feriado (src/utils/feriados.js): só a unidade dentro da abrangência do feriado.
             status = 'cancelada';
             dadosValidacao = { motivoCancelamento: 'Recesso/Feriado', status: 'cancelada' };
         }
