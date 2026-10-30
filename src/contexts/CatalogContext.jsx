@@ -14,7 +14,8 @@ const CATALOGOS_VAZIOS = {
     vinculos: [],
     feriados: [],
     mentores: [],
-    aulas: []
+    aulas: [],
+    aulasTodas: [] // inclui excluídas: usada só para valores de meses passados
 };
 
 const mapearDocs = (snap) => snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -43,7 +44,7 @@ export const CatalogProvider = ({ children }) => {
             { chave: 'professores', ref: query(collection(db, 'professores'), orderBy('nome')) },
             { chave: 'feriados', ref: collection(db, 'feriados') },
             // 🟢 LIXEIRA (SOFT DELETE): aulas com 'excluido: true' não entram na memória global
-            { chave: 'aulas', ref: collection(db, 'aulas'), filtro: (lista) => lista.filter(aula => aula.excluido !== true) },
+            { chave: 'aulas', ref: collection(db, 'aulas'), filtro: (lista) => lista.filter(aula => aula.excluido !== true), copiaCompleta: 'aulasTodas' },
         ];
         // Dados sigilosos só depois do login
         if (user) {
@@ -58,11 +59,11 @@ export const CatalogProvider = ({ children }) => {
             if (pendentes.delete(chave) && pendentes.size === 0) setCarregadoPara(chaveSessao);
         };
 
-        const cancelar = fontes.map(({ chave, ref, filtro }) => onSnapshot(
+        const cancelar = fontes.map(({ chave, ref, filtro, copiaCompleta }) => onSnapshot(
             ref,
             (snap) => {
                 const lista = mapearDocs(snap);
-                setCatalogs(prev => ({ ...prev, [chave]: filtro ? filtro(lista) : lista }));
+                setCatalogs(prev => ({ ...prev, [chave]: filtro ? filtro(lista) : lista, ...(copiaCompleta ? { [copiaCompleta]: lista } : {}) }));
                 marcarRespondido(chave);
             },
             (error) => {

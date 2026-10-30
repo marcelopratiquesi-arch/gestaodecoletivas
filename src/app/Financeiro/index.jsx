@@ -15,6 +15,7 @@ import {
 import * as XLSX from 'xlsx';
 import { formatCurrency, formatPercent } from '../../utils/formatters';
 import { deduplicarValidacoes } from '../../utils/validacoes';
+import { valorDaValidacao } from '../../utils/valores';
 import { useTranslation } from 'react-i18next';
 
 // --- HELPERS ---
@@ -328,7 +329,8 @@ export default function PerformanceFinanceiraPage() {
         try {
             // MAPA DE AULAS LOCAL
             const aulasMap = {};
-            (globalCatalogs.aulas || []).forEach(d => aulasMap[d.id] = d);
+            // Inclui aulas excluídas: o custo que elas geraram no passado não pode sumir.
+            (globalCatalogs.aulasTodas || globalCatalogs.aulas || []).forEach(d => aulasMap[d.id] = d);
 
             // 🟢 CORREÇÃO O(1): Usar SET para performance máxima
             const unidadesSet = new Set(unidades.map(u => u.id));
@@ -344,12 +346,10 @@ export default function PerformanceFinanceiraPage() {
                 deduplicarValidacoes(valSnap.docs.map(d => d.data())).forEach(val => {
                     // 🟢 OTIMIZAÇÃO: Busca no SET é 100x mais rápida que o .some() num array
                     if (unidadesSet.has(val.unidadeId)) {
-                        const aula = aulasMap[val.aulaId];
-                        if (aula) {
-                            const valor = parseFloat(aula.valor) || 0;
-                            if (!custosMap[val.unidadeId]) custosMap[val.unidadeId] = 0;
-                            custosMap[val.unidadeId] += valor;
-                        }
+                        // Valor em vigor no dia da aula (regra única em src/utils/valores.js); aulões entram pelo valorPago.
+                        const valor = valorDaValidacao(val, aulasMap[val.aulaId]);
+                        if (!custosMap[val.unidadeId]) custosMap[val.unidadeId] = 0;
+                        custosMap[val.unidadeId] += valor;
                     }
                 });
                 return custosMap;

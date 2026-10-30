@@ -5,6 +5,7 @@ import { collection, getDocs, onSnapshot, query, where, documentId, orderBy } fr
 import { useTranslation } from "react-i18next"; // 🟢 MOTOR DE IDIOMAS ACIONADO
 import { deduplicarValidacoes } from '../../utils/validacoes';
 import { feriadoNoDia } from '../../utils/feriados';
+import { valorDaValidacao } from '../../utils/valores';
 import { DIAS_SEMANA as diasSemanaMap, getDiaSemana, formatCurrency, formatDate, formatWeekday, formatCancelReason } from '../../utils/formatters';
 
 import { 
@@ -428,8 +429,9 @@ export default function RelatorioPage() {
         const totalAlunos = historicoSeguro.filter(v => v.status === 'realizada').reduce((acc, v) => acc + (Number(v.alunos) || 0), 0);
         const mediaAlunos = aulasRealizadas > 0 ? Math.round(totalAlunos / aulasRealizadas) : 0;
         
+        // "Valor aula" mostra o valor atual; o "A receber" soma o valor em vigor no dia de cada aula realizada.
         const valorHora = parseFloat(aulaBase.valor) || 0;
-        const totalReceber = aulasRealizadas * valorHora; 
+        const totalReceber = historicoSeguro.reduce((acc, v) => acc + valorDaValidacao(v, aulaBase), 0);
 
         const metragem = Number(unidade.metragemSalaColetiva) || 0;
         const indiceMod = Number(modalidade?.indiceOcupacao) || 3;
@@ -499,7 +501,8 @@ export default function RelatorioPage() {
     const totalFinanceiro = baseSegura.reduce((acc, r) => acc + (r.totalReceber || 0), 0);
     const somaAlunos = baseSegura.reduce((acc, r) => acc + (r.totalAlunos || 0), 0);
     const mediaAlunos = totalRealizadas > 0 ? Math.round(somaAlunos / totalRealizadas) : 0;
-    const custoMedio = baseSegura.length > 0 ? baseSegura.reduce((acc, r) => acc + (r.valorHora || 0), 0) / baseSegura.length : 0;
+    // Valor médio realmente pago por aula realizada no período
+    const custoMedio = totalRealizadas > 0 ? totalFinanceiro / totalRealizadas : 0;
     
     const itensComAulaRealizada = baseSegura.filter(r => r.aulasRealizadas > 0 && r.metragem > 0);
     const mediaOcupacao = itensComAulaRealizada.length > 0 ? itensComAulaRealizada.reduce((acc, r) => acc + (r.ocupacao || 0), 0) / itensComAulaRealizada.length : 0;
@@ -547,7 +550,9 @@ export default function RelatorioPage() {
             
             const valsMes = (validacoesYTD || []).filter(v => v.data && v.data.startsWith(prefix) && v.status === 'realizada');
             valsMes.forEach(v => {
-                const aula = (aulasRealtime || []).find(a => String(a.id) === String(v.aulaId));
+                // Aulões não têm aula na grade: usam os próprios dados da validação.
+                const aula = (aulasRealtime || []).find(a => String(a.id) === String(v.aulaId))
+                    || (v.isAulao ? { unidadeId: v.unidadeId, modalidadeId: v.modalidadeId, professorId: v.professorId, hora: v.hora } : null);
                 if (!aula) return;
                 
                 const u = (catalogs.unidades || []).find(x => String(x.id) === String(aula.unidadeId));
@@ -560,7 +565,7 @@ export default function RelatorioPage() {
                 if (professoresFiltro.length > 0 && !professoresFiltro.includes(aula.professorId)) return;
                 if (turnosFiltro.length > 0 && !checkTurno(aula.hora, turnosFiltro)) return;
 
-                valor += (parseFloat(aula.valor) || 0);
+                valor += valorDaValidacao(v, aula);
             });
             status = 'fechado';
 

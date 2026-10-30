@@ -12,6 +12,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
 import { getDiaSemana, formatCurrency } from "../utils/formatters";
 import { deduplicarValidacoes } from "../utils/validacoes";
+import { valorDaValidacao } from "../utils/valores";
 
 // 🟢 CACHE GLOBAL DA HOME (Fica fora do componente para não ser destruído ao trocar de aba)
 let homeDashboardCache = {
@@ -206,7 +207,6 @@ export default function Home() {
 
         let aulasSnapDocs = catalogs.aulas || [];
         
-        let totalValorOntem = 0;
         let totalValorMesProf = 0;
         let totalAulasOntem = 0; 
         let idsAulasOntem = []; 
@@ -236,9 +236,6 @@ export default function Home() {
             if (aula.dias && aula.dias.includes(ontemWeekDay)) {
                 totalAulasOntem++;
                 idsAulasOntem.push(aula.id);
-                if (role !== 'professor') {
-                    totalValorOntem += (parseFloat(aula.valor) || 0); 
-                }
             }
 
             if (aula.dias && aula.dias.includes(todayWeekDay)) {
@@ -260,29 +257,30 @@ export default function Home() {
             }
         });
 
-        if (role === 'professor') {
-            setResumoRelatorio({ valor: totalValorMesProf, labelKey: "monthlyForecast" });
-        } else {
-            setResumoRelatorio({ valor: totalValorOntem, labelKey: "revenueYesterday" });
-        }
-        
         setResumoCronograma({ proximaAula: nextClass });
 
         let validacoesRealizadasOntem = 0;
         let validacoesRealizadasHoje = 0;
-        
+        // Receita de ontem = aulas realmente validadas como realizadas ontem, no valor em vigor no dia (src/utils/valores.js).
+        let receitaOntem = 0;
+
         const cacheDoMesmoDia = homeDashboardCache.todayStr === todayStr;
 
         if (Date.now() - homeDashboardCache.timestamp < CACHE_TTL && cacheDoMesmoDia) {
              validacoesRealizadasOntem = homeDashboardCache.validacoesRealizadasOntem;
              validacoesRealizadasHoje = homeDashboardCache.validacoesRealizadasHoje;
+             receitaOntem = homeDashboardCache.receitaOntem || 0;
         } else {
              if (idsAulasOntem.length > 0 || idsAulasHoje.length > 0) {
                  const qVal = query(collection(db, "validacoes"), where("data", "in", [todayStr, ontemStr]));
                  const valSnap = await getDocs(qVal);
                  
+                 const aulasPorId = new Map((catalogs.aulasTodas || catalogs.aulas || []).map(a => [a.id, a]));
                  deduplicarValidacoes(valSnap.docs.map(d => d.data())).forEach(val => {
-                     if (val.data === ontemStr && idsAulasOntem.includes(val.aulaId)) validacoesRealizadasOntem++;
+                     if (val.data === ontemStr && idsAulasOntem.includes(val.aulaId)) {
+                         validacoesRealizadasOntem++;
+                         receitaOntem += valorDaValidacao(val, aulasPorId.get(val.aulaId));
+                     }
                      if (val.data === todayStr && idsAulasHoje.includes(val.aulaId)) validacoesRealizadasHoje++;
                  });
 
@@ -290,9 +288,16 @@ export default function Home() {
                      timestamp: Date.now(),
                      todayStr: todayStr,
                      validacoesRealizadasOntem,
-                     validacoesRealizadasHoje
+                     validacoesRealizadasHoje,
+                     receitaOntem
                  };
              }
+        }
+
+        if (role === 'professor') {
+            setResumoRelatorio({ valor: totalValorMesProf, labelKey: "monthlyForecast" });
+        } else {
+            setResumoRelatorio({ valor: receitaOntem, labelKey: "revenueYesterday" });
         }
 
         const pendentesHoje = Math.max(0, totalAulasHoje - validacoesRealizadasHoje);

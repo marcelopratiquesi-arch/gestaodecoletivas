@@ -536,6 +536,8 @@ export default function ValidacaoDiariaPage() {
           }
 
           if (item.validacao?.id) {
+            // Editar uma validação não muda o valor da época: mantém o valor gravado quando a aula foi validada.
+            if (item.validacao.valorEfetivo !== undefined && item.validacao.valorEfetivo !== null) payload.valorEfetivo = item.validacao.valorEfetivo;
             if (tipo === 'validar' && item.validacao.alunos !== payload.alunos) diffLog.push(`Edição Alunos: de ${item.validacao.alunos} para ${payload.alunos}`);
             await updateDoc(doc(db, 'validacoes', item.validacao.id), payload);
             await registrarLogAuditoria('ALTERADA', tipo === 'validar' ? `Validação editada.` : `Cancelamento editado.`, item, diffLog.join(' | '));
