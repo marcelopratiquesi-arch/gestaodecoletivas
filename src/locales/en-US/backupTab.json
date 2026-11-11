@@ -21,9 +21,19 @@
     "restoringCollections": "Restoring {{count}} collections...",
     "restoringPct": "Restoring... {{pct}}%",
     "restored": "SYSTEM RESTORED SUCCESSFULLY!",
-    "corrupted": "Corrupted file or invalid format."
+    "corrupted": "Corrupted file or invalid format.",
+    "counting": "Counting documents before reading...",
+    "incomplete": "INCOMPLETE backup: could not read {{list}}. The file was saved with \"_INCOMPLETO\" in its name. Try again later.",
+    "restorePartial": "Restore stopped at \"{{name}}\": {{done}} of {{total}} documents written. The daily write quota was probably exhausted; restore the rest tomorrow."
   },
   "confirmRestore": "⚠️ MAXIMUM SECURITY ALERT ⚠️\n\nYou are about to RESTORE the database.\nThis will OVERWRITE the current information.\n\nAre you absolutely sure?",
   "restoreDone": "Restore completed. The page will reload.",
-  "importError": "Error importing."
+  "importError": "Error importing.",
+  "confirmExport": "This backup will read {{total}} documents, about {{pct}}% of the free daily read quota (50,000).\n\nContinue?",
+  "quotaWarning": "⚠️ WARNING: this uses more than half of today's quota. If the quota runs out, the system can't read data until about 5 AM (Brasília time). Prefer running the backup at night.",
+  "quotaNote": "The backup reads every document and counts toward the free daily quota (50,000 reads). Prefer running it at night.",
+  "chooseCollections": "Choose what to restore. The free limit is 20,000 writes per day: restore in parts if needed.",
+  "selectedTotal": "Selected: {{total}} documents",
+  "writeQuotaWarning": "Above the free limit of {{limit}} writes per day: the restore will stop halfway. Uncheck some collections and restore the rest tomorrow.",
+  "restoreSelected": "Restore selected"
 }
