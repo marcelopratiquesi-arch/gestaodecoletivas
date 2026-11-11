@@ -37,22 +37,25 @@ export const CatalogProvider = ({ children }) => {
     useEffect(() => {
         if (chaveSessao === null) return;
 
+        // Sem login não escuta nada: as únicas telas abertas sem login (/login e /horarios) não usam o catálogo.
+        // Antes, cada QR Code escaneado e cada abertura da tela de login baixava o banco inteiro
+        // (todas as aulas, professores, unidades...) e esgotava a cota diária gratuita de leituras.
+        if (!user) {
+            setCatalogs(CATALOGOS_VAZIOS);
+            setCarregadoPara(chaveSessao);
+            return;
+        }
+
         const fontes = [
-            // Catálogos públicos (qualquer um pode ler, mesmo sem login - para o Cronograma)
             { chave: 'unidades', ref: query(collection(db, 'unidades'), orderBy('nome')) },
             { chave: 'modalidades', ref: query(collection(db, 'modalidades'), orderBy('nome')) },
             { chave: 'professores', ref: query(collection(db, 'professores'), orderBy('nome')) },
             { chave: 'feriados', ref: collection(db, 'feriados') },
             // 🟢 LIXEIRA (SOFT DELETE): aulas com 'excluido: true' não entram na memória global
             { chave: 'aulas', ref: collection(db, 'aulas'), filtro: (lista) => lista.filter(aula => aula.excluido !== true), copiaCompleta: 'aulasTodas' },
+            { chave: 'vinculos', ref: collection(db, 'vinculos') },
+            { chave: 'mentores', ref: query(collection(db, 'usuarios'), where('role', '==', 'mentor')) },
         ];
-        // Dados sigilosos só depois do login
-        if (user) {
-            fontes.push(
-                { chave: 'vinculos', ref: collection(db, 'vinculos') },
-                { chave: 'mentores', ref: query(collection(db, 'usuarios'), where('role', '==', 'mentor')) },
-            );
-        }
 
         const pendentes = new Set(fontes.map(f => f.chave));
         const marcarRespondido = (chave) => {
