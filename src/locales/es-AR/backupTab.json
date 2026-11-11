@@ -21,9 +21,19 @@
     "restoringCollections": "Restaurando {{count}} colecciones...",
     "restoringPct": "Restaurando... {{pct}}%",
     "restored": "¡SISTEMA RESTAURADO CON ÉXITO!",
-    "corrupted": "Archivo dañado o formato inválido."
+    "corrupted": "Archivo dañado o formato inválido.",
+    "counting": "Contando documentos antes de leer...",
+    "incomplete": "Backup INCOMPLETO: no se pudo leer {{list}}. El archivo se guardó con \"_INCOMPLETO\" en el nombre. Intentá de nuevo más tarde.",
+    "restorePartial": "Restauración interrumpida en \"{{name}}\": {{done}} de {{total}} documentos grabados. Probablemente se agotó la cuota diaria de escrituras; restaurá el resto mañana."
   },
   "confirmRestore": "⚠️ ALERTA DE SEGURIDAD MÁXIMA ⚠️\n\nEstás por RESTAURAR la base de datos.\nEsto va a SOBRESCRIBIR la información actual.\n\n¿Estás completamente seguro?",
   "restoreDone": "Restauración completada. La página se va a recargar.",
-  "importError": "Error al importar."
+  "importError": "Error al importar.",
+  "confirmExport": "Este backup va a leer {{total}} documentos, cerca del {{pct}}% de la cuota gratuita diaria de lecturas (50.000).\n\n¿Continuar?",
+  "quotaWarning": "⚠️ ATENCIÓN: esto consume más de la mitad de la cuota del día. Si la cuota se agota, el sistema queda sin lecturas hasta cerca de las 5 de la mañana (hora de Brasilia). Preferí hacer el backup de noche.",
+  "quotaNote": "El backup lee todos los documentos y cuenta en la cuota gratuita diaria (50.000 lecturas). Preferí hacerlo de noche.",
+  "chooseCollections": "Elegí qué restaurar. El límite gratuito es de 20.000 escrituras por día: restaurá en partes si hace falta.",
+  "selectedTotal": "Seleccionado: {{total}} documentos",
+  "writeQuotaWarning": "Supera el límite gratuito de {{limit}} escrituras por día: la restauración se va a cortar a la mitad. Desmarcá algunas colecciones y restaurá el resto mañana.",
+  "restoreSelected": "Restaurar seleccionadas"
 }
