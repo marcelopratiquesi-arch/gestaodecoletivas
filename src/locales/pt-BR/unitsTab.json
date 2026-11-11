@@ -119,5 +119,12 @@
     "purgeConfirm": "Apagar a senha gravada de {{count}} unidade(s)?\n\nO login das unidades continua funcionando normalmente.",
     "purgeDone": "Pronto: senhas removidas de {{count}} unidade(s).",
     "purgeError": "Não foi possível apagar as senhas. Tente de novo."
+  },
+  "publicPage": {
+    "button": "Atualizar página pública",
+    "hint": "Monta de novo a lista de unidades e professores da página de horários (só nome e endereço, sem e-mail nem telefone).",
+    "confirm": "Atualizar a página pública de horários com os cadastros atuais?\n\nEla vai mostrar só nome e endereço das unidades e o nome dos professores (sem e-mail nem telefone).",
+    "done": "Pronto: página pública atualizada com {{units}} unidade(s) e {{teachers}} professor(es).",
+    "error": "Não foi possível atualizar a página pública."
   }
 }

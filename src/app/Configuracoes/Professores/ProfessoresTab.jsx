@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 // Importações de contexto e serviços
 import { useAuth } from "../../../contexts/AuthContext";
 import { db } from "../../../services/firebase";
+import { publicarProfessor, removerProfessorDaVitrine } from "../../../services/vitrinePublica";
 import {
   addDoc, collection, deleteDoc, doc, onSnapshot, serverTimestamp, updateDoc, query, where, setDoc
 } from "firebase/firestore";
@@ -437,8 +438,9 @@ export function ProfessoresTab() {
           if (profEditando.status !== status) mudancas.push(`Status: ${profEditando.status} ➔ ${status}`);
           
           await updateDoc(doc(db, "professores", profEditando.id), { 
-            nome: nomeLimpo, pais, telefone, status, updatedAt: serverTimestamp() 
+            nome: nomeLimpo, pais, telefone, status, updatedAt: serverTimestamp()
           });
+          if (profEditando.nome !== nomeLimpo) await publicarProfessor(profEditando.id, nomeLimpo);
           
           if (profEditando.uidLogin) {
              try { await updateDoc(doc(db, "usuarios", profEditando.uidLogin), { nome: nomeLimpo }); } catch(err) {}
@@ -458,8 +460,9 @@ export function ProfessoresTab() {
 
           const docRef = await addDoc(collection(db, "professores"), { 
               nome: nomeLimpo, email: emailLimpo, pais, telefone, status, uidLogin: newUid, 
-              createdAt: serverTimestamp(), createdBy: userId, roleCreator: role 
+              createdAt: serverTimestamp(), createdBy: userId, roleCreator: role
           });
+          await publicarProfessor(docRef.id, nomeLimpo);
 
           await setDoc(doc(db, "usuarios", newUid), {
             nome: nomeLimpo, email: emailLimpo, role: "professor", professorId: docRef.id,
@@ -527,6 +530,7 @@ export function ProfessoresTab() {
       if (!window.confirm(t('teachersTab.messages.deleteConfirm', { name: p.nome }))) return;
       try {
           await deleteDoc(doc(db, "professores", p.id));
+          await removerProfessorDaVitrine(p.id);
           const vinculadosDoProf = vinculos.filter(v => v.professorId === p.id);
           vinculadosDoProf.forEach(v => deleteDoc(doc(db, "vinculos", v.id)));
           

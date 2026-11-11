@@ -31,6 +31,7 @@ beforeEach(async () => {
     await setDoc(doc(db, 'usuarios/loginUniB'), { role: 'unidade', unidadeId: 'uniB', nome: 'Unidade B' });
     await setDoc(doc(db, 'usuarios/prof1'), { role: 'professor', professorId: 'p1', nome: 'Prof' });
     await setDoc(doc(db, 'aulas/aula1'), { unidadeId: 'uniA' });
+    await setDoc(doc(db, 'publico/vitrine'), { unidades: { uniA: { nome: 'Unidade A' } }, professores: { p1: 'Prof' } });
   });
 });
 
@@ -136,10 +137,34 @@ describe('favoritos do Pratique Play', () => {
   });
 });
 
-describe('o resto do sistema não mudou', () => {
-  it('sem login: lê unidades e aulas (página de horários), não lê usuarios nem validações', async () => {
+describe('página pública de horários (vitrine)', () => {
+  it('sem login: lê a vitrine, as aulas e as modalidades', async () => {
     const db = anonimo();
-    await assertSucceeds(getDoc(doc(db, 'unidades/uniA')));
+    await assertSucceeds(getDoc(doc(db, 'publico/vitrine')));
+    await assertSucceeds(getDoc(doc(db, 'aulas/aula1')));
+    await assertSucceeds(getDoc(doc(db, 'modalidades/m1')));
+  });
+  it('sem login: NÃO lê os cadastros completos (e-mail, telefone) de unidades e professores', async () => {
+    const db = anonimo();
+    await assertFails(getDoc(doc(db, 'unidades/uniA')));
+    await assertFails(getDoc(doc(db, 'professores/p1')));
+  });
+  it('sem login: NÃO grava na vitrine', async () => {
+    await assertFails(setDoc(doc(anonimo(), 'publico/vitrine'), { unidades: {} }));
+  });
+  it('admin, mentor e unidade atualizam a vitrine (telas de cadastro)', async () => {
+    await assertSucceeds(setDoc(doc(como('admin1'), 'publico/vitrine'), { unidades: {}, professores: {} }));
+    await assertSucceeds(updateDoc(doc(como('mentor1'), 'publico/vitrine'), { 'unidades.uniA': { nome: 'A' } }));
+    await assertSucceeds(updateDoc(doc(como('loginUniA'), 'publico/vitrine'), { 'professores.p1': 'Prof' }));
+  });
+  it('professor NÃO mexe na vitrine', async () => {
+    await assertFails(updateDoc(doc(como('prof1'), 'publico/vitrine'), { 'professores.p1': 'Hacker' }));
+  });
+});
+
+describe('o resto do sistema não mudou', () => {
+  it('sem login: lê aulas (página de horários), não lê usuarios nem validações', async () => {
+    const db = anonimo();
     await assertSucceeds(getDoc(doc(db, 'aulas/aula1')));
     await assertFails(getDoc(doc(db, 'usuarios/admin1')));
     await assertFails(getDoc(doc(db, 'validacoes/v1')));
@@ -147,6 +172,11 @@ describe('o resto do sistema não mudou', () => {
   it('sem login: não escreve nada', async () => {
     await assertFails(setDoc(doc(anonimo(), 'aulas/aula2'), { x: 1 }));
     await assertFails(addDoc(collection(anonimo(), 'validacoes'), { x: 1 }));
+  });
+  it('logado: lê cadastros de unidades e professores', async () => {
+    const db = como('prof1');
+    await assertSucceeds(getDoc(doc(db, 'unidades/uniA')));
+    await assertSucceeds(getDoc(doc(db, 'professores/p1')));
   });
   it('logado: lê crachás e grava aulas, validações e auditoria como antes', async () => {
     const db = como('loginUniA');

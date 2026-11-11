@@ -119,5 +119,12 @@
     "purgeConfirm": "¿Borrar la contraseña guardada de {{count}} unidad(es)?\n\nEl acceso de las unidades sigue funcionando normalmente.",
     "purgeDone": "Listo: contraseñas eliminadas de {{count}} unidad(es).",
     "purgeError": "No se pudieron borrar las contraseñas. Intentá de nuevo."
+  },
+  "publicPage": {
+    "button": "Actualizar página pública",
+    "hint": "Vuelve a armar la lista de unidades y profesores de la página de horarios (solo nombre y dirección, sin e-mail ni teléfono).",
+    "confirm": "¿Actualizar la página pública de horarios con los registros actuales?\n\nVa a mostrar solo nombre y dirección de las unidades y el nombre de los profesores (sin e-mail ni teléfono).",
+    "done": "Listo: página pública actualizada con {{units}} unidad(es) y {{teachers}} profesor(es).",
+    "error": "No se pudo actualizar la página pública."
   }
 }
