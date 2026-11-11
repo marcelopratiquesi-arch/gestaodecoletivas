@@ -119,5 +119,12 @@
     "purgeConfirm": "Delete the stored password of {{count}} unit(s)?\n\nUnit logins keep working normally.",
     "purgeDone": "Done: passwords removed from {{count}} unit(s).",
     "purgeError": "Could not delete the passwords. Please try again."
+  },
+  "publicPage": {
+    "button": "Update public page",
+    "hint": "Rebuilds the list of units and teachers shown on the schedule page (name and address only, no email or phone).",
+    "confirm": "Update the public schedule page with the current records?\n\nIt will show only unit names and addresses and teacher names (no email or phone).",
+    "done": "Done: public page updated with {{units}} unit(s) and {{teachers}} teacher(s).",
+    "error": "Could not update the public page."
   }
 }

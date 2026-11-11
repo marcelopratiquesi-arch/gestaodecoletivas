@@ -6,7 +6,8 @@ import {
 import { createUserWithEmailAndPassword, getAuth, signOut } from "firebase/auth";
 import { initializeApp, getApp, deleteApp } from "firebase/app"; 
 import { db } from "../../../services/firebase";
-import { useTranslation } from "react-i18next"; 
+import { publicarUnidade, publicarUnidades, removerUnidadeDaVitrine, ehCampoPublicoUnidade, reconstruirVitrine } from "../../../services/vitrinePublica";
+import { useTranslation } from "react-i18next";
 
 import { 
     Building2, MapPin, Edit2, Trash2, AlertTriangle, CheckCircle2, 
@@ -391,6 +392,23 @@ export function UnidadesTab() {
       } finally { setApagandoSenhas(false); }
   }
 
+  // 🌐 Monta de novo a "vitrine" da página pública de horários (só nome/endereço, sem contatos).
+  const [atualizandoVitrine, setAtualizandoVitrine] = useState(false);
+
+  async function atualizarPaginaPublica() {
+      if (role !== 'admin') return;
+      if (!window.confirm(t('unitsTab.publicPage.confirm'))) return;
+      setAtualizandoVitrine(true);
+      try {
+          const r = await reconstruirVitrine();
+          await registrarLogAuditoria('ALTERADA', 'Página pública de horários atualizada.', 'Várias', `${r.unidades} unidade(s), ${r.professores} professor(es), ${r.tamanhoKb} KB.`);
+          alert(t('unitsTab.publicPage.done', { units: r.unidades, teachers: r.professores }));
+      } catch (e) {
+          console.error(e);
+          alert(t('unitsTab.publicPage.error') + ' ' + e.message);
+      } finally { setAtualizandoVitrine(false); }
+  }
+
   const kpis = useMemo(() => {
       const ativas = unidadesBase.filter(u => u.status === 'ativa').length;
       return { total: unidadesBase.length, ativas, inativas: unidadesBase.length - ativas };
@@ -401,6 +419,7 @@ export function UnidadesTab() {
       try {
           const valorAntigo = unidade[campo] || "Vazio";
           await updateDoc(doc(db, "unidades", unidade.id), { [campo]: valorNovo });
+          if (ehCampoPublicoUnidade(campo)) await publicarUnidade(unidade.id, { ...unidade, [campo]: valorNovo });
           if (campo === 'telefone' && unidade.uidLogin) {
               await updateDoc(doc(db, "usuarios", unidade.uidLogin), { telefone: valorNovo }).catch(()=>{});
           }
@@ -506,6 +525,7 @@ export function UnidadesTab() {
           if (item.novoLinkMaps) updateData.linkGoogleMaps = item.novoLinkMaps;
 
           await updateDoc(ref, updateData);
+          await publicarUnidade(item.dbId, { ...unidadesBase.find(u => u.id === item.dbId), ...updateData });
           await registrarLogAuditoria('IMPORTAÇÃO', 'Endereço/Mapa injetado via CSV.', item.dbNome, `Endereço Injetado: ${item.novoEndereco}`);
 
           const newMatches = [...importData.matches];
@@ -528,6 +548,7 @@ export function UnidadesTab() {
 
           const batch = writeBatch(db);
           let count = 0;
+          const paraVitrine = new Map();
 
           pendentes.forEach(item => {
               const ref = doc(db, "unidades", item.dbId);
@@ -535,10 +556,12 @@ export function UnidadesTab() {
               if (item.novoEndereco) updateData.enderecoCompleto = item.novoEndereco;
               if (item.novoLinkMaps) updateData.linkGoogleMaps = item.novoLinkMaps;
               batch.update(ref, updateData);
+              paraVitrine.set(item.dbId, { ...unidadesBase.find(u => u.id === item.dbId), ...paraVitrine.get(item.dbId), ...updateData });
               count++;
           });
 
           await batch.commit();
+          await publicarUnidades([...paraVitrine].map(([id, dados]) => ({ id, dados })));
           await registrarLogAuditoria('IMPORTAÇÃO', 'Injeção em Lote via CSV aprovada.', 'Várias', `${count} unidades atualizadas.`);
           
           const newMatches = importData.matches.map(m => (m.status === 'pendente' && m.dbId) ? {...m, status: 'aprovado'} : m);
@@ -625,10 +648,11 @@ export function UnidadesTab() {
             linkGoogleMaps: linkMaps.trim(), 
             metragemSalaColetiva: metragem ? Number(metragem) : null,
             enderecoCompleto: endereco.trim(),
-            atualizadoEm: serverTimestamp() 
+            atualizadoEm: serverTimestamp()
         });
-        
-        if(editando.uidLogin) { 
+        await publicarUnidade(editando.id, { ...editando, estado, nome: nome.trim(), linkGoogleMaps: linkMaps.trim(), enderecoCompleto: endereco.trim() });
+
+        if(editando.uidLogin) {
             try { 
                 await updateDoc(doc(db, "usuarios", editando.uidLogin), { 
                     telefone: telParaSalvar,
@@ -656,6 +680,7 @@ export function UnidadesTab() {
           enderecoCompleto: endereco.trim(),
           criadoPor: userId, criadoEm: serverTimestamp()
         });
+        await publicarUnidade(unidadeRef.id, { estado, nome: nome.trim(), linkGoogleMaps: linkMaps.trim(), enderecoCompleto: endereco.trim() });
 
         await setDoc(doc(db, "usuarios", newUid), {
           nome: nome.trim(), email: emailLogin.trim().toLowerCase(), telefone: telParaSalvar,
@@ -697,6 +722,7 @@ export function UnidadesTab() {
         snapUsers.forEach((userDoc) => batch.delete(userDoc.ref));
         
         await batch.commit();
+        await removerUnidadeDaVitrine(u.id);
         await registrarLogAuditoria('EXCLUÍDA', 'Unidade excluída do sistema.', u.nome, `Auditoria: ${snapVinculos.size} vínculo(s) invalidados.`);
     } catch (e) { alert(t('unitsTab.messages.deleteError', "Erro ao excluir:") + " " + e.message); } finally { setSalvando(false); }
   }
@@ -739,6 +765,9 @@ export function UnidadesTab() {
                       <input type="file" accept=".csv" ref={fileInputRef} className="hidden" onChange={handleFileUpload} />
                       <button onClick={() => fileInputRef.current.click()} className="px-5 h-full bg-slate-800 dark:bg-slate-900 text-white rounded-xl font-bold text-xs uppercase tracking-wide hover:bg-slate-700 shadow-lg flex items-center justify-center gap-2 transition-transform active:scale-95 border dark:border-slate-700 whitespace-nowrap">
                           <Upload className="w-4 h-4"/> Importar Infra (CSV)
+                      </button>
+                      <button onClick={atualizarPaginaPublica} disabled={atualizandoVitrine} title={t('unitsTab.publicPage.hint')} className="px-5 h-full bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl font-bold text-xs uppercase tracking-wide hover:bg-slate-50 dark:hover:bg-slate-700 shadow-lg flex items-center justify-center gap-2 transition-transform active:scale-95 border border-slate-200 dark:border-slate-700 whitespace-nowrap disabled:opacity-50">
+                          {atualizandoVitrine ? <Loader2 className="w-4 h-4 animate-spin"/> : <Globe className="w-4 h-4"/>} {t('unitsTab.publicPage.button')}
                       </button>
                   </>
               )}

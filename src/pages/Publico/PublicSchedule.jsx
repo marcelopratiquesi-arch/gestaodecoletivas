@@ -3,6 +3,7 @@ import { flushSync } from 'react-dom';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { db } from '../../services/firebase';
 import { collection, getDocs, query, where, orderBy, onSnapshot } from 'firebase/firestore';
+import { lerVitrine } from '../../services/vitrinePublica';
 import {
   Search, Clock, ChevronRight, Loader2,
   Printer, ArrowLeft, Dumbbell, Sun, Moon, ChevronDown, MapPin, Navigation, LocateFixed, Map, List, Check,
@@ -279,15 +280,30 @@ export default function PublicSchedule() {
     const init = async () => {
         setLoading(true);
         try {
-            const [uSnap, mSnap, pSnap] = await Promise.all([
-                getDocs(query(collection(db, 'unidades'), orderBy('nome'))),
-                getDocs(collection(db, 'modalidades')),
-                getDocs(collection(db, 'professores'))
+            // Unidades e professores vêm da "vitrine" (só nome/endereço, sem e-mail nem telefone).
+            // Se a vitrine ainda não foi montada, cai no jeito antigo (funciona até as regras fecharem os cadastros).
+            const [vitrine, mSnap] = await Promise.all([
+                lerVitrine(),
+                getDocs(collection(db, 'modalidades'))
             ]);
 
-            const uList = uSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+            let uList, pAbs;
+            if (vitrine) {
+                uList = Object.entries(vitrine.unidades)
+                    .map(([id, dados]) => ({ id, ...dados }))
+                    .filter(u => typeof u.nome === 'string')
+                    // mesma ordem do orderBy('nome') do Firestore
+                    .sort((a, b) => (a.nome < b.nome ? -1 : a.nome > b.nome ? 1 : 0));
+                pAbs = { ...vitrine.professores };
+            } else {
+                const [uSnap, pSnap] = await Promise.all([
+                    getDocs(query(collection(db, 'unidades'), orderBy('nome'))),
+                    getDocs(collection(db, 'professores'))
+                ]);
+                uList = uSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                pAbs = {}; pSnap.docs.forEach(d => pAbs[d.id] = d.data().nome);
+            }
             const mAbs = {}; mSnap.docs.forEach(d => mAbs[d.id] = d.data());
-            const pAbs = {}; pSnap.docs.forEach(d => pAbs[d.id] = d.data().nome);
 
             setUnidades(uList);
             setModalidadesMap(mAbs);

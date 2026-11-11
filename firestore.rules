@@ -15,11 +15,13 @@ service cloud.firestore {
     function papelNovo() { return request.resource.data.get('role', '').lower(); }
     function camposAlterados() { return request.resource.data.diff(resource.data).affectedKeys(); }
 
-    // ===================== REGRAS PÚBLICAS (Cronograma / página de horários) =====================
-    // Qualquer pessoa LÊ; só logados ESCREVEM.
-    match /unidades/{document=**} {
+    // ===================== PÁGINA PÚBLICA DE HORÁRIOS =====================
+    // Sem login, a página de horários lê só: a "vitrine" (nome/endereço das unidades e nome dos
+    // professores), as aulas e as modalidades. Os cadastros completos de unidades e professores
+    // (com e-mail, telefone e login) exigem login.
+    match /publico/{docId} {
       allow read: if true;
-      allow write: if logado();
+      allow write: if logado() && meuPapel() in ['admin', 'administrador', 'master', 'mentor', 'unidade'];
     }
     match /aulas/{document=**} {
       allow read: if true;
@@ -29,8 +31,12 @@ service cloud.firestore {
       allow read: if true;
       allow write: if logado();
     }
+    match /unidades/{document=**} {
+      allow read: if logado();
+      allow write: if logado();
+    }
     match /professores/{document=**} {
-      allow read: if true;
+      allow read: if logado();
       allow write: if logado();
     }
 
@@ -63,10 +69,11 @@ service cloud.firestore {
     }
 
     // ===================== DEMAIS COLEÇÕES =====================
-    // Logados leem e escrevem (como antes), EXCETO usuarios, que segue as regras acima.
+    // Logados leem e escrevem (como antes), EXCETO usuarios e publico, que seguem as regras acima.
+    // (No Firestore, se QUALQUER regra libera, a ação passa; por isso as exceções precisam estar aqui.)
     match /{colecao}/{resto=**} {
       allow read: if logado();
-      allow write: if logado() && colecao != 'usuarios';
+      allow write: if logado() && !(colecao in ['usuarios', 'publico']);
     }
   }
 }
