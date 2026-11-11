@@ -109,5 +109,15 @@
       "roomArea": "Room area (m²)",
       "areaPlaceholder": "E.g.: 80"
     }
+  },
+  "security": {
+    "loginLocked": "The unit's login e-mail can't be changed here.",
+    "loginInfo": "The unit's login e-mail stays as it is. Unit access will be replaced by personal login.",
+    "bannerTitle": "{{count}} unit(s) with a password stored in the database",
+    "bannerDesc": "These passwords can be read by anyone on the internet. Deleting them does not change any password or remove anyone's access: it only removes the exposed copy.",
+    "purgeButton": "Delete stored passwords",
+    "purgeConfirm": "Delete the stored password of {{count}} unit(s)?\n\nUnit logins keep working normally.",
+    "purgeDone": "Done: passwords removed from {{count}} unit(s).",
+    "purgeError": "Could not delete the passwords. Please try again."
   }
 }

@@ -109,5 +109,15 @@
       "roomArea": "Metragem da sala (m²)",
       "areaPlaceholder": "Ex: 80"
     }
+  },
+  "security": {
+    "loginLocked": "O e-mail de login da unidade não pode ser trocado por aqui.",
+    "loginInfo": "O e-mail de login da unidade fica como está. O acesso por unidade será substituído pelo login pessoal.",
+    "bannerTitle": "{{count}} unidade(s) com senha gravada no banco",
+    "bannerDesc": "Essas senhas ficam legíveis para qualquer pessoa na internet. Apagar não muda a senha nem tira o acesso de ninguém: só remove a cópia exposta.",
+    "purgeButton": "Apagar senhas gravadas",
+    "purgeConfirm": "Apagar a senha gravada de {{count}} unidade(s)?\n\nO login das unidades continua funcionando normalmente.",
+    "purgeDone": "Pronto: senhas removidas de {{count}} unidade(s).",
+    "purgeError": "Não foi possível apagar as senhas. Tente de novo."
   }
 }

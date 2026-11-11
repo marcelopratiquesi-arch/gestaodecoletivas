@@ -1,0 +1,72 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===================== FUNÇÕES =====================
+    function logado() { return request.auth != null; }
+
+    // Papel de quem está fazendo a ação, lido do crachá (usuarios/{uid}).
+    // Custa 1 leitura, e só é usado ao GRAVAR em usuarios (nunca nas leituras do dia a dia).
+    function meuPapel() {
+      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.get('role', '').lower();
+    }
+    function souAdmin() { return logado() && meuPapel() in ['admin', 'administrador', 'master']; }
+    function papelDoAlvo() { return resource.data.get('role', '').lower(); }
+    function papelNovo() { return request.resource.data.get('role', '').lower(); }
+    function camposAlterados() { return request.resource.data.diff(resource.data).affectedKeys(); }
+
+    // ===================== REGRAS PÚBLICAS (Cronograma / página de horários) =====================
+    // Qualquer pessoa LÊ; só logados ESCREVEM.
+    match /unidades/{document=**} {
+      allow read: if true;
+      allow write: if logado();
+    }
+    match /aulas/{document=**} {
+      allow read: if true;
+      allow write: if logado();
+    }
+    match /modalidades/{document=**} {
+      allow read: if true;
+      allow write: if logado();
+    }
+    match /professores/{document=**} {
+      allow read: if true;
+      allow write: if logado();
+    }
+
+    // ===================== CRACHÁS (usuarios) =====================
+    // Ninguém muda o próprio papel nem se promove. Espelha o que as telas já fazem:
+    // - admin: tudo (Mentores, Controle de Acessos, correções)
+    // - mentor: cria/edita logins de unidade e de professor; exclui login de unidade (ao excluir a unidade)
+    // - unidade: cria/edita logins de professor
+    match /usuarios/{uid} {
+      allow read: if logado();
+
+      allow create: if souAdmin()
+        || (logado() && meuPapel() == 'mentor' && papelNovo() in ['unidade', 'professor'])
+        || (logado() && meuPapel() == 'unidade' && papelNovo() == 'professor');
+
+      allow update: if souAdmin()
+        || (logado() && meuPapel() == 'mentor' && papelDoAlvo() in ['unidade', 'professor']
+            && camposAlterados().hasOnly(['nome', 'email', 'telefone']))
+        || (logado() && meuPapel() == 'unidade' && papelDoAlvo() == 'professor'
+            && camposAlterados().hasOnly(['nome', 'email']));
+
+      allow delete: if souAdmin()
+        || (logado() && meuPapel() == 'mentor' && papelDoAlvo() == 'unidade'
+            && get(/databases/$(database)/documents/unidades/$(resource.data.unidadeId)).data.get('mentorId', '') == request.auth.uid);
+
+      // Favoritos do Pratique Play: cada pessoa mexe só nos próprios.
+      match /favoritos_play/{faixaId} {
+        allow read, write: if logado() && request.auth.uid == uid;
+      }
+    }
+
+    // ===================== DEMAIS COLEÇÕES =====================
+    // Logados leem e escrevem (como antes), EXCETO usuarios, que segue as regras acima.
+    match /{colecao}/{resto=**} {
+      allow read: if logado();
+      allow write: if logado() && colecao != 'usuarios';
+    }
+  }
+}
