@@ -7,9 +7,10 @@ import {
 } from 'lucide-react';
 
 import { useAuth } from '../../contexts/AuthContext'; 
+import { useCatalogs } from '../../contexts/CatalogContext';
 import { db } from '../../services/firebase'; 
 import { 
-  collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where, serverTimestamp, onSnapshot 
+  collection, addDoc, updateDoc, deleteDoc, doc, serverTimestamp
 } from 'firebase/firestore';
 import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
 import { DIAS_SEMANA_GRADE, formatWeekday, getCurrencySymbol } from '../../utils/formatters';
@@ -151,16 +152,10 @@ export default function CronogramaPage() {
   const isReadOnly = role === 'professor';
 
   // --- DADOS GLOBAIS E DE TELA ---
-  const [catalogs, setCatalogs] = useState({ unidades: [], modalidades: [], professores: [], vinculos: [] });
-  const [aulas, setAulas] = useState([]);
-  
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   // --- FILTROS ---
-  const [availableUnits, setAvailableUnits] = useState([]); 
-  const [uniqueStates, setUniqueStates] = useState([]); 
-  const [selectedState, setSelectedState] = useState(""); 
+  const [selectedState, setSelectedState] = useState("");
   const [selectedUnit, setSelectedUnit] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
@@ -186,92 +181,57 @@ export default function CronogramaPage() {
       return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  // 1. CARREGAMENTO DOS CATÁLOGOS
-  useEffect(() => {
-    const fetchCatalogs = async () => {
-      try {
-        setLoading(true);
-        const [unitsSnap, modsSnap, profsSnap, vinculosSnap] = await Promise.all([
-          getDocs(collection(db, 'unidades')),
-          getDocs(collection(db, 'modalidades')),
-          getDocs(collection(db, 'professores')),
-          getDocs(collection(db, 'vinculos')) 
-        ]);
+  // 1. CATÁLOGOS
+  // ECONOMIA DE COTA: antes esta tela relia unidades, modalidades, professores e vínculos (~1.300 leituras)
+  // e escutava as aulas de novo a cada abertura. Agora usa a memória ao vivo (CatalogContext), que já tem
+  // tudo isso atualizado em tempo real: abrir o Cronograma não gasta leitura nenhuma.
+  const { catalogs: catalogosGlobais, loadingCatalogs } = useCatalogs();
+  const loading = loadingCatalogs;
 
-        let finalUnidades = unitsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        finalUnidades.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
-        const states = [...new Set(finalUnidades.map(u => u.estado).filter(Boolean))].sort();
-        setUniqueStates(states);
+  const catalogs = useMemo(() => ({
+      unidades: [...(catalogosGlobais.unidades || [])].sort((a, b) => (a.nome || '').localeCompare(b.nome || '')),
+      modalidades: catalogosGlobais.modalidades || [],
+      professores: catalogosGlobais.professores || [],
+      vinculos: (catalogosGlobais.vinculos || []).map(v => ({
+          ...v,
+          professorId: String(v.professorId),
+          unidadeId: String(v.unidadeId),
+          status: v.status || 'ativo'
+      })).filter(v => v.status === 'ativo'),
+  }), [catalogosGlobais.unidades, catalogosGlobais.modalidades, catalogosGlobais.professores, catalogosGlobais.vinculos]);
 
-        const todosProfessores = profsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        const todosVinculos = vinculosSnap.docs.map(d => ({
-            id: d.id, ...d.data(),
-            professorId: String(d.data().professorId),
-            unidadeId: String(d.data().unidadeId),
-            status: d.data().status || 'ativo'
-        })).filter(v => v.status === 'ativo');
+  const uniqueStates = useMemo(
+      () => [...new Set(catalogs.unidades.map(u => u.estado).filter(Boolean))].sort(),
+      [catalogs.unidades]
+  );
 
-        // Aplicando ACL
-        let unitsToShow = [];
-        if (role === 'admin') unitsToShow = finalUnidades;
-        else if (role === 'mentor') unitsToShow = finalUnidades.filter(u => u.mentorId === userId);
-        else if (role === 'unidade') unitsToShow = finalUnidades.filter(u => u.id === userData.unidadeId);
-        else if (role === 'professor') {
-            const meuPerfil = todosProfessores.find(p => p.uidLogin === userId);
-            if (meuPerfil) {
-                const meusLinks = todosVinculos.filter(v => v.professorId === String(meuPerfil.id));
-                const minhasUnidadesIds = meusLinks.map(v => v.unidadeId);
-                unitsToShow = finalUnidades.filter(u => minhasUnidadesIds.includes(String(u.id)));
-            }
-        }
-
-        setCatalogs({ unidades: finalUnidades, modalidades: modsSnap.docs.map(d => ({ id: d.id, ...d.data() })), professores: todosProfessores, vinculos: todosVinculos });
-        setAvailableUnits(unitsToShow);
-
-        if (unitsToShow.length > 0 && !selectedUnit) {
-            if(unitsToShow.length === 1) setSelectedUnit(unitsToShow[0].id);
-        }
-
-      } catch (error) { 
-          console.error("Erro no load inicial:", error); 
-      } finally { 
-          setLoading(false); 
+  // Aplicando ACL
+  const availableUnits = useMemo(() => {
+      if (role === 'admin') return catalogs.unidades;
+      if (role === 'mentor') return catalogs.unidades.filter(u => u.mentorId === userId);
+      if (role === 'unidade') return catalogs.unidades.filter(u => u.id === userData?.unidadeId);
+      if (role === 'professor') {
+          const meuPerfil = catalogs.professores.find(p => p.uidLogin === userId);
+          if (!meuPerfil) return [];
+          const minhasUnidadesIds = catalogs.vinculos.filter(v => v.professorId === String(meuPerfil.id)).map(v => v.unidadeId);
+          return catalogs.unidades.filter(u => minhasUnidadesIds.includes(String(u.id)));
       }
-    };
-    fetchCatalogs();
-  }, [role, userId, userData]); 
+      return [];
+  }, [catalogs, role, userId, userData?.unidadeId]);
 
-  // 2. MOTOR DE TEMPO REAL DAS AULAS (COM FILTRO DA LIXEIRA OCULTA)
+  // Quem só tem uma unidade já entra com ela selecionada.
   useEffect(() => {
-    let qAulas;
-    
-    if (selectedUnit) {
-      qAulas = query(collection(db, 'aulas'), where('unidadeId', '==', selectedUnit));
-    } 
-    else if (!selectedUnit && debouncedSearchTerm.length > 1) {
-      const unitIds = availableUnits.map(u => u.id);
-      if(unitIds.length > 0) {
-          qAulas = query(collection(db, 'aulas')); 
-      } else {
-          setAulas([]);
-          return;
-      }
-    } else {
-      setAulas([]);
-      return;
-    }
+      if (availableUnits.length === 1 && !selectedUnit) setSelectedUnit(availableUnits[0].id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [availableUnits]);
 
-    const unsubscribe = onSnapshot(qAulas, (snap) => {
-        // Ignora qualquer aula que tenha a tag { excluido: true }
-        const aulasData = snap.docs
-          .map(d => ({ id: d.id, ...d.data() }))
-          .filter(aula => aula.excluido !== true); 
-          
-        setAulas(aulasData);
-    });
-
-    return () => unsubscribe();
-  }, [selectedUnit, debouncedSearchTerm, availableUnits]);
+  // 2. AULAS (já sem as da lixeira: a memória global ignora { excluido: true })
+  const aulas = useMemo(() => {
+      const todas = catalogosGlobais.aulas || [];
+      if (selectedUnit) return todas.filter(a => String(a.unidadeId) === String(selectedUnit));
+      if (debouncedSearchTerm.length > 1 && availableUnits.length > 0) return todas;
+      return [];
+  }, [catalogosGlobais.aulas, selectedUnit, debouncedSearchTerm, availableUnits]);
 
   // 3. PROCESSADOR VISUAL DA TELA
   const filteredClasses = useMemo(() => {
