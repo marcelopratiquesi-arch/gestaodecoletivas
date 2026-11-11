@@ -109,5 +109,15 @@
       "roomArea": "Metraje de la sala (m²)",
       "areaPlaceholder": "Ej: 80"
     }
+  },
+  "security": {
+    "loginLocked": "El e-mail de acceso de la unidad no se puede cambiar desde acá.",
+    "loginInfo": "El e-mail de acceso de la unidad queda como está. El acceso por unidad va a ser reemplazado por el acceso personal.",
+    "bannerTitle": "{{count}} unidad(es) con contraseña guardada en la base",
+    "bannerDesc": "Cualquier persona en internet puede leer estas contraseñas. Borrarlas no cambia ninguna contraseña ni le quita el acceso a nadie: solo elimina la copia expuesta.",
+    "purgeButton": "Borrar contraseñas guardadas",
+    "purgeConfirm": "¿Borrar la contraseña guardada de {{count}} unidad(es)?\n\nEl acceso de las unidades sigue funcionando normalmente.",
+    "purgeDone": "Listo: contraseñas eliminadas de {{count}} unidad(es).",
+    "purgeError": "No se pudieron borrar las contraseñas. Intentá de nuevo."
   }
 }

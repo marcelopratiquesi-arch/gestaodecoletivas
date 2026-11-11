@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useAuth } from "../../../contexts/AuthContext";
 import {
-  collection, addDoc, updateDoc, deleteDoc, doc, query, where, serverTimestamp, setDoc, writeBatch, onSnapshot, getDocs
+  collection, addDoc, updateDoc, doc, query, where, serverTimestamp, setDoc, writeBatch, onSnapshot, getDocs, deleteField
 } from "firebase/firestore";
-import { createUserWithEmailAndPassword, getAuth, signOut, signInWithEmailAndPassword, updateEmail } from "firebase/auth";
+import { createUserWithEmailAndPassword, getAuth, signOut } from "firebase/auth";
 import { initializeApp, getApp, deleteApp } from "firebase/app"; 
 import { db } from "../../../services/firebase";
 import { useTranslation } from "react-i18next"; 
@@ -369,6 +369,28 @@ export function UnidadesTab() {
       return sortConfig.direction === 'asc' ? <ChevronUp className="w-3 h-3 text-red-500"/> : <ChevronDown className="w-3 h-3 text-red-500"/>;
   };
 
+  // 🔒 Senhas das unidades gravadas no banco (legíveis publicamente): o admin apaga de uma vez.
+  const unidadesComSenhaGravada = useMemo(() => unidadesBase.filter(u => u.senhaPainel !== undefined), [unidadesBase]);
+  const [apagandoSenhas, setApagandoSenhas] = useState(false);
+
+  async function apagarSenhasGravadas() {
+      if (role !== 'admin' || unidadesComSenhaGravada.length === 0) return;
+      if (!window.confirm(t('unitsTab.security.purgeConfirm', { count: unidadesComSenhaGravada.length }))) return;
+      setApagandoSenhas(true);
+      try {
+          for (let i = 0; i < unidadesComSenhaGravada.length; i += 450) {
+              const batch = writeBatch(db);
+              unidadesComSenhaGravada.slice(i, i + 450).forEach(u => batch.update(doc(db, "unidades", u.id), { senhaPainel: deleteField() }));
+              await batch.commit();
+          }
+          await registrarLogAuditoria('ALTERADA', 'Senhas das unidades removidas do banco (segurança).', 'Várias', `${unidadesComSenhaGravada.length} unidade(s).`);
+          alert(t('unitsTab.security.purgeDone', { count: unidadesComSenhaGravada.length }));
+      } catch (e) {
+          console.error(e);
+          alert(t('unitsTab.security.purgeError'));
+      } finally { setApagandoSenhas(false); }
+  }
+
   const kpis = useMemo(() => {
       const ativas = unidadesBase.filter(u => u.status === 'ativa').length;
       return { total: unidadesBase.length, ativas, inativas: unidadesBase.length - ativas };
@@ -576,26 +598,10 @@ export function UnidadesTab() {
     try {
       if (editando) {
         let mudancas = [];
-        let emailAlteradoFirebase = false;
-        const novoEmail = emailLogin.trim().toLowerCase();
-        const emailAntigo = editando.email || "";
-
-        if (novoEmail !== emailAntigo) {
-            try {
-                if (editando.uidLogin && editando.senhaPainel) {
-                    secondaryApp = initializeApp(getApp().options, "SecondaryAppEmailUpdate");
-                    const secondaryAuth = getAuth(secondaryApp);
-                    await signInWithEmailAndPassword(secondaryAuth, emailAntigo, editando.senhaPainel);
-                    await updateEmail(secondaryAuth.currentUser, novoEmail);
-                    await signOut(secondaryAuth);
-                    emailAlteradoFirebase = true;
-                }
-                mudancas.push(`Login E-mail: ${emailAntigo} ➔ ${novoEmail}`);
-            } catch (authErr) {
-                console.error(authErr);
-                mudancas.push(`Aviso: E-mail alterado só no BD. Erro Auth: ${authErr.message}`);
-            }
-        }
+        // O e-mail de login da unidade não é trocado por aqui: trocar exigiria guardar a senha da unidade
+        // no banco (o que deixava todas as senhas legíveis publicamente). O login por unidade será
+        // substituído pelo login pessoal; até lá o e-mail fica como está.
+        const novoEmail = editando.email || emailLogin.trim().toLowerCase();
 
         if (editando.nome !== nome.trim()) mudancas.push(`Nome: ${editando.nome} ➔ ${nome.trim()}`);
         if (editando.telefone !== telParaSalvar) mudancas.push(`WhatsApp: ${editando.telefone || 'Sem tel'} ➔ ${telParaSalvar}`);
@@ -633,7 +639,7 @@ export function UnidadesTab() {
         
         if (mudancas.length > 0) await registrarLogAuditoria('ALTERADA', 'Dados cadastrais atualizados.', nome.trim(), mudancas.join('\n'));
         
-        setSucesso(emailAlteradoFirebase ? "Unidade e Login Google Atualizados!" : t('unitsTab.messages.updated', "Unidade atualizada!"));
+        setSucesso(t('unitsTab.messages.updated', "Unidade atualizada!"));
 
       } else {
         secondaryApp = initializeApp(getApp().options, "SecondaryAppUnitCreate");
@@ -647,8 +653,7 @@ export function UnidadesTab() {
           uidLogin: newUid, email: emailLogin.trim().toLowerCase(), 
           linkGoogleMaps: linkMaps.trim(), 
           metragemSalaColetiva: metragem ? Number(metragem) : null, 
-          enderecoCompleto: endereco.trim(), 
-          senhaPainel: senhaLogin, 
+          enderecoCompleto: endereco.trim(),
           criadoPor: userId, criadoEm: serverTimestamp()
         });
 
@@ -743,6 +748,21 @@ export function UnidadesTab() {
               </button>
           </div>
         </div>
+
+        {role === 'admin' && unidadesComSenhaGravada.length > 0 && (
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-2xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 normal-case">
+                <div className="flex items-start gap-3">
+                    <ShieldAlert className="w-6 h-6 text-red-600 shrink-0"/>
+                    <div>
+                        <p className="text-sm font-black text-red-700 dark:text-red-300 uppercase">{t('unitsTab.security.bannerTitle', { count: unidadesComSenhaGravada.length })}</p>
+                        <p className="text-xs font-medium text-red-600 dark:text-red-400 mt-1">{t('unitsTab.security.bannerDesc')}</p>
+                    </div>
+                </div>
+                <button onClick={apagarSenhasGravadas} disabled={apagandoSenhas} className="px-5 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-xs uppercase whitespace-nowrap flex items-center justify-center gap-2 disabled:opacity-50">
+                    {apagandoSenhas ? <Loader2 className="w-4 h-4 animate-spin"/> : <Trash2 className="w-4 h-4"/>} {t('unitsTab.security.purgeButton')}
+                </button>
+            </div>
+        )}
 
         <div className="flex flex-col lg:flex-row gap-4 items-center">
             <div className="relative w-full lg:w-96 group">
@@ -1160,17 +1180,19 @@ export function UnidadesTab() {
               
               <div className="bg-blue-50/50 dark:bg-blue-900/10 p-5 rounded-2xl border border-blue-100 dark:border-blue-800/50 space-y-4">
                   <div className="text-xs font-medium text-slate-600 dark:text-slate-400 leading-relaxed text-center mb-2">
-                      {editando ? "Atualize o e-mail de contato e login da unidade." : t('unitsTab.modal.accessWarning', "O sistema gera automaticamente um painel de controle e login exclusivo.")}
+                      {editando ? t('unitsTab.security.loginInfo') : t('unitsTab.modal.accessWarning', "O sistema gera automaticamente um painel de controle e login exclusivo.")}
                   </div>
                   <div className={`grid grid-cols-1 ${!editando ? 'md:grid-cols-2' : ''} gap-4`}>
                       <div className="w-full">
                           <label className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-1 flex items-center gap-1 pl-1"><Mail className="w-3 h-3"/> {t('unitsTab.modal.login', 'Login (E-mail)')}</label>
-                          <input 
-                              value={emailLogin} 
+                          <input
+                              value={emailLogin}
                               onChange={(e) => setEmailLogin(e.target.value)}
-                              className="w-full px-4 py-3 text-sm border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-xl text-slate-700 dark:text-slate-300 font-mono font-bold shadow-sm focus:border-blue-500 outline-none transition-colors" 
-                              placeholder={t('unitsTab.modal.loginWaiting', "E-mail da unidade...")} 
+                              disabled={!!editando}
+                              className="w-full px-4 py-3 text-sm border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-xl text-slate-700 dark:text-slate-300 font-mono font-bold shadow-sm focus:border-blue-500 outline-none transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                              placeholder={t('unitsTab.modal.loginWaiting', "E-mail da unidade...")}
                           />
+                          {editando && <p className="text-[10px] font-medium text-slate-400 mt-1 pl-1 normal-case">{t('unitsTab.security.loginLocked')}</p>}
                       </div>
                       {!editando && (
                           <div className="w-full">
