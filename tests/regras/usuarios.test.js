@@ -186,3 +186,20 @@ describe('o resto do sistema não mudou', () => {
     await assertSucceeds(addDoc(collection(db, 'auditoria_cronograma'), { x: 1 }));
   });
 });
+
+describe('fechamento do mês (resumos_mensais)', () => {
+  it('logados leem o resumo; sem login, não', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'resumos_mensais/2026-01'), { mes: '2026-01', porAula: {} });
+    });
+    await assertSucceeds(getDoc(doc(como('mentor1'), 'resumos_mensais/2026-01')));
+    await assertSucceeds(getDoc(doc(como('loginUniA'), 'resumos_mensais/2026-01')));
+    await assertFails(getDoc(doc(anonimo(), 'resumos_mensais/2026-01')));
+  });
+  it('só o admin monta ou refaz o resumo', async () => {
+    await assertSucceeds(setDoc(doc(como('admin1'), 'resumos_mensais/2026-02'), { mes: '2026-02', porAula: {} }));
+    await assertFails(setDoc(doc(como('mentor1'), 'resumos_mensais/2026-03'), { mes: '2026-03', porAula: {} }));
+    await assertFails(setDoc(doc(como('loginUniA'), 'resumos_mensais/2026-03'), { mes: '2026-03' }));
+    await assertFails(updateDoc(doc(como('prof1'), 'resumos_mensais/2026-02'), { porAula: { x: { v: 999999 } } }));
+  });
+});
