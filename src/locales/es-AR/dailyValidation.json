@@ -92,5 +92,58 @@
     "selectDate": "Seleccioná la fecha.",
     "informStudentCount": "Ingresá la cantidad de alumnos.",
     "confirmSubstitute": "Por favor, buscá y confirmá al profesor suplente por e-mail."
+  },
+  "deadline": {
+    "closedMonthTeacher": "Este mes ya fue cerrado. Lo que quedó pendiente ya no puede ser validado ni modificado por el profesor. Si necesitás corregir, hablá con el líder de la unidad.",
+    "leaderLimit": "Fuera de plazo: el líder de la unidad solo puede modificar clases de hasta {{dias}} días atrás. Hablá con el mentor.",
+    "noPermission": "No tenés permiso para modificar esta clase.",
+    "substituteReadOnly": "Esta clase aparece solo para consulta (la diste como reemplazo o es una clase especial). Quien valida es el profesor titular, la unidad o el mentor.",
+    "justificationPrompt": "Esta clase es de un mes ya cerrado. Escribí la justificación del cambio (mínimo {{min}} caracteres):",
+    "justificationRequired": "Clase de un mes ya cerrado: escribí una justificación de al menos {{min}} caracteres.",
+    "permissionDenied": "El sistema bloqueó este cambio (fuera de plazo o sin permiso). Actualizá la página e intentá de nuevo; si continúa, hablá con el líder de la unidad.",
+    "invalidStudents": "Cantidad de alumnos inválida. Ingresá un número entero de 0 a {{max}}.",
+    "confirmZeroStudents": "Ingresaste 0 alumnos. ¿La clase se dio igual sin ningún alumno? Si no se dio, usá Cancelar.",
+    "pendingBannerTitle": "Clases pendientes de validación este mes: {{count}}",
+    "pendingBannerDesc": "Validá hasta el último día del mes. Cuando cambie el mes, lo que quedó pendiente ya no podrá ser validado por vos.",
+    "pendingBannerButton": "Ver pendientes",
+    "cardReadOnly": "Solo consulta",
+    "cardSubstitute": "Diste esta clase como reemplazo",
+    "cardClosedMonth": "Mes cerrado",
+    "cardOutOfDeadline": "Fuera de plazo",
+    "cardNeedsJustification": "Mes cerrado: el cambio exige justificación",
+    "studentsHint": "Número entero de 0 a {{max}}.",
+    "justificationLabel": "Justificación (obligatoria)",
+    "justificationHint": "Esta clase es de un mes ya cerrado. Explicá por qué la estás modificando: queda registrado en la clase y en la Auditoría.",
+    "justificationPlaceholder": "Ej.: el profesor olvidó validar y la unidad confirmó la asistencia de los alumnos (mínimo {{min}} caracteres)"
+  },
+  "substitute": {
+    "label": "Profesor reemplazante",
+    "choose": "Seleccioná el profesor...",
+    "noneLinked": "Ningún otro profesor vinculado a esta unidad",
+    "onlyLinkedHint": "Aparecen solo los profesores vinculados a esta unidad."
+  },
+  "quick": {
+    "howMany": "¿Cuántos alumnos?",
+    "less": "Disminuir",
+    "more": "Aumentar",
+    "averageShort": "Promedio: {{media}}",
+    "suggestionHint": "Sugerencia: promedio de {{media}} alumnos en las últimas {{amostras}} clases de este horario.",
+    "unusualHint": "Muy fuera del promedio de este horario ({{media}} alumnos). Revisá antes de validar.",
+    "confirmUnusual": "Ingresaste {{n}} alumnos, pero el promedio de las últimas {{amostras}} clases de este horario es {{media}}. ¿Confirmás ese número?",
+    "substitutionLink": "Reemplazo / más opciones",
+    "cancelLink": "Cancelar clase"
+  },
+  "views": {
+    "label": "Visualización",
+    "stacks": "Pilas",
+    "list": "Lista",
+    "openAll": "Abrir todas",
+    "closeAll": "Cerrar todas",
+    "pendingCount": "{{count}} pendientes",
+    "doneCount": "{{count}} validadas",
+    "canceledCount": "{{count}} canceladas",
+    "collapse": "Cerrar",
+    "showAll": "Ver las {{count}}",
+    "allDone": "Todo al día en este horario · tocá para ver"
   }
 }

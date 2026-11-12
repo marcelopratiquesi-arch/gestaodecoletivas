@@ -19,6 +19,7 @@ import {
   ChevronUp, ArrowDown, ArrowRight, DownloadCloud, Layers, Ban, ShieldCheck, MapPin
 } from "lucide-react";
 import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
+import { ehLider } from '../../../permissions';
 
 // 🌍 PADRÃO OURO INTERNACIONAL — mesma identidade visual usada em MentoresTab
 const PAIS_CONFIG = {
@@ -128,8 +129,8 @@ export function ProfessoresTab() {
   const userId = useMemo(() => userData?.id || userData?.uid, [userData]);
   const userUnidadeId = useMemo(() => userData?.unidadeId, [userData]);
 
-  const podeVer = ["admin", "mentor", "unidade"].includes(role);
-  const podeEditar = ["admin", "mentor", "unidade"].includes(role);
+  const podeVer = ["admin", "mentor", "lider", "unidade"].includes(role);
+  const podeEditar = ["admin", "mentor", "lider", "unidade"].includes(role);
   const podeExcluir = role === "admin"; // Apenas admin exclui do banco geral
 
   // ===== STATES DE DADOS EM TEMPO REAL =====
@@ -213,7 +214,7 @@ export function ProfessoresTab() {
   const minhasUnidades = useMemo(() => {
       if (role === 'admin') return unidades;
       if (role === 'mentor') return unidades.filter(u => u.mentorId === userId);
-      if (role === 'unidade') return unidades.filter(u => u.id === userUnidadeId);
+      if (ehLider(role)) return unidades.filter(u => u.id === userUnidadeId);
       return [];
   }, [unidades, role, userId, userUnidadeId]);
 

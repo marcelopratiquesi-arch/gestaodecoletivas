@@ -1,0 +1,18 @@
+{
+  "title": "Pedidos de acesso",
+  "subtitle": "Pessoas que entraram com o Google e pediram para ser líder de uma unidade. Ao aprovar, a pessoa passa a acessar o sistema como líder daquela unidade.",
+  "empty": "Nenhum pedido aguardando aprovação.",
+  "leaderOf": "Quer ser líder de: {{unit}}",
+  "hasLeader": "Esta unidade já tem líder: {{name}}. Aprovar substitui o líder atual.",
+  "approve": "Aprovar",
+  "replace": "Substituir líder",
+  "refuse": "Recusar",
+  "approveConfirm": "Aprovar {{name}} como líder da unidade {{unit}}?",
+  "replaceConfirm": "A unidade {{unit}} já tem o líder {{current}}.\n\nSubstituir por {{name}}? O líder atual perde o acesso.",
+  "replacedReason": "Substituído por {{name}} como líder da unidade.",
+  "refusePrompt": "Recusar o pedido de {{name}}?\n\nSe quiser, escreva o motivo (a pessoa vai ver):",
+  "unitNotFound": "Unidade não encontrada (pode ter sido excluída).",
+  "notYourUnit": "Esta unidade não é sua.",
+  "approveError": "Não foi possível aprovar.",
+  "refuseError": "Não foi possível recusar."
+}

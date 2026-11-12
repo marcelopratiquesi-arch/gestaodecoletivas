@@ -1,0 +1,39 @@
+{
+  "leader": "Líder de la sede",
+  "logout": "Salir ({{email}})",
+  "loadingUnits": "Cargando sedes...",
+  "noUnits": "No se pudo cargar la lista de sedes. Hablá con tu mentor.",
+  "fields": {
+    "name": "Tu nombre completo",
+    "namePlaceholder": "Ej: María García",
+    "phone": "WhatsApp",
+    "phonePlaceholder": "Ej: +54 9 11 0000-0000",
+    "unit": "Sede",
+    "unitLeader": "Sede en la que sos líder",
+    "unitSearch": "Buscar sede...",
+    "unitSelect": "Seleccioná la sede...",
+    "role": "Función"
+  },
+  "form": {
+    "title": "Pedir acceso",
+    "desc": "¿Primer ingreso? Completá tus datos. Tu mentor va a aprobar el pedido y ahí vas a poder ingresar al sistema.",
+    "send": "Enviar pedido",
+    "cancelEdit": "Cancelar cambios"
+  },
+  "waiting": {
+    "title": "¡Pedido enviado!",
+    "desc": "Ahora solo tenés que esperar que tu mentor lo apruebe. Cuando lo apruebe, esta pantalla abre el sistema sola.",
+    "edit": "Corregir mis datos"
+  },
+  "refused": {
+    "title": "Tu pedido anterior no fue aprobado.",
+    "reason": "Motivo: {{reason}}",
+    "retry": "Si hace falta, corregí los datos y envialo de nuevo."
+  },
+  "errors": {
+    "name": "Escribí tu nombre completo.",
+    "phone": "Escribí un WhatsApp válido.",
+    "unit": "Elegí la sede.",
+    "send": "No se pudo enviar el pedido. Probá de nuevo."
+  }
+}

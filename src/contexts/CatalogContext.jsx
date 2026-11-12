@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { collection, onSnapshot, query, orderBy, where } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { useAuth } from './AuthContext'; // 🟢 1. Importamos o porteiro (Autenticação)
+import { ehLider } from '../permissions';
 
 const CatalogContext = createContext();
 
@@ -41,7 +42,10 @@ const emBlocos = (lista, tamanho = 30) =>
 // Unidades, modalidades, professores, feriados e mentores continuam completos (são pequenos e usados em listas).
 export const CatalogProvider = ({ children }) => {
     // 🟢 2. Pegamos o crachá e o status de carregamento do Auth
-    const { user, userData, loading: authLoading } = useAuth();
+    // Quem entrou pelo Google e ainda aguarda aprovação tem "user" mas não tem crachá (userData):
+    // para ele não escuta nada (o banco recusaria e cada recusa ainda gastaria cota).
+    const { user: usuarioAuth, userData, loading: authLoading } = useAuth();
+    const user = userData ? usuarioAuth : null;
     const uid = user?.uid || null;
     const papel = String(userData?.role || "").trim().toLowerCase();
     const meuProfessorId = papel === 'professor' ? (userData?.professorId || null) : null;
@@ -98,7 +102,7 @@ export const CatalogProvider = ({ children }) => {
     const escopo = useMemo(() => {
         if (chaveSessao === null) return null;
         if (!uid) return '*';
-        if (papel === 'unidade') return userData?.unidadeId ? [String(userData.unidadeId)] : '*';
+        if (ehLider(papel)) return userData?.unidadeId ? [String(userData.unidadeId)] : '*';
         if (papel === 'mentor') {
             if (!basePronta) return null;
             return base.unidades.filter(u => u.mentorId === uid).map(u => String(u.id)).sort();

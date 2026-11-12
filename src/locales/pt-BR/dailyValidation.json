@@ -92,5 +92,58 @@
     "selectDate": "Selecione a data.",
     "informStudentCount": "Informe a quantidade de alunos.",
     "confirmSubstitute": "Por favor, busque e confirme o professor substituto pelo e-mail."
+  },
+  "deadline": {
+    "closedMonthTeacher": "Este mês já foi fechado. O que ficou para trás não pode mais ser validado ou alterado pelo professor. Se precisar corrigir, fale com o líder da unidade.",
+    "leaderLimit": "Fora do prazo: o líder da unidade só pode alterar aulas de até {{dias}} dias atrás. Fale com o mentor.",
+    "noPermission": "Você não tem permissão para alterar esta aula.",
+    "substituteReadOnly": "Esta aula aparece aqui só para consulta (você deu a aula como substituto ou é um aulão). Quem valida é o professor titular, a unidade ou o mentor.",
+    "justificationPrompt": "Esta aula é de um mês já fechado. Escreva a justificativa da alteração (mínimo {{min}} caracteres):",
+    "justificationRequired": "Aula de mês já fechado: escreva uma justificativa com pelo menos {{min}} caracteres.",
+    "permissionDenied": "O sistema bloqueou esta alteração (fora do prazo ou sem permissão). Atualize a página e tente de novo; se continuar, fale com o líder da unidade.",
+    "invalidStudents": "Número de alunos inválido. Informe um número inteiro de 0 a {{max}}.",
+    "confirmZeroStudents": "Você informou 0 alunos. A aula aconteceu mesmo sem nenhum aluno? Se ela não aconteceu, use Cancelar.",
+    "pendingBannerTitle": "Aulas pendentes de validação neste mês: {{count}}",
+    "pendingBannerDesc": "Valide até o último dia do mês. Quando o mês virar, o que ficou para trás não pode mais ser validado por você.",
+    "pendingBannerButton": "Ver pendentes",
+    "cardReadOnly": "Somente consulta",
+    "cardSubstitute": "Você deu esta aula como substituto",
+    "cardClosedMonth": "Mês fechado",
+    "cardOutOfDeadline": "Fora do prazo",
+    "cardNeedsJustification": "Mês fechado: alteração exige justificativa",
+    "studentsHint": "Número inteiro de 0 a {{max}}.",
+    "justificationLabel": "Justificativa (obrigatória)",
+    "justificationHint": "Esta aula é de um mês já fechado. Explique por que está alterando: fica registrado na aula e na Auditoria.",
+    "justificationPlaceholder": "Ex.: professor esqueceu de validar e a unidade confirmou a presença dos alunos (mínimo {{min}} caracteres)"
+  },
+  "substitute": {
+    "label": "Professor substituto",
+    "choose": "Selecione o professor...",
+    "noneLinked": "Nenhum outro professor vinculado a esta unidade",
+    "onlyLinkedHint": "Aparecem só os professores vinculados a esta unidade."
+  },
+  "quick": {
+    "howMany": "Quantos alunos?",
+    "less": "Diminuir",
+    "more": "Aumentar",
+    "averageShort": "Média: {{media}}",
+    "suggestionHint": "Sugestão: média de {{media}} alunos nas últimas {{amostras}} aulas deste horário.",
+    "unusualHint": "Bem fora da média deste horário ({{media}} alunos). Confira antes de validar.",
+    "confirmUnusual": "Você informou {{n}} alunos, mas a média das últimas {{amostras}} aulas deste horário é {{media}}. Confirma esse número?",
+    "substitutionLink": "Substituição / mais opções",
+    "cancelLink": "Cancelar aula"
+  },
+  "views": {
+    "label": "Visualização",
+    "stacks": "Pilhas",
+    "list": "Lista",
+    "openAll": "Abrir todas",
+    "closeAll": "Recolher todas",
+    "pendingCount": "{{count}} pendentes",
+    "doneCount": "{{count}} validadas",
+    "canceledCount": "{{count}} canceladas",
+    "collapse": "Recolher",
+    "showAll": "Ver as {{count}}",
+    "allDone": "Tudo em dia neste horário · toque para ver"
   }
 }

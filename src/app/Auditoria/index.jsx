@@ -11,6 +11,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import i18n from '../../i18n';
 import { formatDate, formatTime, formatCurrency, formatWeekday } from '../../utils/formatters';
+import { ehLider } from '../../permissions';
 
 // --- HELPERS E CONSTANTES ---
 const getTodayStr = () => new Date().toLocaleDateString('en-CA');
@@ -61,7 +62,7 @@ export default function AuditoriaPage() {
     const [isCachedData, setIsCachedData] = useState(false);
     const [refreshTrigger, setRefreshTrigger] = useState(0); 
 
-    if (role === 'professor' || role === 'unidade') {
+    if (role === 'professor' || ehLider(role)) {
         return (
             <div className="flex flex-col items-center justify-center h-[80vh] text-slate-500">
                 <ShieldCheck className="w-16 h-16 mb-4 text-red-500 opacity-50" />

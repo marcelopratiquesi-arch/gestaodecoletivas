@@ -1,0 +1,13 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "validacoes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "aulaId", "order": "ASCENDING" },
+        { "fieldPath": "data", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

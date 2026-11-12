@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
 import { getDiaSemana, formatCurrency, formatDate, formatTime, formatWeekday, getCurrencyCode } from "../utils/formatters";
 import { deduplicarValidacoes } from "../utils/validacoes";
 import { valorDaValidacao } from "../utils/valores";
+import { ehLider } from "../permissions";
 import { feriadoNoDia } from "../utils/feriados";
 import { aulaNaGradeDoDia, situacaoDaAula, SITUACAO, dataLocalStr, somarDias, datasEntre } from "../utils/agendaAulas";
 import { lerCacheInicio, gravarCacheInicio, invalidarCacheInicio } from "../services/cacheInicio";
@@ -201,15 +202,15 @@ export default function Home() {
   const minhaUnidadeId = userData?.unidadeId;
 
   const permissions = useMemo(() => ({
-      relatorio: ['admin', 'mentor', 'unidade', 'professor'].includes(role),
+      relatorio: ['admin', 'mentor', 'lider', 'unidade', 'professor'].includes(role),
       cronograma: true,
       validacaoDiaria: true,
       validacaoColetiva: ['admin', 'mentor'].includes(role),
-      pratiquePlay: ['admin', 'mentor', 'unidade', 'professor'].includes(role),
-      linkAluno: ['admin', 'mentor', 'unidade', 'professor'].includes(role),
+      pratiquePlay: ['admin', 'mentor', 'lider', 'unidade', 'professor'].includes(role),
+      linkAluno: ['admin', 'mentor', 'lider', 'unidade', 'professor'].includes(role),
       // Abas das Configurações (mesmos perfis de src/app/Configuracoes/index.jsx)
       cfgUnidades: ['admin', 'mentor'].includes(role),
-      cfgProfessores: ['admin', 'mentor', 'unidade'].includes(role),
+      cfgProfessores: ['admin', 'mentor', 'lider', 'unidade'].includes(role),
       cfgModalidades: ['admin', 'mentor'].includes(role),
       cfgFeriados: ['admin', 'mentor'].includes(role),
   }), [role]);
@@ -221,7 +222,7 @@ export default function Home() {
     let unidades = [];
     if (role === 'admin' || role === 'professor') unidades = todas; // professor: recorta pelas aulas dele, logo abaixo
     else if (role === 'mentor') unidades = todas.filter(u => u.mentorId === userId);
-    else if (role === 'unidade') unidades = todas.filter(u => String(u.id) === String(minhaUnidadeId));
+    else if (ehLider(role)) unidades = todas.filter(u => String(u.id) === String(minhaUnidadeId));
 
     const unidadesPorId = new Map(unidades.map(u => [String(u.id), u]));
     const meuProf = role === 'professor'
@@ -262,7 +263,7 @@ export default function Home() {
   const idsUnidadesMentor = role === 'mentor' ? escopo.unidades.map(u => u.id) : [];
   const chaveBusca = [
     userId, role, inicioJanela, hoje,
-    role === 'unidade' ? minhaUnidadeId : '',
+    ehLider(role) ? minhaUnidadeId : '',
     role === 'professor' ? escopo.meuProfId : '',
     idsUnidadesMentor.join(','),
   ].join('|');
@@ -295,7 +296,7 @@ export default function Home() {
       let consultas = [];
       if (escopo.aulas.length === 0) {
         consultas = []; // sem aulas visíveis não há o que contar: não gasta leitura
-      } else if (role === 'unidade') {
+      } else if (ehLider(role)) {
         consultas = [query(ref, where("unidadeId", "==", minhaUnidadeId), ...periodo)];
       } else if (role === 'professor') {
         consultas = [
@@ -501,7 +502,7 @@ export default function Home() {
   const temaValidacao = erroCarga ? "orange" : (temPendencia ? "red" : (resumo.aulasNoPeriodo > 0 ? "green" : "slate"));
 
   // 🟢 Role adaptada ao idioma
-  const userContextLabel = role === 'admin' ? t('home.roles.admin') : (role === 'unidade' ? userData.unidadeNome : (role === 'professor' ? t('home.roles.professor') : t('home.roles.mentor')));
+  const userContextLabel = role === 'admin' ? t('home.roles.admin') : (ehLider(role) ? userData.unidadeNome : (role === 'professor' ? t('home.roles.professor') : t('home.roles.mentor')));
 
   // ===================== CARDS =====================
   const cardRelatorio = permissions.relatorio && (
@@ -537,7 +538,7 @@ export default function Home() {
 
   const [aulaEmDestaque, ...aulasDepois] = agendaHoje.aulas;
   // Na linha de baixo: gestor quer saber ONDE (unidade); unidade quer saber QUEM (professor).
-  const detalheDaAula = (aula) => (role === 'unidade' ? primeiroNome(aula.professorNome) : aula.unidadeNome);
+  const detalheDaAula = (aula) => (ehLider(role) ? primeiroNome(aula.professorNome) : aula.unidadeNome);
 
   const cardCronograma = permissions.cronograma && (
       <DashboardCard

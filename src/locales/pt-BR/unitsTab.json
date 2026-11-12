@@ -126,5 +126,23 @@
     "confirm": "Atualizar a página pública de horários com os cadastros atuais?\n\nEla vai mostrar só nome e endereço das unidades e o nome dos professores (sem e-mail nem telefone).",
     "done": "Pronto: página pública atualizada com {{units}} unidade(s) e {{teachers}} professor(es).",
     "error": "Não foi possível atualizar a página pública."
+  },
+  "leader": {
+    "title": "Líder da unidade",
+    "label": "Líder: {{name}}",
+    "none": "Sem líder ainda",
+    "howTo": "A unidade não tem mais login e senha. Quem entra é o líder: ele pede acesso com a conta Google ou você cadastra na aba Líderes.",
+    "created": "Unidade criada! Agora cadastre o líder na aba Líderes (ou ele pede acesso entrando com o Google).",
+    "oldLogin": "Login antigo da unidade",
+    "oldLoginShort": "login antigo",
+    "oldLoginHint": "Continua funcionando até ser desligado. Desligue depois que o líder estiver aprovado.",
+    "turnOffOne": "Desligar login antigo",
+    "turnOffOneConfirm": "Desligar o login antigo da unidade {{name}} ({{email}})?\n\nQuem entra com esse e-mail perde o acesso. Confira se o líder já foi aprovado.",
+    "turnOffAll": "Desligar logins antigos",
+    "turnOffAllConfirm": "Desligar os logins antigos de {{count}} unidade(s) que já têm líder aprovado?\n\nQuem entra com esses e-mails perde o acesso.",
+    "turnOffDone": "{{count}} login(s) antigo(s) desligado(s).",
+    "turnOffError": "Não foi possível desligar.",
+    "bannerTitle": "{{count}} unidade(s) já têm líder e ainda têm o login antigo ligado",
+    "bannerDesc": "Agora que o líder entra com o Google, o login antigo da unidade (e-mail @pratique.com e senha) pode ser desligado."
   }
 }

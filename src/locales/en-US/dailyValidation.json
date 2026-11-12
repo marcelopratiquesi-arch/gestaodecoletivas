@@ -92,5 +92,58 @@
     "selectDate": "Select the date.",
     "informStudentCount": "Enter the number of students.",
     "confirmSubstitute": "Please search for and confirm the substitute teacher by e-mail."
+  },
+  "deadline": {
+    "closedMonthTeacher": "This month is already closed. Anything left behind can no longer be validated or changed by the teacher. If something needs fixing, talk to the unit leader.",
+    "leaderLimit": "Out of deadline: the unit leader can only change classes up to {{dias}} days back. Talk to the mentor.",
+    "noPermission": "You do not have permission to change this class.",
+    "substituteReadOnly": "This class is shown for reference only (you taught it as a substitute, or it is a special class). The main teacher, the unit or the mentor validates it.",
+    "justificationPrompt": "This class belongs to a closed month. Write the reason for the change (at least {{min}} characters):",
+    "justificationRequired": "Class from a closed month: write a justification with at least {{min}} characters.",
+    "permissionDenied": "The system blocked this change (out of deadline or no permission). Refresh the page and try again; if it persists, talk to the unit leader.",
+    "invalidStudents": "Invalid number of students. Enter a whole number from 0 to {{max}}.",
+    "confirmZeroStudents": "You entered 0 students. Did the class really happen with no students? If it did not happen, use Cancel.",
+    "pendingBannerTitle": "Classes pending validation this month: {{count}}",
+    "pendingBannerDesc": "Validate by the last day of the month. Once the month turns, anything left behind can no longer be validated by you.",
+    "pendingBannerButton": "View pending",
+    "cardReadOnly": "Read only",
+    "cardSubstitute": "You taught this class as a substitute",
+    "cardClosedMonth": "Month closed",
+    "cardOutOfDeadline": "Out of deadline",
+    "cardNeedsJustification": "Month closed: change requires justification",
+    "studentsHint": "Whole number from 0 to {{max}}.",
+    "justificationLabel": "Justification (required)",
+    "justificationHint": "This class belongs to a closed month. Explain why you are changing it: it is recorded on the class and in the Audit log.",
+    "justificationPlaceholder": "E.g.: the teacher forgot to validate and the unit confirmed the students attended (at least {{min}} characters)"
+  },
+  "substitute": {
+    "label": "Substitute teacher",
+    "choose": "Select the teacher...",
+    "noneLinked": "No other teacher linked to this unit",
+    "onlyLinkedHint": "Only teachers linked to this unit are listed."
+  },
+  "quick": {
+    "howMany": "How many students?",
+    "less": "Decrease",
+    "more": "Increase",
+    "averageShort": "Average: {{media}}",
+    "suggestionHint": "Suggestion: average of {{media}} students in the last {{amostras}} classes at this time slot.",
+    "unusualHint": "Far from this time slot’s average ({{media}} students). Double-check before validating.",
+    "confirmUnusual": "You entered {{n}} students, but the average of the last {{amostras}} classes at this time slot is {{media}}. Confirm this number?",
+    "substitutionLink": "Substitution / more options",
+    "cancelLink": "Cancel class"
+  },
+  "views": {
+    "label": "View",
+    "stacks": "Stacks",
+    "list": "List",
+    "openAll": "Open all",
+    "closeAll": "Collapse all",
+    "pendingCount": "{{count}} pending",
+    "doneCount": "{{count}} validated",
+    "canceledCount": "{{count}} canceled",
+    "collapse": "Collapse",
+    "showAll": "See all {{count}}",
+    "allDone": "All up to date for this slot · tap to see"
   }
 }

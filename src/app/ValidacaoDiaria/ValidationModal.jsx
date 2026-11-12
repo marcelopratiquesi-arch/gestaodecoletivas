@@ -1,12 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  CircleCheck, CircleX, Users, ArrowRightLeft, 
-  ChevronDown, Loader2, Undo2, Search, Mail, User, Check, Star, DollarSign, Clock, Calendar, AlertTriangle
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+  CircleCheck, CircleX, Users, ArrowRightLeft,
+  ChevronDown, Loader2, Undo2, User, Check, Star, DollarSign, Clock, Calendar, AlertTriangle, FileText
 } from 'lucide-react';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../../services/firebase'; 
 import { useTranslation, Trans } from 'react-i18next';
 import { getCurrencySymbol, formatCancelReason, formatSubstitutionReason } from '../../utils/formatters';
+import { hojeLocal, LIMITE_ALUNOS, MIN_JUSTIFICATIVA } from '../../utils/validacoes';
+import { numeroEstranho } from '../../hooks/useMediaAlunos';
+
+// Campo de alunos: só dígitos (sem sinal de menos, vírgula ou "e"), no máximo 4 casas.
+const soDigitos = (valor) => String(valor || '').replace(/\D/g, '').slice(0, 4);
 
 // Valores gravados no banco (em português); o texto exibido vem da tradução.
 const OPCOES_CANCELAMENTO = ["Feriado", "Férias Professor", "Atestado Médico", "Manutenção Unidade", "Falta sem Justificativa", "Chuva/Clima"];
@@ -14,19 +17,17 @@ const OPCOES_SUBSTITUICAO = ["Atestado do Titular", "Férias", "Folga Programada
 
 export function ValidationModal({ 
     isOpen, onClose, onConfirm, onRevert, 
-    acaoAtual, catalogs, processando, isMaster 
+    acaoAtual, catalogs, processando, isMaster, regraPrazo
 }) {
     const { t } = useTranslation();
     // --- ESTADOS GERAIS ---
-    const [inputValor, setInputValor] = useState(""); 
-    const [inputObs, setInputObs] = useState(""); 
-    
+    const [inputValor, setInputValor] = useState("");
+    const [inputObs, setInputObs] = useState("");
+    const [justificativa, setJustificativa] = useState("");
+
     // --- ESTADOS DE SUBSTITUIÇÃO / AULÃO ---
     const [isSubstituicao, setIsSubstituicao] = useState(false);
-    const [emailBusca, setEmailBusca] = useState("");
-    const [professorEncontrado, setProfessorEncontrado] = useState(null); 
-    const [buscandoProf, setBuscandoProf] = useState(false);
-    const [erroBusca, setErroBusca] = useState("");
+    const [professorEncontrado, setProfessorEncontrado] = useState(null);
     const [motivoSubstituicao, setMotivoSubstituicao] = useState("");
 
     // --- ESTADOS ESPECÍFICOS DO AULÃO ---
@@ -44,18 +45,22 @@ export function ValidationModal({
             // Resetar tudo
             setInputValor("");
             setInputObs("");
+            setJustificativa("");
             setIsSubstituicao(false);
-            setEmailBusca("");
             setProfessorEncontrado(null);
-            setErroBusca("");
             setMotivoSubstituicao("");
-            
+
             // Aulão Defaults
-            setEtapaAulao('aviso'); 
+            setEtapaAulao('aviso');
             setAulaoModalidadeId("");
-            setAulaoData(item.data || new Date().toISOString().split('T')[0]); 
+            setAulaoData(item.data || hojeLocal());
             setAulaoHora("10:00");
             setAulaoValor("");
+
+            // Validação nova: já vem com a média das últimas aulas daquele horário (a pessoa só ajusta).
+            if (acaoAtual.tipo === 'validar' && !item?.validacao && item?.mediaAlunos) {
+                setInputValor(String(item.mediaAlunos.media));
+            }
 
             // Preencher se for edição (Validar ou Cancelar existente)
             if (item && item.validacao) {
@@ -85,39 +90,49 @@ export function ValidationModal({
         }
     }, [isOpen, acaoAtual, catalogs]);
 
-    // --- FUNÇÃO DE BUSCA NO BANCO DE DADOS ---
-    const handleBuscarProfessor = async () => {
-        if (!emailBusca.trim()) {
-            setErroBusca(t('dailyValidation.search.typeEmail'));
-            return;
-        }
+    // --- LISTA DE PROFESSORES QUE PODEM DAR A AULA ---
+    // Só os vinculados (ativos) à unidade da aula. Na substituição, sem o próprio titular.
+    // Se a aula já tinha um substituto salvo que não está mais vinculado, ele continua na lista (para não sumir na edição).
+    const unidadeDaAula = acaoAtual?.item?.unidade?.id ?? acaoAtual?.item?.aulaBase?.unidadeId;
+    const titularId = acaoAtual?.tipo === 'aulao' ? null : acaoAtual?.item?.aulaBase?.professorId;
+    const professoresDaUnidade = useMemo(() => {
+        if (!catalogs || unidadeDaAula == null) return [];
+        const ids = new Set((catalogs.vinculos || [])
+            .filter(v => String(v.unidadeId) === String(unidadeDaAula) && (v.status || 'ativo') === 'ativo')
+            .map(v => String(v.professorId)));
+        if (professorEncontrado?.id) ids.add(String(professorEncontrado.id));
+        return (catalogs.professores || [])
+            .filter(p => ids.has(String(p.id)) && String(p.id) !== String(titularId ?? ''))
+            .sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || '')));
+    }, [catalogs, unidadeDaAula, titularId, professorEncontrado]);
 
-        setBuscandoProf(true);
-        setErroBusca("");
-        setProfessorEncontrado(null);
-
-        try {
-            const q = query(collection(db, "professores"), where("email", "==", emailBusca.trim().toLowerCase()));
-            const querySnapshot = await getDocs(q);
-
-            if (querySnapshot.empty) {
-                setErroBusca(t('dailyValidation.search.notFound'));
-            } else {
-                const docData = querySnapshot.docs[0].data();
-                setProfessorEncontrado({
-                    id: querySnapshot.docs[0].id,
-                    ...docData
-                });
-            }
-        } catch (error) {
-            console.error("Erro ao buscar professor:", error);
-            setErroBusca(t('dailyValidation.search.connectionError'));
-        } finally {
-            setBuscandoProf(false);
-        }
-    };
+    const escolherProfessor = (id) => setProfessorEncontrado((catalogs?.professores || []).find(p => String(p.id) === String(id)) || null);
 
     if (!isOpen || !acaoAtual) return null;
+
+    // Prazo: mexer em mês já fechado (líder/mentor/admin) exige justificativa.
+    const dataAlvo = acaoAtual.tipo === 'aulao' ? aulaoData : acaoAtual.item?.data;
+    const prazo = regraPrazo ? regraPrazo(dataAlvo) : { pode: true, precisaJustificativa: false };
+    const mostrarJustificativa = prazo.precisaJustificativa && acaoAtual.item?.status !== 'cancelada'
+        && !(acaoAtual.tipo === 'aulao' && etapaAulao === 'aviso');
+
+    const seletorProfessor = (cor) => (
+        <div className="space-y-2">
+            <div className="relative">
+                <User className={`absolute left-3 top-3 w-4 h-4 ${cor === 'purple' ? 'text-purple-400' : 'text-blue-400'}`}/>
+                <select
+                    className={`w-full pl-9 pr-9 p-2.5 bg-white border rounded-xl text-sm font-semibold text-slate-700 outline-none appearance-none ${cor === 'purple' ? 'border-purple-200 focus:border-purple-500' : 'border-blue-200 focus:border-blue-500'}`}
+                    value={professorEncontrado?.id || ''}
+                    onChange={(e) => escolherProfessor(e.target.value)}
+                >
+                    <option value="">{professoresDaUnidade.length === 0 ? t('dailyValidation.substitute.noneLinked') : t('dailyValidation.substitute.choose')}</option>
+                    {professoresDaUnidade.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
+                </select>
+                <ChevronDown className="absolute right-3 top-3 w-4 h-4 text-slate-400 pointer-events-none"/>
+            </div>
+            <p className="text-[10px] text-slate-400 ml-1">{t('dailyValidation.substitute.onlyLinkedHint')}</p>
+        </div>
+    );
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -174,7 +189,8 @@ export function ValidationModal({
             // Novos campos injetados para o Passo 2:
             professorNomeEfetivo: nomeProfSnapshot,
             modalidadeNomeEfetiva: nomeModSnapshot,
-            valorEfetivo: valorAulaSnapshot
+            valorEfetivo: valorAulaSnapshot,
+            justificativa: mostrarJustificativa ? justificativa : ''
         };
         
         onConfirm(dadosFormulario);
@@ -242,38 +258,7 @@ export function ValidationModal({
                         {/* 1. Buscar Professor */}
                         <div className="p-4 border-2 border-purple-100 bg-purple-50/30 rounded-xl space-y-3">
                             <label className="block text-[10px] font-bold text-purple-600 uppercase mb-1">{t('dailyValidation.modal.whoTeaches')}</label>
-                            <div className="flex gap-2">
-                                <div className="relative flex-1">
-                                    <Mail className="absolute left-3 top-2.5 w-4 h-4 text-purple-400"/>
-                                    <input 
-                                        type="email" 
-                                        placeholder="professor@email.com"
-                                        className="w-full pl-9 p-2 bg-white border border-purple-200 rounded-lg text-sm outline-none focus:border-purple-500"
-                                        value={emailBusca}
-                                        onChange={(e) => setEmailBusca(e.target.value)}
-                                        onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleBuscarProfessor())}
-                                    />
-                                </div>
-                                <button 
-                                    type="button" 
-                                    onClick={handleBuscarProfessor}
-                                    disabled={buscandoProf || !emailBusca}
-                                    className="bg-purple-600 text-white px-3 rounded-lg font-bold text-xs hover:bg-purple-700 disabled:opacity-50 flex items-center gap-1"
-                                >
-                                    {buscandoProf ? <Loader2 className="w-3 h-3 animate-spin"/> : <Search className="w-3 h-3"/>}
-                                </button>
-                            </div>
-                            {erroBusca && <p className="text-[10px] text-red-500 font-bold ml-1">{erroBusca}</p>}
-
-                            {professorEncontrado && (
-                                <div className="flex items-center gap-3 p-2 bg-white rounded-lg border border-purple-200 shadow-sm animate-in fade-in">
-                                    <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center overflow-hidden">
-                                        {professorEncontrado.fotoUrl ? <img src={professorEncontrado.fotoUrl} alt={t('dailyValidation.modal.photoAlt')} className="w-full h-full object-cover"/> : <User className="w-4 h-4 text-slate-400"/>}
-                                    </div>
-                                    <p className="text-sm font-black text-slate-800 truncate flex-1">{professorEncontrado.nome}</p>
-                                    <Check className="w-4 h-4 text-purple-500"/>
-                                </div>
-                            )}
+                            {seletorProfessor('purple')}
                         </div>
 
                         {/* 2. Data e Hora */}
@@ -282,7 +267,7 @@ export function ValidationModal({
                                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{t('dailyValidation.modal.date')}</label>
                                 <div className="relative">
                                     <Calendar className="absolute left-3 top-2.5 w-4 h-4 text-slate-400"/>
-                                    <input type="date" className="w-full pl-9 p-2.5 border rounded-xl text-sm font-bold bg-slate-50" value={aulaoData} onChange={e => setAulaoData(e.target.value)} />
+                                    <input type="date" max={hojeLocal()} className="w-full pl-9 p-2.5 border rounded-xl text-sm font-bold bg-slate-50" value={aulaoData} onChange={e => setAulaoData(e.target.value)} />
                                 </div>
                             </div>
                             <div>
@@ -315,7 +300,7 @@ export function ValidationModal({
                                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{t('dailyValidation.modal.studentCount')}</label>
                                 <div className="relative">
                                     <Users className="absolute left-3 top-2.5 w-4 h-4 text-slate-400"/>
-                                    <input type="number" placeholder="0" className="w-full pl-9 p-2.5 border rounded-xl text-sm font-bold" value={inputValor} onChange={e => setInputValor(e.target.value)} />
+                                    <input type="text" inputMode="numeric" pattern="[0-9]*" placeholder="0" className="w-full pl-9 p-2.5 border rounded-xl text-sm font-bold" value={inputValor} onChange={e => setInputValor(soDigitos(e.target.value))} />
                                 </div>
                             </div>
                         </div>
@@ -344,30 +329,8 @@ export function ValidationModal({
                                         <div className="px-4 pb-4 space-y-3 animate-in slide-in-from-top-2">
                                             <div className="h-px w-full bg-blue-200 mb-3"></div>
                                             <div>
-                                                <label className="block text-[10px] font-bold text-blue-600 uppercase mb-1">{t('dailyValidation.modal.substituteEmail')}</label>
-                                                <div className="flex gap-2">
-                                                    <div className="relative flex-1">
-                                                        <Mail className="absolute left-3 top-2.5 w-4 h-4 text-blue-400"/>
-                                                        <input 
-                                                            type="email" 
-                                                            placeholder="ex: professor@pratique.com"
-                                                            className="w-full pl-9 p-2 bg-white border border-blue-200 rounded-lg text-sm outline-none focus:border-blue-500"
-                                                            value={emailBusca}
-                                                            onChange={(e) => setEmailBusca(e.target.value)}
-                                                            onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleBuscarProfessor())}
-                                                        />
-                                                    </div>
-                                                    <button 
-                                                        type="button" 
-                                                        onClick={handleBuscarProfessor}
-                                                        disabled={buscandoProf || !emailBusca}
-                                                        className="bg-blue-600 text-white px-3 rounded-lg font-bold text-xs hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1"
-                                                    >
-                                                        {buscandoProf ? <Loader2 className="w-3 h-3 animate-spin"/> : <Search className="w-3 h-3"/>}
-                                                        {t('dailyValidation.modal.search')}
-                                                    </button>
-                                                </div>
-                                                {erroBusca && <p className="text-[10px] text-red-500 font-bold mt-1 ml-1">{erroBusca}</p>}
+                                                <label className="block text-[10px] font-bold text-blue-600 uppercase mb-1">{t('dailyValidation.substitute.label')}</label>
+                                                {seletorProfessor('blue')}
                                             </div>
 
                                             {professorEncontrado && (
@@ -405,8 +368,21 @@ export function ValidationModal({
                                     <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2 ml-1">{t('dailyValidation.modal.numberOfStudents')}</label>
                                     <div className="relative group">
                                         <Users className="absolute left-4 top-3.5 w-5 h-5 text-slate-300 group-focus-within:text-emerald-500 transition-colors"/>
-                                        <input type="number" min="0" className="w-full pl-12 p-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-emerald-500 rounded-xl text-xl font-bold text-slate-800 dark:text-white outline-none transition-all placeholder:text-slate-300" value={inputValor} onChange={e => setInputValor(e.target.value)} placeholder="00" autoFocus />
+                                        <input type="text" inputMode="numeric" pattern="[0-9]*" className="w-full pl-12 p-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-emerald-500 rounded-xl text-xl font-bold text-slate-800 dark:text-white outline-none transition-all placeholder:text-slate-300" value={inputValor} onChange={e => setInputValor(soDigitos(e.target.value))} placeholder="00" autoFocus />
                                     </div>
+                                    {(() => {
+                                        const media = acaoAtual.item?.mediaAlunos;
+                                        const n = inputValor === '' ? null : parseInt(inputValor, 10);
+                                        if (n !== null && n > 0 && numeroEstranho(n, media)) {
+                                            return <p className="text-[11px] font-bold text-amber-600 mt-1 ml-1 flex items-center gap-1"><AlertTriangle className="w-3.5 h-3.5 shrink-0"/> {t('dailyValidation.quick.unusualHint', { media: media.media })}</p>;
+                                        }
+                                        return (
+                                            <p className="text-[10px] text-slate-400 mt-1 ml-1">
+                                                {t('dailyValidation.deadline.studentsHint', { max: LIMITE_ALUNOS })}
+                                                {media && <> {t('dailyValidation.quick.suggestionHint', { media: media.media, amostras: media.amostras })}</>}
+                                            </p>
+                                        );
+                                    })()}
                                 </div>
                             </>
                         ) : (
@@ -448,6 +424,23 @@ export function ValidationModal({
                             </div>
                         )}
                     </form>
+                )}
+
+                {/* === JUSTIFICATIVA (mês já fechado) === */}
+                {mostrarJustificativa && (
+                    <div className="mt-5 p-4 rounded-xl border-2 border-amber-200 bg-amber-50/60 dark:bg-amber-900/10 dark:border-amber-900/40 space-y-2">
+                        <label className="flex items-center gap-1.5 text-[10px] font-black text-amber-700 dark:text-amber-400 uppercase">
+                            <FileText className="w-3.5 h-3.5"/> {t('dailyValidation.deadline.justificationLabel')}
+                        </label>
+                        <p className="text-[11px] text-amber-700/80 dark:text-amber-400/80">{t('dailyValidation.deadline.justificationHint')}</p>
+                        <textarea
+                            rows="3"
+                            className="w-full p-3 bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-900/40 rounded-xl text-sm text-slate-700 dark:text-white outline-none resize-none focus:border-amber-500"
+                            value={justificativa}
+                            onChange={e => setJustificativa(e.target.value)}
+                            placeholder={t('dailyValidation.deadline.justificationPlaceholder', { min: MIN_JUSTIFICATIVA })}
+                        />
+                    </div>
                 )}
             </div>
 

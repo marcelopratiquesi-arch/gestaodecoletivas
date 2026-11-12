@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "i18n:check": "node scripts/check-i18n.mjs",
     "preview": "vite preview",
-    "test:regras": "firebase emulators:exec --only firestore --project demo-gestao-pratique \"vitest run tests/regras\""
+    "test:regras": "firebase emulators:exec --only firestore --project demo-gestao-pratique \"vitest run tests/regras --no-file-parallelism\""
   },
   "dependencies": {
     "@vimeo/player": "^2.30.2",

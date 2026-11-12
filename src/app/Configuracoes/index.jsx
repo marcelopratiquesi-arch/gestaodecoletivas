@@ -2,9 +2,12 @@ import { useState, useMemo, Suspense, lazy } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { 
   Building2, Users, Dumbbell, CalendarDays, 
-  ShieldCheck, Database, LayoutDashboard, Loader2, Headphones 
+  ShieldCheck, Database, LayoutDashboard, Loader2, Headphones, UserCheck
 } from "lucide-react";
+import { usePedidosPendentes } from "./Pendencias/usePedidosPendentes";
+import { useCatalogs } from "../../contexts/CatalogContext";
 import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
+import { ehLider } from '../../permissions';
 import { useLocation } from "react-router-dom";
 
 // --- LAZY LOADING ---
@@ -14,6 +17,7 @@ const ModalidadesTab = lazy(() => import('./Modalidades/ModalidadesTab').then(mo
 const ProfessoresTab = lazy(() => import('./Professores/ProfessoresTab').then(module => ({ default: module.ProfessoresTab })));
 const FeriadosTab = lazy(() => import('./Feriados/FeriadosTab').then(module => ({ default: module.FeriadosTab })));
 const BackupTab = lazy(() => import('./Backup/BackupTab'));
+const LideresTab = lazy(() => import('./Lideres/LideresTab').then(module => ({ default: module.LideresTab })));
 
 // 🟢 NOVA ABA: PRATIQUE PLAY
 const PratiquePlayTab = lazy(() => import('./PratiquePlay/PratiquePlayTab').then(module => ({ default: module.PratiquePlayTab })));
@@ -34,17 +38,27 @@ export default function ConfiguracoesPage() {
   const { t } = useTranslation(); // 🟢 CÉREBRO CONECTADO NO COMPONENTE PRINCIPAL
   
   const role = useMemo(() => String(userData?.role || "").trim().toLowerCase(), [userData?.role]);
+  const { pedidos: pedidosPendentes } = usePedidosPendentes();
+  // Líderes que assumiram sozinhos (trocaram o login antigo pelo Google) e ainda não foram conferidos.
+  const { catalogs } = useCatalogs();
+  const meuId = userData?.id || userData?.uid;
+  const lideresAConferir = useMemo(() => (catalogs?.unidades || []).filter((u) =>
+    u.liderUid && u.liderAConferir === true && (role === "admin" || (role === "mentor" && u.mentorId === meuId))).length,
+  [catalogs?.unidades, role, meuId]);
 
   // 🟢 Abas agora reagem ao idioma em tempo real
   const tabs = useMemo(() => [
-    { id: "unidades", label: t('settingsPage.tabs.unidades', 'Unidades'), icon: Building2, roles: ["admin", "mentor"] },
+    // Ordem: Mentores, Líderes, Professores, Unidades, Modalidades, Feriados, Pratique Play, Backup.
+    // Os pedidos de acesso pelo Google ficam dentro da aba Líderes (o número vermelho mostra quantos aguardam).
     { id: "mentores", label: t('settingsPage.tabs.mentores', 'Mentores'), icon: ShieldCheck, roles: ["admin"] },
-    { id: "professores", label: t('settingsPage.tabs.professores', 'Professores'), icon: Users, roles: ["admin", "mentor", "unidade"] },
+    { id: "lideres", label: t('settingsPage.tabs.lideres'), icon: UserCheck, roles: ["admin", "mentor"], contador: pedidosPendentes.length + lideresAConferir },
+    { id: "professores", label: t('settingsPage.tabs.professores', 'Professores'), icon: Users, roles: ["admin", "mentor", "lider", "unidade"] },
+    { id: "unidades", label: t('settingsPage.tabs.unidades', 'Unidades'), icon: Building2, roles: ["admin", "mentor"] },
     { id: "modalidades", label: t('settingsPage.tabs.modalidades', 'Modalidades'), icon: Dumbbell, roles: ["admin", "mentor"] },
     { id: "feriados", label: t('settingsPage.tabs.feriados', 'Feriados'), icon: CalendarDays, roles: ["admin", "mentor"] },
     { id: "pratique-play", label: t('settingsPage.tabs.pratiquePlay', 'Pratique Play'), icon: Headphones, roles: ["admin"] },
     { id: "backup", label: t('settingsPage.tabs.backup', 'Backup'), icon: Database, roles: ["admin"] },
-  ], [t]);
+  ], [t, pedidosPendentes.length, lideresAConferir]);
 
   const allowedTabs = useMemo(() => tabs.filter(t => t.roles.includes(role)), [role, tabs]);
 
@@ -54,7 +68,7 @@ export default function ConfiguracoesPage() {
 
   const [activeTab, setActiveTab] = useState(() => {
     if (abaPedida && tabs.some(t => t.id === abaPedida && t.roles.includes(role))) return abaPedida;
-    if (role === 'unidade') return 'professores';
+    if (ehLider(role)) return 'professores';
     const firstAllowed = tabs.find(t => t.roles.includes(role));
     return firstAllowed ? firstAllowed.id : 'unidades';
   });
@@ -88,7 +102,7 @@ export default function ConfiguracoesPage() {
           {t('settingsPage.title', 'Painel de Configurações')}
         </h1>
         <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium ml-1">
-          {role === 'unidade' 
+          {ehLider(role) 
             ? t('settingsPage.subtitle.unidade', 'Gerencie o quadro de professores da sua unidade.') 
             : t('settingsPage.subtitle.default', 'Gerencie os registros globais e parâmetros do sistema.')}
         </p>
@@ -112,6 +126,9 @@ export default function ConfiguracoesPage() {
             >
               <Icon className={`w-5 h-5 transition-transform duration-300 ${isActive ? "text-red-600 scale-110" : "text-slate-400 group-hover:text-slate-600"}`} />
               {tab.label}
+              {tab.contador > 0 && (
+                <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-red-600 text-white text-[10px] font-black flex items-center justify-center">{tab.contador}</span>
+              )}
             </button>
           );
         })}
@@ -122,6 +139,7 @@ export default function ConfiguracoesPage() {
         <Suspense fallback={<TabLoading />}>
             <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                 {activeTab === "unidades" && allowedTabs.some(t => t.id === 'unidades') && <UnidadesTab />}
+                {activeTab === "lideres" && allowedTabs.some(t => t.id === 'lideres') && <LideresTab />}
                 {activeTab === "mentores" && allowedTabs.some(t => t.id === 'mentores') && <MentoresTab />}
                 {activeTab === "modalidades" && allowedTabs.some(t => t.id === 'modalidades') && <ModalidadesTab />}
                 {activeTab === "professores" && allowedTabs.some(t => t.id === 'professores') && <ProfessoresTab />}

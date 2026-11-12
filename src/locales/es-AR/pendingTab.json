@@ -1,0 +1,18 @@
+{
+  "title": "Pedidos de acceso",
+  "subtitle": "Personas que ingresaron con Google y pidieron ser líder de una sede. Al aprobar, la persona accede al sistema como líder de esa sede.",
+  "empty": "No hay pedidos esperando aprobación.",
+  "leaderOf": "Quiere ser líder de: {{unit}}",
+  "hasLeader": "Esta sede ya tiene líder: {{name}}. Aprobar reemplaza al líder actual.",
+  "approve": "Aprobar",
+  "replace": "Reemplazar líder",
+  "refuse": "Rechazar",
+  "approveConfirm": "¿Aprobar a {{name}} como líder de la sede {{unit}}?",
+  "replaceConfirm": "La sede {{unit}} ya tiene el líder {{current}}.\n\n¿Reemplazar por {{name}}? El líder actual pierde el acceso.",
+  "replacedReason": "Reemplazado por {{name}} como líder de la sede.",
+  "refusePrompt": "¿Rechazar el pedido de {{name}}?\n\nSi querés, escribí el motivo (la persona lo va a ver):",
+  "unitNotFound": "Sede no encontrada (puede haber sido eliminada).",
+  "notYourUnit": "Esta sede no es tuya.",
+  "approveError": "No se pudo aprobar.",
+  "refuseError": "No se pudo rechazar."
+}

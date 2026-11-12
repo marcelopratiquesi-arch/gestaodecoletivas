@@ -1,10 +1,8 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useAuth } from "../../../contexts/AuthContext";
 import {
-  collection, addDoc, updateDoc, doc, query, where, serverTimestamp, setDoc, writeBatch, onSnapshot, getDocs, deleteField
+  collection, addDoc, updateDoc, doc, query, where, serverTimestamp, writeBatch, onSnapshot, getDocs, deleteField
 } from "firebase/firestore";
-import { createUserWithEmailAndPassword, getAuth, signOut } from "firebase/auth";
-import { initializeApp, getApp, deleteApp } from "firebase/app"; 
 import { db } from "../../../services/firebase";
 import { publicarUnidade, publicarUnidades, removerUnidadeDaVitrine, ehCampoPublicoUnidade, reconstruirVitrine } from "../../../services/vitrinePublica";
 import { useTranslation } from "react-i18next";
@@ -12,7 +10,7 @@ import { useTranslation } from "react-i18next";
 import { 
     Building2, MapPin, Edit2, Trash2, AlertTriangle, CheckCircle2, 
     Loader2, User, Search, Mail, Lock, Globe, Key, ChevronDown, ChevronUp, Ban, PowerOff, Plus, X, Phone, Check,
-    Map, Maximize, GripHorizontal, Upload, FileSpreadsheet, ShieldAlert
+    Map, Maximize, GripHorizontal, Upload, FileSpreadsheet, ShieldAlert, UserCheck
 } from "lucide-react";
 
 // 🌍 PADRÃO OURO INTERNACIONAL
@@ -35,8 +33,12 @@ const PAISES = Object.values(PAIS_CONFIG);
 const DDI_MAP = Object.fromEntries(PAISES.map(p => [p.id, p.ddi]));
 const PAIS_DEFAULT = "BR";
 
-/* ================= LOCALIZAÇÕES (Mapeadas para as Siglas) ================= */
+/* ================= LOCALIZAÇÕES (Mapeadas para as Siglas) =================
+   ⚠️ O texto de cada item é o que fica gravado na unidade (campo "estado").
+   Não renomeie itens existentes — só acrescente — senão as unidades antigas
+   deixam de bater com a lista e com o filtro. */
 const LOCATIONS = {
+  // Brasil: 26 estados + Distrito Federal (27 no total)
   "BR": [
     "Acre", "Alagoas", "Amapá", "Amazonas", "Bahia", "Ceará", "Distrito Federal",
     "Espírito Santo", "Goiás", "Maranhão", "Mato Grosso", "Mato Grosso do Sul",
@@ -44,17 +46,32 @@ const LOCATIONS = {
     "Rio de Janeiro", "Rio Grande do Norte", "Rio Grande do Sul", "Rondônia",
     "Roraima", "Santa Catarina", "São Paulo", "Sergipe", "Tocantins"
   ],
+  // Argentina: 23 províncias + Cidade Autônoma de Buenos Aires (24 no total).
+  // Bairros (ex.: Villa Devoto, Palermo) ficam dentro da CABA e vão no nome da unidade.
   "AR": [
-    "Buenos Aires", "Catamarca", "Chaco", "Chubut", "Córdoba", "Corrientes", 
-    "Entre Ríos", "Formosa", "Jujuy", "La Pampa", "La Rioja", "Mendoza", 
-    "Misiones", "Neuquén", "Río Negro", "Salta", "San Juan", "San Luis", 
-    "Santa Cruz", "Santa Fe", "Santiago del Estero", "Tierra del Fuego", "Tucumán"
+    "Buenos Aires", "CABA (Ciudad Autónoma de Buenos Aires)", "Catamarca", "Chaco",
+    "Chubut", "Córdoba", "Corrientes", "Entre Ríos", "Formosa", "Jujuy", "La Pampa",
+    "La Rioja", "Mendoza", "Misiones", "Neuquén", "Río Negro", "Salta", "San Juan",
+    "San Luis", "Santa Cruz", "Santa Fe", "Santiago del Estero",
+    "Tierra del Fuego", "Tucumán"
   ],
   "US": [
     "Florida (Miami)", "California", "New York", "Texas", "Nevada", "Illinois", 
     "Pennsylvania", "Ohio", "Georgia", "North Carolina", "Michigan", "New Jersey"
   ]
 };
+
+// Siglas mostradas ao lado do nome (só na tela; o que grava continua sendo o nome).
+const SIGLAS_UF_BR = {
+  "Acre": "AC", "Alagoas": "AL", "Amapá": "AP", "Amazonas": "AM", "Bahia": "BA",
+  "Ceará": "CE", "Distrito Federal": "DF", "Espírito Santo": "ES", "Goiás": "GO",
+  "Maranhão": "MA", "Mato Grosso": "MT", "Mato Grosso do Sul": "MS", "Minas Gerais": "MG",
+  "Pará": "PA", "Paraíba": "PB", "Paraná": "PR", "Pernambuco": "PE", "Piauí": "PI",
+  "Rio de Janeiro": "RJ", "Rio Grande do Norte": "RN", "Rio Grande do Sul": "RS",
+  "Rondônia": "RO", "Roraima": "RR", "Santa Catarina": "SC", "São Paulo": "SP",
+  "Sergipe": "SE", "Tocantins": "TO"
+};
+const rotuloEstado = (nomeEstado) => SIGLAS_UF_BR[nomeEstado] ? `${nomeEstado} (${SIGLAS_UF_BR[nomeEstado]})` : nomeEstado;
 
 // 🟢 ÍCONES DE BANDEIRA EM SVG PURO
 function FlagIcon({ pais, className = "w-4 h-3" }) {
@@ -279,8 +296,6 @@ export function UnidadesTab() {
   const [editandoMapaId, setEditandoMapaId] = useState(null);
   const [mapaInline, setMapaInline] = useState("");
 
-  const [emailLogin, setEmailLogin] = useState("");
-  const [senhaLogin, setSenhaLogin] = useState("123456");
 
   const fileInputRef = useRef(null);
   const [importModalAberto, setImportModalAberto] = useState(false);
@@ -289,7 +304,11 @@ export function UnidadesTab() {
   const [importSize, setImportSize] = useState({ w: 1000, h: 700 });
   const [importando, setImportando] = useState(false);
 
-  const estadosDisponiveis = pais ? LOCATIONS[pais] || [] : [];
+  // Se a unidade em edição tem um estado que não está na lista (cadastro antigo), ele continua aparecendo.
+  const estadosDisponiveis = useMemo(() => {
+      const lista = pais ? LOCATIONS[pais] || [] : [];
+      return estado && !lista.includes(estado) ? [estado, ...lista] : lista;
+  }, [pais, estado]);
 
   const registrarLogAuditoria = async (tipoAcao, descricao, nomeUnidade, detalhes = "") => {
       try {
@@ -323,16 +342,6 @@ export function UnidadesTab() {
     }
     return () => { unsubUnidades(); unsubMentores(); };
   }, [role, userId, podeAcessar]);
-
-  useEffect(() => {
-    if (!editando && modalUnidadeAberto && nome) {
-      try {
-        const slug = nome.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, ""); 
-        if (slug.length > 0) setEmailLogin(`${slug}@pratique.com`);
-        else setEmailLogin("");
-      } catch (error) {}
-    }
-  }, [nome, editando, modalUnidadeAberto]);
 
   const unidadesProcessadas = useMemo(() => {
       let resultado = unidadesBase;
@@ -390,6 +399,40 @@ export function UnidadesTab() {
           console.error(e);
           alert(t('unitsTab.security.purgeError'));
       } finally { setApagandoSenhas(false); }
+  }
+
+  // 🔑 TRANSIÇÃO PARA O LOGIN DO LÍDER: logins antigos (um por unidade) que ainda funcionam.
+  // "Desligar" apaga o crachá do login antigo: ele para de entrar no sistema. A unidade continua igual.
+  const loginsAntigosComLider = useMemo(
+      () => unidadesBase.filter(u => u.uidLogin && !u.loginAntigoDesligado && u.liderUid),
+      [unidadesBase]
+  );
+  const [desligandoLogins, setDesligandoLogins] = useState(false);
+
+  async function desligarLoginsAntigos(lista) {
+      if (role !== 'admin' || lista.length === 0) return;
+      const pergunta = lista.length === 1
+          ? t('unitsTab.leader.turnOffOneConfirm', { name: lista[0].nome, email: lista[0].email })
+          : t('unitsTab.leader.turnOffAllConfirm', { count: lista.length });
+      if (!window.confirm(pergunta)) return;
+      setDesligandoLogins(true);
+      try {
+          for (let i = 0; i < lista.length; i += 200) {
+              const batch = writeBatch(db);
+              lista.slice(i, i + 200).forEach(u => {
+                  batch.delete(doc(db, "usuarios", u.uidLogin));
+                  batch.update(doc(db, "unidades", u.id), { loginAntigoDesligado: true, loginAntigoDesligadoEm: serverTimestamp() });
+              });
+              await batch.commit();
+          }
+          await registrarLogAuditoria('ALTERADA', 'Login antigo de unidade desligado (acesso passa a ser do líder).',
+              lista.length === 1 ? lista[0].nome : 'Várias', lista.map(u => `${u.nome}: ${u.email || u.uidLogin}`).join('\n'));
+          if (editando && lista.some(u => u.id === editando.id)) setEditando(prev => ({ ...prev, loginAntigoDesligado: true }));
+          alert(t('unitsTab.leader.turnOffDone', { count: lista.length }));
+      } catch (e) {
+          console.error(e);
+          alert(t('unitsTab.leader.turnOffError') + ' ' + e.message);
+      } finally { setDesligandoLogins(false); }
   }
 
   // 🌐 Monta de novo a "vitrine" da página pública de horários (só nome/endereço, sem contatos).
@@ -571,8 +614,7 @@ export function UnidadesTab() {
 
   function abrirNovaUnidade() {
     setEditando(null); setPais(PAIS_DEFAULT); setEstado(""); setNome(""); setTelefone(""); setStatus("ativa");
-    setLinkMaps(""); setMetragem(""); setEndereco(""); 
-    setEmailLogin(""); setSenhaLogin("123456");
+    setLinkMaps(""); setMetragem(""); setEndereco("");
     if (role === 'mentor') setMentorId(userId); else setMentorId("");
     setErro(""); setSucesso("");
     setModalPos(getCenterPos(800, 700)); setModalSize({ w: 800, h: 700 }); 
@@ -589,10 +631,8 @@ export function UnidadesTab() {
     setTelefone(formatarTelefone(u.telefone || "", uPaisCorrigido)); setStatus(u.status || "ativa"); setMentorId(u.mentorId || "");
     setLinkMaps(u.linkGoogleMaps || ""); 
     setMetragem(u.metragemSalaColetiva || ""); 
-    setEndereco(u.enderecoCompleto || ""); 
-    
-    setEmailLogin(u.email || ""); setSenhaLogin("");
-    
+    setEndereco(u.enderecoCompleto || "");
+
     setErro(""); setSucesso("");
     setModalPos(getCenterPos(800, 700)); setModalSize({ w: 800, h: 700 }); 
     setModalUnidadeAberto(true);
@@ -605,26 +645,17 @@ export function UnidadesTab() {
     if (!nome.trim() || !telefone.trim() || !estado || !mentorId) { 
         setSalvando(false); return setErro(t('unitsTab.messages.nameRequired', 'Preencha os campos obrigatórios.')); 
     }
-    if (!emailLogin.includes("@")) { 
-        setSalvando(false); return setErro(t('unitsTab.messages.invalidEmail', 'E-mail inválido.')); 
-    }
-    if (!editando && senhaLogin.length < 6) { 
-        setSalvando(false); return setErro(t('unitsTab.messages.weakPassword', 'Senha mín. 6 dígitos.')); 
-    }
 
     let telParaSalvar = telefone.trim();
     if (pais === 'BR' && !telParaSalvar.startsWith('+')) telParaSalvar = `+55 ${telParaSalvar}`;
     if (pais === 'AR' && !telParaSalvar.startsWith('+')) telParaSalvar = `+54 ${telParaSalvar}`;
     if (pais === 'US' && !telParaSalvar.startsWith('+')) telParaSalvar = `+1 ${telParaSalvar}`;
 
-    let secondaryApp = null;
     try {
       if (editando) {
         let mudancas = [];
-        // O e-mail de login da unidade não é trocado por aqui: trocar exigiria guardar a senha da unidade
-        // no banco (o que deixava todas as senhas legíveis publicamente). O login por unidade será
-        // substituído pelo login pessoal; até lá o e-mail fica como está.
-        const novoEmail = editando.email || emailLogin.trim().toLowerCase();
+        // A unidade não tem mais login próprio: quem entra é o LÍDER, pelo Google (aba Pendências).
+        // O login antigo da unidade (se existir) não é alterado por aqui.
 
         if (editando.nome !== nome.trim()) mudancas.push(`Nome: ${editando.nome} ➔ ${nome.trim()}`);
         if (editando.telefone !== telParaSalvar) mudancas.push(`WhatsApp: ${editando.telefone || 'Sem tel'} ➔ ${telParaSalvar}`);
@@ -643,8 +674,7 @@ export function UnidadesTab() {
         }
 
         await updateDoc(doc(db, "unidades", editando.id), { 
-            pais, estado, nome: nome.trim(), telefone: telParaSalvar, status, mentorId, 
-            email: novoEmail, 
+            pais, estado, nome: nome.trim(), telefone: telParaSalvar, status, mentorId,
             linkGoogleMaps: linkMaps.trim(), 
             metragemSalaColetiva: metragem ? Number(metragem) : null,
             enderecoCompleto: endereco.trim(),
@@ -652,13 +682,11 @@ export function UnidadesTab() {
         });
         await publicarUnidade(editando.id, { ...editando, estado, nome: nome.trim(), linkGoogleMaps: linkMaps.trim(), enderecoCompleto: endereco.trim() });
 
-        if(editando.uidLogin) {
-            try { 
-                await updateDoc(doc(db, "usuarios", editando.uidLogin), { 
-                    telefone: telParaSalvar,
-                    email: novoEmail 
-                }); 
-            } catch(err){} 
+        // Login antigo da unidade (enquanto não for desligado): mantém o WhatsApp em dia.
+        if(editando.uidLogin && !editando.loginAntigoDesligado) {
+            try {
+                await updateDoc(doc(db, "usuarios", editando.uidLogin), { telefone: telParaSalvar });
+            } catch(err){ console.warn("Login antigo da unidade não atualizado", err); }
         }
         
         if (mudancas.length > 0) await registrarLogAuditoria('ALTERADA', 'Dados cadastrais atualizados.', nome.trim(), mudancas.join('\n'));
@@ -666,15 +694,9 @@ export function UnidadesTab() {
         setSucesso(t('unitsTab.messages.updated', "Unidade atualizada!"));
 
       } else {
-        secondaryApp = initializeApp(getApp().options, "SecondaryAppUnitCreate");
-        const secondaryAuth = getAuth(secondaryApp);
-
-        const userCred = await createUserWithEmailAndPassword(secondaryAuth, emailLogin.trim().toLowerCase(), senhaLogin);
-        const newUid = userCred.user.uid;
-
+        // Unidade nova = só o cadastro. O acesso é do líder, que entra pelo Google e é aprovado na aba Pendências.
         const unidadeRef = await addDoc(collection(db, "unidades"), {
-          pais, estado, nome: nome.trim(), telefone: telParaSalvar, status, mentorId, 
-          uidLogin: newUid, email: emailLogin.trim().toLowerCase(), 
+          pais, estado, nome: nome.trim(), telefone: telParaSalvar, status, mentorId,
           linkGoogleMaps: linkMaps.trim(), 
           metragemSalaColetiva: metragem ? Number(metragem) : null, 
           enderecoCompleto: endereco.trim(),
@@ -682,23 +704,15 @@ export function UnidadesTab() {
         });
         await publicarUnidade(unidadeRef.id, { estado, nome: nome.trim(), linkGoogleMaps: linkMaps.trim(), enderecoCompleto: endereco.trim() });
 
-        await setDoc(doc(db, "usuarios", newUid), {
-          nome: nome.trim(), email: emailLogin.trim().toLowerCase(), telefone: telParaSalvar,
-          role: "unidade", unidadeId: unidadeRef.id, status: "ativo", criadoPor: userId, criadoEm: serverTimestamp()
-        });
-
-        await signOut(secondaryAuth);
-        const mNome = mentores.find(m => m.id === mentorId)?.nome || 'Sem Mentor';
-        await registrarLogAuditoria('NOVA', 'Nova unidade e credenciais criadas.', nome.trim(), `Local: ${estado} | Mentor: ${mNome}`);
-        setSucesso(t('unitsTab.messages.created', "Unidade e Acesso criados!"));
+        const mNome = mentores.find(m => m.id === mentorId)?.nome || userName;
+        await registrarLogAuditoria('NOVA', 'Nova unidade criada.', nome.trim(), `Local: ${estado} | Mentor: ${mNome}`);
+        setSucesso(t('unitsTab.leader.created'));
       }
       setTimeout(() => { setModalUnidadeAberto(false); setSucesso(""); }, 1500);
-    } catch (e) { 
-      if (e.code === 'auth/email-already-in-use') setErro(t('unitsTab.messages.emailExists', "E-mail já existe."));
-      else setErro("Erro: " + e.message); 
-    } finally { 
-      if (secondaryApp) await deleteApp(secondaryApp).catch(() => {});
-      setSalvando(false); 
+    } catch (e) {
+      setErro("Erro: " + e.message);
+    } finally {
+      setSalvando(false);
     }
   }
 
@@ -789,6 +803,21 @@ export function UnidadesTab() {
                 </div>
                 <button onClick={apagarSenhasGravadas} disabled={apagandoSenhas} className="px-5 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-xs uppercase whitespace-nowrap flex items-center justify-center gap-2 disabled:opacity-50">
                     {apagandoSenhas ? <Loader2 className="w-4 h-4 animate-spin"/> : <Trash2 className="w-4 h-4"/>} {t('unitsTab.security.purgeButton')}
+                </button>
+            </div>
+        )}
+
+        {role === 'admin' && loginsAntigosComLider.length > 0 && (
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-2xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 normal-case">
+                <div className="flex items-start gap-3">
+                    <Key className="w-6 h-6 text-blue-600 shrink-0"/>
+                    <div>
+                        <p className="text-sm font-black text-blue-800 dark:text-blue-300 uppercase">{t('unitsTab.leader.bannerTitle', { count: loginsAntigosComLider.length })}</p>
+                        <p className="text-xs font-medium text-blue-700 dark:text-blue-400 mt-1">{t('unitsTab.leader.bannerDesc')}</p>
+                    </div>
+                </div>
+                <button onClick={() => desligarLoginsAntigos(loginsAntigosComLider)} disabled={desligandoLogins} className="px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs uppercase whitespace-nowrap flex items-center justify-center gap-2 disabled:opacity-50">
+                    {desligandoLogins ? <Loader2 className="w-4 h-4 animate-spin"/> : <PowerOff className="w-4 h-4"/>} {t('unitsTab.leader.turnOffAll')}
                 </button>
             </div>
         )}
@@ -918,7 +947,12 @@ export function UnidadesTab() {
                               </div>
                           )}
                         </div>
-                        {u.email && <div className="text-[10px] text-slate-500 font-mono flex items-center gap-1 opacity-80"><Mail className="w-3 h-3"/> {u.email}</div>}
+                        {u.liderUid ? (
+                            <div className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1 normal-case" title={u.liderEmail}><UserCheck className="w-3 h-3"/> {t('unitsTab.leader.label', { name: u.liderNome })}</div>
+                        ) : (
+                            <div className="text-[10px] font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1 italic"><UserCheck className="w-3 h-3"/> {t('unitsTab.leader.none')}</div>
+                        )}
+                        {u.email && !u.loginAntigoDesligado && <div className="text-[10px] text-slate-400 font-mono flex items-center gap-1 opacity-80 normal-case"><Mail className="w-3 h-3"/> {u.email} <span className="font-sans">({t('unitsTab.leader.oldLoginShort')})</span></div>}
                       </td>
 
                       <td className="px-3 py-2 space-y-1">
@@ -1139,7 +1173,7 @@ export function UnidadesTab() {
                       <div className="relative">
                           <select value={estado} onChange={e=>setEstado(e.target.value)} className="w-full pl-4 pr-10 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-red-500 rounded-xl text-sm font-bold outline-none appearance-none transition-all dark:text-white">
                               <option value="">{t('unitsTab.modal.select', 'Selecione...')}</option>
-                              {estadosDisponiveis.map(e=><option key={e} value={e}>{e}</option>)}
+                              {estadosDisponiveis.map(e=><option key={e} value={e}>{rotuloEstado(e)}</option>)}
                           </select>
                           <ChevronDown className="absolute right-4 top-3.5 w-4 h-4 text-slate-400 pointer-events-none"/>
                       </div>
@@ -1201,36 +1235,41 @@ export function UnidadesTab() {
               </div>
           </div>
 
-          {/* CARD 2: DADOS DE ACESSO */}
+          {/* CARD 2: LÍDER DA UNIDADE (a unidade não tem mais login próprio) */}
           <div className="space-y-4 bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
               <h4 className="text-[10px] font-black text-blue-500 dark:text-blue-400 uppercase tracking-widest border-b border-slate-100 dark:border-slate-700 pb-2 flex items-center gap-2">
-                  <Key className="w-3 h-3"/> {editando ? t('unitsTab.modal.access', "Dados de Acesso") : t('unitsTab.modal.generatedCreds', "Geração de Acesso")}
+                  <UserCheck className="w-3 h-3"/> {t('unitsTab.leader.title')}
               </h4>
-              
-              <div className="bg-blue-50/50 dark:bg-blue-900/10 p-5 rounded-2xl border border-blue-100 dark:border-blue-800/50 space-y-4">
-                  <div className="text-xs font-medium text-slate-600 dark:text-slate-400 leading-relaxed text-center mb-2">
-                      {editando ? t('unitsTab.security.loginInfo') : t('unitsTab.modal.accessWarning', "O sistema gera automaticamente um painel de controle e login exclusivo.")}
+
+              {editando?.liderUid ? (
+                  <div className="bg-emerald-50/60 dark:bg-emerald-900/10 p-4 rounded-2xl border border-emerald-100 dark:border-emerald-800/50 normal-case">
+                      <p className="text-sm font-black text-slate-800 dark:text-white flex items-center gap-2"><User className="w-4 h-4 text-emerald-600"/> {editando.liderNome}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2 mt-1"><Mail className="w-3 h-3"/> {editando.liderEmail}</p>
+                      {editando.liderTelefone && <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2 mt-1"><Phone className="w-3 h-3"/> {editando.liderTelefone}</p>}
                   </div>
-                  <div className={`grid grid-cols-1 ${!editando ? 'md:grid-cols-2' : ''} gap-4`}>
-                      <div className="w-full">
-                          <label className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-1 flex items-center gap-1 pl-1"><Mail className="w-3 h-3"/> {t('unitsTab.modal.login', 'Login (E-mail)')}</label>
-                          <input
-                              value={emailLogin}
-                              onChange={(e) => setEmailLogin(e.target.value)}
-                              disabled={!!editando}
-                              className="w-full px-4 py-3 text-sm border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-xl text-slate-700 dark:text-slate-300 font-mono font-bold shadow-sm focus:border-blue-500 outline-none transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-                              placeholder={t('unitsTab.modal.loginWaiting', "E-mail da unidade...")}
-                          />
-                          {editando && <p className="text-[10px] font-medium text-slate-400 mt-1 pl-1 normal-case">{t('unitsTab.security.loginLocked')}</p>}
+              ) : (
+                  <div className="bg-amber-50/60 dark:bg-amber-900/10 p-4 rounded-2xl border border-amber-100 dark:border-amber-800/50 normal-case">
+                      <p className="text-sm font-black text-amber-700 dark:text-amber-400">{t('unitsTab.leader.none')}</p>
+                  </div>
+              )}
+
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400 leading-relaxed normal-case">{t('unitsTab.leader.howTo')}</p>
+
+              {/* Login antigo da unidade (fase de transição) */}
+              {editando?.uidLogin && !editando.loginAntigoDesligado && (
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 normal-case">
+                      <div className="text-xs text-slate-600 dark:text-slate-400">
+                          <p className="font-black text-slate-700 dark:text-slate-200 flex items-center gap-1.5"><Key className="w-3 h-3"/> {t('unitsTab.leader.oldLogin')}</p>
+                          <p className="font-mono mt-1">{editando.email}</p>
+                          <p className="mt-1">{t('unitsTab.leader.oldLoginHint')}</p>
                       </div>
-                      {!editando && (
-                          <div className="w-full">
-                              <label className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-1 flex items-center gap-1 pl-1"><Lock className="w-3 h-3"/> {t('unitsTab.modal.password', 'Senha Padrão')}</label>
-                              <input disabled value={senhaLogin} className="w-full px-4 py-3 text-sm border-none bg-white dark:bg-slate-800 rounded-xl text-slate-700 dark:text-slate-300 font-mono font-bold shadow-sm text-center tracking-widest" />
-                          </div>
+                      {role === 'admin' && (
+                          <button type="button" onClick={() => desligarLoginsAntigos([editando])} disabled={desligandoLogins} className="px-4 py-2 rounded-xl text-[10px] font-black uppercase bg-white dark:bg-slate-800 border border-red-200 dark:border-red-800 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 whitespace-nowrap flex items-center gap-1.5 disabled:opacity-50">
+                              {desligandoLogins ? <Loader2 className="w-3 h-3 animate-spin"/> : <PowerOff className="w-3 h-3"/>} {t('unitsTab.leader.turnOffOne')}
+                          </button>
                       )}
                   </div>
-              </div>
+              )}
           </div>
 
           {/* CARD 3: ESTRUTURA E LOCALIZAÇÃO */}

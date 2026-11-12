@@ -1,27 +1,33 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { ehLider } from '../../permissions';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import * as XLSX from 'xlsx';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../services/firebase';
-import { collection, getDocs, onSnapshot, query, where, documentId, orderBy } from 'firebase/firestore'; 
+import { collection, getDocs, onSnapshot, query, where, documentId, orderBy } from 'firebase/firestore';
 import { useTranslation } from "react-i18next"; // 🟢 MOTOR DE IDIOMAS ACIONADO
 import { deduplicarValidacoes } from '../../utils/validacoes';
-import { feriadoNoDia } from '../../utils/feriados';
+import { feriadoNoDia, normalizarPais } from '../../utils/feriados';
 import { valorDaValidacao } from '../../utils/valores';
 import { DIAS_SEMANA as diasSemanaMap, getDiaSemana, formatCurrency, formatDate, formatWeekday, formatCancelReason } from '../../utils/formatters';
 
-import { 
-  BarChart2, Filter, DollarSign, Users, Calendar, 
-  CheckCircle2, XCircle, Clock, ChevronRight, ChevronDown, 
-  LayoutDashboard, Map, Globe, UserCheck, AlertTriangle, 
+import {
+  BarChart2, Filter, DollarSign, Users, Calendar,
+  CheckCircle2, XCircle, Clock, ChevronRight, ChevronDown,
+  LayoutDashboard, Map, Globe, UserCheck, AlertTriangle,
   Download, FileSpreadsheet, FileText, X, User, MousePointerClick, ArrowRightLeft,
   ArrowDown, DownloadCloud, Star, AlignJustify, Layers, Lock, PieChart, Activity, TrendingUp, Search, CheckSquare, Square
 } from 'lucide-react';
 
 // --- HELPERS E MÁSCARAS ---
-const DIAS_UTEIS = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta']; 
-const DURACAO_AULA_PADRAO = 40; 
-const GAP_MINIMO_OCIOSO = 60; 
+const DIAS_UTEIS = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta'];
+const DURACAO_AULA_PADRAO = 40;
+const GAP_MINIMO_OCIOSO = 60;
 
-const getTodayStr = () => new Date().toLocaleDateString('en-CA'); 
+const getTodayStr = () => new Date().toLocaleDateString('en-CA');
+// Data local "AAAA-MM-DD" (toISOString usa UTC e pode pular um dia dependendo do fuso).
+const toDateStr = (d) => d.toLocaleDateString('en-CA');
+// O Firestore aceita no máximo 30 valores num filtro "in".
+const LIMITE_IN = 30;
 
 const getInitials = (name) => {
     if (!name) return '??';
@@ -57,11 +63,11 @@ const getDatesByWeekdayInPeriod = (startStr, endStr, activeDaysArray) => {
   (activeDaysArray || []).forEach(d => datesByDay[d] = []);
   const start = new Date(startStr + 'T00:00:00');
   const end = new Date(endStr + 'T00:00:00');
-  
+
   for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
     const dayName = diasSemanaMap[d.getDay()];
     if ((activeDaysArray || []).includes(dayName)) {
-      datesByDay[dayName].push(new Date(d).toISOString().split('T')[0]);
+      datesByDay[dayName].push(toDateStr(d));
     }
   }
   return datesByDay;
@@ -83,7 +89,7 @@ const processarBuracos = (aulasDoDia, turnosArray) => {
         const inicioAula = timeToMins(a.hora);
         return inicioAula >= abertura && inicioAula < fechamento;
     }).sort((a, b) => timeToMins(a.hora) - timeToMins(b.hora));
-    
+
     let tempoAtual = abertura;
 
     aulasNoTurno.forEach(aula => {
@@ -93,11 +99,11 @@ const processarBuracos = (aulasDoDia, turnosArray) => {
         }
         tempoAtual = Math.max(tempoAtual, inicioAula + DURACAO_AULA_PADRAO);
     });
-    
+
     if (fechamento - tempoAtual >= GAP_MINIMO_OCIOSO) {
         janelas.push({ inicio: tempoAtual, fim: fechamento });
     }
-    
+
     return janelas.map(j => `${minsToTime(j.inicio)} - ${minsToTime(j.fim)}`);
 };
 
@@ -114,10 +120,19 @@ const getMediaAlunosTheme = (media) => {
 };
 
 // 🟢 COMPONENTE: MULTI-SELECT AVANÇADO
-const MultiSelectDropdown = ({ label, options, selected, onChange, placeholder }) => {
+const MultiSelectDropdown = ({ label, options, selected, onChange, placeholder, alignRight = false }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [search, setSearch] = useState("");
+    const ref = useRef(null);
     const { t } = useTranslation();
+
+    // Fecha ao clicar fora (mesmo comportamento da Performance Financeira).
+    useEffect(() => {
+        if (!isOpen) return undefined;
+        const fora = (e) => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
+        document.addEventListener('mousedown', fora);
+        return () => document.removeEventListener('mousedown', fora);
+    }, [isOpen]);
 
     const filteredOptions = (options || []).filter(o => (o.label || '').toUpperCase().includes(search.toUpperCase()));
 
@@ -128,44 +143,51 @@ const MultiSelectDropdown = ({ label, options, selected, onChange, placeholder }
 
     const handleSelectAll = () => {
         const allIds = filteredOptions.map(o => o.id);
-        const uniqueSelected = Array.from(new Set([...selected, ...allIds]));
-        onChange(uniqueSelected);
+        onChange(Array.from(new Set([...selected, ...allIds])));
     };
 
+    const todosMarcados = selected.length > 0 && (options || []).length > 0 && (options || []).every(o => selected.includes(o.id));
+    const texto = selected.length === 0
+        ? placeholder
+        : todosMarcados
+            ? t('common.multiSelect.allSelected')
+            : selected.length === 1
+                ? (options || []).find(o => o.id === selected[0])?.label || selected[0]
+                : t('common.multiSelect.selected', { count: selected.length });
+
     return (
-        <div className="relative w-full">
+        <div className="relative w-full" ref={ref}>
             <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase mb-1.5 block tracking-widest">{label}</label>
-            <div onClick={() => setIsOpen(!isOpen)} className={`w-full p-3 bg-slate-50 dark:bg-slate-900 border ${isOpen ? 'border-blue-500 ring-2 ring-blue-100 dark:ring-blue-900/30' : 'border-slate-200 dark:border-slate-700'} rounded-xl text-[10px] font-black outline-none cursor-pointer flex justify-between items-center transition-all uppercase shadow-sm`}>
-                <span className="truncate text-slate-700 dark:text-slate-300">{selected.length === 0 ? placeholder : selected.length === 1 ? options.find(o => o.id === selected[0])?.label : t('common.multiSelect.selected', { count: selected.length })}</span>
-                <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180 text-blue-500' : ''}`} />
-            </div>
+            <button type="button" onClick={() => setIsOpen(!isOpen)} title={texto} className={`w-full h-[42px] px-3 bg-white dark:bg-slate-900 border ${isOpen ? 'border-blue-500 ring-2 ring-blue-100 dark:ring-blue-900/30' : selected.length > 0 ? 'border-blue-300 dark:border-blue-700' : 'border-slate-200 dark:border-slate-700'} rounded-xl text-[11px] font-black outline-none cursor-pointer flex justify-between items-center gap-2 transition-all uppercase shadow-sm text-left`}>
+                <span className={`truncate ${selected.length > 0 ? 'text-blue-700 dark:text-blue-400' : 'text-slate-700 dark:text-slate-300'}`}>{texto}</span>
+                <ChevronDown className={`w-4 h-4 shrink-0 text-slate-400 transition-transform ${isOpen ? 'rotate-180 text-blue-500' : ''}`} />
+            </button>
             {isOpen && (
-                <>
-                    <div className="fixed inset-0 z-[40]" onClick={() => setIsOpen(false)} />
-                    <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl z-[50] overflow-hidden flex flex-col max-h-[350px]">
-                        <div className="p-2 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 shrink-0">
-                            <div className="relative"><Search className="w-3 h-3 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" /><input type="text" placeholder={t('common.multiSelect.search')} value={search} onChange={(e) => setSearch(e.target.value)} className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg pl-8 pr-3 py-2 text-[10px] font-black uppercase outline-none focus:border-blue-500 dark:text-white placeholder-slate-300 dark:placeholder-slate-600"/></div>
-                        </div>
-                        <div className="overflow-y-auto custom-scrollbar p-2 flex-1 space-y-1">
-                            {filteredOptions.length === 0 ? <div className="p-3 text-center text-[10px] font-bold text-slate-400 uppercase">{t('common.multiSelect.noResults')}</div> : filteredOptions.map(opt => (
-                                <div key={opt.id} onClick={() => toggle(opt.id)} className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors ${selected.includes(opt.id) ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-600 dark:text-slate-300'}`}>
-                                    {selected.includes(opt.id) ? <CheckSquare className="w-4 h-4 text-blue-500 shrink-0" /> : <Square className="w-4 h-4 text-slate-300 dark:text-slate-600 shrink-0" />}<span className="text-[10px] font-black uppercase truncate">{opt.label}</span>
-                                </div>
-                            ))}
-                        </div>
-                        <div className="p-2 border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 shrink-0 flex gap-2">
-                            <button onClick={handleSelectAll} className="flex-1 py-2 text-[9px] font-black text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded uppercase transition-colors">{t('common.multiSelect.all')}</button>
-                            {selected.length > 0 && <button onClick={() => onChange([])} className="flex-1 py-2 text-[9px] font-black text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded uppercase transition-colors">{t('common.multiSelect.clear')}</button>}
+                // alignRight: o último filtro abre para a esquerda, para a caixa não sair da tela.
+                <div className={`absolute top-full ${alignRight ? 'right-0' : 'left-0'} mt-2 w-full min-w-[240px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl z-[50] overflow-hidden flex flex-col max-h-[380px]`}>
+                    <div className="p-2 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 shrink-0 space-y-2">
+                        <div className="relative"><Search className="w-3 h-3 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" /><input autoFocus type="text" placeholder={t('common.multiSelect.search')} value={search} onChange={(e) => setSearch(e.target.value)} className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg pl-8 pr-3 py-2 text-[11px] font-bold outline-none focus:border-blue-500 dark:text-white placeholder-slate-400 dark:placeholder-slate-600"/></div>
+                        <div className="flex justify-between">
+                            <button type="button" onClick={handleSelectAll} className="text-[10px] font-black text-blue-600 dark:text-blue-400 px-2 py-1 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded uppercase transition-colors">{t('common.multiSelect.selectAll')}</button>
+                            <button type="button" onClick={() => onChange([])} disabled={selected.length === 0} className="text-[10px] font-black text-rose-600 dark:text-rose-400 px-2 py-1 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded uppercase transition-colors disabled:opacity-30 disabled:hover:bg-transparent">{t('common.multiSelect.clear')}</button>
                         </div>
                     </div>
-                </>
+                    <div className="overflow-y-auto custom-scrollbar p-1.5 flex-1">
+                        {filteredOptions.length === 0 ? <div className="p-3 text-center text-[10px] font-bold text-slate-400 uppercase">{t('common.multiSelect.noResults')}</div> : filteredOptions.map(opt => (
+                            <div key={opt.id} onClick={() => toggle(opt.id)} className={`flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer transition-colors ${selected.includes(opt.id) ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-600 dark:text-slate-300'}`}>
+                                {selected.includes(opt.id) ? <CheckSquare className="w-4 h-4 text-blue-500 shrink-0" /> : <Square className="w-4 h-4 text-slate-300 dark:text-slate-600 shrink-0" />}
+                                <span className="text-[11px] font-bold uppercase leading-tight break-words">{opt.label}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
             )}
         </div>
     );
 };
 
 const SortableHeader = ({ label, field, currentSort, onSort, align = "left", className = "" }) => (
-  <th 
+  <th
     className={`p-3 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-${align} ${className}`}
     onClick={() => onSort(field)}
   >
@@ -187,24 +209,25 @@ export default function RelatorioPage() {
   const userId = userData?.id || userData?.uid;
 
   const [loading, setLoading] = useState(true);
-  const [catalogs, setCatalogs] = useState({ 
+  const [catalogs, setCatalogs] = useState({
     unidades: [], professores: [], modalidades: [], users: [], feriados: []
   });
-  
+
   const [aulasRealtime, setAulasRealtime] = useState([]);
   const [validacoesRealtime, setValidacoesRealtime] = useState([]);
   const [validacoesYTD, setValidacoesYTD] = useState([]);
-  
-  const [modoFiltro, setModoFiltro] = useState('mes'); 
+  const [carregandoDados, setCarregandoDados] = useState(false);
+
+  const [modoFiltro, setModoFiltro] = useState('mes');
   const [dataFiltro, setDataFiltro] = useState(getTodayStr());
-  const [mesFiltro, setMesFiltro] = useState(new Date().toISOString().slice(0, 7));
+  const [mesFiltro, setMesFiltro] = useState(getTodayStr().slice(0, 7));
   const [dataInicioFiltro, setDataInicioFiltro] = useState(() => {
-      const d = new Date(); d.setDate(d.getDate() - 30); return d.toISOString().split('T')[0];
+      const d = new Date(); d.setDate(d.getDate() - 30); return toDateStr(d);
   });
   const [dataFimFiltro, setDataFimFiltro] = useState(getTodayStr());
-  
+
   const [showExportMenu, setShowExportMenu] = useState(false);
-  const [viewMode, setViewMode] = useState('agrupado'); 
+  const [viewMode, setViewMode] = useState('agrupado');
 
   const [paisesFiltro, setPaisesFiltro] = useState([]);
   const [estadosFiltro, setEstadosFiltro] = useState([]);
@@ -214,26 +237,31 @@ export default function RelatorioPage() {
   const [professoresFiltro, setProfessoresFiltro] = useState([]);
   const [turnosFiltro, setTurnosFiltro] = useState([]);
 
-  const [filtroKPI, setFiltroKPI] = useState(null); 
+  const [filtroKPI, setFiltroKPI] = useState(null);
   const [sortConfig, setSortConfig] = useState({ field: 'totalReceber', direction: 'desc' });
   const [expandedRowId, setExpandedRowId] = useState(null);
   const [itensVisiveis, setItensVisiveis] = useState(20);
 
-  const isCofreFechado = (role === 'admin' || role === 'mentor') && 
-      (paisesFiltro.length === 0 && estadosFiltro.length === 0 && mentoresFiltro.length === 0 && 
+  const isCofreFechado = (role === 'admin' || role === 'mentor') &&
+      (paisesFiltro.length === 0 && estadosFiltro.length === 0 && mentoresFiltro.length === 0 &&
        unidadesFiltro.length === 0 && modalidadesFiltro.length === 0 && professoresFiltro.length === 0 && turnosFiltro.length === 0);
 
+  const temFiltroAtivo = (role === 'admin' && (paisesFiltro.length + estadosFiltro.length + mentoresFiltro.length) > 0) ||
+      (!ehLider(role) && unidadesFiltro.length > 0) ||
+      (modalidadesFiltro.length + professoresFiltro.length + turnosFiltro.length) > 0;
+
   const clearFilters = () => {
-      setPaisesFiltro([]); setEstadosFiltro([]); setMentoresFiltro([]); setUnidadesFiltro([]);
+      setPaisesFiltro([]); setEstadosFiltro([]); setMentoresFiltro([]);
+      setUnidadesFiltro(ehLider(role) ? [userData.unidadeId] : []);
       setModalidadesFiltro([]); setProfessoresFiltro([]); setTurnosFiltro([]); setFiltroKPI(null);
   };
 
   const period = useMemo(() => {
     let start = "", end = "";
-    if (modoFiltro === 'dia') { start = dataFiltro; end = dataFiltro; } 
+    if (modoFiltro === 'dia') { start = dataFiltro; end = dataFiltro; }
     else if (modoFiltro === 'mes') {
       const [y, m] = mesFiltro.split('-');
-      start = `${y}-${m}-01`; end = new Date(y, m, 0).toISOString().split('T')[0];
+      start = `${y}-${m}-01`; end = toDateStr(new Date(y, m, 0));
     } else { start = dataInicioFiltro; end = dataFimFiltro; }
     return { start, end };
   }, [modoFiltro, dataFiltro, mesFiltro, dataInicioFiltro, dataFimFiltro]);
@@ -245,89 +273,163 @@ export default function RelatorioPage() {
       try {
         let qUnidades = query(collection(db, 'unidades'), orderBy('nome'));
         if (role === 'mentor') qUnidades = query(collection(db, 'unidades'), where('mentorId', '==', userId));
-        else if (role === 'unidade') qUnidades = query(collection(db, 'unidades'), where(documentId(), '==', userData.unidadeId));
+        else if (ehLider(role)) qUnidades = query(collection(db, 'unidades'), where(documentId(), '==', userData.unidadeId));
 
         const usersQuery = query(collection(db, 'usuarios'), where('role', '==', 'mentor'));
 
         const [uniSnap, profSnap, modSnap, usersSnap, feriadosSnap] = await Promise.all([
-          getDocs(qUnidades), getDocs(collection(db, 'professores')), getDocs(collection(db, 'modalidades')), 
+          getDocs(qUnidades), getDocs(collection(db, 'professores')), getDocs(collection(db, 'modalidades')),
           getDocs(usersQuery), getDocs(collection(db, 'feriados'))
         ]);
 
         setCatalogs({
-          unidades: uniSnap.docs.map(d => ({ id: d.id, ...d.data() })),
+          // País padronizado (BR/Brasil/Brazil -> BR) e estado sem espaços sobrando,
+          // para os filtros não mostrarem o mesmo país/estado duas vezes.
+          unidades: uniSnap.docs.map(d => {
+            const dados = d.data();
+            return { id: d.id, ...dados, pais: normalizarPais(dados.pais), estado: String(dados.estado || '').trim() };
+          }),
           professores: profSnap.docs.map(d => ({ id: d.id, ...d.data() })),
           modalidades: modSnap.docs.map(d => ({ id: d.id, ...d.data() })),
           users: usersSnap.docs.map(d => ({ id: d.id, ...d.data() })),
           feriados: feriadosSnap.docs.map(d => ({ id: d.id, ...d.data() }))
         });
 
-        if (role === 'unidade') setUnidadesFiltro([userData.unidadeId]);
+        if (ehLider(role)) setUnidadesFiltro([userData.unidadeId]);
 
-      } catch (e) { console.error("Erro loading catálogos:", e); } 
+      } catch (e) { console.error("Erro loading catálogos:", e); }
       finally { setLoading(false); }
     };
     loadCatalogs();
-  }, [role, userId, userData]);
+  }, [role, userId, userData?.unidadeId]);
 
-  // 2. MOTOR TEMPO REAL 
-  useEffect(() => {
-      if (isCofreFechado) {
-          setAulasRealtime([]); setValidacoesRealtime([]); setValidacoesYTD([]); return;
-      }
-
-      const aulasRef = collection(db, 'aulas');
-      const validacoesRef = collection(db, 'validacoes');
-      
-      const currentYear = new Date(period.start + 'T00:00:00').getFullYear();
-      const startOfYear = `${currentYear}-01-01`;
-      const endOfYear = `${currentYear}-12-31`;
-
-      let qAulas = query(aulasRef);
-      let qValidacoes = query(validacoesRef, where('data', '>=', period.start), where('data', '<=', period.end));
-      let qValidacoesYTD = query(validacoesRef, where('data', '>=', startOfYear), where('data', '<=', endOfYear));
-
-      if (role === 'unidade') {
-          qAulas = query(aulasRef, where('unidadeId', '==', userData.unidadeId));
-          qValidacoes = query(qValidacoes, where('unidadeId', '==', userData.unidadeId));
-          qValidacoesYTD = query(qValidacoesYTD, where('unidadeId', '==', userData.unidadeId));
-      } else if (role === 'professor') {
-          const meuPerfil = catalogs.professores.find(p => p.uidLogin === userId);
-          if (meuPerfil) {
-              qAulas = query(aulasRef, where('professorId', '==', meuPerfil.id));
-              qValidacoes = query(qValidacoes, where('professorId', '==', meuPerfil.id));
-              qValidacoesYTD = query(qValidacoesYTD, where('professorId', '==', meuPerfil.id));
-          }
-      }
-
-      const unsubAulas = onSnapshot(qAulas, (snap) => setAulasRealtime(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
-      const unsubValidacoes = onSnapshot(qValidacoes, (snap) => setValidacoesRealtime(deduplicarValidacoes(snap.docs.map(d => ({ id: d.id, ...d.data() })))));
-      const unsubValidacoesYTD = onSnapshot(qValidacoesYTD, (snap) => setValidacoesYTD(deduplicarValidacoes(snap.docs.map(d => ({ id: d.id, ...d.data() })))));
-
-      return () => { unsubAulas(); unsubValidacoes(); unsubValidacoesYTD(); };
-  }, [role, userData.unidadeId, period, isCofreFechado, catalogs.professores, userId]);
-
-  // Listas Dinâmicas de Filtros
+  // Listas Dinâmicas de Filtros (país e estado já vêm padronizados do carregamento)
   const listasFiltros = useMemo(() => {
-    const units = catalogs.unidades.filter(u => 
-        (paisesFiltro.length === 0 || paisesFiltro.includes(u.pais?.toUpperCase())) && 
-        (estadosFiltro.length === 0 || estadosFiltro.includes(u.estado?.toUpperCase())) && 
+    const ordenar = (a, b) => a.localeCompare(b, 'pt-BR', { sensitivity: 'base' });
+    const units = catalogs.unidades.filter(u =>
+        (paisesFiltro.length === 0 || paisesFiltro.includes(u.pais)) &&
+        (estadosFiltro.length === 0 || estadosFiltro.includes(u.estado.toUpperCase())) &&
         (mentoresFiltro.length === 0 || mentoresFiltro.includes(u.mentorId))
-    ).sort((a, b) => (a.nome || '').localeCompare(b.nome || '')); 
+    ).sort((a, b) => ordenar(a.nome || '', b.nome || ''));
 
-    const paises = [...new Set(catalogs.unidades.map(u => u.pais?.toUpperCase()).filter(Boolean))].sort();
-    const estados = [...new Set(catalogs.unidades.filter(u => paisesFiltro.length === 0 || paisesFiltro.includes(u.pais?.toUpperCase())).map(u => u.estado?.toUpperCase()).filter(Boolean))].sort();
-    
+    const paises = [...new Set(catalogs.unidades.map(u => u.pais).filter(Boolean))].sort(ordenar);
+    const estados = [...new Set(catalogs.unidades
+        .filter(u => paisesFiltro.length === 0 || paisesFiltro.includes(u.pais))
+        .map(u => u.estado.toUpperCase()).filter(Boolean))].sort(ordenar);
+
     const mentorIds = [...new Set(units.map(u => u.mentorId).filter(Boolean))];
     const mentores = mentorIds.map(id => {
-        const user = catalogs.users.find(u => u.id === id || u.uid === id); 
+        const user = catalogs.users.find(u => u.id === id || u.uid === id);
         return { id, nome: (user?.nome || t('common.unknown.generic')).toUpperCase() };
-    }).sort((a, b) => a.nome.localeCompare(b.nome));
+    }).sort((a, b) => ordenar(a.nome, b.nome));
 
     return { paises, estados, mentores, unidadesFiltradas: units };
   }, [catalogs, paisesFiltro, estadosFiltro, mentoresFiltro, t]);
 
-  // 3. PROCESSAMENTO CORE 
+  // Quais unidades buscar no banco. Até 30 unidades -> busca só elas (muito mais rápido e gasta menos
+  // da cota gratuita). Mais que isso -> busca tudo e filtra na tela, como antes.
+  //   ''        = sem restrição por unidade
+  //   'NENHUMA' = o filtro não bate com nenhuma unidade (não precisa buscar nada)
+  const unidadesAlvoKey = useMemo(() => {
+      if (ehLider(role) || role === 'professor') return '';
+      const ids = unidadesFiltro.length > 0 ? unidadesFiltro : listasFiltros.unidadesFiltradas.map(u => u.id);
+      if (ids.length === 0) return 'NENHUMA';
+      if (ids.length > LIMITE_IN) return '';
+      return ids.map(String).sort().join(',');
+  }, [role, unidadesFiltro, listasFiltros.unidadesFiltradas]);
+
+  const meuProfessorId = useMemo(
+      () => (role === 'professor' ? catalogs.professores.find(p => p.uidLogin === userId)?.id || null : null),
+      [role, catalogs.professores, userId]
+  );
+
+  // Aplica o recorte do usuário (unidade / professor / unidades filtradas) numa consulta.
+  const recortarConsulta = (q, ids) => {
+      if (ehLider(role)) return query(q, where('unidadeId', '==', userData.unidadeId));
+      if (role === 'professor') return meuProfessorId ? query(q, where('professorId', '==', meuProfessorId)) : q;
+      if (ids) return query(q, where('unidadeId', 'in', ids));
+      return q;
+  };
+
+  // 2. MOTOR TEMPO REAL (período selecionado)
+  useEffect(() => {
+      if (isCofreFechado || unidadesAlvoKey === 'NENHUMA') {
+          setAulasRealtime([]); setValidacoesRealtime([]); setCarregandoDados(false); return undefined;
+      }
+      setCarregandoDados(true);
+
+      const ids = unidadesAlvoKey ? unidadesAlvoKey.split(',') : null;
+      const aulasRef = collection(db, 'aulas');
+      const validacoesRef = collection(db, 'validacoes');
+      const qPeriodo = query(validacoesRef, where('data', '>=', period.start), where('data', '<=', period.end));
+
+      let pendentes = 2;
+      const chegou = () => { pendentes -= 1; if (pendentes <= 0) setCarregandoDados(false); };
+      const unsubs = [];
+
+      const ouvirAulas = (q, podeTentarSemRecorte) => unsubs.push(onSnapshot(q,
+          (snap) => { setAulasRealtime(snap.docs.map(d => ({ id: d.id, ...d.data() }))); chegou(); },
+          (err) => {
+              console.error('Relatórios: erro ao ler aulas', err);
+              if (podeTentarSemRecorte) ouvirAulas(aulasRef, false); else chegou();
+          }));
+
+      const ouvirValidacoes = (q, podeTentarSemRecorte) => unsubs.push(onSnapshot(q,
+          (snap) => { setValidacoesRealtime(deduplicarValidacoes(snap.docs.map(d => ({ id: d.id, ...d.data() })))); chegou(); },
+          (err) => {
+              // Se faltar índice no banco para o filtro por unidade, busca o período inteiro e filtra na tela.
+              console.error('Relatórios: erro ao ler validações', err);
+              if (podeTentarSemRecorte) ouvirValidacoes(qPeriodo, false); else chegou();
+          }));
+
+      ouvirAulas(recortarConsulta(aulasRef, ids), Boolean(ids));
+      ouvirValidacoes(recortarConsulta(qPeriodo, ids), Boolean(ids));
+
+      return () => unsubs.forEach(u => u());
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [role, userData?.unidadeId, period.start, period.end, isCofreFechado, meuProfessorId, unidadesAlvoKey]);
+
+  // 2b. HISTÓRICO DO ANO (meses anteriores ao período). São meses fechados: uma leitura só,
+  // sem ficar "escutando" o banco, e só as aulas realizadas.
+  useEffect(() => {
+      const ano = period.start.slice(0, 4);
+      const inicio = `${ano}-01-01`;
+      const fim = `${period.start.slice(0, 7)}-01`; // exclusivo: começo do mês do período
+      if (isCofreFechado || unidadesAlvoKey === 'NENHUMA' || fim <= inicio) { setValidacoesYTD([]); return undefined; }
+
+      let ativo = true;
+      const ids = unidadesAlvoKey ? unidadesAlvoKey.split(',') : null;
+      const qAno = query(collection(db, 'validacoes'), where('data', '>=', inicio), where('data', '<', fim));
+      const semRecorte = !ehLider(role) && role !== 'professor' && !ids;
+      // Sem recorte, filtra "realizada" no banco (mesmo índice usado pela Performance Financeira).
+      const qPrincipal = semRecorte ? query(qAno, where('status', '==', 'realizada')) : recortarConsulta(qAno, ids);
+
+      const carregar = async () => {
+          let snap;
+          try { snap = await getDocs(qPrincipal); }
+          catch (err) {
+              console.error('Relatórios: erro ao ler histórico do ano', err);
+              try { snap = await getDocs(semRecorte ? qAno : recortarConsulta(qAno, null)); }
+              catch (err2) { console.error('Relatórios: histórico do ano indisponível', err2); return; }
+          }
+          if (!ativo) return;
+          const lista = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(v => v.status === 'realizada');
+          setValidacoesYTD(deduplicarValidacoes(lista));
+      };
+      carregar();
+      return () => { ativo = false; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [role, userData?.unidadeId, period.start, isCofreFechado, meuProfessorId, unidadesAlvoKey]);
+
+  // Mapas para achar unidade/aula/professor/modalidade por id sem varrer listas inteiras (era o que travava a tela).
+  const mapas = useMemo(() => ({
+      unidades: new Map(catalogs.unidades.map(u => [String(u.id), u])),
+      professores: new Map(catalogs.professores.map(p => [String(p.id), p])),
+      modalidades: new Map(catalogs.modalidades.map(m => [String(m.id), m])),
+      aulas: new Map((aulasRealtime || []).map(a => [String(a.id), a])),
+  }), [catalogs, aulasRealtime]);
+
+  // 3. PROCESSAMENTO CORE
   const processamentoBase = useMemo(() => {
     if (catalogs.unidades.length === 0 || isCofreFechado) return [];
 
@@ -352,28 +454,30 @@ export default function RelatorioPage() {
     });
 
     // Regra única de feriado (src/utils/feriados.js)
+    const temFeriados = (catalogs.feriados || []).length > 0;
     const checkIsFeriado = (dateStr, unidadeId) => {
-        const unidade = (catalogs.unidades || []).find(u => String(u.id) === String(unidadeId)) || { id: unidadeId };
+        const unidade = mapas.unidades.get(String(unidadeId)) || { id: unidadeId };
         return Boolean(feriadoNoDia(dateStr, unidade, catalogs.feriados || []));
     };
 
     const buildHistoricoComFeriados = (aula, validacoesExistentes) => {
         const historicoCompleto = [...(validacoesExistentes || [])];
+        if (!temFeriados) return historicoCompleto;
+        const datasComValidacao = new Set(historicoCompleto.map(v => v.data));
         const start = new Date(period.start + 'T00:00:00');
         const end = new Date(period.end + 'T00:00:00');
         const todayObj = new Date(todayStr + 'T00:00:00');
 
         for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-            if (d > todayObj) continue; 
-            const dateStr = d.toISOString().split('T')[0];
+            if (d > todayObj) continue;
+            const dateStr = toDateStr(d);
             const diaNome = diasSemanaMap[d.getDay()];
-            
+
             if (aula.dataInicio && dateStr < aula.dataInicio) continue;
             if (aula.dataFim && dateStr > aula.dataFim) continue;
 
             if (aula.dias && aula.dias.includes(diaNome)) {
-                const jaTemValidacao = historicoCompleto.some(v => v.data === dateStr);
-                if (!jaTemValidacao && checkIsFeriado(dateStr, aula.unidadeId)) {
+                if (!datasComValidacao.has(dateStr) && checkIsFeriado(dateStr, aula.unidadeId)) {
                     historicoCompleto.push({ data: dateStr, status: 'cancelada', motivoCancelamento: 'RECESSO/FERIADO AUTOMÁTICO', isFeriadoVirtual: true });
                 }
             }
@@ -383,14 +487,29 @@ export default function RelatorioPage() {
 
     let todasLinhas = [];
 
+    // Filtros que dependem só da aula/unidade: aplicados ANTES de montar o histórico,
+    // para não calcular feriados de aulas que nem vão aparecer.
+    const passaFiltrosDaAula = (aulaBase) => {
+        const unidade = mapas.unidades.get(String(aulaBase.unidadeId));
+        if (!unidade) return false;
+        if (paisesFiltro.length > 0 && !paisesFiltro.includes(unidade.pais)) return false;
+        if (estadosFiltro.length > 0 && !estadosFiltro.includes(unidade.estado.toUpperCase())) return false;
+        if (mentoresFiltro.length > 0 && !mentoresFiltro.includes(unidade.mentorId)) return false;
+        if (unidadesFiltro.length > 0 && !unidadesFiltro.includes(aulaBase.unidadeId)) return false;
+        if (modalidadesFiltro.length > 0 && !modalidadesFiltro.includes(aulaBase.modalidadeId)) return false;
+        if (turnosFiltro.length > 0 && !checkTurno(aulaBase.hora, turnosFiltro)) return false;
+        return true;
+    };
+
     (aulasRealtime || []).forEach(aula => {
+        if (!passaFiltrosDaAula(aula)) return;
         const historicoTitular = buildHistoricoComFeriados(aula, valMapTitular[aula.id]);
         todasLinhas.push({ tipo: 'titular', aulaBase: aula, professorId: aula.professorId, validacoes: historicoTitular, validacoesSubstituido: valMapSubstituto[aula.id] || [] });
     });
 
     Object.keys(substituicoesMap).forEach(key => {
         const [aulaId, profId] = key.split('_');
-        const aulaBase = aulasRealtime.find(a => String(a.id) === String(aulaId));
+        const aulaBase = mapas.aulas.get(String(aulaId));
         if (aulaBase) { todasLinhas.push({ tipo: 'substituto', aulaBase: aulaBase, professorId: profId, validacoes: substituicoesMap[key], validacoesSubstituido: [] }); }
     });
 
@@ -401,34 +520,26 @@ export default function RelatorioPage() {
 
     return todasLinhas.map(item => {
         const { aulaBase, professorId, validacoes, validacoesSubstituido } = item;
-        const unidade = catalogs.unidades.find(u => String(u.id) === String(aulaBase.unidadeId));
-        if (!unidade) return null;
-
-        if (paisesFiltro.length > 0 && !paisesFiltro.includes(unidade.pais?.toUpperCase())) return null;
-        if (estadosFiltro.length > 0 && !estadosFiltro.includes(unidade.estado?.toUpperCase())) return null;
-        if (mentoresFiltro.length > 0 && !mentoresFiltro.includes(unidade.mentorId)) return null;
-        if (unidadesFiltro.length > 0 && !unidadesFiltro.includes(aulaBase.unidadeId)) return null;
-        if (modalidadesFiltro.length > 0 && !modalidadesFiltro.includes(aulaBase.modalidadeId)) return null;
-        if (turnosFiltro.length > 0 && !checkTurno(aulaBase.hora, turnosFiltro)) return null;
+        if (!passaFiltrosDaAula(aulaBase)) return null;
+        const unidade = mapas.unidades.get(String(aulaBase.unidadeId));
 
         if (role === 'professor') {
-            const me = catalogs.professores.find(p => p.uidLogin === userId);
-            if (!me || String(professorId) !== String(me.id)) return null;
+            if (!meuProfessorId || String(professorId) !== String(meuProfessorId)) return null;
         } else if (professoresFiltro.length > 0 && !professoresFiltro.includes(professorId)) return null;
 
-        const professor = catalogs.professores.find(p => String(p.id) === String(professorId));
-        const modalidade = catalogs.modalidades.find(m => String(m.id) === String(aulaBase.modalidadeId));
+        const professor = mapas.professores.get(String(professorId));
+        const modalidade = mapas.modalidades.get(String(aulaBase.modalidadeId));
 
         const historicoSeguro = validacoes || [];
         const aulasRealizadas = historicoSeguro.filter(v => v.status === 'realizada').length;
-        const aulasCanceladas = historicoSeguro.filter(v => v.status === 'cancelada').length; 
-        
+        const aulasCanceladas = historicoSeguro.filter(v => v.status === 'cancelada').length;
+
         if (filtroKPI === 'realizadas' && aulasRealizadas === 0) return null;
         if (filtroKPI === 'canceladas' && aulasCanceladas === 0) return null;
 
         const totalAlunos = historicoSeguro.filter(v => v.status === 'realizada').reduce((acc, v) => acc + (Number(v.alunos) || 0), 0);
         const mediaAlunos = aulasRealizadas > 0 ? Math.round(totalAlunos / aulasRealizadas) : 0;
-        
+
         // "Valor aula" mostra o valor atual; o "A receber" soma o valor em vigor no dia de cada aula realizada.
         const valorHora = parseFloat(aulaBase.valor) || 0;
         const totalReceber = historicoSeguro.reduce((acc, v) => acc + valorDaValidacao(v, aulaBase), 0);
@@ -441,12 +552,12 @@ export default function RelatorioPage() {
         return {
             id: item.tipo === 'titular' ? aulaBase.id : (item.tipo === 'aulao' ? `view_${aulaBase.id}` : `${aulaBase.id}_sub_${professorId}`),
             unidadeId: aulaBase.unidadeId,
-            unidadeNome: (unidade.nome || '').toUpperCase(), 
-            unidadeEstado: (unidade.estado || '').toUpperCase(), 
-            unidadePais: (unidade.pais || 'BR').toUpperCase(), // 🟢 CARREGANDO PAÍS SEGURO
+            unidadeNome: (unidade.nome || '').toUpperCase(),
+            unidadeEstado: (unidade.estado || '').toUpperCase(),
+            unidadePais: unidade.pais, // já padronizado (BR/AR/US)
             professorNome: (professor?.nome || t('common.unknown.noTeacher')).toUpperCase(),
             tipoLinha: item.tipo,
-            modalidadeNome: (modalidade?.nome || t('common.unknown.modality')).toUpperCase(), 
+            modalidadeNome: (modalidade?.nome || t('common.unknown.modality')).toUpperCase(),
             modalidadeCor: modalidade?.cor || '#ccc',
             dias: aulaBase.dias || [], horario: aulaBase.hora,
             aulasRealizadas, aulasCanceladas, mediaAlunos, totalAlunos, valorHora, totalReceber,
@@ -455,11 +566,11 @@ export default function RelatorioPage() {
             aulaBase
         };
     }).filter(Boolean);
-  }, [catalogs, aulasRealtime, validacoesRealtime, period, paisesFiltro, estadosFiltro, mentoresFiltro, unidadesFiltro, modalidadesFiltro, professoresFiltro, turnosFiltro, filtroKPI, role, userId, isCofreFechado, t]);
+  }, [catalogs, mapas, aulasRealtime, validacoesRealtime, period, paisesFiltro, estadosFiltro, mentoresFiltro, unidadesFiltro, modalidadesFiltro, professoresFiltro, turnosFiltro, filtroKPI, role, meuProfessorId, isCofreFechado, t]);
 
   const relatorioFinal = useMemo(() => {
       let resultado = [];
-      if (viewMode === 'detalhado') { resultado = [...(processamentoBase || [])]; } 
+      if (viewMode === 'detalhado') { resultado = [...(processamentoBase || [])]; }
       else {
           const grouped = {};
           (processamentoBase || []).forEach(row => {
@@ -471,9 +582,9 @@ export default function RelatorioPage() {
               }
           });
           resultado = Object.values(grouped).map(g => {
-              g.mediaAlunos = g.aulasRealizadas > 0 ? Math.round(g.totalAlunos / g.aulasRealizadas) : 0; 
+              g.mediaAlunos = g.aulasRealizadas > 0 ? Math.round(g.totalAlunos / g.aulasRealizadas) : 0;
               g.horario = g.horariosSet.size > 1 ? "VÁRIOS HORÁRIOS" : Array.from(g.horariosSet)[0];
-              g.dias = Array.from(g.diasSet); g.ocupacao = g.countOcupacao > 0 ? (g.somaOcupacao / g.countOcupacao) : 0; 
+              g.dias = Array.from(g.diasSet); g.ocupacao = g.countOcupacao > 0 ? (g.somaOcupacao / g.countOcupacao) : 0;
               return g;
           });
       }
@@ -487,7 +598,7 @@ export default function RelatorioPage() {
   }, [processamentoBase, viewMode, sortConfig]);
 
   const relatorioVisivel = useMemo(() => (relatorioFinal || []).slice(0, itensVisiveis), [relatorioFinal, itensVisiveis]);
-  
+
   const handleCarregarMais = (qtd) => {
     if (qtd === 'todos') setItensVisiveis(relatorioFinal.length);
     else setItensVisiveis(prev => prev + qtd);
@@ -495,7 +606,7 @@ export default function RelatorioPage() {
 
   const kpis = useMemo(() => {
     const baseSegura = processamentoBase || [];
-    
+
     const totalRealizadas = baseSegura.reduce((acc, r) => acc + (r.aulasRealizadas || 0), 0);
     const totalCanceladas = baseSegura.reduce((acc, r) => acc + (r.aulasCanceladas || 0), 0);
     const totalFinanceiro = baseSegura.reduce((acc, r) => acc + (r.totalReceber || 0), 0);
@@ -503,7 +614,7 @@ export default function RelatorioPage() {
     const mediaAlunos = totalRealizadas > 0 ? Math.round(somaAlunos / totalRealizadas) : 0;
     // Valor médio realmente pago por aula realizada no período
     const custoMedio = totalRealizadas > 0 ? totalFinanceiro / totalRealizadas : 0;
-    
+
     const itensComAulaRealizada = baseSegura.filter(r => r.aulasRealizadas > 0 && r.metragem > 0);
     const mediaOcupacao = itensComAulaRealizada.length > 0 ? itensComAulaRealizada.reduce((acc, r) => acc + (r.ocupacao || 0), 0) / itensComAulaRealizada.length : 0;
 
@@ -525,44 +636,47 @@ export default function RelatorioPage() {
         const semanasNoPeriodo = difDays / 7;
         totalBuracosGlobais += (buracosUnidade * semanasNoPeriodo);
     });
-    
-    let maxSlotsPorDia = 24; 
+
+    let maxSlotsPorDia = 24;
     if (turnosFiltro.length === 1) {
-        if (turnosFiltro.includes('Manhã')) maxSlotsPorDia = 9; 
-        else if (turnosFiltro.includes('Tarde')) maxSlotsPorDia = 9; 
-        else if (turnosFiltro.includes('Noite')) maxSlotsPorDia = 6; 
+        if (turnosFiltro.includes('Manhã')) maxSlotsPorDia = 9;
+        else if (turnosFiltro.includes('Tarde')) maxSlotsPorDia = 9;
+        else if (turnosFiltro.includes('Noite')) maxSlotsPorDia = 6;
     }
-    
-    const diasUteisNoPeriodo = difDays * (5/7); 
+
+    const diasUteisNoPeriodo = difDays * (5/7);
     maxSlotsGlobais = (listasFiltros.unidadesFiltradas || []).length * maxSlotsPorDia * diasUteisNoPeriodo;
     const taxaVacancia = maxSlotsGlobais > 0 ? Math.min((totalBuracosGlobais / maxSlotsGlobais) * 100, 100) : 0;
 
     const currentYear = new Date(period.start + 'T00:00:00').getFullYear();
-    const currentMonthIdx = new Date(period.start + 'T00:00:00').getMonth(); 
+    const currentMonthIdx = new Date(period.start + 'T00:00:00').getMonth();
     const mesesNomes = Array.from({ length: 12 }, (_, idx) => idx); // nome do mês é formatado na tela, no idioma atual
-    
+
     const historicoYTD = mesesNomes.map((nome, idx) => {
-        let valor = 0; let status = 'pendente'; 
+        let valor = 0; let status = 'pendente';
 
         if (idx < currentMonthIdx) {
             const mesFormatado = String(idx + 1).padStart(2, '0');
             const prefix = `${currentYear}-${mesFormatado}`;
-            
+
             const valsMes = (validacoesYTD || []).filter(v => v.data && v.data.startsWith(prefix) && v.status === 'realizada');
             valsMes.forEach(v => {
                 // Aulões não têm aula na grade: usam os próprios dados da validação.
-                const aula = (aulasRealtime || []).find(a => String(a.id) === String(v.aulaId))
-                    || (v.isAulao ? { unidadeId: v.unidadeId, modalidadeId: v.modalidadeId, professorId: v.professorId, hora: v.hora } : null);
-                if (!aula) return;
-                
-                const u = (catalogs.unidades || []).find(x => String(x.id) === String(aula.unidadeId));
+                // Aula excluída depois: usa os dados gravados na própria validação (o passado continua valendo).
+                const aula = mapas.aulas.get(String(v.aulaId))
+                    || { unidadeId: v.unidadeId, modalidadeId: v.modalidadeId, professorId: v.professorId, hora: v.hora };
+
+                const u = mapas.unidades.get(String(aula.unidadeId));
                 if (!u) return;
-                if (paisesFiltro.length > 0 && !paisesFiltro.includes(u.pais?.toUpperCase())) return;
-                if (estadosFiltro.length > 0 && !estadosFiltro.includes(u.estado?.toUpperCase())) return;
+                if (paisesFiltro.length > 0 && !paisesFiltro.includes(u.pais)) return;
+                if (estadosFiltro.length > 0 && !estadosFiltro.includes(u.estado.toUpperCase())) return;
                 if (mentoresFiltro.length > 0 && !mentoresFiltro.includes(u.mentorId)) return;
                 if (unidadesFiltro.length > 0 && !unidadesFiltro.includes(aula.unidadeId)) return;
                 if (modalidadesFiltro.length > 0 && !modalidadesFiltro.includes(aula.modalidadeId)) return;
-                if (professoresFiltro.length > 0 && !professoresFiltro.includes(aula.professorId)) return;
+                // Substituição: quem recebe é o professor da validação, não o titular da aula.
+                const profDaValidacao = v.professorId || aula.professorId;
+                if (role === 'professor' && meuProfessorId && String(profDaValidacao) !== String(meuProfessorId)) return;
+                if (professoresFiltro.length > 0 && !professoresFiltro.includes(profDaValidacao)) return;
                 if (turnosFiltro.length > 0 && !checkTurno(aula.hora, turnosFiltro)) return;
 
                 valor += valorDaValidacao(v, aula);
@@ -579,10 +693,10 @@ export default function RelatorioPage() {
     const maxTrendYTD = Math.max(...historicoYTD.map(h => h.valor)) || 1;
 
     return { totalFinanceiro, totalRealizadas, totalCanceladas, mediaAlunos, custoMedio, mediaOcupacao, taxaVacancia, historicoYTD, maxTrendYTD };
-  }, [processamentoBase, listasFiltros.unidadesFiltradas, aulasRealtime, period, turnosFiltro, validacoesYTD, paisesFiltro, estadosFiltro, mentoresFiltro, unidadesFiltro, modalidadesFiltro, professoresFiltro, catalogs.unidades]);
+  }, [processamentoBase, listasFiltros.unidadesFiltradas, aulasRealtime, mapas, period, turnosFiltro, validacoesYTD, paisesFiltro, estadosFiltro, mentoresFiltro, unidadesFiltro, modalidadesFiltro, professoresFiltro, role, meuProfessorId]);
 
   // 🟢 DESCOBRIR QUAL A MOEDA DOMINANTE NO KPI GLOBAL
-  const dominantCountry = paisesFiltro.length === 1 ? paisesFiltro[0] : (listasFiltros.unidadesFiltradas[0]?.pais || 'BR');
+  const dominantCountry = paisesFiltro.length === 1 ? paisesFiltro[0] : normalizarPais(listasFiltros.unidadesFiltradas[0]?.pais);
 
   const handleSort = (field) => {
     setSortConfig(prev => ({ field, direction: prev.field === field && prev.direction === 'desc' ? 'asc' : 'desc' }));
@@ -596,7 +710,16 @@ export default function RelatorioPage() {
         return [ r.unidadePais||"-", r.unidadeEstado||"-", r.unidadeNome, r.modalidadeNome, r.horario === 'VÁRIOS HORÁRIOS' ? t('reports.table.multipleTimes') : r.horario, r.professorNome, t(`reports.export.${r.isGroup ? 'typeGrouped' : r.tipoLinha === 'aulao' ? 'typeSpecial' : r.tipoLinha === 'substituto' ? 'typeSubstitute' : 'typeHolder'}`), r.aulasRealizadas, r.aulasCanceladas, r.mediaAlunos, `${(r.ocupacao || 0).toFixed(1)}%`, formatSmartCurrency(r.valorHora, r.unidadePais), formatSmartCurrency(r.totalReceber, r.unidadePais) ];
     });
 
-    if (type === 'csv' || type === 'excel') {
+    if (type === 'excel') {
+        const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+        ws['!cols'] = headers.map((_, i) => ({ wch: i === 2 ? 30 : 14 }));
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Relatorio');
+        XLSX.writeFile(wb, `relatorio_folha_${period.start}.xlsx`);
+        return;
+    }
+
+    if (type === 'csv') {
         const csvContent = [headers.join(";"), ...rows.map(row => row.join(";"))].join("\n");
         const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
@@ -605,6 +728,8 @@ export default function RelatorioPage() {
         link.setAttribute('download', `relatorio_folha_${type}_${period.start}.csv`);
         document.body.appendChild(link);
         link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
     }
   };
 
@@ -623,7 +748,7 @@ export default function RelatorioPage() {
           </h1>
           <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium text-sm">{t('reports.subtitle', 'Painel Executivo de Folha e Ocupação')}</p>
         </div>
-        
+
         <div className="flex items-center gap-3 bg-white dark:bg-slate-800 p-2 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-x-auto max-w-full">
           <div className="flex bg-slate-100 dark:bg-slate-700 rounded-lg p-1 shrink-0">
             <button onClick={() => setModoFiltro('dia')} className={`px-4 py-2 text-xs font-bold rounded-md transition-all uppercase ${modoFiltro === 'dia' ? 'bg-white dark:bg-slate-600 shadow text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400'}`}>{t('reports.filters.day', 'DIA')}</button>
@@ -631,7 +756,7 @@ export default function RelatorioPage() {
             <button onClick={() => setModoFiltro('periodo')} className={`px-4 py-2 text-xs font-bold rounded-md transition-all uppercase ${modoFiltro === 'periodo' ? 'bg-white dark:bg-slate-600 shadow text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400'}`}>{t('reports.filters.period', 'PERÍODO')}</button>
           </div>
           <div className="h-8 w-px bg-slate-200 dark:bg-slate-600 mx-1 shrink-0"></div>
-          
+
           <div className="shrink-0 flex items-center gap-2">
             {modoFiltro === 'dia' && <input type="date" value={dataFiltro} onChange={e => setDataFiltro(e.target.value)} className="bg-transparent font-bold text-slate-700 dark:text-white outline-none text-sm p-1"/>}
             {modoFiltro === 'mes' && <input type="month" value={mesFiltro} onChange={e => setMesFiltro(e.target.value)} className="bg-transparent font-bold text-slate-700 dark:text-white outline-none text-sm p-1"/>}
@@ -643,10 +768,10 @@ export default function RelatorioPage() {
                 </>
             )}
           </div>
-          
+
           <div className="h-8 w-px bg-slate-200 dark:bg-slate-600 mx-1 shrink-0"></div>
           <div className="relative shrink-0">
-            <button onClick={() => setShowExportMenu(!showExportMenu)} className="p-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg text-slate-600 dark:text-slate-300 transition-colors flex items-center gap-2 font-bold text-xs"><Download className="w-4 h-4"/> {t('reports.filters.export', 'Exportar')}</button>
+            <button onClick={() => setShowExportMenu(!showExportMenu)} className="px-4 h-[38px] bg-emerald-500 hover:bg-emerald-600 rounded-xl text-white shadow-sm transition-colors flex items-center gap-2 font-bold text-xs uppercase"><Download className="w-4 h-4"/> {t('reports.filters.export', 'Exportar')}</button>
             {showExportMenu && (<div className="absolute right-0 top-12 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl rounded-xl w-40 z-50 overflow-hidden animate-in fade-in zoom-in duration-200"><button onClick={() => handleExport('excel')} className="w-full text-left px-4 py-3 text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 text-slate-700 dark:text-slate-300"><FileSpreadsheet className="w-4 h-4 text-green-600"/> Excel (XLSX)</button><button onClick={() => handleExport('csv')} className="w-full text-left px-4 py-3 text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 text-slate-700 dark:text-slate-300"><FileText className="w-4 h-4 text-blue-600"/> CSV</button></div>)}
           </div>
         </div>
@@ -657,23 +782,25 @@ export default function RelatorioPage() {
         <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm relative group/filter animate-fade-in z-20">
             <div className="flex justify-between items-center mb-4">
                 <h4 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase flex items-center gap-2"><Filter className="w-3 h-3"/> {t('reports.filters.advanced', 'Filtros Avançados (Múltipla Escolha)')}</h4>
-                <button onClick={clearFilters} className="text-[10px] font-bold text-red-500 hover:text-red-600 dark:text-red-400 flex items-center gap-1 opacity-0 group-hover/filter:opacity-100 transition-opacity bg-red-50 dark:bg-red-900/20 px-3 py-1.5 rounded-lg"><X className="w-3 h-3"/> {t('reports.filters.clear', 'Limpar Filtros')}</button>
+                {temFiltroAtivo && (
+                    <button onClick={clearFilters} className="text-[10px] font-bold text-red-500 hover:text-red-600 dark:text-red-400 flex items-center gap-1 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 px-3 py-1.5 rounded-lg transition-colors"><X className="w-3 h-3"/> {t('reports.filters.clear', 'Limpar Filtros')}</button>
+                )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-4">
                 {role === 'admin' && (
                     <>
-                        <MultiSelectDropdown label={t('reports.filters.country', 'País')} options={(listasFiltros.paises || []).map(p => ({id: p, label: p}))} selected={paisesFiltro} onChange={setPaisesFiltro} placeholder={t('common.multiSelect.all')} />
+                        <MultiSelectDropdown label={t('reports.filters.country', 'País')} options={(listasFiltros.paises || []).map(p => ({id: p, label: t(`common.countries.${p}`, p)}))} selected={paisesFiltro} onChange={setPaisesFiltro} placeholder={t('common.multiSelect.all')} />
                         <MultiSelectDropdown label={t('reports.filters.state', 'Estado')} options={(listasFiltros.estados || []).map(e => ({id: e, label: e}))} selected={estadosFiltro} onChange={setEstadosFiltro} placeholder={t('common.multiSelect.all')} />
                         <MultiSelectDropdown label={t('reports.filters.mentor', 'Mentor')} options={(listasFiltros.mentores || []).map(m => ({id: m.id, label: m.nome}))} selected={mentoresFiltro} onChange={setMentoresFiltro} placeholder={t('common.multiSelect.all')} />
                     </>
                 )}
-                {role !== 'unidade' && (
+                {!ehLider(role) && (
                     <MultiSelectDropdown label={t('reports.filters.unit', 'Unidade')} options={(listasFiltros.unidadesFiltradas || []).map(u => ({id: u.id, label: u.nome.toUpperCase()}))} selected={unidadesFiltro} onChange={setUnidadesFiltro} placeholder={t('common.multiSelect.all')} />
                 )}
                 <MultiSelectDropdown label={t('reports.filters.modality', 'Modalidade')} options={(catalogs.modalidades || []).map(m => ({id: m.id, label: m.nome.toUpperCase()}))} selected={modalidadesFiltro} onChange={setModalidadesFiltro} placeholder={t('common.multiSelect.all')} />
                 <MultiSelectDropdown label={t('reports.filters.teacher', 'Professor')} options={(catalogs.professores || []).map(p => ({id: p.id, label: p.nome.toUpperCase()}))} selected={professoresFiltro} onChange={setProfessoresFiltro} placeholder={t('common.multiSelect.all')} />
-                <MultiSelectDropdown label={t('reports.filters.shift', 'Turno')} options={[{id: 'Manhã', label: t('reports.filters.shiftMorning').toUpperCase()}, {id: 'Tarde', label: t('reports.filters.shiftAfternoon').toUpperCase()}, {id: 'Noite', label: t('reports.filters.shiftNight').toUpperCase()}]} selected={turnosFiltro} onChange={setTurnosFiltro} placeholder={t('common.multiSelect.all')} />
+                <MultiSelectDropdown label={t('reports.filters.shift', 'Turno')} options={[{id: 'Manhã', label: t('reports.filters.shiftMorning').toUpperCase()}, {id: 'Tarde', label: t('reports.filters.shiftAfternoon').toUpperCase()}, {id: 'Noite', label: t('reports.filters.shiftNight').toUpperCase()}]} selected={turnosFiltro} onChange={setTurnosFiltro} placeholder={t('common.multiSelect.all')} alignRight />
             </div>
         </div>
       )}
@@ -693,13 +820,18 @@ export default function RelatorioPage() {
           </div>
       ) : (
         <>
+          {carregandoDados && (
+            <div className="flex items-center justify-center gap-2 py-2 text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900 rounded-xl">
+              <LayoutDashboard className="w-4 h-4 animate-spin"/> {t('layout.loading', 'Carregando...')}
+            </div>
+          )}
           {/* 🟢 NOVO PAINEL DE BORDO EXECUTIVO */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
-              
+
               {/* BLOCO 1: O COFRE (VISÃO FINANCEIRA YTD) */}
               <div className="bg-gradient-to-br from-slate-900 to-slate-800 dark:from-slate-950 dark:to-slate-900 rounded-3xl p-6 xl:p-8 border border-slate-700 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.3)] flex flex-col relative overflow-hidden h-[340px]">
                   <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4 pointer-events-none"></div>
-                  
+
                   <div className="relative z-10 shrink-0">
                       <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2 text-emerald-400/80 font-bold uppercase tracking-widest text-[10px] xl:text-xs">
@@ -718,8 +850,8 @@ export default function RelatorioPage() {
                           <div key={i} className="flex items-center gap-3 group">
                               <span className={`w-8 text-[9px] font-black uppercase tracking-widest ${item.status === 'atual' ? 'text-emerald-400' : item.status === 'fechado' ? 'text-slate-300 group-hover:text-emerald-400 transition-colors' : 'text-slate-600'}`}>{formatDate(new Date(2000, item.mes, 1), { month: 'short' }).replace('.', '')}</span>
                               <div className="flex-1 h-3.5 bg-slate-800/50 rounded-sm overflow-hidden flex items-center relative">
-                                  <div 
-                                      className={`h-full transition-all duration-1000 ${item.status === 'atual' ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]' : item.status === 'fechado' ? 'bg-slate-500 group-hover:bg-emerald-400' : 'bg-transparent'}`} 
+                                  <div
+                                      className={`h-full transition-all duration-1000 ${item.status === 'atual' ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]' : item.status === 'fechado' ? 'bg-slate-500 group-hover:bg-emerald-400' : 'bg-transparent'}`}
                                       style={{ width: `${Math.max(item.valor > 0 ? 5 : 0, (item.valor / (kpis.maxTrendYTD || 1)) * 100)}%` }}
                                   ></div>
                               </div>
@@ -734,7 +866,7 @@ export default function RelatorioPage() {
               {/* BLOCO 2: MOTOR OPERACIONAL */}
               <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 xl:p-8 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between relative overflow-hidden h-[340px]">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/4 pointer-events-none"></div>
-                  
+
                   <div>
                       <div className="flex items-center justify-between mb-6">
                           <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest text-[10px] xl:text-xs">
@@ -779,7 +911,7 @@ export default function RelatorioPage() {
               {/* BLOCO 3: SAÚDE DA GRADE (COM SEMÁFORO DE CORES) */}
               <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 xl:p-8 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between relative overflow-hidden h-[340px]">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/4 pointer-events-none"></div>
-                  
+
                   <div>
                       <div className="flex items-center justify-between mb-6">
                           <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest text-[10px] xl:text-xs">
@@ -832,14 +964,14 @@ export default function RelatorioPage() {
           <div className="space-y-4 animate-fade-in mt-6">
               <div className="flex justify-start">
                   <div className="flex p-1 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
-                      <button 
-                          onClick={() => { setViewMode('agrupado'); setExpandedRowId(null); }} 
+                      <button
+                          onClick={() => { setViewMode('agrupado'); setExpandedRowId(null); }}
                           className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-xs font-bold uppercase transition-all ${viewMode === 'agrupado' ? 'bg-slate-100 dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-700'}`}
                       >
                           <Layers className="w-4 h-4"/> {t('reports.table.summary', 'Resumo da Folha')}
                       </button>
-                      <button 
-                          onClick={() => { setViewMode('detalhado'); setExpandedRowId(null); }} 
+                      <button
+                          onClick={() => { setViewMode('detalhado'); setExpandedRowId(null); }}
                           className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-xs font-bold uppercase transition-all ${viewMode === 'detalhado' ? 'bg-slate-100 dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-700'}`}
                       >
                           <AlignJustify className="w-4 h-4"/> {t('reports.table.detailed', 'Detalhado')}
@@ -858,12 +990,12 @@ export default function RelatorioPage() {
                         <SortableHeader label={t('reports.table.modality', 'MODALIDADE')} field="modalidadeNome" currentSort={sortConfig} onSort={handleSort} />
                         <SortableHeader label={t('reports.table.time', 'HORÁRIO')} field="horario" currentSort={sortConfig} onSort={handleSort} />
                         <SortableHeader label={t('reports.table.teacher', 'PROFESSOR')} field="professorNome" currentSort={sortConfig} onSort={handleSort} />
-                        
+
                         <SortableHeader label={t('reports.table.completed', 'REALIZADAS')} field="aulasRealizadas" currentSort={sortConfig} onSort={handleSort} align="center" />
                         <SortableHeader label={t('reports.table.canceled', 'CANCELADAS')} field="aulasCanceladas" currentSort={sortConfig} onSort={handleSort} align="center" />
                         <SortableHeader label={t('reports.table.avgStudentsCol', 'MÉDIA ALUNOS')} field="mediaAlunos" currentSort={sortConfig} onSort={handleSort} align="center" />
                         <SortableHeader label={t('reports.table.occupancyCol', 'TAXA OCUPAÇÃO')} field="ocupacao" currentSort={sortConfig} onSort={handleSort} align="center" />
-                        
+
                         <SortableHeader label={t('reports.table.classValue', 'VALOR AULA')} field="valorHora" currentSort={sortConfig} onSort={handleSort} align="right" />
                         <SortableHeader label={t('reports.table.toReceive', 'A RECEBER')} field="totalReceber" currentSort={sortConfig} onSort={handleSort} align="right" />
                       </tr>
@@ -893,8 +1025,8 @@ export default function RelatorioPage() {
                                 </td>
                                 <td className="p-3">
                                     <div className="flex items-center gap-2">
-                                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-black border 
-                                            ${row.tipoLinha === 'substituto' ? 'bg-blue-100 text-blue-700 border-blue-200' : 
+                                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-black border
+                                            ${row.tipoLinha === 'substituto' ? 'bg-blue-100 text-blue-700 border-blue-200' :
                                               row.tipoLinha === 'aulao' ? 'bg-purple-100 text-purple-700 border-purple-200' :
                                               'bg-slate-200 text-slate-600 border-slate-300 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600'}`}>
                                             {getInitials(row.professorNome)}
@@ -907,13 +1039,13 @@ export default function RelatorioPage() {
                                         </div>
                                     </div>
                                 </td>
-                                
+
                                 <td className="p-3 text-center font-bold text-blue-600 bg-blue-50 dark:bg-blue-900/10 rounded">{row.aulasRealizadas}</td>
-                                
+
                                 <td className={`p-3 text-center font-bold rounded ${row.aulasCanceladas > 0 ? 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400' : 'text-slate-300'}`}>
                                     {row.aulasCanceladas > 0 ? row.aulasCanceladas : '-'}
                                 </td>
-                                
+
                                 <td className={`p-3 text-center font-bold ${rowMediaTheme.text}`}>{row.mediaAlunos}</td>
 
                                 <td className="p-3 align-middle min-w-[120px]">
@@ -932,11 +1064,11 @@ export default function RelatorioPage() {
                                         </div>
                                     )}
                                 </td>
-                                
+
                                 <td className="p-3 text-right text-slate-500 dark:text-slate-400">{formatSmartCurrency(row.valorHora, row.unidadePais)}</td>
                                 <td className="p-3 text-right font-mono text-green-600 font-black text-sm">{formatSmartCurrency(row.totalReceber, row.unidadePais)}</td>
                               </tr>
-                              
+
                               {/* EXPANSÃO DA GAVETA */}
                               {expandedRowId === row.id && (
                                 <tr className="bg-slate-50/50 dark:bg-slate-900/20 border-b border-slate-200 dark:border-slate-700 shadow-inner">
@@ -966,7 +1098,7 @@ export default function RelatorioPage() {
                                         <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin">
                                             {(row.dias || []).map(dia => {
                                                 const datasDoDia = getDatesByWeekdayInPeriod(period.start, period.end, [dia])[dia] || [];
-                                                
+
                                                 return (
                                                     <div key={dia} className="flex-1 min-w-[130px] max-w-[180px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden flex flex-col shadow-sm">
                                                         <div className="bg-slate-100 dark:bg-slate-700 px-3 py-1.5 text-center border-b border-slate-200 dark:border-slate-600">
@@ -977,18 +1109,18 @@ export default function RelatorioPage() {
                                                             {(datasDoDia || []).map(dataStr => {
                                                                 const validacao = (row.historico || []).find(h => h.data === dataStr);
                                                                 const foiSubstituido = (row.historicoSubstituido || []).find(h => h.data === dataStr);
-                                                                
+
                                                                 if (row.aulaBase.dataInicio && dataStr < row.aulaBase.dataInicio) return null;
                                                                 if (row.aulaBase.dataFim && dataStr > row.aulaBase.dataFim) return null;
 
                                                                 const diaMes = formatDate(dataStr, 'dayMonth');
-                                                                
-                                                                const itemClass = validacao 
-                                                                    ? (validacao.status === 'cancelada' 
-                                                                        ? 'bg-red-50 border-red-100 text-red-700 dark:bg-red-900/20 dark:border-red-900 dark:text-red-300' 
+
+                                                                const itemClass = validacao
+                                                                    ? (validacao.status === 'cancelada'
+                                                                        ? 'bg-red-50 border-red-100 text-red-700 dark:bg-red-900/20 dark:border-red-900 dark:text-red-300'
                                                                         : 'bg-green-50 border-green-100 text-green-700 dark:bg-green-900/20 dark:border-green-900 dark:text-green-300')
-                                                                    : (foiSubstituido 
-                                                                        ? 'bg-blue-50 border-blue-100 text-blue-700 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-300 opacity-70' 
+                                                                    : (foiSubstituido
+                                                                        ? 'bg-blue-50 border-blue-100 text-blue-700 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-300 opacity-70'
                                                                         : 'bg-slate-50 border-slate-100 text-slate-300 dark:bg-slate-900 dark:border-slate-800 opacity-60');
 
                                                                 return (
@@ -996,12 +1128,12 @@ export default function RelatorioPage() {
                                                                         <div className="flex justify-between items-center w-full">
                                                                             <span className="font-bold">{diaMes}</span>
                                                                             {validacao ? (
-                                                                                validacao.status === 'cancelada' 
-                                                                                ? <span className="font-bold text-[8px] uppercase">{t('reports.table.cancelShort')}</span> 
+                                                                                validacao.status === 'cancelada'
+                                                                                ? <span className="font-bold text-[8px] uppercase">{t('reports.table.cancelShort')}</span>
                                                                                 : <span className="font-bold flex items-center gap-1"><Users className="w-3 h-3"/> {validacao.alunos}</span>
                                                                             ) : (
-                                                                                foiSubstituido 
-                                                                                ? <span className="font-bold text-[8px] uppercase flex items-center gap-1"><ArrowRightLeft className="w-2.5 h-2.5"/> {t('reports.table.substShort')}</span> 
+                                                                                foiSubstituido
+                                                                                ? <span className="font-bold text-[8px] uppercase flex items-center gap-1"><ArrowRightLeft className="w-2.5 h-2.5"/> {t('reports.table.substShort')}</span>
                                                                                 : <span>--</span>
                                                                             )}
                                                                         </div>
@@ -1031,24 +1163,24 @@ export default function RelatorioPage() {
                   </table>
                 </div>
               </div>
-              
+
               {/* BOTÕES DE CARREGAMENTO */}
               {itensVisiveis < (relatorioFinal || []).length && (
                   <div className="flex flex-wrap justify-center gap-3 pb-4 animate-fade-in">
-                      <button 
-                          onClick={() => handleCarregarMais(20)} 
+                      <button
+                          onClick={() => handleCarregarMais(20)}
                           className="px-5 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-sm flex items-center gap-2 transition-all uppercase"
                       >
                           <ArrowDown className="w-4 h-4"/> {t('reports.buttons.load20', 'CARREGAR +20')}
                       </button>
-                      <button 
-                          onClick={() => handleCarregarMais(50)} 
+                      <button
+                          onClick={() => handleCarregarMais(50)}
                           className="px-5 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-sm flex items-center gap-2 transition-all uppercase"
                       >
                           {t('reports.buttons.load50', 'CARREGAR +50')}
                       </button>
-                      <button 
-                          onClick={() => handleCarregarMais('todos')} 
+                      <button
+                          onClick={() => handleCarregarMais('todos')}
                           className="px-5 py-2.5 bg-slate-100 dark:bg-slate-700 border border-transparent rounded-xl text-sm font-bold text-slate-700 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-600 shadow-sm flex items-center gap-2 transition-all uppercase"
                       >
                           <DownloadCloud className="w-4 h-4"/> {t('reports.buttons.loadAll', 'VER TODOS')} ({(relatorioFinal || []).length})

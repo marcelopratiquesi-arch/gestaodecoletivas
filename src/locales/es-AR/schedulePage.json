@@ -1,7 +1,7 @@
 {
   "title": "Agenda de Clases",
   "subtitle": "Gestión de Grilla y Horarios",
-  "subtitleReadOnly": "Consulta los horarios de todas las unidades",
+  "subtitleReadOnly": "Consulta el cuadro de clases colectivas de tus unidades",
   "closedBadge": "Cerrada",
   "closedClassTitle": "Clase Cerrada (Solo Historial)",
   "activeClassTitle": "Clase Activa",
@@ -13,7 +13,8 @@
     "searchInGrid": "Filtrar en esta grilla",
     "searchEverywhere": "Buscar Modalidad en todas las unidades",
     "searchPlaceholderInGrid": "Ej: Spinning...",
-    "searchPlaceholderEverywhere": "Ej: Escribe 'Pilates' para ver dónde hay..."
+    "searchPlaceholderEverywhere": "Ej: Escribe 'Pilates' para ver dónde hay...",
+    "selectMyUnit": "Selecciona tu unidad..."
   },
   "buttons": {
     "showHistory": "Ver Finalizadas",
@@ -27,7 +28,11 @@
     "noClassesFound": "No se encontró ninguna clase con este nombre.",
     "emptyGrid": "La grilla actual está vacía. Intenta hacer clic en 'Ver Finalizadas'.",
     "noClassesInUnit": "No hay clases registradas en esta unidad.",
-    "createFirstClass": "Crear primera clase"
+    "createFirstClass": "Crear primera clase",
+    "selectMyUnitTitle": "Selecciona tu unidad",
+    "selectMyUnitDesc": "Elige una de tus unidades para ver el cuadro de clases colectivas.",
+    "noLinkedUnitTitle": "Ninguna unidad vinculada",
+    "noLinkedUnitDesc": "Todavía no estás vinculado a ninguna unidad. Habla con la coordinación."
   },
   "modal": {
     "newTitle": "CREAR NUEVA CLASE",

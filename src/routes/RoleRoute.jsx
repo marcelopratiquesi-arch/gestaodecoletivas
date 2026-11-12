@@ -1,6 +1,6 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import { canAccessPage } from "../permissions";
+import { canAccessPage, getHomePath } from "../permissions";
 import i18n from "../i18n";
 
 export default function RoleRoute({ pageKey, children }) {
@@ -19,8 +19,14 @@ export default function RoleRoute({ pageKey, children }) {
       return children; // Se for o chefe, entra direto sem perguntar nada.
   }
 
-  // 3. Se não for Master, verifica as regras normais. Se falhar, manda pra Home.
-  if (!canAccessPage(userData, pageKey)) return <Navigate to="/app" replace />;
+  // 3. Se não for Master, verifica as regras normais. Se falhar, manda pra página "de casa" do perfil
+  //    (professor não tem Início: cai na Validação Diária). Se nem a casa é permitida, volta pro login.
+  if (!canAccessPage(userData, pageKey)) {
+    const home = getHomePath(userData);
+    const homeKey = home === "/app" ? "inicio" : "validacao_diaria";
+    if (homeKey === pageKey || !canAccessPage(userData, homeKey)) return <Navigate to="/login" replace />;
+    return <Navigate to={home} replace />;
+  }
 
   return children;
 }

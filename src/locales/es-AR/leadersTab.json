@@ -1,0 +1,69 @@
+{
+  "title": "Líderes",
+  "subtitle": "Cada sede tiene 1 líder, que es quien ingresa al sistema por ella. El líder pide acceso ingresando con Google (los pedidos aparecen acá arriba) o vos lo registrás a mano con e-mail y contraseña.",
+  "new": "Registrar líder",
+  "register": "Registrar",
+  "edit": "Editar contacto",
+  "replace": "Cambiar líder",
+  "remove": "Quitar líder",
+  "search": "Buscar sede, líder, e-mail o teléfono...",
+  "onlyWithout": "Solo sin líder",
+  "empty": "No se encontraron sedes.",
+  "noLeader": "Sin líder",
+  "howTo": "Cambiar o quitar al líder le saca el acceso en el momento. Las sedes con \"acceso anterior\" todavía ingresan con el e-mail de la sede: en el próximo ingreso el sistema obliga a la persona a actualizar su registro y conectar su cuenta de Google, y aparece acá como líder \"a revisar\".",
+  "kpi": {
+    "units": "Sedes",
+    "withLeader": "Con líder",
+    "withoutLeader": "Sin líder",
+    "requests": "Pedidos en espera",
+    "toCheck": "A revisar"
+  },
+  "col": {
+    "unit": "Sede",
+    "leader": "Líder",
+    "access": "Cómo ingresa",
+    "mentor": "Mentor",
+    "actions": "Acciones"
+  },
+  "access": {
+    "google": "Google",
+    "password": "E-mail y contraseña",
+    "legacy": "Login antiguo de la sede"
+  },
+  "replaceConfirm": "La sede {{unit}} ya tiene el líder {{current}}.\n\n¿Cambiar por {{name}}? El líder actual pierde el acceso.",
+  "replacedReason": "Reemplazado por {{name}} como líder de la sede.",
+  "removedReason": "Quitado como líder de la sede.",
+  "removeConfirm": "¿Quitar a {{name}} como líder de la sede {{unit}}?\n\nEsta persona pierde el acceso al sistema en el momento.",
+  "createdManual": "¡Líder {{name}} registrado!\n\nPasale: ingresar con el e-mail {{email}} y la contraseña que definiste.",
+  "modal": {
+    "newTitle": "Registrar líder",
+    "editTitle": "Editar contacto del líder",
+    "unit": "Sede",
+    "chooseUnit": "Elegí la sede...",
+    "hasLeader": "líder: {{name}}",
+    "replaceWarning": "Esta sede ya tiene el líder {{name}}. Al guardar, pierde el acceso y el nuevo líder asume.",
+    "name": "Nombre completo",
+    "email": "E-mail (es el login)",
+    "emailLocked": "El e-mail de login no se cambia acá. Para cambiarlo, registrá al líder de nuevo.",
+    "phone": "WhatsApp",
+    "password": "Contraseña inicial",
+    "passwordHint": "Mínimo {{min}} caracteres. Pasale la contraseña al líder.",
+    "cancel": "Cancelar",
+    "save": "Guardar"
+  },
+  "errors": {
+    "unit": "Elegí la sede.",
+    "name": "Escribí el nombre completo (mínimo 3 letras).",
+    "phone": "Escribí el WhatsApp del líder.",
+    "email": "E-mail inválido.",
+    "password": "La contraseña debe tener al menos {{min}} caracteres.",
+    "emailInUse": "Este e-mail ya tiene login en el sistema. Usá otro e-mail, o pedile a la persona que ingrese con Google y aprobá el pedido.",
+    "save": "No se pudo guardar.",
+    "remove": "No se pudo quitar al líder.",
+    "confirm": "No se pudo confirmar al líder."
+  },
+  "toCheck": "A revisar",
+  "confirm": "Confirmar líder",
+  "confirmQuestion": "¿Confirmar a {{name}} como líder de la sede {{unit}}?",
+  "checkBanner": "{{count}} sede(s) con líder nuevo a revisar: la persona ingresó con el acceso anterior de la sede y asumió como líder con su cuenta de Google. Revisá si es la persona correcta: confirmá o quitá."
+}

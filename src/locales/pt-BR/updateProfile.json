@@ -1,0 +1,34 @@
+{
+  "logout": "Sair ({{email}})",
+  "submit": "Conectar com o Google e concluir",
+  "googleHint": "Ao concluir, escolha a SUA conta Google pessoal. A partir de agora você entra no sistema só por ela, com o botão \"Entrar com Google\". O login antigo (e-mail e senha) deixa de funcionar.",
+  "leader": {
+    "title": "Atualize seu cadastro de líder",
+    "desc": "O login da unidade está sendo trocado pelo login pessoal do líder. Preencha seus dados e conecte a sua conta Google para continuar."
+  },
+  "mentor": {
+    "title": "Atualize seu cadastro de mentor",
+    "desc": "O acesso agora é pessoal, pela sua conta Google. Confira seus dados e conecte a sua conta Google para continuar."
+  },
+  "fields": {
+    "unitLeader": "Unidade em que você é líder",
+    "name": "Seu nome completo",
+    "namePlaceholder": "Ex: Maria Silva",
+    "phone": "WhatsApp",
+    "phonePlaceholder": "Ex: +55 31 99999-0000"
+  },
+  "blocked": {
+    "hasLeaderTitle": "Este login não é mais usado",
+    "hasLeaderDesc": "A unidade {{unit}} já tem um líder cadastrado ({{name}}), que entra com a conta Google dele. Se você é o novo líder, fale com o seu mentor.",
+    "noUnitTitle": "Unidade não encontrada",
+    "noUnitDesc": "Este login não está ligado a nenhuma unidade ativa. Fale com o seu mentor."
+  },
+  "errors": {
+    "name": "Digite seu nome completo.",
+    "phone": "Digite um WhatsApp válido.",
+    "popupBlocked": "O navegador bloqueou a janela do Google. Libere os pop-ups deste site e tente de novo.",
+    "googleInUse": "Esta conta Google já está em uso no sistema. Escolha outra conta Google ou fale com o seu mentor.",
+    "notEnabled": "O login pelo Google ainda não está liberado. Fale com o suporte.",
+    "save": "Não foi possível concluir. Tente de novo."
+  }
+}

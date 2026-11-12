@@ -39,8 +39,9 @@
     "roles": {
       "admin": "Admin (Master)",
       "mentor": "Mentor",
-      "unidade": "Sede (Líder)",
-      "professor": "Profesor",
+      "lider": "Líder",
+      "unidade": "Sede (antiguo)",
+      "professor": "Profesor de Clases Grupales",
       "bloqueado": "Sin Acceso (Bloqueado)"
     },
     "messages": {
