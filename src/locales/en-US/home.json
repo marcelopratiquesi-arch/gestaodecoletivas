@@ -33,7 +33,10 @@
       "teacher": "Teacher",
       "noMoreClasses": "No more classes today",
       "defaultModality": "Group Class",
-      "defaultTeacher": "Instructor"
+      "defaultTeacher": "Instructor",
+      "now": "Now",
+      "after": "Later",
+      "moreToday": "+{{count}} today"
     },
     "validation": {
       "title": "Daily Validation",
@@ -64,33 +67,17 @@
       },
       "validatedOf": "{{validated}} of {{total}} validated",
       "subtitleOf": "Status for {{dia}}",
-      "noClasses": "No classes in the last 7 days"
-    },
-    "pratiquePlay": {
-      "title": "PRATIQUE PLAY",
-      "subtitle": "CLASS MUSIC",
-      "footer": "Access Play",
-      "insideLine1": "GROUP CLASS",
-      "insideLine2": "PLAYLISTS"
-    },
-    "linkAluno": {
-      "title": "STUDENT LINK",
-      "subtitle": "EXTERNAL ACCESS",
-      "footer": "Open Portal",
-      "insideLine1": "STUDENT",
-      "insideLine2": "PORTAL"
-    },
-    "settings": {
-      "title": "Settings",
-      "subtitle": "Admin Panel",
-      "footer": "Manage",
-      "units": "Units",
-      "mods": "Mods",
-      "profs": "Profs"
+      "noClasses": "No classes in the last 7 days",
+      "mostLate": "Most behind",
+      "pendingShort": "{{count}} not validated"
     }
   },
   "loadError": "Couldn't load the numbers. Check your internet and reload the page.",
   "days": {
     "yesterday": "yesterday"
-  }
+  },
+  "offline": "No internet · numbers may be out of date",
+  "updatedAt": "Updated at {{hora}}",
+  "refresh": "Refresh",
+  "shortcuts": "Shortcuts"
 }

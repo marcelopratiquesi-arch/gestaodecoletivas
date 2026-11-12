@@ -13,10 +13,11 @@ import {
 
 import { AulaCard } from './AulaCard';
 import { ValidationModal } from './ValidationModal';
-import { getDiaSemana, formatCurrency } from '../../utils/formatters';
+import { useLocation } from 'react-router-dom';
+import { getDiaSemana, formatCurrency, formatPeriod } from '../../utils/formatters';
 import { idValidacao, deduplicarValidacoes } from '../../utils/validacoes';
 import { feriadoNoDia } from '../../utils/feriados';
-import { aulaNaGradeDoDia } from '../../utils/agendaAulas';
+import { aulaNaGradeDoDia, datasEntre } from '../../utils/agendaAulas';
 import { invalidarCacheInicio } from '../../services/cacheInicio';
 import { useTranslation } from 'react-i18next';
 
@@ -139,18 +140,27 @@ export default function ValidacaoDiariaPage() {
   const userUnidadeId = useMemo(() => userData?.unidadeId, [userData]);
   const isMaster = useMemo(() => ['admin', 'mentor'].includes(role), [role]);
 
+  // Vindo do "Resolver agora" da Página de Início: abre já no período das pendências, nas unidades
+  // que têm pendência, mostrando só as pendentes. { inicio, fim, unidadeIds }
+  const location = useLocation();
+  const pedidoDoInicio = location.state?.pendencias || null;
+
   // --- FILTROS MULTI-SELECT ---
-  const [modoFiltro, setModoFiltro] = useState('dia'); 
+  // modoFiltro: 'dia' | 'mes' | 'periodo' (o período só existe quando vem da Página de Início)
+  const [modoFiltro, setModoFiltro] = useState(pedidoDoInicio ? 'periodo' : 'dia');
   const [dataFiltro, setDataFiltro] = useState(getTodayStr());
   const [mesFiltro, setMesFiltro] = useState(new Date().toISOString().slice(0, 7));
-  
+  const [periodoFiltro] = useState(() => pedidoDoInicio
+    ? { inicio: pedidoDoInicio.inicio, fim: pedidoDoInicio.fim || getTodayStr() }
+    : { inicio: getTodayStr(), fim: getTodayStr() });
+
   const [filtroEstado, setFiltroEstado] = useState([]);
   const [filtroMentor, setFiltroMentor] = useState([]);
-  const [filtroUnidade, setFiltroUnidade] = useState([]);
+  const [filtroUnidade, setFiltroUnidade] = useState(() => (pedidoDoInicio?.unidadeIds || []).map(String));
   const [filtroModalidade, setFiltroModalidade] = useState([]);
-  
+
   const [filtroProfessor, setFiltroProfessor] = useState("");
-  const [filtroStatus, setFiltroStatus] = useState('todos'); 
+  const [filtroStatus, setFiltroStatus] = useState(pedidoDoInicio ? 'pendente' : 'todos');
 
   // --- DADOS TEMPO REAL ---
   const [validacoesRealtime, setValidacoesRealtime] = useState([]);
@@ -284,30 +294,60 @@ export default function ValidacaoDiariaPage() {
     let dataInicio, dataFim;
     if (modoFiltro === 'dia') {
       dataInicio = dataFiltro; dataFim = dataFiltro;
+    } else if (modoFiltro === 'periodo') {
+      dataInicio = periodoFiltro.inicio; dataFim = periodoFiltro.fim;
     } else {
       const [ano, mes] = mesFiltro.split('-');
       const lastDay = new Date(parseInt(ano), parseInt(mes), 0).getDate();
       dataInicio = `${ano}-${mes}-01`; dataFim = `${ano}-${mes}-${lastDay}`;
     }
 
-    let qValidacoes;
+    const ref = collection(db, 'validacoes');
+    const periodo = [where('data', '>=', dataInicio), where('data', '<=', dataFim)];
+    const noPeriodo = (v) => v.data >= dataInicio && v.data <= dataFim;
+
+    // Cada consulta escuta o banco ao vivo; a lista final junta todas (sem repetir) e tira duplicatas antigas.
+    const consultas = [];
     if (role === 'unidade') {
-        qValidacoes = query(collection(db, 'validacoes'), where('data', '>=', dataInicio), where('data', '<=', dataFim), where('unidadeId', '==', userUnidadeId));
+        consultas.push({ q: query(ref, ...periodo, where('unidadeId', '==', userUnidadeId)) });
     } else if (role === 'professor') {
         const meuPerfil = catalogs.professores.find(p => p.uidLogin === userId);
         const meuProfId = meuPerfil ? meuPerfil.id : 'xyz';
-        qValidacoes = query(collection(db, 'validacoes'), where('data', '>=', dataInicio), where('data', '<=', dataFim), where('professorId', '==', meuProfId));
+        consultas.push({ q: query(ref, ...periodo, where('professorId', '==', meuProfId)) });
+        // Aula do professor dada por um substituto: a validação vai com o professorId do substituto.
+        // Sem esta busca, a aula aparecia como pendente para o titular mesmo já validada.
+        // (Substituições de um professor são poucas; filtra o período aqui para não precisar de índice novo.)
+        consultas.push({ q: query(ref, where('professorOriginalId', '==', meuProfId)), filtro: noPeriodo });
+    } else if (filtroUnidade.length > 0 && filtroUnidade.length <= 30) {
+        // Admin/mentor com unidades escolhidas: busca só essas unidades, e não a rede inteira (poupa a cota gratuita).
+        consultas.push({ q: query(ref, ...periodo, where('unidadeId', 'in', filtroUnidade)) });
     } else {
-        qValidacoes = query(collection(db, 'validacoes'), where('data', '>=', dataInicio), where('data', '<=', dataFim));
+        consultas.push({ q: query(ref, ...periodo) });
     }
 
-    const unsubValidacoes = onSnapshot(qValidacoes, (snap) => {
-        setValidacoesRealtime(deduplicarValidacoes(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
-        setLoading(false); 
-    });
+    const resultados = consultas.map(() => null);
+    const atualizar = () => {
+        if (resultados.some(r => r === null)) return; // espera todas responderem
+        const porId = new Map();
+        resultados.flat().forEach(v => porId.set(v.id, v));
+        setValidacoesRealtime(deduplicarValidacoes([...porId.values()]));
+        setLoading(false);
+    };
 
-    return () => unsubValidacoes();
-  }, [modoFiltro, dataFiltro, mesFiltro, catalogs.unidades.length, catalogs.professores, role, userId, userUnidadeId, isCofreFechado, loadingCatalogs]);
+    const cancelar = consultas.map(({ q, filtro }, i) => onSnapshot(q, (snap) => {
+        const lista = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        resultados[i] = filtro ? lista.filter(filtro) : lista;
+        atualizar();
+    }, (error) => {
+        console.error('Erro ao escutar validações:', error);
+        resultados[i] = [];
+        atualizar();
+    }));
+
+    return () => cancelar.forEach(unsub => unsub());
+    // filtroUnidade entra como texto para não reabrir a escuta quando só a referência da lista muda
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modoFiltro, dataFiltro, mesFiltro, periodoFiltro, filtroUnidade.join(','), catalogs.unidades.length, catalogs.professores, role, userId, userUnidadeId, isCofreFechado, loadingCatalogs]);
 
   // ==========================================
   // 3. PROCESSADOR DE GRADE VISUAL
@@ -316,7 +356,8 @@ export default function ValidacaoDiariaPage() {
     if (loading || loadingCatalogs || catalogs.unidades.length === 0 || isCofreFechado) return;
 
     let datasParaVerificar = [];
-    if (modoFiltro === 'dia') datasParaVerificar = [new Date(dataFiltro + 'T12:00:00')]; 
+    if (modoFiltro === 'dia') datasParaVerificar = [new Date(dataFiltro + 'T12:00:00')];
+    else if (modoFiltro === 'periodo') datasParaVerificar = datasEntre(periodoFiltro.inicio, periodoFiltro.fim).map(d => new Date(d + 'T12:00:00'));
     else {
       const [ano, mes] = mesFiltro.split('-');
       datasParaVerificar = getMonthDates(parseInt(ano), parseInt(mes) - 1);
@@ -431,7 +472,7 @@ export default function ValidacaoDiariaPage() {
 
     setGradeGerada(gradeFinal);
 
-  }, [validacoesRealtime, loading, loadingCatalogs, catalogs, filtroUnidade, filtroModalidade, filtroProfessor, filtroEstado, filtroMentor, dataFiltro, mesFiltro, modoFiltro, role, userId, isCofreFechado, t]);
+  }, [validacoesRealtime, loading, loadingCatalogs, catalogs, filtroUnidade, filtroModalidade, filtroProfessor, filtroEstado, filtroMentor, dataFiltro, mesFiltro, modoFiltro, periodoFiltro, role, userId, isCofreFechado, t]);
 
   // CONTADORES E PAGINAÇÃO
   const counts = useMemo(() => {
@@ -596,10 +637,18 @@ export default function ValidacaoDiariaPage() {
                 <div className="flex bg-slate-100 dark:bg-slate-700 rounded-xl p-1 h-10 shrink-0">
                     <button onClick={() => setModoFiltro('dia')} className={`px-3 text-xs font-bold uppercase tracking-wide rounded-lg transition-all ${modoFiltro === 'dia' ? 'bg-white dark:bg-slate-600 shadow text-emerald-700 dark:text-white' : 'text-slate-500 hover:text-slate-700'}`}>{t('common.period.day')}</button>
                     <button onClick={() => setModoFiltro('mes')} className={`px-3 text-xs font-bold uppercase tracking-wide rounded-lg transition-all ${modoFiltro === 'mes' ? 'bg-white dark:bg-slate-600 shadow text-emerald-700 dark:text-white' : 'text-slate-500 hover:text-slate-700'}`}>{t('common.period.month')}</button>
+                    {pedidoDoInicio && (
+                        <button onClick={() => setModoFiltro('periodo')} className={`px-3 text-xs font-bold uppercase tracking-wide rounded-lg transition-all ${modoFiltro === 'periodo' ? 'bg-white dark:bg-slate-600 shadow text-emerald-700 dark:text-white' : 'text-slate-500 hover:text-slate-700'}`}>{t('common.period.range')}</button>
+                    )}
                 </div>
-                <div className="relative h-10 w-[140px] shrink-0">
+                <div className={`relative h-10 shrink-0 ${modoFiltro === 'periodo' ? 'min-w-[140px]' : 'w-[140px]'}`}>
                     <Calendar className="absolute left-3 top-2.5 w-4 h-4 text-emerald-500"/>
-                    {modoFiltro === 'dia' ? (
+                    {modoFiltro === 'periodo' ? (
+                    // Período das pendências que a Página de Início mandou abrir (só leitura; Dia/Mês voltam ao normal).
+                    <div className="w-full h-full pl-9 pr-3 flex items-center bg-slate-50 dark:bg-slate-900 rounded-xl text-xs font-bold text-slate-700 dark:text-white uppercase whitespace-nowrap">
+                        {formatPeriod(periodoFiltro.inicio, periodoFiltro.fim, 'dayMonth')}
+                    </div>
+                    ) : modoFiltro === 'dia' ? (
                     <input type="date" value={dataFiltro} onChange={e => setDataFiltro(e.target.value)} className="w-full h-full pl-9 pr-2 border-0 bg-slate-50 dark:bg-slate-900 rounded-xl text-xs font-bold text-slate-700 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none uppercase" />
                     ) : (
                     <input type="month" value={mesFiltro} onChange={e => setMesFiltro(e.target.value)} className="w-full h-full pl-9 pr-2 border-0 bg-slate-50 dark:bg-slate-900 rounded-xl text-xs font-bold text-slate-700 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none uppercase" />
