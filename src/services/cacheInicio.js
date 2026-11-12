@@ -8,10 +8,11 @@ const TTL_MS = 5 * 60 * 1000;
 
 let memoria = { chave: '', timestamp: 0, validacoes: [] };
 
+// Devolve { validacoes, timestamp } (timestamp = quando foram buscadas no banco) ou null.
 export function lerCacheInicio(chave) {
   if (memoria.chave !== chave) return null;
   if (Date.now() - memoria.timestamp > TTL_MS) return null;
-  return memoria.validacoes;
+  return { validacoes: memoria.validacoes, timestamp: memoria.timestamp };
 }
 
 export function gravarCacheInicio(chave, validacoes) {
