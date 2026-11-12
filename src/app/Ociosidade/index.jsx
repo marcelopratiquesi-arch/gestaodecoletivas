@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCatalogs } from '../../contexts/CatalogContext';
 import { db } from '../../services/firebase';
@@ -14,6 +14,7 @@ import { useNavigate } from 'react-router-dom';
 import { DIAS_SEMANA_GRADE, formatDate, formatWeekday, getCurrencySymbol } from '../../utils/formatters';
 import { useTranslation } from 'react-i18next';
 import { deduplicarValidacoes } from '../../utils/validacoes';
+import { lerResumos, buscarValidacoes, mesAtual, mesAnterior } from '../../services/resumosMensais';
 
 // 🟢 IMPORTANDO AS VISÕES (Os arquivos que você já separou)
 import VisaoGlobal from './VisaoGlobal';
@@ -181,9 +182,9 @@ export default function RadarDeGrade() {
     const [unidadesFiltro, setUnidadesFiltro] = useState([]);
     const [turnoFiltro, setTurnoFiltro] = useState(""); 
     
-    const [validacoesRecentes, setValidacoesRecentes] = useState([]);
-    const [mentoresList, setMentoresList] = useState([]);
-    const [vinculosList, setVinculosList] = useState([]); 
+    // Médias de alunos (só aulas realizadas): por aula { n, soma } e por unidade { grade: { n, soma }, auloes: [{ n, soma, hora }] }
+    const [agregados, setAgregados] = useState({ porAula: {}, porUnidade: {} });
+    const carregouAgregadosRef = useRef(false);
 
     const [previewModal, setPreviewModal] = useState({ isOpen: false, unidadeNome: '', unidadeId: '', dia: '', aulas: [], buracos: [], pos: { x: 0, y: 0 }, size: { w: 450, h: 500 } });
     const [floatingSchedule, setFloatingSchedule] = useState({ isOpen: false, unidadeId: null, unidadeNome: '', pos: { x: 0, y: 0 }, size: { w: 480, h: 600 } });
@@ -204,28 +205,76 @@ export default function RadarDeGrade() {
 
     const isCofreFechado = (role === 'admin' || role === 'mentor') && (estadosFiltro.length === 0 && mentoresFiltro.length === 0 && unidadesFiltro.length === 0 && !turnoFiltro);
 
+    // Mentores e vínculos vêm da memória ao vivo (antes: ~650 leituras a cada abertura).
+    const mentoresList = useMemo(() => (role === 'admin' ? (catalogs.mentores || []) : []), [role, catalogs.mentores]);
+    const vinculosList = useMemo(() => (catalogs.vinculos || []).filter(v => v.status === 'ativo'), [catalogs.vinculos]);
+
+    // ECONOMIA DE COTA: antes lia as validações de 90 dias da rede inteira (~27 mil leituras por abertura).
+    // Agora os 3 últimos meses completos vêm do "fechamento do mês" (1 documento cada) e só o mês atual
+    // é lido validação por validação (mentor: só das unidades dele).
     useEffect(() => {
-        const fetchInitialData = async () => {
+        if (loadingCatalogs || carregouAgregadosRef.current) return;
+        carregouAgregadosRef.current = true;
+        const carregar = async () => {
             setLoading(true);
             try {
-                if (role === 'admin') {
-                    const usersSnap = await getDocs(query(collection(db, 'usuarios'), where('role', '==', 'mentor')));
-                    setMentoresList(usersSnap.docs.map(d => ({ id: d.id, ...d.data() })));
-                }
-                const vinculosSnap = await getDocs(collection(db, 'vinculos'));
-                setVinculosList(vinculosSnap.docs.map(d => ({ id: d.id, ...d.data() })).filter(v => v.status === 'ativo'));
+                const escopo = role === 'mentor' ? (catalogs.unidades || []).filter(u => u.mentorId === userId).map(u => u.id) : null;
+                const mesesFechados = [1, 2, 3].map(n => mesAnterior(mesAtual(), n));
+                const aulasPorId = new Map((catalogs.aulasTodas || catalogs.aulas || []).map(a => [String(a.id), a]));
+                const resumos = await lerResumos(mesesFechados, { podeMontar: role === 'admin', aulasPorId });
 
-                const dataCorte = new Date();
-                dataCorte.setDate(dataCorte.getDate() - 90);
-                const dataCorteStr = dataCorte.toISOString().split('T')[0];
-                const q = query(collection(db, 'validacoes'), where('data', '>=', dataCorteStr));
-                const snap = await getDocs(q);
-                setValidacoesRecentes(deduplicarValidacoes(snap.docs.map(d => ({ id: d.id, ...d.data() }))).filter(v => v.status === 'realizada'));
+                const porAula = {};
+                const porUnidade = {};
+                const unidadeDe = (u) => {
+                    if (!porUnidade[u]) porUnidade[u] = { grade: { n: 0, soma: 0 }, auloes: [] };
+                    return porUnidade[u];
+                };
+                const somarAula = (aulaId, u, n, soma) => {
+                    if (!porAula[aulaId]) porAula[aulaId] = { n: 0, soma: 0 };
+                    porAula[aulaId].n += n; porAula[aulaId].soma += soma;
+                    const g = unidadeDe(u).grade; g.n += n; g.soma += soma;
+                };
+                const noEscopo = (u) => escopo === null || escopo.includes(u);
+
+                // Meses com fechamento pronto.
+                const mesesSemResumo = [];
+                mesesFechados.forEach(mes => {
+                    const r = resumos[mes];
+                    if (!r) { mesesSemResumo.push(mes); return; }
+                    Object.entries(r.porAula || {}).forEach(([aulaId, e]) => { if (noEscopo(e.u) && e.r > 0) somarAula(aulaId, e.u, e.r, e.a); });
+                    Object.values(r.auloes || {}).forEach(e => { if (noEscopo(e.u) && e.r > 0) unidadeDe(e.u).auloes.push({ n: e.r, soma: e.a, hora: e.h }); });
+                });
+
+                // Mês atual (e meses sem fechamento): validação por validação.
+                const hoje = new Date().toLocaleDateString('en-CA');
+                const intervalos = [[mesAtual() + '-01', hoje], ...mesesSemResumo.map(mes => [mes + '-01', mes + '-31'])];
+                const listas = await Promise.all(intervalos.map(([ini, fim]) => buscarValidacoes(ini, fim, escopo)));
+                deduplicarValidacoes(listas.flat()).filter(v => v.status === 'realizada').forEach(v => {
+                    const alunos = Number(v.alunos) || 0;
+                    if (v.isAulao) unidadeDe(v.unidadeId).auloes.push({ n: 1, soma: alunos, hora: v.hora });
+                    else somarAula(v.aulaId, v.unidadeId, 1, alunos);
+                });
+
+                setAgregados({ porAula, porUnidade });
             } catch (e) { console.error(e); }
             finally { setLoading(false); }
         };
-        fetchInitialData();
-    }, [role]);
+        carregar();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [loadingCatalogs, role]);
+
+    // Histórico da janela "saúde da unidade": busca na hora do clique, só daquela unidade (90 dias, como antes).
+    const abrirHistoricoUnidade = async (u, base) => {
+        setFlowPreview({ ...base, ultimasAulas: [] });
+        try {
+            const corte = new Date(); corte.setDate(corte.getDate() - 90);
+            const snap = await getDocs(query(collection(db, 'validacoes'), where('unidadeId', '==', u.id), where('data', '>=', corte.toLocaleDateString('en-CA'))));
+            const lista = deduplicarValidacoes(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+                .filter(v => v.status === 'realizada')
+                .sort((a, b) => new Date(b.data) - new Date(a.data));
+            setFlowPreview(prev => (prev.unidadeId === u.id ? { ...prev, ultimasAulas: lista } : prev));
+        } catch (e) { console.error(e); }
+    };
 
     // MÁQUINA DE INDEXAÇÃO (HASH MAPS)
     const aulasPorUnidade = useMemo(() => {
@@ -243,23 +292,8 @@ export default function RadarDeGrade() {
         return map;
     }, [catalogs.modalidades]);
 
-    const validacoesPorAula = useMemo(() => {
-        const map = {};
-        validacoesRecentes.forEach(v => {
-            if (!map[v.aulaId]) map[v.aulaId] = [];
-            map[v.aulaId].push(v);
-        });
-        return map;
-    }, [validacoesRecentes]);
-
-    const validacoesPorUnidade = useMemo(() => {
-        const map = {};
-        validacoesRecentes.forEach(v => {
-            if (!map[v.unidadeId]) map[v.unidadeId] = [];
-            map[v.unidadeId].push(v);
-        });
-        return map;
-    }, [validacoesRecentes]);
+    const validacoesPorAula = agregados.porAula;
+    const validacoesPorUnidade = agregados.porUnidade;
 
     const processarBuracos = (aulasDoDia, turno) => {
         let abertura = timeToMins("06:00");
@@ -322,17 +356,20 @@ export default function RadarDeGrade() {
                 diasData[dia] = processarBuracos(aulasNoDia, turnoFiltro);
             });
 
-            const valsUnidade = validacoesPorUnidade[u.id] || [];
-            const filteredVals = turnoFiltro ? valsUnidade.filter(v => {
+            // Aulas da grade não guardam horário na validação (entram sempre); aulões entram pelo turno da hora deles.
+            const valsUnidade = validacoesPorUnidade[u.id] || { grade: { n: 0, soma: 0 }, auloes: [] };
+            const auloesNoTurno = turnoFiltro ? valsUnidade.auloes.filter(v => {
                 if (!v.hora) return true;
                 const mins = timeToMins(v.hora);
                 if (turnoFiltro === 'manha') return mins >= timeToMins("06:00") && mins < timeToMins("12:00");
                 if (turnoFiltro === 'tarde') return mins >= timeToMins("12:00") && mins < timeToMins("18:00");
                 if (turnoFiltro === 'noite') return mins >= timeToMins("18:00") && mins <= timeToMins("22:00");
                 return true;
-            }) : valsUnidade;
+            }) : valsUnidade.auloes;
 
-            const media = filteredVals.length > 0 ? Math.round(filteredVals.reduce((acc, v) => acc + (Number(v.alunos) || 0), 0) / filteredVals.length) : 0;
+            const totalN = valsUnidade.grade.n + auloesNoTurno.reduce((acc, v) => acc + v.n, 0);
+            const totalSoma = valsUnidade.grade.soma + auloesNoTurno.reduce((acc, v) => acc + v.soma, 0);
+            const media = totalN > 0 ? Math.round(totalSoma / totalN) : 0;
             
             let saude = { label: 'MÉDIA', color: 'text-amber-500', bg: 'bg-amber-50 dark:bg-amber-900/20', border: 'border-amber-200 dark:border-amber-800', icon: <Activity className="w-3 h-3"/> };
             if (media >= 20) saude = { label: 'ALTA DEMANDA', color: 'text-rose-500', bg: 'bg-rose-50 dark:bg-rose-900/20', border: 'border-rose-200 dark:border-rose-800', icon: <Flame className="w-3 h-3"/> };
@@ -432,8 +469,8 @@ export default function RadarDeGrade() {
                 const indice = Number(mod?.indiceOcupacao) || 3;
                 const capacidadeMaxima = metragem > 0 ? Math.floor(metragem / indice) : 0; 
                 
-                const validacoesDaAula = validacoesPorAula[aula.id] || [];
-                const mediaAlunos = validacoesDaAula.length > 0 ? validacoesDaAula.reduce((acc, v) => acc + (Number(v.alunos) || 0), 0) / validacoesDaAula.length : 0;
+                const validacoesDaAula = validacoesPorAula[aula.id] || { n: 0, soma: 0 };
+                const mediaAlunos = validacoesDaAula.n > 0 ? validacoesDaAula.soma / validacoesDaAula.n : 0;
                 
                 let ocupacaoDaAula = 0;
                 if (capacidadeMaxima > 0) {
@@ -626,7 +663,7 @@ export default function RadarDeGrade() {
                                                 <td className="p-5 sticky left-0 z-20 bg-white dark:bg-slate-800 group-hover:bg-slate-50 dark:group-hover:bg-slate-800/90 border-r border-slate-200 dark:border-slate-700 shadow-[4px_0_10px_-4px_rgba(0,0,0,0.05)]">
                                                     <div className="font-black text-slate-800 dark:text-slate-100 text-sm mb-1">{u.nome}</div>
                                                     <button 
-                                                        onClick={() => setFlowPreview({ isOpen: true, unidadeId: u.id, unidadeNome: u.nome, media: u.mediaAlunos, saude: u.saude, ultimasAulas: validacoesPorUnidade[u.id]?.sort((a,b) => new Date(b.data) - new Date(a.data)) || [], pos: getCenterPos(380, 550), size: flowPreview.size })} 
+                                                        onClick={() => abrirHistoricoUnidade(u, { isOpen: true, unidadeId: u.id, unidadeNome: u.nome, media: u.mediaAlunos, saude: u.saude, pos: getCenterPos(380, 550), size: flowPreview.size })} 
                                                         className={`inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-[10px] font-black w-full shadow-sm hover:scale-105 transition-transform ${u.saude.bg} ${u.saude.color} ${u.saude.border}`}
                                                     >
                                                         {u.saude.icon} {u.mediaAlunos > 0 ? t('radar.matrix.studentsPerClass', { count: u.mediaAlunos }) : t('radar.matrix.noData')}

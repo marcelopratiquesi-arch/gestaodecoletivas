@@ -16,6 +16,7 @@ import * as XLSX from 'xlsx';
 import { formatCurrency, formatPercent } from '../../utils/formatters';
 import { deduplicarValidacoes } from '../../utils/validacoes';
 import { valorDaValidacao } from '../../utils/valores';
+import { lerResumos, buscarValidacoes } from '../../services/resumosMensais';
 import { useTranslation } from 'react-i18next';
 
 // --- HELPERS ---
@@ -335,15 +336,41 @@ export default function PerformanceFinanceiraPage() {
             // 🟢 CORREÇÃO O(1): Usar SET para performance máxima
             const unidadesSet = new Set(unidades.map(u => u.id));
 
+            // ECONOMIA DE COTA
+            // 1) Mês já fechado: usa o "fechamento do mês" (1 documento) em vez de milhares de validações.
+            // 2) Senão: busca só as validações das unidades que interessam (mentor: as dele; admin: as dos mentores
+            //    escolhidos). Só "Todos os mentores" lê a rede inteira.
+            const [anoAtual, mesAtual] = mesFiltro.split('-');
+            const anoAnterior = (parseInt(anoAtual) - 1).toString();
+            const mesesPedidos = [`${anoAtual}-${mesAtual}`, `${anoAnterior}-${mesAtual}`];
+            const resumos = await lerResumos(mesesPedidos, {
+                podeMontar: role === 'admin',
+                aulasPorId: new Map(Object.entries(aulasMap)),
+            });
+            const escopoUnidades = (role === 'admin' && filtroMentor.includes('todos'))
+                ? null
+                : (role === 'admin' ? unidades.filter(u => filtroMentor.includes(u.mentorId)) : unidades).map(u => u.id);
+
             const processarPeriodo = async (ano, mes) => {
+                const resumo = resumos[`${ano}-${mes}`];
+                if (resumo) {
+                    const custosMap = {};
+                    [...Object.values(resumo.porAula || {}), ...Object.values(resumo.auloes || {})].forEach(e => {
+                        if (!unidadesSet.has(e.u)) return;
+                        custosMap[e.u] = (custosMap[e.u] || 0) + (Number(e.v) || 0);
+                    });
+                    return custosMap;
+                }
+
                 const inicio = `${ano}-${mes}-01`;
                 const fim = `${ano}-${mes}-${new Date(ano, mes, 0).getDate()}`;
-                
-                const qVal = query(collection(db, 'validacoes'), where('data', '>=', inicio), where('data', '<=', fim), where('status', '==', 'realizada'));
-                const valSnap = await getDocs(qVal);
-                
+
+                const brutas = escopoUnidades === null
+                    ? (await getDocs(query(collection(db, 'validacoes'), where('data', '>=', inicio), where('data', '<=', fim), where('status', '==', 'realizada')))).docs.map(d => d.data())
+                    : (await buscarValidacoes(inicio, fim, escopoUnidades)).filter(v => v.status === 'realizada');
+
                 const custosMap = {};
-                deduplicarValidacoes(valSnap.docs.map(d => d.data())).forEach(val => {
+                deduplicarValidacoes(brutas).forEach(val => {
                     // 🟢 OTIMIZAÇÃO: Busca no SET é 100x mais rápida que o .some() num array
                     if (unidadesSet.has(val.unidadeId)) {
                         // Valor em vigor no dia da aula (regra única em src/utils/valores.js); aulões entram pelo valorPago.
@@ -355,9 +382,6 @@ export default function PerformanceFinanceiraPage() {
                 return custosMap;
             };
 
-            const [anoAtual, mesAtual] = mesFiltro.split('-');
-            const anoAnterior = (parseInt(anoAtual) - 1).toString();
-            
             const [custosAtual, custosAnterior] = await Promise.all([
                 processarPeriodo(anoAtual, mesAtual), 
                 processarPeriodo(anoAnterior, mesAtual)
