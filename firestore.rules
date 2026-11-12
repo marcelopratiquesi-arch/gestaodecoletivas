@@ -11,6 +11,15 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.get('role', '').lower();
     }
     function souAdmin() { return logado() && meuPapel() in ['admin', 'administrador', 'master']; }
+    // Líder = perfil novo "lider" ou o antigo "unidade" (valem igual durante a transição).
+    function papeisLider() { return ['lider', 'unidade']; }
+    // Professor não grava cadastros (aulas, unidades, professores, modalidades, feriados...).
+    // Quem não tem crachá em usuarios segue como antes (não é tratado como professor).
+    function souProfessor() {
+      return logado()
+        && exists(/databases/$(database)/documents/usuarios/$(request.auth.uid))
+        && meuPapel() == 'professor';
+    }
     function papelDoAlvo() { return resource.data.get('role', '').lower(); }
     function papelNovo() { return request.resource.data.get('role', '').lower(); }
     function camposAlterados() { return request.resource.data.diff(resource.data).affectedKeys(); }
@@ -21,45 +30,140 @@ service cloud.firestore {
     // (com e-mail, telefone e login) exigem login.
     match /publico/{docId} {
       allow read: if true;
-      allow write: if logado() && meuPapel() in ['admin', 'administrador', 'master', 'mentor', 'unidade'];
+      allow write: if logado() && meuPapel() in ['admin', 'administrador', 'master', 'mentor', 'lider', 'unidade'];
     }
     match /aulas/{document=**} {
       allow read: if true;
-      allow write: if logado();
+      allow write: if logado() && !souProfessor();
     }
     match /modalidades/{document=**} {
       allow read: if true;
-      allow write: if logado();
+      allow write: if logado() && !souProfessor();
     }
     match /unidades/{document=**} {
       allow read: if logado();
-      allow write: if logado();
+      allow write: if logado() && !souProfessor();
     }
     match /professores/{document=**} {
       allow read: if logado();
-      allow write: if logado();
+      allow write: if logado() && !souProfessor();
+    }
+
+    // ===================== VALIDAÇÕES (presença e pagamento) =====================
+    // Mesma regra de prazo da tela (src/utils/validacoes.js):
+    // - professor: só aulas em que é TITULAR, do mês atual até hoje; não muda o valor da aula,
+    //   não lança aulão, não mexe em aula cancelada e não apaga nada;
+    // - líder (unidade): só a própria unidade, até 60 dias para trás; mês já fechado exige justificativa;
+    // - mentor: só as unidades dele; mês já fechado exige justificativa;
+    // - admin: tudo (inclusive restaurar backup).
+    // Datas no fuso do Brasil/Argentina (UTC-3).
+    function agoraLocal() { return request.time - duration.value(3, 'h'); }
+    function hojeLocal() { let a = agoraLocal(); return timestamp.date(a.year(), a.month(), a.day()); }
+    function inicioDoMes() { let a = agoraLocal(); return timestamp.date(a.year(), a.month(), 1); }
+    function diaDa(dataStr) {
+      let p = dataStr.split('-');
+      return timestamp.date(int(p[0]), int(p[1]), int(p[2]));
+    }
+    function meuUsuario() { return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data; }
+    function aulaDa(aulaId) { return get(/databases/$(database)/documents/aulas/$(aulaId)).data; }
+
+    function dataValida(d) { return d.data is string && d.data.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$'); }
+    function justificada(d) { return d.get('justificativa', '') is string && d.get('justificativa', '').size() >= 10; }
+    // Alunos: inteiro de 0 a 150 nas aulas da grade (aulão fica livre). Não mexer no número antigo também passa.
+    function alunosOk(d) {
+      return !('alunos' in d) || d.get('isAulao', false) == true
+        || (d.alunos is int && d.alunos >= 0 && d.alunos <= 150)
+        || (resource != null && resource.data.get('alunos', null) == d.alunos);
+    }
+    // Valor da aula: o mesmo do cronograma ou o que já estava gravado (valor da época).
+    function valorOk(d, aula) {
+      return d.get('valorEfetivo', 0) == aula.get('valor', 0)
+        || (aula.get('valor', 0) is string && float(aula.valor) == d.get('valorEfetivo', 0))
+        || (resource != null && d.get('valorEfetivo', 0) == resource.data.get('valorEfetivo', -1));
+    }
+    // Na criação, o documento da aula da grade tem ID fixo "<aulaId>_<data>".
+    function idCerto(vid, d) { return resource != null || d.get('isAulao', false) == true || vid == d.aulaId + '_' + d.data; }
+    // Na edição não se troca a aula nem o dia.
+    function mesmaAulaEDia(d) {
+      return resource == null || (resource.data.get('aulaId', null) == d.get('aulaId', null) && resource.data.data == d.data);
+    }
+
+    function souTitularDa(aula) {
+      return aula.get('professorId', '') != ''
+        && (meuUsuario().get('professorId', '') == aula.professorId
+            || get(/databases/$(database)/documents/professores/$(aula.professorId)).data.get('uidLogin', '') == request.auth.uid);
+    }
+
+    function professorPodeGravar(vid, d) {
+      let aula = aulaDa(d.aulaId);
+      return meuPapel() == 'professor'
+        && d.get('isAulao', false) != true
+        && idCerto(vid, d) && mesmaAulaEDia(d)
+        && diaDa(d.data) >= inicioDoMes() && diaDa(d.data) <= hojeLocal()
+        && souTitularDa(aula)
+        && d.unidadeId == aula.unidadeId
+        && d.status in ['realizada', 'cancelada']
+        && (d.get('substituicao', false) == true
+              ? d.get('professorOriginalId', '') == aula.professorId
+              : d.professorId == aula.professorId)
+        && valorOk(d, aula)
+        && (resource == null || resource.data.get('status', '') != 'cancelada');
+    }
+
+    function liderPodeGravar(vid, d) {
+      return meuPapel() in papeisLider()
+        && d.unidadeId == meuUsuario().get('unidadeId', '')
+        && idCerto(vid, d) && mesmaAulaEDia(d)
+        && diaDa(d.data) <= hojeLocal()
+        && diaDa(d.data) >= hojeLocal() - duration.value(60, 'd')
+        && (diaDa(d.data) >= inicioDoMes() || justificada(d))
+        && (d.get('isAulao', false) == true || aulaDa(d.aulaId).unidadeId == d.unidadeId)
+        && (d.get('isAulao', false) == true || valorOk(d, aulaDa(d.aulaId)));
+    }
+
+    function mentorPodeGravar(vid, d) {
+      return meuPapel() == 'mentor'
+        && get(/databases/$(database)/documents/unidades/$(d.unidadeId)).data.get('mentorId', '') == request.auth.uid
+        && idCerto(vid, d) && mesmaAulaEDia(d)
+        && (diaDa(d.data) >= inicioDoMes() || justificada(d));
+    }
+
+    function podeGravarValidacao(vid) {
+      let d = request.resource.data;
+      return souAdmin()
+        || (logado() && dataValida(d) && d.get('validadoPor', '') == request.auth.uid && alunosOk(d)
+            && (professorPodeGravar(vid, d) || liderPodeGravar(vid, d) || mentorPodeGravar(vid, d)));
+    }
+
+    match /validacoes/{vid} {
+      allow read: if logado();
+      allow create, update: if podeGravarValidacao(vid);
+      // Apagar = "reverter cancelamento" (só admin e mentor da unidade, como na tela).
+      allow delete: if souAdmin()
+        || (logado() && meuPapel() == 'mentor'
+            && get(/databases/$(database)/documents/unidades/$(resource.data.unidadeId)).data.get('mentorId', '') == request.auth.uid);
     }
 
     // ===================== CRACHÁS (usuarios) =====================
     // Ninguém muda o próprio papel nem se promove. Espelha o que as telas já fazem:
     // - admin: tudo (Mentores, Controle de Acessos, correções)
-    // - mentor: cria/edita logins de unidade e de professor; exclui login de unidade (ao excluir a unidade)
-    // - unidade: cria/edita logins de professor
+    // - mentor: cria/edita logins de líder e de professor; exclui login de líder (ao excluir a unidade)
+    // - líder (lider/unidade): cria/edita logins de professor
     match /usuarios/{uid} {
       allow read: if logado();
 
       allow create: if souAdmin()
-        || (logado() && meuPapel() == 'mentor' && papelNovo() in ['unidade', 'professor'])
-        || (logado() && meuPapel() == 'unidade' && papelNovo() == 'professor');
+        || (logado() && meuPapel() == 'mentor' && papelNovo() in ['lider', 'unidade', 'professor'])
+        || (logado() && meuPapel() in papeisLider() && papelNovo() == 'professor');
 
       allow update: if souAdmin()
-        || (logado() && meuPapel() == 'mentor' && papelDoAlvo() in ['unidade', 'professor']
+        || (logado() && meuPapel() == 'mentor' && papelDoAlvo() in ['lider', 'unidade', 'professor']
             && camposAlterados().hasOnly(['nome', 'email', 'telefone']))
-        || (logado() && meuPapel() == 'unidade' && papelDoAlvo() == 'professor'
+        || (logado() && meuPapel() in papeisLider() && papelDoAlvo() == 'professor'
             && camposAlterados().hasOnly(['nome', 'email']));
 
       allow delete: if souAdmin()
-        || (logado() && meuPapel() == 'mentor' && papelDoAlvo() == 'unidade'
+        || (logado() && meuPapel() == 'mentor' && papelDoAlvo() in papeisLider()
             && get(/databases/$(database)/documents/unidades/$(resource.data.unidadeId)).data.get('mentorId', '') == request.auth.uid);
 
       // Favoritos do Pratique Play: cada pessoa mexe só nos próprios.
@@ -69,11 +173,13 @@ service cloud.firestore {
     }
 
     // ===================== DEMAIS COLEÇÕES =====================
-    // Logados leem e escrevem (como antes), EXCETO usuarios e publico, que seguem as regras acima.
+    // Logados leem e escrevem (como antes), EXCETO usuarios, publico e validacoes, que seguem as regras acima.
+    // Professor não grava nada aqui, só cria registros de auditoria (log da validação e do "Sair").
     // (No Firestore, se QUALQUER regra libera, a ação passa; por isso as exceções precisam estar aqui.)
     match /{colecao}/{resto=**} {
       allow read: if logado();
-      allow write: if logado() && !(colecao in ['usuarios', 'publico']);
+      allow write: if logado() && !(colecao in ['usuarios', 'publico', 'validacoes']) && !souProfessor();
+      allow create: if logado() && colecao in ['auditoria_cronograma', 'auditoria_configuracoes'];
     }
   }
 }

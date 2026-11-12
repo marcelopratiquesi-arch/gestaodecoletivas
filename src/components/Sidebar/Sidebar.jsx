@@ -1,3 +1,4 @@
+import { ehLider } from '../../permissions';
 import React, { useState, useEffect, useMemo } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
@@ -8,6 +9,8 @@ import { collection, query, where, getDocs, onSnapshot } from "firebase/firestor
 import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
 import { LANGUAGES, getDiaSemana, formatDateTime, formatRole } from "../../utils/formatters";
 import { feriadoNoDia } from "../../utils/feriados";
+import { hojeLocal, mesLocal, pendenciasDoProfessor } from "../../utils/validacoes";
+import { useValidacoesDoProfessor, meuProfessorId } from "../../hooks/useValidacoesDoProfessor";
 
 import { 
   LayoutDashboard, BarChart3, Calendar, CircleCheck, 
@@ -26,6 +29,21 @@ export default function Sidebar({ collapsed }) {
   const { t, i18n } = useTranslation(); // 🟢 CÉREBRO CONECTADO
 
   const [pendencias, setPendencias] = useState(0);
+
+  // Professor: o selo conta as pendências do MÊS (não só de hoje), em tempo real.
+  // Usa a mesma consulta da Validação Diária (o Firebase compartilha, sem leitura em dobro).
+  const ehProfessor = String(userData?.role || "").trim().toLowerCase() === "professor";
+  const profIdSelo = ehProfessor ? meuProfessorId(userData, catalogs.professores) : null;
+  const { validacoes: validacoesSelo, carregando: carregandoSelo } =
+    useValidacoesDoProfessor(profIdSelo, `${mesLocal()}-01`, hojeLocal());
+  const pendenciasProfessor = useMemo(() => {
+    if (!ehProfessor || loadingCatalogs || carregandoSelo) return 0;
+    return pendenciasDoProfessor({
+      aulas: catalogs.aulas, unidades: catalogs.unidades, feriados: catalogs.feriados,
+      validacoes: validacoesSelo, professorId: profIdSelo, getDiaSemana, feriadoNoDia,
+    }).length;
+  }, [ehProfessor, loadingCatalogs, carregandoSelo, catalogs, validacoesSelo, profIdSelo]);
+
   const [alertas, setAlertas] = useState([]);
   const [unreadAlerts, setUnreadAlerts] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -54,6 +72,8 @@ export default function Sidebar({ collapsed }) {
 
   const role = String(userData.role || "").trim().toLowerCase();
   const isMaster = role === 'admin' || role === 'master';
+  // Professor de coletiva só vê: Cronograma, Link do Aluno e Validação Diária.
+  const isProfessor = role === 'professor';
 
   const userInitials = userData.nome 
     ? (userData.nome.split(' ')[0][0] + (userData.nome.split(' ').length > 1 ? userData.nome.split(' ').pop()[0] : '')).toUpperCase()
@@ -66,7 +86,7 @@ export default function Sidebar({ collapsed }) {
   // Aulas e cadastros vêm da memória ao vivo (CatalogContext); só as validações de hoje são buscadas a cada minuto.
   // Conta apenas aulas ativas hoje (não excluídas, dentro de início/fim) e fora de feriado (regra única).
   useEffect(() => {
-    if (loadingCatalogs) return;
+    if (loadingCatalogs || role === 'professor') return; // professor usa pendenciasProfessor (mês inteiro)
     const fetchPendencias = async () => {
         try {
             const todayStr = new Date().toLocaleDateString('en-CA');
@@ -90,7 +110,7 @@ export default function Sidebar({ collapsed }) {
                 let isMyResponsibility = false;
 
                 if (role === 'admin') isMyResponsibility = true;
-                else if (role === 'unidade' && String(aula.unidadeId) === String(userData.unidadeId)) isMyResponsibility = true;
+                else if (ehLider(role) && String(aula.unidadeId) === String(userData.unidadeId)) isMyResponsibility = true;
                 else if (role === 'professor' && meuProfessorId && String(aula.professorId) === String(meuProfessorId)) isMyResponsibility = true;
                 else if (role === 'mentor' && unidade?.mentorId === meuId) isMyResponsibility = true;
 
@@ -336,11 +356,11 @@ export default function Sidebar({ collapsed }) {
 
           <div className="space-y-1.5">
               {!collapsed && <p className="px-4 text-[9px] font-black text-slate-400/60 uppercase tracking-widest mb-2">{t('sidebar.sections.principal', 'Principal')}</p>}
-              <NavItem to="/app" icon={LayoutDashboard} label={t('sidebar.items.inicio', 'Início')} collapsed={collapsed} active={path === "/app"} />
-              {["admin", "mentor", "unidade", "professor"].includes(role) && 
+              {!isProfessor && <NavItem to="/app" icon={LayoutDashboard} label={t('sidebar.items.inicio', 'Início')} collapsed={collapsed} active={path === "/app"} />}
+              {["admin", "mentor", "lider", "unidade", "professor"].includes(role) &&
                   <NavItem to="/app/cronograma" icon={Calendar} label={t('sidebar.items.cronograma', 'Cronograma')} collapsed={collapsed} active={isActive("/app/cronograma")} />
               }
-              {["admin", "mentor", "unidade", "professor"].includes(role) && 
+              {["admin", "mentor", "lider", "unidade"].includes(role) &&
                   <NavItem to="/app/pratique-play" icon={Headphones} label={t('sidebar.items.pratiquePlay')} collapsed={collapsed} active={isActive("/app/pratique-play")} />
               }
               <NavItem to="/horarios" icon={Globe} label={t('sidebar.items.linkAluno', 'Link do Aluno')} collapsed={collapsed} active={false} target="_blank" />
@@ -348,17 +368,17 @@ export default function Sidebar({ collapsed }) {
 
           <div className="space-y-1.5">
               {!collapsed && <p className="px-4 text-[9px] font-black text-slate-400/60 uppercase tracking-widest mb-2">{t('sidebar.sections.operacional', 'Operacional')}</p>}
-              <NavItem to="/app/validacao-diaria" icon={CircleCheck} label={t('sidebar.items.validacaoDiaria', 'Validação Diária')} collapsed={collapsed} active={isActive("/app/validacao-diaria")} badge={pendencias}/>
+              <NavItem to="/app/validacao-diaria" icon={CircleCheck} label={t('sidebar.items.validacaoDiaria', 'Validação Diária')} collapsed={collapsed} active={isActive("/app/validacao-diaria")} badge={isProfessor ? pendenciasProfessor : pendencias}/>
               {["admin", "mentor"].includes(role) && <NavItem to="/app/validacao-coletiva" icon={ShieldCheck} label={t('sidebar.items.validacaoColetiva', 'Validação Coletiva')} collapsed={collapsed} active={isActive("/app/validacao-coletiva")} />}
           </div>
 
-          <div className="space-y-1.5">
+          {!isProfessor && <div className="space-y-1.5">
               {!collapsed && <p className="px-4 text-[9px] font-black text-slate-400/60 uppercase tracking-widest mb-2">{t('sidebar.sections.gestao', 'Gestão')}</p>}
               {["admin", "mentor"].includes(role) && <NavItem to="/app/financeiro" icon={TrendingUp} label={t('sidebar.items.performanceFinanceira', 'Financeiro')} collapsed={collapsed} active={isActive("/app/financeiro")} />}
               <NavItem to="/app/relatorio-gerencial" icon={BarChart3} label={t('sidebar.items.relatorios', 'Relatórios')} collapsed={collapsed} active={isActive("/app/relatorio-gerencial")} />
               {["admin", "mentor"].includes(role) && <NavItem to="/app/comunicacao" icon={Megaphone} label={t('sidebar.items.comunicados')} collapsed={collapsed} active={isActive("/app/comunicacao")} />}
-              {["admin", "mentor", "unidade"].includes(role) && <NavItem to="/app/configuracoes" icon={Settings} label={t('sidebar.items.configuracoes', 'Configurações')} collapsed={collapsed} active={isActive("/app/configuracoes")} />}
-          </div>
+              {["admin", "mentor", "lider", "unidade"].includes(role) && <NavItem to="/app/configuracoes" icon={Settings} label={t('sidebar.items.configuracoes', 'Configurações')} collapsed={collapsed} active={isActive("/app/configuracoes")} />}
+          </div>}
 
           {/* 🟢 O COFRE MASTER */}
           {isMaster && (

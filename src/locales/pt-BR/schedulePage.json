@@ -1,7 +1,7 @@
 {
   "title": "Agenda de Coletivas",
   "subtitle": "Gerenciamento de Grade e Horário",
-  "subtitleReadOnly": "Consulte os horários de todas as unidades",
+  "subtitleReadOnly": "Consulte o quadro de coletivas das suas unidades",
   "closedBadge": "Encerrada",
   "closedClassTitle": "Aula Encerrada (Apenas Histórico)",
   "activeClassTitle": "Aula Ativa",
@@ -13,7 +13,8 @@
     "searchInGrid": "Filtrar nesta grade",
     "searchEverywhere": "Buscar Modalidade em todas as unidades",
     "searchPlaceholderInGrid": "Ex: Spinning...",
-    "searchPlaceholderEverywhere": "Ex: Digite 'Pilates' para ver onde tem..."
+    "searchPlaceholderEverywhere": "Ex: Digite 'Pilates' para ver onde tem...",
+    "selectMyUnit": "Selecione sua unidade..."
   },
   "buttons": {
     "showHistory": "Ver Encerradas",
@@ -27,7 +28,11 @@
     "noClassesFound": "Nenhuma aula encontrada com este nome.",
     "emptyGrid": "A grade atual está vazia. Tente clicar em 'Ver Encerradas'.",
     "noClassesInUnit": "Nenhuma aula cadastrada nesta unidade.",
-    "createFirstClass": "Criar primeira aula"
+    "createFirstClass": "Criar primeira aula",
+    "selectMyUnitTitle": "Selecione sua unidade",
+    "selectMyUnitDesc": "Escolha uma das suas unidades para ver o quadro de coletivas.",
+    "noLinkedUnitTitle": "Nenhuma unidade vinculada",
+    "noLinkedUnitDesc": "Você ainda não está vinculado a nenhuma unidade. Fale com a coordenação."
   },
   "modal": {
     "newTitle": "CRIAR NOVA AULA",

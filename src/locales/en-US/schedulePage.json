@@ -1,7 +1,7 @@
 {
   "title": "Class Schedule",
   "subtitle": "Grid and Schedule Management",
-  "subtitleReadOnly": "Check the schedules of all units",
+  "subtitleReadOnly": "Check the group class schedule of your units",
   "closedBadge": "Closed",
   "closedClassTitle": "Closed Class (History Only)",
   "activeClassTitle": "Active Class",
@@ -13,7 +13,8 @@
     "searchInGrid": "Filter in this grid",
     "searchEverywhere": "Search Modality in all units",
     "searchPlaceholderInGrid": "Ex: Spinning...",
-    "searchPlaceholderEverywhere": "Ex: Type 'Pilates' to see where it's available..."
+    "searchPlaceholderEverywhere": "Ex: Type 'Pilates' to see where it's available...",
+    "selectMyUnit": "Select your unit..."
   },
   "buttons": {
     "showHistory": "View Finished",
@@ -27,7 +28,11 @@
     "noClassesFound": "No classes found with this name.",
     "emptyGrid": "The current grid is empty. Try clicking 'View Finished'.",
     "noClassesInUnit": "No classes registered in this unit.",
-    "createFirstClass": "Create first class"
+    "createFirstClass": "Create first class",
+    "selectMyUnitTitle": "Select your unit",
+    "selectMyUnitDesc": "Choose one of your units to see the group class schedule.",
+    "noLinkedUnitTitle": "No linked unit",
+    "noLinkedUnitDesc": "You are not linked to any unit yet. Please contact the coordination."
   },
   "modal": {
     "newTitle": "CREATE NEW CLASS",

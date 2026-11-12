@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
 import { getDiaSemana, formatCurrency } from "../utils/formatters";
 import { deduplicarValidacoes } from "../utils/validacoes";
 import { valorDaValidacao } from "../utils/valores";
+import { ehLider } from '../permissions';
 
 // 🟢 CACHE GLOBAL DA HOME (Fica fora do componente para não ser destruído ao trocar de aba)
 let homeDashboardCache = {
@@ -147,13 +148,13 @@ export default function Home() {
   const userId = userData?.id || userData?.uid;
 
   const permissions = useMemo(() => ({
-      relatorio: ['admin', 'mentor', 'unidade', 'professor'].includes(role),
+      relatorio: ['admin', 'mentor', 'lider', 'unidade', 'professor'].includes(role),
       cronograma: true, 
       validacaoDiaria: true, 
       validacaoColetiva: ['admin', 'mentor'].includes(role), 
-      configuracoes: ['admin', 'mentor', 'unidade'].includes(role),
-      pratiquePlay: ['admin', 'mentor', 'unidade', 'professor'].includes(role),
-      linkAluno: ['admin', 'mentor', 'unidade', 'professor'].includes(role),
+      configuracoes: ['admin', 'mentor', 'lider', 'unidade'].includes(role),
+      pratiquePlay: ['admin', 'mentor', 'lider', 'unidade', 'professor'].includes(role),
+      linkAluno: ['admin', 'mentor', 'lider', 'unidade', 'professor'].includes(role),
   }), [role]);
 
   useEffect(() => {
@@ -220,7 +221,7 @@ export default function Home() {
                 hasAccess = true;
             } else if (role === 'mentor') {
                 if (unidadesMentorIds.includes(String(aula.unidadeId))) hasAccess = true;
-            } else if (role === 'unidade') {
+            } else if (ehLider(role)) {
                 if (String(aula.unidadeId) === String(userData.unidadeId)) hasAccess = true;
             } else if (role === 'professor') {
                 if (String(aula.professorId) === String(meuProfId)) hasAccess = true;
@@ -327,7 +328,7 @@ export default function Home() {
   const coletivaStatus = getColetivaStatus(resumoColetiva.percentual);
 
   // 🟢 Role adaptada ao idioma
-  const userContextLabel = role === 'admin' ? t('home.roles.admin') : (role === 'unidade' ? userData.unidadeNome : (role === 'professor' ? t('home.roles.professor') : t('home.roles.mentor')));
+  const userContextLabel = role === 'admin' ? t('home.roles.admin') : (ehLider(role) ? userData.unidadeNome : (role === 'professor' ? t('home.roles.professor') : t('home.roles.mentor')));
 
   return (
     <div className="p-6 md:p-8 max-w-[1920px] mx-auto animate-fade-in min-h-screen bg-slate-50 dark:bg-[#0b1120]">
@@ -562,7 +563,7 @@ export default function Home() {
                         </div>
                     )}
 
-                    {(role === 'admin' || role === 'unidade') && (
+                    {(role === 'admin' || ehLider(role)) && (
                         <div className="flex flex-col items-center gap-1 group/icon cursor-pointer hover:bg-white p-2 rounded-lg transition-all">
                             <Users className="w-6 h-6 text-slate-400 group-hover/icon:text-green-600"/>
                             <span className="text-[8px] font-bold uppercase text-slate-400 group-hover/icon:text-slate-600">{t('home.cards.settings.profs')}</span>

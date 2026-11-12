@@ -5,6 +5,7 @@ import {
   ShieldCheck, Database, LayoutDashboard, Loader2, Headphones 
 } from "lucide-react";
 import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
+import { ehLider } from '../../permissions';
 
 // --- LAZY LOADING ---
 const UnidadesTab = lazy(() => import('./Unidades/UnidadesTab').then(module => ({ default: module.UnidadesTab })));
@@ -38,7 +39,7 @@ export default function ConfiguracoesPage() {
   const tabs = useMemo(() => [
     { id: "unidades", label: t('settingsPage.tabs.unidades', 'Unidades'), icon: Building2, roles: ["admin", "mentor"] },
     { id: "mentores", label: t('settingsPage.tabs.mentores', 'Mentores'), icon: ShieldCheck, roles: ["admin"] },
-    { id: "professores", label: t('settingsPage.tabs.professores', 'Professores'), icon: Users, roles: ["admin", "mentor", "unidade"] },
+    { id: "professores", label: t('settingsPage.tabs.professores', 'Professores'), icon: Users, roles: ["admin", "mentor", "lider", "unidade"] },
     { id: "modalidades", label: t('settingsPage.tabs.modalidades', 'Modalidades'), icon: Dumbbell, roles: ["admin", "mentor"] },
     { id: "feriados", label: t('settingsPage.tabs.feriados', 'Feriados'), icon: CalendarDays, roles: ["admin", "mentor"] },
     { id: "pratique-play", label: t('settingsPage.tabs.pratiquePlay', 'Pratique Play'), icon: Headphones, roles: ["admin"] },
@@ -48,7 +49,7 @@ export default function ConfiguracoesPage() {
   const allowedTabs = useMemo(() => tabs.filter(t => t.roles.includes(role)), [role, tabs]);
 
   const [activeTab, setActiveTab] = useState(() => {
-    if (role === 'unidade') return 'professores';
+    if (ehLider(role)) return 'professores';
     const firstAllowed = tabs.find(t => t.roles.includes(role));
     return firstAllowed ? firstAllowed.id : 'unidades';
   });
@@ -82,7 +83,7 @@ export default function ConfiguracoesPage() {
           {t('settingsPage.title', 'Painel de Configurações')}
         </h1>
         <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium ml-1">
-          {role === 'unidade' 
+          {ehLider(role) 
             ? t('settingsPage.subtitle.unidade', 'Gerencie o quadro de professores da sua unidade.') 
             : t('settingsPage.subtitle.default', 'Gerencie os registros globais e parâmetros do sistema.')}
         </p>

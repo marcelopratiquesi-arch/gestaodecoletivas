@@ -13,6 +13,7 @@ import {
 } from 'firebase/firestore';
 import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
 import { DIAS_SEMANA_GRADE, formatWeekday, getCurrencySymbol } from '../../utils/formatters';
+import { ehLider } from '../../permissions';
 
 // --- FUNÇÕES UTILITÁRIAS ---
 const getTodayStr = () => new Date().toLocaleDateString('en-CA');
@@ -215,7 +216,7 @@ export default function CronogramaPage() {
         let unitsToShow = [];
         if (role === 'admin') unitsToShow = finalUnidades;
         else if (role === 'mentor') unitsToShow = finalUnidades.filter(u => u.mentorId === userId);
-        else if (role === 'unidade') unitsToShow = finalUnidades.filter(u => u.id === userData.unidadeId);
+        else if (ehLider(role)) unitsToShow = finalUnidades.filter(u => u.id === userData.unidadeId);
         else if (role === 'professor') {
             const meuPerfil = todosProfessores.find(p => p.uidLogin === userId);
             if (meuPerfil) {
@@ -593,7 +594,7 @@ export default function CronogramaPage() {
             {t('schedulePage.title', 'Agenda de Coletivas')}
           </h1>
           <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium">
-            {isReadOnly ? t('schedulePage.subtitleReadOnly', "Consulte os horários de todas as unidades") : t('schedulePage.subtitle', "Gerenciamento Inteligente de Grade e Horário")}
+            {isReadOnly ? t('schedulePage.subtitleReadOnly', "Consulte o quadro de coletivas das suas unidades") : t('schedulePage.subtitle', "Gerenciamento Inteligente de Grade e Horário")}
           </p>
         </div>
       </div>
@@ -602,7 +603,8 @@ export default function CronogramaPage() {
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-100 dark:border-slate-700 p-6">
         <div className="flex flex-col xl:flex-row gap-4 items-end">
           
-          <div className="w-full md:w-32 space-y-2">
+          {/* Professor não vê Estado, Busca nem Encerradas: só escolhe uma das unidades dele. */}
+          {!isReadOnly && <div className="w-full md:w-32 space-y-2">
             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
               <Globe className="w-3 h-3" /> {t('schedulePage.filters.state', 'Estado')}
             </label>
@@ -617,9 +619,9 @@ export default function CronogramaPage() {
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
             </div>
-          </div>
+          </div>}
 
-          <div className="w-full md:w-64 space-y-2">
+          <div className={`w-full space-y-2 ${isReadOnly ? 'md:w-96' : 'md:w-64'}`}>
             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
               <MapPin className="w-3 h-3" /> {t('schedulePage.filters.unit', 'Unidade')}
             </label>
@@ -628,10 +630,10 @@ export default function CronogramaPage() {
                 className="w-full h-12 pl-4 pr-10 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl text-sm font-bold text-slate-700 dark:text-white focus:border-red-500 outline-none appearance-none cursor-pointer"
                 value={selectedUnit}
                 onChange={(e) => setSelectedUnit(e.target.value)}
-                disabled={availableUnits.length <= 1 && (role === 'unidade' || role === 'professor')}
+                disabled={availableUnits.length <= 1 && (ehLider(role) || role === 'professor')}
               >
-                <option value="">{t('schedulePage.filters.allUnits', 'Selecione...')}</option>
-                {filteredUnitsDropdown.map(u => (
+                <option value="">{isReadOnly ? t('schedulePage.filters.selectMyUnit', 'Selecione sua unidade...') : t('schedulePage.filters.allUnits', 'Selecione...')}</option>
+                {(isReadOnly ? availableUnits : filteredUnitsDropdown).map(u => (
                   <option key={u.id} value={u.id}>{u.nome}</option>
                 ))}
               </select>
@@ -639,7 +641,7 @@ export default function CronogramaPage() {
             </div>
           </div>
 
-          <div className="flex-1 w-full space-y-2">
+          {!isReadOnly && <div className="flex-1 w-full space-y-2">
             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
               <Search className="w-3 h-3" /> {selectedUnit ? t('schedulePage.filters.searchInGrid', "Filtrar nesta grade") : t('schedulePage.filters.searchEverywhere', "Buscar Modalidade em todas as unidades")}
             </label>
@@ -653,9 +655,9 @@ export default function CronogramaPage() {
               />
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             </div>
-          </div>
+          </div>}
 
-          <button 
+          {!isReadOnly && <button
               onClick={() => setMostrarEncerradas(!mostrarEncerradas)}
               className={`h-12 px-4 rounded-xl font-bold text-[11px] uppercase flex items-center gap-2 shadow-sm transition-all whitespace-nowrap
               ${mostrarEncerradas 
@@ -664,7 +666,7 @@ export default function CronogramaPage() {
           >
               {mostrarEncerradas ? <EyeOff className="w-4 h-4"/> : <History className="w-4 h-4"/>}
               <span className="hidden sm:inline">{mostrarEncerradas ? t('schedulePage.buttons.hideHistory', "Ocultar Encerradas") : t('schedulePage.buttons.showHistory', "Ver Encerradas")}</span>
-          </button>
+          </button>}
 
           {!isReadOnly && (
             <button 
@@ -689,8 +691,24 @@ export default function CronogramaPage() {
         {!selectedUnit && !debouncedSearchTerm && (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 bg-slate-50/50 dark:bg-slate-900/50 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-700">
             <Globe className="w-16 h-16 mb-4 text-slate-300 dark:text-slate-600" />
-            <h3 className="text-xl font-black text-slate-600 dark:text-slate-400">{t('schedulePage.placeholders.startSearchTitle', 'Comece sua busca')}</h3>
-            <p className="text-sm mt-1">{t('schedulePage.placeholders.startSearchDesc', 'Selecione uma Unidade para ver o calendário ou digite uma Modalidade para buscar em todas.')}</p>
+            {isReadOnly ? (
+              availableUnits.length === 0 && !loading ? (
+                <>
+                  <h3 className="text-xl font-black text-slate-600 dark:text-slate-400">{t('schedulePage.placeholders.noLinkedUnitTitle', 'Nenhuma unidade vinculada')}</h3>
+                  <p className="text-sm mt-1">{t('schedulePage.placeholders.noLinkedUnitDesc', 'Você ainda não está vinculado a nenhuma unidade. Fale com a coordenação.')}</p>
+                </>
+              ) : (
+                <>
+                  <h3 className="text-xl font-black text-slate-600 dark:text-slate-400">{t('schedulePage.placeholders.selectMyUnitTitle', 'Selecione sua unidade')}</h3>
+                  <p className="text-sm mt-1">{t('schedulePage.placeholders.selectMyUnitDesc', 'Escolha uma das suas unidades para ver o quadro de coletivas.')}</p>
+                </>
+              )
+            ) : (
+              <>
+                <h3 className="text-xl font-black text-slate-600 dark:text-slate-400">{t('schedulePage.placeholders.startSearchTitle', 'Comece sua busca')}</h3>
+                <p className="text-sm mt-1">{t('schedulePage.placeholders.startSearchDesc', 'Selecione uma Unidade para ver o calendário ou digite uma Modalidade para buscar em todas.')}</p>
+              </>
+            )}
           </div>
         )}
 
@@ -723,7 +741,7 @@ export default function CronogramaPage() {
                 {filteredClasses.length === 0 && !debouncedSearchTerm ? (
                     <div className="py-20 flex flex-col items-center justify-center text-slate-400 dark:text-slate-500">
                         <Calendar className="w-12 h-12 mb-3 opacity-20" />
-                        <p>{mostrarEncerradas ? t('schedulePage.placeholders.noClassesInUnit', "Nenhuma aula cadastrada nesta unidade.") : t('schedulePage.placeholders.emptyGrid', "A grade atual está vazia. Tente clicar em 'Ver Encerradas'.")}</p>
+                        <p>{(mostrarEncerradas || isReadOnly) ? t('schedulePage.placeholders.noClassesInUnit', "Nenhuma aula cadastrada nesta unidade.") : t('schedulePage.placeholders.emptyGrid', "A grade atual está vazia. Tente clicar em 'Ver Encerradas'.")}</p>
                         {!isReadOnly && <button onClick={openNewModal} className="mt-2 text-red-600 hover:underline font-bold text-sm">{t('schedulePage.placeholders.createFirstClass', 'Criar nova aula')}</button>}
                     </div>
                 ) : (
@@ -779,7 +797,7 @@ export default function CronogramaPage() {
                     
                         <div>
                             <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 block">{t('schedulePage.filters.unit', 'Unidade')}</label>
-                            <select className="w-full p-3.5 bg-slate-100 dark:bg-slate-900 border-transparent rounded-xl text-sm font-bold text-slate-600 dark:text-slate-300 outline-none" value={formData.unidadeId} onChange={e => setFormData({...formData, unidadeId: e.target.value})} disabled={userData?.role === 'unidade'}>
+                            <select className="w-full p-3.5 bg-slate-100 dark:bg-slate-900 border-transparent rounded-xl text-sm font-bold text-slate-600 dark:text-slate-300 outline-none" value={formData.unidadeId} onChange={e => setFormData({...formData, unidadeId: e.target.value})} disabled={ehLider(userData?.role)}>
                                 <option value="">{t('schedulePage.filters.allUnits', 'Selecione...')}</option>
                                 {availableUnits.map(u => <option key={u.id} value={u.id}>{u.nome}</option>)}
                             </select>

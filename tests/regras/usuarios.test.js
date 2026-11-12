@@ -29,6 +29,8 @@ beforeEach(async () => {
     await setDoc(doc(db, 'unidades/uniB'), { nome: 'Unidade B', mentorId: 'mentor2' });
     await setDoc(doc(db, 'usuarios/loginUniA'), { role: 'unidade', unidadeId: 'uniA', nome: 'Unidade A', telefone: '1' });
     await setDoc(doc(db, 'usuarios/loginUniB'), { role: 'unidade', unidadeId: 'uniB', nome: 'Unidade B' });
+    await setDoc(doc(db, 'usuarios/liderA'), { role: 'lider', unidadeId: 'uniA', nome: 'Líder A' });
+    await setDoc(doc(db, 'usuarios/liderB'), { role: 'lider', unidadeId: 'uniB', nome: 'Líder B' });
     await setDoc(doc(db, 'usuarios/prof1'), { role: 'professor', professorId: 'p1', nome: 'Prof' });
     await setDoc(doc(db, 'aulas/aula1'), { unidadeId: 'uniA' });
     await setDoc(doc(db, 'publico/vitrine'), { unidades: { uniA: { nome: 'Unidade A' } }, professores: { p1: 'Prof' } });
@@ -178,11 +180,45 @@ describe('o resto do sistema não mudou', () => {
     await assertSucceeds(getDoc(doc(db, 'unidades/uniA')));
     await assertSucceeds(getDoc(doc(db, 'professores/p1')));
   });
-  it('logado: lê crachás e grava aulas, validações e auditoria como antes', async () => {
+  it('logado: lê crachás e grava aulas e auditoria como antes', async () => {
     const db = como('loginUniA');
     await assertSucceeds(getDoc(doc(db, 'usuarios/admin1')));
     await assertSucceeds(setDoc(doc(db, 'aulas/aula2'), { unidadeId: 'uniA' }));
-    await assertSucceeds(addDoc(collection(db, 'validacoes'), { x: 1 }));
     await assertSucceeds(addDoc(collection(db, 'auditoria_cronograma'), { x: 1 }));
+  });
+  it('validações agora têm regra própria: lixo sem aula/data/prazo é recusado (ver validacoes.test.js)', async () => {
+    await assertFails(addDoc(collection(como('loginUniA'), 'validacoes'), { x: 1 }));
+  });
+});
+
+describe('líder (perfil novo "lider"): mesmas permissões do antigo "unidade"', () => {
+  it('NÃO vira admin nem mentor', async () => {
+    await assertFails(updateDoc(doc(como('liderA'), 'usuarios/liderA'), { role: 'admin' }));
+    await assertFails(updateDoc(doc(como('liderA'), 'usuarios/liderA'), { role: 'mentor' }));
+  });
+  it('cria login de professor e edita o nome', async () => {
+    const db = como('liderA');
+    await assertSucceeds(setDoc(doc(db, 'usuarios/profDoLider'), { role: 'professor' }));
+    await assertSucceeds(updateDoc(doc(db, 'usuarios/prof1'), { nome: 'Outro Nome' }));
+  });
+  it('NÃO cria líder/mentor/admin e NÃO exclui ninguém', async () => {
+    const db = como('liderA');
+    await assertFails(setDoc(doc(db, 'usuarios/l2'), { role: 'lider' }));
+    await assertFails(setDoc(doc(db, 'usuarios/m2'), { role: 'admin' }));
+    await assertFails(deleteDoc(doc(db, 'usuarios/prof1')));
+  });
+  it('mentor cria login de líder, edita telefone e exclui só o da própria unidade', async () => {
+    const db = como('mentor1');
+    await assertSucceeds(setDoc(doc(db, 'usuarios/novoLider'), { role: 'lider', unidadeId: 'uniA' }));
+    await assertSucceeds(updateDoc(doc(db, 'usuarios/liderA'), { telefone: '+55 31 9' }));
+    await assertFails(updateDoc(doc(db, 'usuarios/liderA'), { role: 'admin' }));
+    await assertSucceeds(deleteDoc(doc(db, 'usuarios/liderA')));
+    await assertFails(deleteDoc(doc(db, 'usuarios/liderB')));
+  });
+  it('admin troca unidade → líder (Controle de Acessos)', async () => {
+    await assertSucceeds(updateDoc(doc(como('admin1'), 'usuarios/loginUniA'), { role: 'lider' }));
+  });
+  it('grava a vitrine pública como o antigo perfil unidade', async () => {
+    await assertSucceeds(setDoc(doc(como('liderA'), 'publico/vitrine'), { unidades: {}, professores: {} }));
   });
 });

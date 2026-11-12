@@ -18,6 +18,7 @@ import { deduplicarValidacoes } from '../../utils/validacoes';
 // 🟢 IMPORTANDO AS VISÕES (Os arquivos que você já separou)
 import VisaoGlobal from './VisaoGlobal';
 import VisaoPerformance from './VisaoPerformance';
+import { ehLider } from '../../permissions';
 
 // ============================================================================
 // 1. HELPERS & CONFIGURAÇÕES GLOBAIS
@@ -198,7 +199,7 @@ export default function RadarDeGrade() {
 
     const [formData, setFormData] = useState({ modalidadeId: '', professorId: '', hora: '', valor: '', dias: [], dataInicio: getTodayStr() });
 
-    if (role === 'professor' || role === 'unidade') {
+    if (role === 'professor' || ehLider(role)) {
         return <div className="p-20 text-center font-black text-slate-300 dark:text-slate-600">{t('radar.restricted')}</div>;
     }
 

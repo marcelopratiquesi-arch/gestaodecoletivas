@@ -92,7 +92,7 @@ export function AuthProvider({ children }) {
       role: userData?.role || null,
       isAdmin: userData?.role === "admin",
       isMentor: userData?.role === "mentor",
-      isUnidade: userData?.role === "unidade",
+      isUnidade: ["lider", "unidade"].includes(String(userData?.role || "").toLowerCase()),
       isProfessor: userData?.role === "professor",
     }),
     [user, userData, loading]

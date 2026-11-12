@@ -201,7 +201,7 @@ export default function ControleAcessosPage() {
                                                             className={`w-full p-2.5 rounded-lg text-xs font-black uppercase outline-none border transition-all cursor-pointer appearance-none shadow-sm
                                                                 ${roleAtual === 'admin' ? 'bg-rose-50 border-rose-200 text-rose-700' : 
                                                                 roleAtual === 'mentor' ? 'bg-blue-50 border-blue-200 text-blue-700' : 
-                                                                roleAtual === 'unidade' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 
+                                                                (roleAtual === 'lider' || roleAtual === 'unidade') ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 
                                                                 'bg-slate-50 border-slate-200 text-slate-700'}
                                                             `}
                                                             value={roleAtual}
@@ -210,6 +210,7 @@ export default function ControleAcessosPage() {
                                                         >
                                                             <option value="admin">{t('misc.access.roles.admin')}</option>
                                                             <option value="mentor">{t('misc.access.roles.mentor')}</option>
+                                                            <option value="lider">{t('misc.access.roles.lider')}</option>
                                                             <option value="unidade">{t('misc.access.roles.unidade')}</option>
                                                             <option value="professor">{t('misc.access.roles.professor')}</option>
                                                             <option value="bloqueado">{t('misc.access.roles.bloqueado')}</option>

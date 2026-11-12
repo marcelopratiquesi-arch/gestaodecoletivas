@@ -8,18 +8,26 @@ import {
 import { 
   Calendar, CircleCheck, CircleX, TriangleAlert, 
   MapPin, Filter, Search, List, ArrowDown, DownloadCloud, Loader2, LayoutDashboard, UserCog,
-  Map as MapIcon, Star, CheckSquare, Square, ChevronDown 
+  Map as MapIcon, Star, CheckSquare, Square, ChevronDown, Layers, ChevronsUpDown, ChevronsDownUp
 } from 'lucide-react';
 
 import { AulaCard } from './AulaCard';
+import { PilhaAulas } from './PilhaAulas';
+import { ListaAulas } from './ListaAulas';
 import { ValidationModal } from './ValidationModal';
 import { getDiaSemana, formatCurrency } from '../../utils/formatters';
-import { idValidacao, deduplicarValidacoes } from '../../utils/validacoes';
+import {
+  idValidacao, deduplicarValidacoes, regraDePrazo, hojeLocal, mesLocal, dataLocal,
+  alunosValidos, LIMITE_ALUNOS, MIN_JUSTIFICATIVA, DIAS_RETROATIVOS_LIDER, pendenciasDoProfessor
+} from '../../utils/validacoes';
 import { feriadoNoDia } from '../../utils/feriados';
+import { useValidacoesDoProfessor, meuProfessorId } from '../../hooks/useValidacoesDoProfessor';
+import { useMediaAlunos, numeroEstranho } from '../../hooks/useMediaAlunos';
 import { useTranslation } from 'react-i18next';
+import { ehLider } from '../../permissions';
 
 // --- HELPERS ---
-const getTodayStr = () => new Date().toLocaleDateString('en-CA'); 
+const getTodayStr = hojeLocal;
 
 const getMonthDates = (year, month) => {
   const date = new Date(year, month, 1);
@@ -140,7 +148,8 @@ export default function ValidacaoDiariaPage() {
   // --- FILTROS MULTI-SELECT ---
   const [modoFiltro, setModoFiltro] = useState('dia'); 
   const [dataFiltro, setDataFiltro] = useState(getTodayStr());
-  const [mesFiltro, setMesFiltro] = useState(new Date().toISOString().slice(0, 7));
+  // Mês no fuso do aparelho (o toISOString virava o mês às 21h do último dia).
+  const [mesFiltro, setMesFiltro] = useState(mesLocal());
   
   const [filtroEstado, setFiltroEstado] = useState([]);
   const [filtroMentor, setFiltroMentor] = useState([]);
@@ -178,12 +187,12 @@ export default function ValidacaoDiariaPage() {
     
     if (role === 'mentor') {
       unitsData = unitsData.filter(u => u.mentorId === userId);
-    } else if (role === 'unidade') {
+    } else if (ehLider(role)) {
       unitsData = unitsData.filter(u => String(u.id) === String(userUnidadeId));
     } else if (role === 'professor') {
-      const meuPerfil = globalCatalogs.professores.find(p => p.uidLogin === userId);
-      if (meuPerfil) {
-         const meusLinks = globalCatalogs.vinculos.filter(l => String(l.professorId) === String(meuPerfil.id));
+      const meuId = meuProfessorId(userData, globalCatalogs.professores);
+      if (meuId) {
+         const meusLinks = globalCatalogs.vinculos.filter(l => String(l.professorId) === String(meuId));
          const minhasUnidadesIds = meusLinks.map(l => String(l.unidadeId));
          unitsData = unitsData.filter(u => minhasUnidadesIds.includes(String(u.id)));
       } else {
@@ -192,11 +201,50 @@ export default function ValidacaoDiariaPage() {
     }
 
     return { ...globalCatalogs, unidades: unitsData };
-  }, [globalCatalogs, loadingCatalogs, role, userId, userUnidadeId]);
+  }, [globalCatalogs, loadingCatalogs, role, userId, userUnidadeId, userData]);
+
+  // --- PERÍODO NA TELA E VALIDAÇÕES DO PROFESSOR ---
+  const periodo = useMemo(() => {
+    if (modoFiltro === 'dia') return { inicio: dataFiltro, fim: dataFiltro };
+    const [ano, mes] = mesFiltro.split('-');
+    const lastDay = new Date(parseInt(ano), parseInt(mes), 0).getDate();
+    return { inicio: `${ano}-${mes}-01`, fim: `${ano}-${mes}-${String(lastDay).padStart(2, '0')}` };
+  }, [modoFiltro, dataFiltro, mesFiltro]);
+
+  const isProfessor = role === 'professor';
+  const meuProfId = useMemo(
+    () => (isProfessor ? meuProfessorId(userData, catalogs.professores) : null),
+    [isProfessor, userData, catalogs.professores]
+  );
+
+  // O professor sempre carrega o mês atual inteiro (para o aviso de pendências), mais o período escolhido.
+  const inicioMesAtual = `${mesLocal()}-01`;
+  const hoje = hojeLocal();
+  const faixaProfessor = {
+    inicio: periodo.inicio < inicioMesAtual ? periodo.inicio : inicioMesAtual,
+    fim: periodo.fim > hoje ? periodo.fim : hoje,
+  };
+  const { validacoes: validacoesProfessor, carregando: carregandoProfessor } =
+    useValidacoesDoProfessor(meuProfId, faixaProfessor.inicio, faixaProfessor.fim);
+
+  const validacoesDaTela = isProfessor ? validacoesProfessor : validacoesRealtime;
+  const carregandoValidacoes = isProfessor ? carregandoProfessor : loading;
+
+  const pendentesDoMes = useMemo(() => {
+    if (!isProfessor || loadingCatalogs || carregandoProfessor) return [];
+    return pendenciasDoProfessor({
+      aulas: catalogs.aulas, unidades: catalogs.unidades, feriados: catalogs.feriados,
+      validacoes: validacoesProfessor, professorId: meuProfId, getDiaSemana, feriadoNoDia,
+    });
+  }, [isProfessor, loadingCatalogs, carregandoProfessor, catalogs, validacoesProfessor, meuProfId]);
+
+  const verPendentesDoMes = () => {
+      setModoFiltro('mes'); setMesFiltro(mesLocal()); setFiltroStatus('pendente'); setItensVisiveis(12);
+  };
 
   // Se for unidade, auto-seleciona
   useEffect(() => {
-      if (role === 'unidade' && userUnidadeId) {
+      if (ehLider(role) && userUnidadeId) {
           setFiltroUnidade([userUnidadeId]);
       }
   }, [role, userUnidadeId]);
@@ -242,9 +290,20 @@ export default function ValidacaoDiariaPage() {
       return filtradas.map(u => ({ id: u.id, nome: String(u.nome).toUpperCase() })).sort((a,b) => a.nome.localeCompare(b.nome));
   }, [catalogs.unidades, filtroEstado, filtroMentor]);
 
+  // Admin vê todas as modalidades; os demais, só as que existem nas aulas que eles enxergam
+  // (o professor, só as das aulas dele).
   const modalidadesOptions = useMemo(() => {
-      return (catalogs.modalidades || []).map(m => ({ id: m.id, nome: m.nome.toUpperCase() })).sort((a,b) => a.nome.localeCompare(b.nome));
-  }, [catalogs.modalidades]);
+      let modalidades = catalogs.modalidades || [];
+      if (role !== 'admin') {
+          const unidadesVisiveis = new Set(catalogs.unidades.map(u => String(u.id)));
+          const idsUsados = new Set((catalogs.aulas || [])
+              .filter(a => unidadesVisiveis.has(String(a.unidadeId)))
+              .filter(a => !isProfessor || String(a.professorId) === String(meuProfId))
+              .map(a => String(a.modalidadeId)));
+          modalidades = modalidades.filter(m => idsUsados.has(String(m.id)));
+      }
+      return modalidades.map(m => ({ id: m.id, nome: String(m.nome || '').toUpperCase() })).sort((a,b) => a.nome.localeCompare(b.nome));
+  }, [catalogs.modalidades, catalogs.unidades, catalogs.aulas, role, isProfessor, meuProfId]);
 
   // ==========================================
   // 0. MOTOR DE AUDITORIA FINANCEIRA (O X-9)
@@ -269,7 +328,9 @@ export default function ValidacaoDiariaPage() {
   // 2. MOTOR DE TEMPO REAL BLINDADO E OTIMIZADO
   // ==========================================
   useEffect(() => {
-    if (loadingCatalogs || (catalogs.unidades.length === 0 && role !== 'admin')) return; 
+    // Professor: as validações vêm do useValidacoesDoProfessor (as dele + as das aulas dele substituídas).
+    if (role === 'professor') return;
+    if (loadingCatalogs || (catalogs.unidades.length === 0 && role !== 'admin')) return;
 
     if (isCofreFechado) {
         setValidacoesRealtime([]);
@@ -289,12 +350,8 @@ export default function ValidacaoDiariaPage() {
     }
 
     let qValidacoes;
-    if (role === 'unidade') {
+    if (ehLider(role)) {
         qValidacoes = query(collection(db, 'validacoes'), where('data', '>=', dataInicio), where('data', '<=', dataFim), where('unidadeId', '==', userUnidadeId));
-    } else if (role === 'professor') {
-        const meuPerfil = catalogs.professores.find(p => p.uidLogin === userId);
-        const meuProfId = meuPerfil ? meuPerfil.id : 'xyz';
-        qValidacoes = query(collection(db, 'validacoes'), where('data', '>=', dataInicio), where('data', '<=', dataFim), where('professorId', '==', meuProfId));
     } else {
         qValidacoes = query(collection(db, 'validacoes'), where('data', '>=', dataInicio), where('data', '<=', dataFim));
     }
@@ -305,31 +362,30 @@ export default function ValidacaoDiariaPage() {
     });
 
     return () => unsubValidacoes();
-  }, [modoFiltro, dataFiltro, mesFiltro, catalogs.unidades.length, catalogs.professores, role, userId, userUnidadeId, isCofreFechado, loadingCatalogs]);
+  }, [modoFiltro, dataFiltro, mesFiltro, catalogs.unidades.length, role, userUnidadeId, isCofreFechado, loadingCatalogs]);
 
   // ==========================================
   // 3. PROCESSADOR DE GRADE VISUAL
   // ==========================================
   useEffect(() => {
-    if (loading || loadingCatalogs || catalogs.unidades.length === 0 || isCofreFechado) return;
+    if (carregandoValidacoes || loadingCatalogs || catalogs.unidades.length === 0 || isCofreFechado) {
+      if (isProfessor && !loadingCatalogs && catalogs.unidades.length === 0) setGradeGerada([]);
+      return;
+    }
 
     let datasParaVerificar = [];
-    if (modoFiltro === 'dia') datasParaVerificar = [new Date(dataFiltro + 'T12:00:00')]; 
+    if (modoFiltro === 'dia') datasParaVerificar = [new Date(dataFiltro + 'T12:00:00')];
     else {
       const [ano, mes] = mesFiltro.split('-');
       datasParaVerificar = getMonthDates(parseInt(ano), parseInt(mes) - 1);
     }
 
-    let meuProfessorId = null;
-    if (role === 'professor') {
-        const meuPerfil = catalogs.professores.find(p => p.uidLogin === userId);
-        if (meuPerfil) meuProfessorId = meuPerfil.id;
-    }
+    const meuProfessorId = meuProfId;
 
     let gradeFinal = [];
 
     datasParaVerificar.forEach(dataObj => {
-      const dataString = dataObj.toISOString().split('T')[0];
+      const dataString = dataLocal(dataObj);
       const diaSemanaNome = getDiaSemana(dataObj);
 
       const aulasDoDia = catalogs.aulas.filter(aula => aula.dias && aula.dias.includes(diaSemanaNome));
@@ -348,9 +404,18 @@ export default function ValidacaoDiariaPage() {
             if (filtroMentor.length > 0 && !filtroMentor.includes(unidadeValida.mentorId)) return;
         }
         if (filtroModalidade.length > 0 && !filtroModalidade.includes(String(aula.modalidadeId))) return;
-        if (role === 'professor' && String(aula.professorId) !== String(meuProfessorId)) return;
 
-        const validacao = validacoesRealtime.find(v => String(v.aulaId) === String(aula.id) && v.data === dataString);
+        const validacao = validacoesDaTela.find(v => String(v.aulaId) === String(aula.id) && v.data === dataString);
+
+        // Professor vê as aulas em que é titular e também as que ele deu como SUBSTITUTO
+        // (essas só para consulta: quem valida/edita é o titular, a unidade ou o mentor).
+        let somenteLeitura = false;
+        if (role === 'professor') {
+            const souTitular = String(aula.professorId) === String(meuProfessorId);
+            const souSubstituto = !!validacao && String(validacao.professorId) === String(meuProfessorId);
+            if (!souTitular && !souSubstituto) return;
+            somenteLeitura = !souTitular;
+        }
         
         const profDoCatalogo = catalogs.professores.find(p => String(p.id) === String(aula.professorId));
         const modDoCatalogo = catalogs.modalidades.find(m => String(m.id) === String(aula.modalidadeId));
@@ -391,11 +456,12 @@ export default function ValidacaoDiariaPage() {
           data: dataString, diaSemana: diaSemanaNome, aulaBase: aula,
           professor: professorExibicao, professorTitular: profDoCatalogo,
           unidade: unidadeValida, modalidade: modalidadeExibicao,
-          validacao: dadosValidacao || null, status: status
+          validacao: dadosValidacao || null, status: status,
+          somenteLeitura, prazo: regraDePrazo(role, dataString)
         });
       });
 
-      const auloesDoDia = validacoesRealtime.filter(v => v.isAulao && v.data === dataString);
+      const auloesDoDia = validacoesDaTela.filter(v => v.isAulao && v.data === dataString);
       auloesDoDia.forEach(v => {
          const unidadeValida = catalogs.unidades.find(u => String(u.id) === String(v.unidadeId));
          if (!unidadeValida) return;
@@ -419,7 +485,9 @@ export default function ValidacaoDiariaPage() {
              key: `aulao-${v.id}`, data: dataString, diaSemana: diaSemanaNome,
              aulaBase: { id: v.id, hora: v.hora || "00:00", unidadeId: v.unidadeId, modalidadeId: v.modalidadeId, professorId: v.professorId },
              professor: profAulao, professorTitular: profAulao, unidade: unidadeValida, modalidade: modAulao,
-             validacao: v, status: v.status, isAulao: true
+             validacao: v, status: v.status, isAulao: true,
+             // Aulão é lançado pela unidade/mentor; o professor só consulta.
+             somenteLeitura: role === 'professor', prazo: regraDePrazo(role, dataString)
          });
       });
     });
@@ -431,7 +499,7 @@ export default function ValidacaoDiariaPage() {
 
     setGradeGerada(gradeFinal);
 
-  }, [validacoesRealtime, loading, loadingCatalogs, catalogs, filtroUnidade, filtroModalidade, filtroProfessor, filtroEstado, filtroMentor, dataFiltro, mesFiltro, modoFiltro, role, userId, isCofreFechado, t]);
+  }, [validacoesDaTela, carregandoValidacoes, loadingCatalogs, catalogs, filtroUnidade, filtroModalidade, filtroProfessor, filtroEstado, filtroMentor, dataFiltro, mesFiltro, modoFiltro, role, isProfessor, meuProfId, isCofreFechado, t]);
 
   // CONTADORES E PAGINAÇÃO
   const counts = useMemo(() => {
@@ -450,20 +518,90 @@ export default function ValidacaoDiariaPage() {
       return gradeGerada;
   }, [gradeGerada, filtroStatus]);
 
-  const listaExibicao = useMemo(() => listaFiltradaTotal.slice(0, itensVisiveis), [listaFiltradaTotal, itensVisiveis]);
+  // GRUPOS = mesmo horário fixo (unidade + horário + modalidade + professor titular).
+  // Dentro do grupo a ordem é por data (a mais antiga primeiro); os grupos vão por horário.
+  // A paginação ("carregar mais") conta GRUPOS, não aulas soltas.
+  const grupos = useMemo(() => {
+      const mapa = new Map();
+      for (const item of listaFiltradaTotal) {
+          const chave = item.isAulao
+              ? `aulao|${item.key}`
+              : [item.unidade?.id, item.aulaBase.hora, item.aulaBase.modalidadeId, item.aulaBase.professorId].join('|');
+          if (!mapa.has(chave)) {
+              mapa.set(chave, {
+                  chave, hora: item.aulaBase.hora || '', isAulao: !!item.isAulao,
+                  modalidade: item.modalidade?.nome || '', unidade: item.unidade?.nome || '',
+                  professor: item.professorTitular?.nome || item.professor?.nome || '', itens: [],
+              });
+          }
+          mapa.get(chave).itens.push(item);
+      }
+      return [...mapa.values()].sort((a, b) =>
+          a.hora.localeCompare(b.hora) || a.modalidade.localeCompare(b.modalidade)
+          || a.unidade.localeCompare(b.unidade) || a.professor.localeCompare(b.professor));
+  }, [listaFiltradaTotal]);
+
+  const gruposVisiveis = useMemo(() => grupos.slice(0, itensVisiveis), [grupos, itensVisiveis]);
+
+  // Média de alunos (sugestão + alerta de número estranho): só para aulas na tela que ainda podem ser
+  // validadas/editadas (pendentes ou realizadas, dentro do prazo, aula da grade).
+  const podeTerMedia = (item) => !item.isAulao && !item.somenteLeitura && item.prazo?.pode && item.status !== 'cancelada';
+  const mediaDe = useMediaAlunos(gruposVisiveis.flatMap(g => g.itens).filter(podeTerMedia).map(i => i.aulaBase.id));
+  const gruposExibicao = gruposVisiveis.map(g => ({
+      ...g,
+      itens: g.itens.map(item => podeTerMedia(item) ? { ...item, mediaAlunos: mediaDe(item.aulaBase.id, item.data) } : item),
+  }));
 
   const handleCarregarMais = (qtd) => {
-      if (qtd === 'todos') setItensVisiveis(listaFiltradaTotal.length);
+      if (qtd === 'todos') setItensVisiveis(grupos.length);
       else setItensVisiveis(prev => prev + qtd);
   };
+
+  // --- VISUALIZAÇÃO: PILHAS (padrão do professor) ou LISTA (padrão de líder/unidade, mentor e admin) ---
+  // A escolha fica salva neste navegador (só conveniência; se não der para salvar, usa o padrão).
+  const chaveVisualizacao = `validacao.visualizacao.${role || 'x'}`;
+  const [visualizacao, setVisualizacaoState] = useState(() => {
+      try {
+          const salva = localStorage.getItem(chaveVisualizacao);
+          if (salva === 'pilhas' || salva === 'lista') return salva;
+      } catch { /* sem armazenamento: usa o padrão */ }
+      return role === 'professor' ? 'pilhas' : 'lista';
+  });
+  const setVisualizacao = (v) => {
+      setVisualizacaoState(v);
+      try { localStorage.setItem(chaveVisualizacao, v); } catch { /* ignora */ }
+  };
+
+  const [pilhasAbertas, setPilhasAbertas] = useState(() => new Set());
+  const alternarPilha = (chave) => setPilhasAbertas(prev => {
+      const novo = new Set(prev);
+      if (novo.has(chave)) novo.delete(chave); else novo.add(chave);
+      return novo;
+  });
+  const temPilhaDeVerdade = gruposExibicao.some(g => g.itens.length > 1);
+  const abrirTodasPilhas = () => setPilhasAbertas(new Set(gruposExibicao.map(g => g.chave)));
+  const recolherTodasPilhas = () => setPilhasAbertas(new Set());
+  const mostrarProfessorNoGrupo = !isProfessor;
 
   const verificarFuturo = (dataString) => {
     const hoje = new Date(); hoje.setHours(0,0,0,0);
     return new Date(dataString + 'T00:00:00') > hoje;
   };
 
+  // Mensagem de bloqueio por prazo (mesma regra do banco: src/utils/validacoes.js e firestore.rules).
+  const mensagemPrazo = (motivo) => {
+    if (motivo === 'futuro') return t('dailyValidation.alerts.futureClass');
+    if (motivo === 'mesFechado') return t('dailyValidation.deadline.closedMonthTeacher');
+    if (motivo === 'limiteDias') return t('dailyValidation.deadline.leaderLimit', { dias: DIAS_RETROATIVOS_LIDER });
+    return t('dailyValidation.deadline.noPermission');
+  };
+
   const abrirModal = (tipo, item) => {
-    if (tipo !== 'aulao' && verificarFuturo(item.data)) return alert(t('dailyValidation.alerts.futureClass'));
+    if (item?.somenteLeitura) return alert(t('dailyValidation.deadline.substituteReadOnly'));
+    if (tipo !== 'aulao') {
+        const prazo = regraDePrazo(role, item.data);
+        if (!prazo.pode) return alert(mensagemPrazo(prazo.motivo));
+    }
     if (item && item.status === 'cancelada' && !isMaster) {
         if (item.validacao?.motivoCancelamento === 'Recesso/Feriado') return alert(t('dailyValidation.alerts.holidayInfo'));
         return alert(t('dailyValidation.alerts.blockedCanceled'));
@@ -474,14 +612,37 @@ export default function ValidacaoDiariaPage() {
   const handleReverterCancelamento = async () => {
       if (!acaoAtual.item.validacao?.id && acaoAtual.item.validacao?.motivoCancelamento === 'Recesso/Feriado') return alert(t('dailyValidation.alerts.autoHolidayRevert'));
       if (!acaoAtual || !acaoAtual.item.validacao?.id) return;
-      if (!window.confirm(t('dailyValidation.alerts.confirmRevert'))) return;
+      const prazo = regraDePrazo(role, acaoAtual.item.data);
+      if (!prazo.pode) return alert(mensagemPrazo(prazo.motivo));
+      let justificativa = '';
+      if (prazo.precisaJustificativa) {
+          justificativa = (window.prompt(t('dailyValidation.deadline.justificationPrompt', { min: MIN_JUSTIFICATIVA })) || '').trim();
+          if (justificativa.length < MIN_JUSTIFICATIVA) return alert(t('dailyValidation.deadline.justificationRequired', { min: MIN_JUSTIFICATIVA }));
+      } else if (!window.confirm(t('dailyValidation.alerts.confirmRevert'))) return;
 
       setProcessando(true);
       try {
           await deleteDoc(doc(db, 'validacoes', acaoAtual.item.validacao.id));
-          await registrarLogAuditoria('EXCLUÍDA', `Cancelamento revertido.`, acaoAtual.item, `Cancelamento por motivo de "${acaoAtual.item.validacao?.motivoCancelamento}" desfeito.`);
-      } catch (error) { alert(t('dailyValidation.alerts.revertError')); } 
+          await registrarLogAuditoria('EXCLUÍDA', `Cancelamento revertido.`, acaoAtual.item,
+              `Cancelamento por motivo de "${acaoAtual.item.validacao?.motivoCancelamento}" desfeito.` + (justificativa ? ` | Justificativa (mês fechado): ${justificativa}` : ''));
+      } catch (error) { alert(error?.code === 'permission-denied' ? t('dailyValidation.deadline.permissionDenied') : t('dailyValidation.alerts.revertError')); }
       finally { setProcessando(false); setModalOpen(false); }
+  };
+
+  // VALIDAR DIRETO NO CARTÃO: só o número de alunos, professor titular, sem abrir a janela.
+  // Substituição, cancelamento e mês fechado (justificativa) continuam pela janela.
+  const validarRapido = (item, alunos) => {
+    if (item?.somenteLeitura) return alert(t('dailyValidation.deadline.substituteReadOnly'));
+    const prazo = regraDePrazo(role, item.data);
+    if (!prazo.pode) return alert(mensagemPrazo(prazo.motivo));
+    if (prazo.precisaJustificativa) return abrirModal('validar', item);
+    return confirmarAcao({
+        inputValor: String(alunos ?? ''), inputObs: '', isSubstituicao: false, substitutoId: '', motivoSubstituicao: '',
+        professorNomeEfetivo: item.professorTitular?.nome || item.professor?.nome || 'Professor Desconhecido',
+        modalidadeNomeEfetiva: item.modalidade?.nome || 'Modalidade Desconhecida',
+        valorEfetivo: item.aulaBase?.valor ? parseFloat(item.aulaBase.valor) : 0,
+        justificativa: '',
+    }, { tipo: 'validar', item });
   };
 
   const handleNovoAulao = () => {
@@ -490,15 +651,36 @@ export default function ValidacaoDiariaPage() {
       abrirModal('aulao', { unidade: unidadeObj, data: dataFiltro });
   };
 
-  const confirmarAcao = async (dadosFormulario) => {
-    const { inputValor, inputObs, isSubstituicao, substitutoId, motivoSubstituicao, aulaoModalidadeId, aulaoHora, aulaoValor, aulaoData, professorNomeEfetivo, modalidadeNomeEfetiva, valorEfetivo } = dadosFormulario;
-    
-    if (acaoAtual.tipo === 'validar' && !inputValor) return alert(t('dailyValidation.alerts.informStudents'));
-    if (acaoAtual.tipo === 'aulao' && (!aulaoModalidadeId || !inputValor || !substitutoId || !aulaoData)) return alert(t('dailyValidation.alerts.fillSpecialClass'));
+  // A janela e o "validar direto no cartão" passam pelo MESMO caminho (mesmas checagens, auditoria e regras).
+  const confirmarAcao = async (dadosFormulario, acao = acaoAtual) => {
+    if (!acao) return;
+    const { inputValor, inputObs, isSubstituicao, substitutoId, motivoSubstituicao, aulaoModalidadeId, aulaoHora, aulaoValor, aulaoData, professorNomeEfetivo, modalidadeNomeEfetiva, valorEfetivo, justificativa: justificativaBruta } = dadosFormulario;
+
+    if (acao.tipo === 'validar' && !inputValor) return alert(t('dailyValidation.alerts.informStudents'));
+    if (acao.tipo === 'aulao' && (!aulaoModalidadeId || !inputValor || !substitutoId || !aulaoData)) return alert(t('dailyValidation.alerts.fillSpecialClass'));
+
+    // Número de alunos: inteiro, sem negativo e sem valor absurdo.
+    if (acao.tipo === 'validar') {
+        if (!alunosValidos(inputValor)) return alert(t('dailyValidation.deadline.invalidStudents', { max: LIMITE_ALUNOS }));
+        const n = parseInt(inputValor, 10);
+        if (n === 0 && !window.confirm(t('dailyValidation.deadline.confirmZeroStudents'))) return;
+        // Número fora do normal para esta aula (ex.: 80 quando a média é 18): pede confirmação.
+        const mediaInfo = acao.item?.mediaAlunos;
+        if (n > 0 && numeroEstranho(n, mediaInfo) && !window.confirm(t('dailyValidation.quick.confirmUnusual', { n, media: mediaInfo.media, amostras: mediaInfo.amostras }))) return;
+    }
+    if (acao.tipo === 'aulao' && !alunosValidos(inputValor, 1000)) return alert(t('dailyValidation.deadline.invalidStudents', { max: 1000 }));
+
+    // Prazo (mês fechado / 60 dias do líder) e justificativa.
+    const prazo = regraDePrazo(role, acao.tipo === 'aulao' ? aulaoData : acao.item.data);
+    if (!prazo.pode) return alert(mensagemPrazo(prazo.motivo));
+    const justificativa = String(justificativaBruta || '').trim();
+    if (prazo.precisaJustificativa && justificativa.length < MIN_JUSTIFICATIVA) {
+        return alert(t('dailyValidation.deadline.justificationRequired', { min: MIN_JUSTIFICATIVA }));
+    }
 
     setProcessando(true);
     try {
-      const { tipo, item } = acaoAtual;
+      const { tipo, item } = acao;
       const payload = {
         data: tipo === 'aulao' ? aulaoData : item.data, 
         validadoPor: userId,
@@ -507,6 +689,9 @@ export default function ValidacaoDiariaPage() {
         modalidadeNomeEfetiva: modalidadeNomeEfetiva || "",
         valorEfetivo: valorEfetivo || 0
       };
+      // Mexer em mês já fechado deixa registrado o porquê (no documento e na Auditoria).
+      const textoJustificativa = prazo.precisaJustificativa ? ` | Justificativa (mês fechado): ${justificativa}` : '';
+      if (prazo.precisaJustificativa) payload.justificativa = justificativa;
 
       if (tipo === 'aulao') {
           payload.status = 'realizada'; payload.isAulao = true; payload.unidadeId = item.unidade.id;
@@ -515,7 +700,7 @@ export default function ValidacaoDiariaPage() {
           payload.valorPago = aulaoValor ? parseFloat(aulaoValor) : 0; payload.substituicao = false; 
           
           await addDoc(collection(db, 'validacoes'), payload);
-          await registrarLogAuditoria('NOVA', `Aulão Especial registrado.`, { unidade: item.unidade, professor: {nome: professorNomeEfetivo}, modalidade: {nome: modalidadeNomeEfetiva}, aulaBase: {hora: aulaoHora}, diaSemana: aulaoData }, `Qtd Alunos: ${inputValor} | Valor: ${formatCurrency(aulaoValor, item.unidade?.pais)}`);
+          await registrarLogAuditoria('NOVA', `Aulão Especial registrado.`, { unidade: item.unidade, professor: {nome: professorNomeEfetivo}, modalidade: {nome: modalidadeNomeEfetiva}, aulaBase: {hora: aulaoHora}, diaSemana: aulaoData }, `Qtd Alunos: ${inputValor} | Valor: ${formatCurrency(aulaoValor, item.unidade?.pais)}${textoJustificativa}`);
       } else {
           payload.aulaId = item.aulaBase.id; payload.unidadeId = item.aulaBase.unidadeId;
           payload.professorId = (tipo === 'validar' && isSubstituicao) ? substitutoId : item.aulaBase.professorId;
@@ -540,14 +725,14 @@ export default function ValidacaoDiariaPage() {
             if (item.validacao.valorEfetivo !== undefined && item.validacao.valorEfetivo !== null) payload.valorEfetivo = item.validacao.valorEfetivo;
             if (tipo === 'validar' && item.validacao.alunos !== payload.alunos) diffLog.push(`Edição Alunos: de ${item.validacao.alunos} para ${payload.alunos}`);
             await updateDoc(doc(db, 'validacoes', item.validacao.id), payload);
-            await registrarLogAuditoria('ALTERADA', tipo === 'validar' ? `Validação editada.` : `Cancelamento editado.`, item, diffLog.join(' | '));
+            await registrarLogAuditoria('ALTERADA', tipo === 'validar' ? `Validação editada.` : `Cancelamento editado.`, item, diffLog.join(' | ') + textoJustificativa);
           } else {
             // ID fixo por aula/dia: se outra pessoa validar ao mesmo tempo, atualiza o mesmo registro (sem duplicar).
             await setDoc(doc(db, 'validacoes', idValidacao(payload.aulaId, payload.data)), payload);
-            await registrarLogAuditoria('NOVA', tipo === 'validar' ? `Aula validada.` : `Aula cancelada.`, item, diffLog.join(' | '));
+            await registrarLogAuditoria('NOVA', tipo === 'validar' ? `Aula validada.` : `Aula cancelada.`, item, diffLog.join(' | ') + textoJustificativa);
           }
       }
-    } catch (error) { alert(t('dailyValidation.alerts.saveError')); } 
+    } catch (error) { alert(error?.code === 'permission-denied' ? t('dailyValidation.deadline.permissionDenied') : t('dailyValidation.alerts.saveError')); }
     finally { setProcessando(false); setModalOpen(false); setAcaoAtual(null); }
   };
 
@@ -612,7 +797,7 @@ export default function ValidacaoDiariaPage() {
                     </>
                 )}
                 
-                {role !== 'unidade' && (
+                {!ehLider(role) && (
                     <FilterMultiSelect options={unidadesFiltradasSelect} selected={filtroUnidade} onChange={setFiltroUnidade} placeholder={t('dailyValidation.filters.units')} icon={MapPin} searchable={true} />
                 )}
 
@@ -634,6 +819,20 @@ export default function ValidacaoDiariaPage() {
         </div>
       </div>
 
+      {/* AVISO DO PROFESSOR: o que ficou para trás no mês (some quando tudo estiver validado) */}
+      {isProfessor && pendentesDoMes.length > 0 && !(modoFiltro === 'mes' && mesFiltro === mesLocal() && filtroStatus === 'pendente') && (
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-2xl border border-amber-200 dark:border-amber-900/40 bg-amber-50 dark:bg-amber-900/10 animate-fade-in">
+              <TriangleAlert className="w-6 h-6 text-amber-500 shrink-0"/>
+              <div className="flex-1">
+                  <p className="text-sm font-black text-amber-800 dark:text-amber-300">{t('dailyValidation.deadline.pendingBannerTitle', { count: pendentesDoMes.length })}</p>
+                  <p className="text-xs font-medium text-amber-700 dark:text-amber-400/80 mt-0.5">{t('dailyValidation.deadline.pendingBannerDesc')}</p>
+              </div>
+              <button onClick={verPendentesDoMes} className="h-10 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-black uppercase tracking-wide shadow-sm transition-all whitespace-nowrap">
+                  {t('dailyValidation.deadline.pendingBannerButton')}
+              </button>
+          </div>
+      )}
+
       {isCofreFechado ? (
           <div className="py-24 text-center bg-white dark:bg-slate-800 rounded-3xl border border-dashed border-slate-300 dark:border-slate-700 shadow-sm animate-fade-in">
             <div className="bg-slate-50 dark:bg-slate-900 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-100 dark:border-slate-800 shadow-inner">
@@ -646,7 +845,7 @@ export default function ValidacaoDiariaPage() {
                 {role === 'admin' ? t('dailyValidation.empty.noFilterDesc') : t('dailyValidation.empty.noUnitDesc')}
             </p>
           </div>
-      ) : (loading || loadingCatalogs) ? (
+      ) : (carregandoValidacoes || loadingCatalogs) ? (
         <div className="h-64 flex flex-col items-center justify-center text-slate-400">
           <Loader2 className="w-8 h-8 animate-spin mb-2 text-emerald-500"/>
           <p className="text-xs font-bold uppercase tracking-widest">{t('dailyValidation.empty.loading')}</p>
@@ -664,19 +863,66 @@ export default function ValidacaoDiariaPage() {
           </p>
         </div>
       ) : (
-        <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6">
-            {listaExibicao.map((item) => (
-                <AulaCard 
-                    key={item.key} item={item} 
-                    onValidar={(i) => abrirModal('validar', i)}
-                    onCancelar={(i) => abrirModal('cancelar', i)}
-                    verificarFuturo={verificarFuturo}
-                />
-            ))}
+        <div className="space-y-4 md:space-y-6">
+            {/* Barra da visualização: [Pilhas | Lista] e abrir/recolher pilhas */}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex bg-slate-100 dark:bg-slate-700 rounded-xl p-1 h-10" role="group" aria-label={t('dailyValidation.views.label')}>
+                    <button onClick={() => setVisualizacao('pilhas')} aria-pressed={visualizacao === 'pilhas'} className={`px-3 text-xs font-bold uppercase tracking-wide rounded-lg flex items-center gap-1.5 transition-all ${visualizacao === 'pilhas' ? 'bg-white dark:bg-slate-600 shadow text-emerald-700 dark:text-white' : 'text-slate-500 hover:text-slate-700'}`}>
+                        <Layers className="w-4 h-4"/> {t('dailyValidation.views.stacks')}
+                    </button>
+                    <button onClick={() => setVisualizacao('lista')} aria-pressed={visualizacao === 'lista'} className={`px-3 text-xs font-bold uppercase tracking-wide rounded-lg flex items-center gap-1.5 transition-all ${visualizacao === 'lista' ? 'bg-white dark:bg-slate-600 shadow text-emerald-700 dark:text-white' : 'text-slate-500 hover:text-slate-700'}`}>
+                        <List className="w-4 h-4"/> {t('dailyValidation.views.list')}
+                    </button>
+                </div>
+                {visualizacao === 'pilhas' && temPilhaDeVerdade && (
+                    <div className="flex gap-2">
+                        <button onClick={abrirTodasPilhas} className="h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-[11px] font-black uppercase text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-1.5">
+                            <ChevronsUpDown className="w-4 h-4"/> {t('dailyValidation.views.openAll')}
+                        </button>
+                        <button onClick={recolherTodasPilhas} className="h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-[11px] font-black uppercase text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-1.5">
+                            <ChevronsDownUp className="w-4 h-4"/> {t('dailyValidation.views.closeAll')}
+                        </button>
+                    </div>
+                )}
             </div>
 
-            {itensVisiveis < listaFiltradaTotal.length && (
+            {visualizacao === 'lista' ? (
+                <ListaAulas
+                    grupos={gruposExibicao}
+                    mostrarProfessor={mostrarProfessorNoGrupo}
+                    verificarFuturo={verificarFuturo}
+                    onValidar={(i) => abrirModal('validar', i)}
+                    onCancelar={(i) => abrirModal('cancelar', i)}
+                    onValidarRapido={validarRapido}
+                    salvando={processando}
+                />
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3 md:gap-6 items-start">
+                {gruposExibicao.map((grupo) => (
+                    <PilhaAulas
+                        key={grupo.chave}
+                        grupo={grupo}
+                        aberta={pilhasAbertas.has(grupo.chave)}
+                        onAlternar={() => alternarPilha(grupo.chave)}
+                        mostrarProfessor={mostrarProfessorNoGrupo}
+                        verificarFuturo={verificarFuturo}
+                        renderCartao={(item, variante) => (
+                            <AulaCard
+                                key={item.key} item={item} variante={variante}
+                                onValidar={(i) => abrirModal('validar', i)}
+                                onCancelar={(i) => abrirModal('cancelar', i)}
+                                onValidarRapido={validarRapido}
+                                salvando={processando}
+                                ocultarProfessor={isProfessor && !item.professor?.isSubstituto && !item.somenteLeitura}
+                                verificarFuturo={verificarFuturo}
+                            />
+                        )}
+                    />
+                ))}
+                </div>
+            )}
+
+            {itensVisiveis < grupos.length && (
                 <div className="flex flex-wrap justify-center gap-3 pt-6 pb-4 animate-fade-in">
                     <button onClick={() => handleCarregarMais(12)} className="px-5 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-black uppercase text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-sm flex items-center gap-2 transition-all"><ArrowDown className="w-4 h-4"/> {t('common.actions.loadMore', { count: 12 })}</button>
                     <button onClick={() => handleCarregarMais('todos')} className="px-5 py-2.5 bg-slate-100 dark:bg-slate-700 border border-transparent rounded-xl text-xs font-black uppercase text-slate-700 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-600 shadow-sm flex items-center gap-2 transition-all"><DownloadCloud className="w-4 h-4"/> {t('common.actions.viewAll')}</button>
@@ -685,7 +931,7 @@ export default function ValidacaoDiariaPage() {
         </div>
       )}
 
-      <ValidationModal isOpen={modalOpen} onClose={() => setModalOpen(false)} onConfirm={confirmarAcao} onRevert={handleReverterCancelamento} acaoAtual={acaoAtual} catalogs={catalogs} processando={processando} isMaster={isMaster} />
+      <ValidationModal isOpen={modalOpen} onClose={() => setModalOpen(false)} onConfirm={confirmarAcao} onRevert={handleReverterCancelamento} acaoAtual={acaoAtual} catalogs={catalogs} processando={processando} isMaster={isMaster} regraPrazo={(data) => regraDePrazo(role, data)} />
     </div>
   );
 }

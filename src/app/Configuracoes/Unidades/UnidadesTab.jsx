@@ -35,8 +35,12 @@ const PAISES = Object.values(PAIS_CONFIG);
 const DDI_MAP = Object.fromEntries(PAISES.map(p => [p.id, p.ddi]));
 const PAIS_DEFAULT = "BR";
 
-/* ================= LOCALIZAÇÕES (Mapeadas para as Siglas) ================= */
+/* ================= LOCALIZAÇÕES (Mapeadas para as Siglas) =================
+   ⚠️ O texto de cada item é o que fica gravado na unidade (campo "estado").
+   Não renomeie itens existentes — só acrescente — senão as unidades antigas
+   deixam de bater com a lista e com o filtro. */
 const LOCATIONS = {
+  // Brasil: 26 estados + Distrito Federal (27 no total)
   "BR": [
     "Acre", "Alagoas", "Amapá", "Amazonas", "Bahia", "Ceará", "Distrito Federal",
     "Espírito Santo", "Goiás", "Maranhão", "Mato Grosso", "Mato Grosso do Sul",
@@ -44,17 +48,32 @@ const LOCATIONS = {
     "Rio de Janeiro", "Rio Grande do Norte", "Rio Grande do Sul", "Rondônia",
     "Roraima", "Santa Catarina", "São Paulo", "Sergipe", "Tocantins"
   ],
+  // Argentina: 23 províncias + Cidade Autônoma de Buenos Aires (24 no total).
+  // Bairros (ex.: Villa Devoto, Palermo) ficam dentro da CABA e vão no nome da unidade.
   "AR": [
-    "Buenos Aires", "Catamarca", "Chaco", "Chubut", "Córdoba", "Corrientes", 
-    "Entre Ríos", "Formosa", "Jujuy", "La Pampa", "La Rioja", "Mendoza", 
-    "Misiones", "Neuquén", "Río Negro", "Salta", "San Juan", "San Luis", 
-    "Santa Cruz", "Santa Fe", "Santiago del Estero", "Tierra del Fuego", "Tucumán"
+    "Buenos Aires", "CABA (Ciudad Autónoma de Buenos Aires)", "Catamarca", "Chaco",
+    "Chubut", "Córdoba", "Corrientes", "Entre Ríos", "Formosa", "Jujuy", "La Pampa",
+    "La Rioja", "Mendoza", "Misiones", "Neuquén", "Río Negro", "Salta", "San Juan",
+    "San Luis", "Santa Cruz", "Santa Fe", "Santiago del Estero",
+    "Tierra del Fuego", "Tucumán"
   ],
   "US": [
     "Florida (Miami)", "California", "New York", "Texas", "Nevada", "Illinois", 
     "Pennsylvania", "Ohio", "Georgia", "North Carolina", "Michigan", "New Jersey"
   ]
 };
+
+// Siglas mostradas ao lado do nome (só na tela; o que grava continua sendo o nome).
+const SIGLAS_UF_BR = {
+  "Acre": "AC", "Alagoas": "AL", "Amapá": "AP", "Amazonas": "AM", "Bahia": "BA",
+  "Ceará": "CE", "Distrito Federal": "DF", "Espírito Santo": "ES", "Goiás": "GO",
+  "Maranhão": "MA", "Mato Grosso": "MT", "Mato Grosso do Sul": "MS", "Minas Gerais": "MG",
+  "Pará": "PA", "Paraíba": "PB", "Paraná": "PR", "Pernambuco": "PE", "Piauí": "PI",
+  "Rio de Janeiro": "RJ", "Rio Grande do Norte": "RN", "Rio Grande do Sul": "RS",
+  "Rondônia": "RO", "Roraima": "RR", "Santa Catarina": "SC", "São Paulo": "SP",
+  "Sergipe": "SE", "Tocantins": "TO"
+};
+const rotuloEstado = (nomeEstado) => SIGLAS_UF_BR[nomeEstado] ? `${nomeEstado} (${SIGLAS_UF_BR[nomeEstado]})` : nomeEstado;
 
 // 🟢 ÍCONES DE BANDEIRA EM SVG PURO
 function FlagIcon({ pais, className = "w-4 h-3" }) {
@@ -289,7 +308,11 @@ export function UnidadesTab() {
   const [importSize, setImportSize] = useState({ w: 1000, h: 700 });
   const [importando, setImportando] = useState(false);
 
-  const estadosDisponiveis = pais ? LOCATIONS[pais] || [] : [];
+  // Se a unidade em edição tem um estado que não está na lista (cadastro antigo), ele continua aparecendo.
+  const estadosDisponiveis = useMemo(() => {
+      const lista = pais ? LOCATIONS[pais] || [] : [];
+      return estado && !lista.includes(estado) ? [estado, ...lista] : lista;
+  }, [pais, estado]);
 
   const registrarLogAuditoria = async (tipoAcao, descricao, nomeUnidade, detalhes = "") => {
       try {
@@ -684,7 +707,7 @@ export function UnidadesTab() {
 
         await setDoc(doc(db, "usuarios", newUid), {
           nome: nome.trim(), email: emailLogin.trim().toLowerCase(), telefone: telParaSalvar,
-          role: "unidade", unidadeId: unidadeRef.id, status: "ativo", criadoPor: userId, criadoEm: serverTimestamp()
+          role: "lider", unidadeId: unidadeRef.id, status: "ativo", criadoPor: userId, criadoEm: serverTimestamp()
         });
 
         await signOut(secondaryAuth);
@@ -1139,7 +1162,7 @@ export function UnidadesTab() {
                       <div className="relative">
                           <select value={estado} onChange={e=>setEstado(e.target.value)} className="w-full pl-4 pr-10 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-red-500 rounded-xl text-sm font-bold outline-none appearance-none transition-all dark:text-white">
                               <option value="">{t('unitsTab.modal.select', 'Selecione...')}</option>
-                              {estadosDisponiveis.map(e=><option key={e} value={e}>{e}</option>)}
+                              {estadosDisponiveis.map(e=><option key={e} value={e}>{rotuloEstado(e)}</option>)}
                           </select>
                           <ChevronDown className="absolute right-4 top-3.5 w-4 h-4 text-slate-400 pointer-events-none"/>
                       </div>

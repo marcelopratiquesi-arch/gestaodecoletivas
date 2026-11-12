@@ -121,7 +121,7 @@ export function ModalidadesTab() {
   const role = useMemo(() => String(userData?.role || "").trim().toLowerCase(), [userData?.role]);
   const userId = useMemo(() => userData?.id || userData?.uid || null, [userData?.id, userData?.uid]);
 
-  const podeVer = ["admin", "mentor", "unidade"].includes(role);
+  const podeVer = ["admin", "mentor", "lider", "unidade"].includes(role);
   const podeEditar = role === "admin"; 
 
   const [loading, setLoading] = useState(true);
