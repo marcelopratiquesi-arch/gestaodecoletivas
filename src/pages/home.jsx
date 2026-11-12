@@ -212,8 +212,7 @@ export default function Home() {
         let idsAulasOntem = []; 
         let totalAulasHoje = 0;
         let idsAulasHoje = [];
-        let nextClass = null;
-        const unidadesDasAulas = new Map(); // unidades das minhas aulas de ontem/hoje (para ler só as validações delas)
+        let nextClass = null; 
         
         aulasSnapDocs.forEach(aula => {
             let hasAccess = false;
@@ -237,13 +236,11 @@ export default function Home() {
             if (aula.dias && aula.dias.includes(ontemWeekDay)) {
                 totalAulasOntem++;
                 idsAulasOntem.push(aula.id);
-                unidadesDasAulas.set(String(aula.unidadeId), aula.unidadeId);
             }
 
             if (aula.dias && aula.dias.includes(todayWeekDay)) {
                 totalAulasHoje++;
                 idsAulasHoje.push(aula.id);
-                unidadesDasAulas.set(String(aula.unidadeId), aula.unidadeId);
                 
                 if (aula.hora >= nowTime) {
                     if (!nextClass || aula.hora < nextClass.hora) {
@@ -267,7 +264,7 @@ export default function Home() {
         // Receita de ontem = aulas realmente validadas como realizadas ontem, no valor em vigor no dia (src/utils/valores.js).
         let receitaOntem = 0;
 
-        const cacheDoMesmoDia = homeDashboardCache.todayStr === todayStr && homeDashboardCache.userId === userId;
+        const cacheDoMesmoDia = homeDashboardCache.todayStr === todayStr;
 
         if (Date.now() - homeDashboardCache.timestamp < CACHE_TTL && cacheDoMesmoDia) {
              validacoesRealizadasOntem = homeDashboardCache.validacoesRealizadasOntem;
@@ -275,23 +272,11 @@ export default function Home() {
              receitaOntem = homeDashboardCache.receitaOntem || 0;
         } else {
              if (idsAulasOntem.length > 0 || idsAulasHoje.length > 0) {
-                 // ECONOMIA DE COTA: admin lê a rede; os demais leem só as validações das unidades das suas aulas
-                 // (antes todo mundo lia as validações de ontem e hoje da rede inteira, ~600 leituras).
-                 const consultas = [];
-                 if (role === 'admin') {
-                     consultas.push(query(collection(db, "validacoes"), where("data", "in", [todayStr, ontemStr])));
-                 } else {
-                     const unidadesIds = [...unidadesDasAulas.values()];
-                     for (const dia of [todayStr, ontemStr]) {
-                         for (let i = 0; i < unidadesIds.length; i += 30) {
-                             consultas.push(query(collection(db, "validacoes"), where("data", "==", dia), where("unidadeId", "in", unidadesIds.slice(i, i + 30))));
-                         }
-                     }
-                 }
-                 const snaps = await Promise.all(consultas.map(q => getDocs(q)));
-
+                 const qVal = query(collection(db, "validacoes"), where("data", "in", [todayStr, ontemStr]));
+                 const valSnap = await getDocs(qVal);
+                 
                  const aulasPorId = new Map((catalogs.aulasTodas || catalogs.aulas || []).map(a => [a.id, a]));
-                 deduplicarValidacoes(snaps.flatMap(s => s.docs.map(d => d.data()))).forEach(val => {
+                 deduplicarValidacoes(valSnap.docs.map(d => d.data())).forEach(val => {
                      if (val.data === ontemStr && idsAulasOntem.includes(val.aulaId)) {
                          validacoesRealizadasOntem++;
                          receitaOntem += valorDaValidacao(val, aulasPorId.get(val.aulaId));
@@ -302,7 +287,6 @@ export default function Home() {
                  homeDashboardCache = {
                      timestamp: Date.now(),
                      todayStr: todayStr,
-                     userId,
                      validacoesRealizadasOntem,
                      validacoesRealizadasHoje,
                      receitaOntem
