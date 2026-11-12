@@ -17,6 +17,7 @@ import {
 import { db } from "../../../services/firebase";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useCatalogs } from "../../../contexts/CatalogContext";
+import { liderMantemAcesso } from "../../../permissions";
 import { PendenciasTab } from "../Pendencias/PendenciasTab";
 import { usePedidosPendentes } from "../Pendencias/usePedidosPendentes";
 
@@ -84,8 +85,10 @@ export function LideresTab() {
   };
 
   // Tira o acesso do líder atual da unidade (apaga o crachá) dentro de um batch já aberto.
+  // Se o líder também é admin ou mentor, ele só deixa de ser o líder da unidade: o acesso dele fica.
   async function tirarLiderAtual(batch, unidade, motivo) {
     const cracha = await getDoc(doc(db, "usuarios", unidade.liderUid));
+    if (cracha.exists() && liderMantemAcesso(cracha.data().role)) return;
     if (cracha.exists()) batch.delete(cracha.ref);
     const pedido = await getDoc(doc(db, "solicitacoes_acesso", unidade.liderUid));
     if (pedido.exists() && pedido.data().status !== "recusado") {
