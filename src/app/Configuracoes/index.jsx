@@ -7,6 +7,7 @@ import {
 import { usePedidosPendentes } from "./Pendencias/usePedidosPendentes";
 import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
 import { ehLider } from '../../permissions';
+import { useLocation } from "react-router-dom";
 
 // --- LAZY LOADING ---
 const UnidadesTab = lazy(() => import('./Unidades/UnidadesTab').then(module => ({ default: module.UnidadesTab })));
@@ -54,7 +55,12 @@ export default function ConfiguracoesPage() {
 
   const allowedTabs = useMemo(() => tabs.filter(t => t.roles.includes(role)), [role, tabs]);
 
+  // Atalhos da Página de Início abrem direto na aba certa (navigate com state: { aba }), se o perfil puder vê-la.
+  const location = useLocation();
+  const abaPedida = location.state?.aba;
+
   const [activeTab, setActiveTab] = useState(() => {
+    if (abaPedida && tabs.some(t => t.id === abaPedida && t.roles.includes(role))) return abaPedida;
     if (ehLider(role)) return 'professores';
     const firstAllowed = tabs.find(t => t.roles.includes(role));
     return firstAllowed ? firstAllowed.id : 'unidades';

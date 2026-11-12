@@ -220,14 +220,22 @@ service cloud.firestore {
       allow delete: if souDono() || souAdmin() || mentorDaUnidade(resource.data.unidadeId);
     }
 
+    // ===================== FECHAMENTO DO MÊS (resumos_mensais) =====================
+    // Resumo pronto das validações de cada mês já passado (Relatórios, Financeiro, Radar).
+    // Logados leem; só o admin monta/refaz, para ninguém forjar números.
+    match /resumos_mensais/{mes} {
+      allow read: if logado();
+      allow write: if souAdmin();
+    }
+
     // ===================== DEMAIS COLEÇÕES =====================
-    // Logados leem e escrevem (como antes), EXCETO usuarios, publico, validacoes e solicitacoes_acesso,
-    // que seguem as regras acima.
+    // Logados leem e escrevem (como antes), EXCETO as coleções com regra própria acima
+    // (usuarios, publico, validacoes, solicitacoes_acesso e resumos_mensais).
     // Professor não grava nada aqui, só cria registros de auditoria (log da validação e do "Sair").
     // (No Firestore, se QUALQUER regra libera, a ação passa; por isso as exceções precisam estar aqui.)
     match /{colecao}/{resto=**} {
       allow read: if logado() && colecao != 'solicitacoes_acesso';
-      allow write: if logado() && !(colecao in ['usuarios', 'publico', 'validacoes', 'solicitacoes_acesso']) && !souProfessor();
+      allow write: if logado() && !(colecao in ['usuarios', 'publico', 'validacoes', 'solicitacoes_acesso', 'resumos_mensais']) && !souProfessor();
       allow create: if logado() && colecao in ['auditoria_cronograma', 'auditoria_configuracoes'];
     }
   }

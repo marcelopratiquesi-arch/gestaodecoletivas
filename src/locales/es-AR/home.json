@@ -21,7 +21,8 @@
       "revenueYesterday": "INGRESOS DE AYER",
       "monthlyForecast": "PREVISIÓN MENSUAL",
       "footer": "Ver Detalles",
-      "monthlyEstimate": "Estimación Mensual (Est.)"
+      "monthlyEstimate": "Estimación Mensual (Est.)",
+      "revenueOf": "INGRESOS DEL {{dia}}"
     },
     "schedule": {
       "title": "Cronograma",
@@ -32,7 +33,10 @@
       "teacher": "Profesor",
       "noMoreClasses": "No hay más clases hoy",
       "defaultModality": "Clase Grupal",
-      "defaultTeacher": "Instructor"
+      "defaultTeacher": "Instructor",
+      "now": "Ahora",
+      "after": "Después",
+      "moreToday": "+{{count}} hoy"
     },
     "validation": {
       "title": "Validación Diaria",
@@ -41,7 +45,13 @@
       "history": "Historial",
       "classes": "Clases",
       "pending": "Pendientes",
-      "allValidated": "¡Todo Validado!"
+      "allValidated": "¡Todo Validado!",
+      "toValidate": "Por validar",
+      "laterToday": "+{{count}} más tarde hoy",
+      "oldest": "Más antigua: {{dia}}",
+      "periodLast7": "ÚLTIMOS 7 DÍAS",
+      "periodSince": "DESDE EL {{dia}}",
+      "noClasses": "Sin clases en el período"
     },
     "monitoring": {
       "title": "Monitoreo de Validación",
@@ -55,29 +65,19 @@
         "excellent": "EXCELENTE",
         "inProgress": "EN CURSO"
       },
-      "validatedOf": "{{validated}} de {{total}} validadas"
-    },
-    "pratiquePlay": {
-      "title": "PRATIQUE PLAY",
-      "subtitle": "MÚSICA PARA CLASES",
-      "footer": "Acceder a Play",
-      "insideLine1": "PLAYLISTS DE",
-      "insideLine2": "CLASES"
-    },
-    "linkAluno": {
-      "title": "ENLACE DEL ALUMNO",
-      "subtitle": "ACCESO EXTERNO",
-      "footer": "Abrir Portal",
-      "insideLine1": "PORTAL DE",
-      "insideLine2": "ALUMNOS"
-    },
-    "settings": {
-      "title": "Configuración",
-      "subtitle": "Panel Administrativo",
-      "footer": "Gestionar",
-      "units": "Unidades",
-      "mods": "Mods",
-      "profs": "Profs"
+      "validatedOf": "{{validated}} de {{total}} validadas",
+      "subtitleOf": "Estado del {{dia}}",
+      "noClasses": "Sin clases en los últimos 7 días",
+      "mostLate": "Más atrasadas",
+      "pendingShort": "{{count}} sin validar"
     }
-  }
+  },
+  "loadError": "No se pudieron cargar los números. Revisá la conexión y recargá la página.",
+  "days": {
+    "yesterday": "ayer"
+  },
+  "offline": "Sin internet · los números pueden estar desactualizados",
+  "updatedAt": "Actualizado a las {{hora}}",
+  "refresh": "Actualizar",
+  "shortcuts": "Atajos"
 }

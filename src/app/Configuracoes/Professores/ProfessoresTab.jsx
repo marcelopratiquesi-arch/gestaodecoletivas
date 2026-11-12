@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 // Importações de contexto e serviços
 import { useAuth } from "../../../contexts/AuthContext";
+import { useCatalogs } from "../../../contexts/CatalogContext";
 import { db } from "../../../services/firebase";
 import { publicarProfessor, removerProfessorDaVitrine } from "../../../services/vitrinePublica";
 import {
@@ -133,10 +134,16 @@ export function ProfessoresTab() {
   const podeExcluir = role === "admin"; // Apenas admin exclui do banco geral
 
   // ===== STATES DE DADOS EM TEMPO REAL =====
-  const [professoresTotais, setProfessoresTotais] = useState([]);
-  const [unidades, setUnidades] = useState([]);
-  const [vinculos, setVinculos] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // ECONOMIA DE COTA: unidades, professores e vínculos vêm da memória ao vivo (CatalogContext), que já está
+  // carregada e atualizada em tempo real. Antes esta aba baixava tudo de novo (~1.300 leituras) a cada abertura.
+  // Exceção: unidade e mentor têm na memória só os vínculos das próprias unidades, e esta aba mostra em quais
+  // outras unidades cada professor dá aula; por isso, para eles, os vínculos da rede são escutados aqui.
+  const { catalogs: catalogosGlobais, loadingCatalogs } = useCatalogs();
+  const professoresTotais = catalogosGlobais.professores || [];
+  const unidades = catalogosGlobais.unidades || [];
+  const [vinculosDaRede, setVinculosDaRede] = useState(null);
+  const vinculos = role !== 'admin' ? (vinculosDaRede || []) : (catalogosGlobais.vinculos || []);
+  const loading = loadingCatalogs || (role !== 'admin' && vinculosDaRede === null);
   
   // UX: Paginação e Ordenação
   const [itensVisiveis, setItensVisiveis] = useState(20);
@@ -194,24 +201,12 @@ export function ProfessoresTab() {
   // 1. MOTOR DE TEMPO REAL (Velocidade da Luz)
   // ==========================================
   useEffect(() => { 
-      if (!podeVer) return;
-      setLoading(true);
-
-      const unsubUnidades = onSnapshot(collection(db, "unidades"), snap => {
-          setUnidades(snap.docs.map(d => ({id: d.id, ...d.data()})));
-      });
-
+      if (!podeVer || role === 'admin') return;
       const unsubVinculos = onSnapshot(collection(db, "vinculos"), snap => {
-          setVinculos(snap.docs.map(d => ({id: d.id, ...d.data()})));
+          setVinculosDaRede(snap.docs.map(d => ({id: d.id, ...d.data()})));
       });
-
-      const unsubProfs = onSnapshot(collection(db, "professores"), snap => {
-          setProfessoresTotais(snap.docs.map(d => ({id: d.id, ...d.data()})));
-          setLoading(false);
-      });
-
-      return () => { unsubUnidades(); unsubVinculos(); unsubProfs(); };
-  }, [podeVer]);
+      return () => unsubVinculos();
+  }, [podeVer, role]);
 
   // ==========================================
   // 2. FILTROS DE PERMISSÃO (ACL)

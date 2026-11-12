@@ -12,6 +12,10 @@ import { getDiaSemana, toDate, formatDate, formatTime } from '../../utils/format
 import { deduplicarValidacoes } from '../../utils/validacoes';
 import { feriadoNoDia, ehCancelamentoAutomaticoDeFeriado } from '../../utils/feriados';
 import { useTranslation } from 'react-i18next';
+import { emBlocos } from '../../services/resumosMensais';
+
+// Usuários guardados entre aberturas da tela (ver efeito abaixo).
+let cacheUsuarios = { uid: null, quando: 0, lista: [] };
 
 export default function ValidacaoColetiva() {
   const { userData } = useAuth();
@@ -49,9 +53,19 @@ export default function ValidacaoColetiva() {
 
   useEffect(() => { if (dataInicio > dataFim) setDataFim(dataInicio); }, [dataInicio, dataFim]);
 
+  // Lista de usuários (nomes de quem validou e dos mentores): ~700 leituras, então fica guardada por 30 min
+  // em vez de ser baixada a cada abertura da tela.
   useEffect(() => {
       if (!userId) return;
-      getDocs(collection(db, 'usuarios')).then(snap => setUsuariosBase(snap.docs.map(d => ({id: d.id, ...d.data()})))).catch(e => console.error(e));
+      if (cacheUsuarios.uid === userId && Date.now() - cacheUsuarios.quando < 30 * 60 * 1000) {
+          setUsuariosBase(cacheUsuarios.lista);
+          return;
+      }
+      getDocs(collection(db, 'usuarios')).then(snap => {
+          const lista = snap.docs.map(d => ({id: d.id, ...d.data()}));
+          cacheUsuarios = { uid: userId, quando: Date.now(), lista };
+          setUsuariosBase(lista);
+      }).catch(e => console.error(e));
   }, [userId]);
 
   const unidadesBase = useMemo(() => {
@@ -78,14 +92,33 @@ export default function ValidacaoColetiva() {
   const professoresBase = catalogs?.professores || [];
   const aulasBase = catalogs?.aulas || [];
 
+  // ECONOMIA DE COTA: escuta só as validações das unidades filtradas (antes: a rede inteira, e o filtro
+  // era aplicado depois de baixar). Várias consultas de até 30 unidades, juntadas aqui.
+  const escopoUnidades = useMemo(() => {
+      let u = unidadesFiltradasEstado;
+      if (mentorFiltro.length > 0) u = u.filter(x => mentorFiltro.includes(x.mentorId));
+      if (unidadeFiltro.length > 0) u = u.filter(x => unidadeFiltro.includes(x.id));
+      return JSON.stringify(u.map(x => x.id).sort());
+  }, [unidadesFiltradasEstado, mentorFiltro, unidadeFiltro]);
+
   useEffect(() => {
     if (!userId || loadingCatalogs) return;
     if (isCofreGlobalFechado) { setValidacoesBase([]); setLoadingRealtime(false); return; }
+    const ids = JSON.parse(escopoUnidades);
+    if (ids.length === 0) { setValidacoesBase([]); setLoadingRealtime(false); return; }
     setLoadingRealtime(true);
-    const q = query(collection(db, 'validacoes'), where('data', '>=', dataInicio), where('data', '<=', dataFim));
-    const u = onSnapshot(q, s => { setValidacoesBase(deduplicarValidacoes(s.docs.map(d => ({id: d.id, ...d.data()})))); setLoadingRealtime(false); });
-    return () => u();
-  }, [dataInicio, dataFim, userId, isCofreGlobalFechado, loadingCatalogs]); 
+    const blocos = emBlocos(ids);
+    const porBloco = blocos.map(() => null);
+    const cancelar = blocos.map((bloco, i) => onSnapshot(
+        query(collection(db, 'validacoes'), where('data', '>=', dataInicio), where('data', '<=', dataFim), where('unidadeId', 'in', bloco)),
+        s => {
+            porBloco[i] = s.docs.map(d => ({id: d.id, ...d.data()}));
+            if (porBloco.every(Boolean)) { setValidacoesBase(deduplicarValidacoes(porBloco.flat())); setLoadingRealtime(false); }
+        },
+        e => { console.error(e); setLoadingRealtime(false); }
+    ));
+    return () => cancelar.forEach(unsub => unsub());
+  }, [dataInicio, dataFim, userId, isCofreGlobalFechado, loadingCatalogs, escopoUnidades]); 
 
   const dadosProcessados = useMemo(() => {
     if (unidadesBase.length === 0 || isCofreGlobalFechado) return { mentores: [], unidades: [], kpis: { totalAulas: 0, unidadesValidadas: 0, unidadesPendentes: 0 } };

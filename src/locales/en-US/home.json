@@ -21,7 +21,8 @@
       "revenueYesterday": "YESTERDAY'S REVENUE",
       "monthlyForecast": "MONTHLY FORECAST",
       "footer": "View Details",
-      "monthlyEstimate": "Monthly Estimate (Est.)"
+      "monthlyEstimate": "Monthly Estimate (Est.)",
+      "revenueOf": "REVENUE ON {{dia}}"
     },
     "schedule": {
       "title": "Schedule",
@@ -32,7 +33,10 @@
       "teacher": "Teacher",
       "noMoreClasses": "No more classes today",
       "defaultModality": "Group Class",
-      "defaultTeacher": "Instructor"
+      "defaultTeacher": "Instructor",
+      "now": "Now",
+      "after": "Later",
+      "moreToday": "+{{count}} today"
     },
     "validation": {
       "title": "Daily Validation",
@@ -41,7 +45,13 @@
       "history": "History",
       "classes": "Classes",
       "pending": "Pending",
-      "allValidated": "All Validated!"
+      "allValidated": "All Validated!",
+      "toValidate": "To validate",
+      "laterToday": "+{{count}} later today",
+      "oldest": "Oldest: {{dia}}",
+      "periodLast7": "LAST 7 DAYS",
+      "periodSince": "SINCE {{dia}}",
+      "noClasses": "No classes in this period"
     },
     "monitoring": {
       "title": "Validation Monitoring",
@@ -55,29 +65,19 @@
         "excellent": "EXCELLENT",
         "inProgress": "IN PROGRESS"
       },
-      "validatedOf": "{{validated}} of {{total}} validated"
-    },
-    "pratiquePlay": {
-      "title": "PRATIQUE PLAY",
-      "subtitle": "CLASS MUSIC",
-      "footer": "Access Play",
-      "insideLine1": "GROUP CLASS",
-      "insideLine2": "PLAYLISTS"
-    },
-    "linkAluno": {
-      "title": "STUDENT LINK",
-      "subtitle": "EXTERNAL ACCESS",
-      "footer": "Open Portal",
-      "insideLine1": "STUDENT",
-      "insideLine2": "PORTAL"
-    },
-    "settings": {
-      "title": "Settings",
-      "subtitle": "Admin Panel",
-      "footer": "Manage",
-      "units": "Units",
-      "mods": "Mods",
-      "profs": "Profs"
+      "validatedOf": "{{validated}} of {{total}} validated",
+      "subtitleOf": "Status for {{dia}}",
+      "noClasses": "No classes in the last 7 days",
+      "mostLate": "Most behind",
+      "pendingShort": "{{count}} not validated"
     }
-  }
+  },
+  "loadError": "Couldn't load the numbers. Check your internet and reload the page.",
+  "days": {
+    "yesterday": "yesterday"
+  },
+  "offline": "No internet · numbers may be out of date",
+  "updatedAt": "Updated at {{hora}}",
+  "refresh": "Refresh",
+  "shortcuts": "Shortcuts"
 }

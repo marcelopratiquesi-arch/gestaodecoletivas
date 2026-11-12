@@ -5,7 +5,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useCatalogs } from "../../contexts/CatalogContext";
 import { db } from "../../services/firebase";
-import { collection, query, where, getDocs, onSnapshot } from "firebase/firestore";
+import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
 import { LANGUAGES, getDiaSemana, formatDateTime, formatRole } from "../../utils/formatters";
 import { feriadoNoDia } from "../../utils/feriados";
@@ -27,8 +27,6 @@ export default function Sidebar({ collapsed }) {
   const { theme, toggleTheme } = useTheme();
   const location = useLocation();
   const { t, i18n } = useTranslation(); // 🟢 CÉREBRO CONECTADO
-
-  const [pendencias, setPendencias] = useState(0);
 
   // Professor: o selo conta as pendências do MÊS (não só de hoje), em tempo real.
   // Usa a mesma consulta da Validação Diária (o Firebase compartilha, sem leitura em dobro).
@@ -68,14 +66,14 @@ export default function Sidebar({ collapsed }) {
   // 🔒 A SENHA DO MENU (Pode trocar aqui quando quiser)
   const PIN_DO_MENU = "7788";
 
-  if (!userData) return null;
+  // (o "if (!userData) return null" fica logo antes do return da tela: os hooks precisam rodar sempre na mesma ordem)
 
-  const role = String(userData.role || "").trim().toLowerCase();
+  const role = String(userData?.role || "").trim().toLowerCase();
   const isMaster = role === 'admin' || role === 'master';
   // Professor de coletiva só vê: Cronograma, Link do Aluno e Validação Diária.
   const isProfessor = role === 'professor';
 
-  const userInitials = userData.nome 
+  const userInitials = userData?.nome 
     ? (userData.nome.split(' ')[0][0] + (userData.nome.split(' ').length > 1 ? userData.nome.split(' ').pop()[0] : '')).toUpperCase()
     : "US";
 
@@ -83,48 +81,83 @@ export default function Sidebar({ collapsed }) {
   const isActive = (route) => path === route || path.startsWith(`${route}/`);
 
   // --- CÁLCULO DE PENDÊNCIAS ---
-  // Aulas e cadastros vêm da memória ao vivo (CatalogContext); só as validações de hoje são buscadas a cada minuto.
-  // Conta apenas aulas ativas hoje (não excluídas, dentro de início/fim) e fora de feriado (regra única).
+  // Conta aulas de hoje sob minha responsabilidade (ativas, dentro de início/fim, fora de feriado) ainda sem validação.
+  // ECONOMIA DE COTA: antes, a cada 1 minuto, cada pessoa logada baixava TODAS as validações do dia da rede inteira
+  // (~300 leituras/minuto por pessoa). Agora escuta ao vivo só as validações de hoje das MINHAS unidades:
+  // paga a primeira carga e depois só cada validação nova.
+  const meuId = userData?.uid || userData?.id;
+
+  // Hoje (AAAA-MM-DD). O relógio só troca o dia; não lê nada do banco.
+  const [hojeStr, setHojeStr] = useState(() => new Date().toLocaleDateString('en-CA'));
   useEffect(() => {
-    if (loadingCatalogs || role === 'professor') return; // professor usa pendenciasProfessor (mês inteiro)
-    const fetchPendencias = async () => {
-        try {
-            const todayStr = new Date().toLocaleDateString('en-CA');
-            const diaSemanaHoje = getDiaSemana(new Date());
+    const relogio = setInterval(() => {
+        const agora = new Date().toLocaleDateString('en-CA');
+        setHojeStr(prev => (prev === agora ? prev : agora));
+    }, 60000);
+    return () => clearInterval(relogio);
+  }, []);
 
-            const qValidacoes = query(collection(db, "validacoes"), where("data", "==", todayStr));
-            const validacoesSnap = await getDocs(qValidacoes);
-            const validacoesMap = new Set(validacoesSnap.docs.map(doc => doc.data().aulaId));
+  // Minhas aulas de hoje (só memória).
+  const minhasAulasHoje = useMemo(() => {
+    // Professor não entra aqui: o selo dele é o pendenciasProfessor (mês inteiro), que já tem a própria escuta.
+    if (loadingCatalogs || role === 'professor') return [];
+    const diaSemanaHoje = getDiaSemana(new Date(hojeStr + 'T12:00:00'));
+    const unidadesPorId = new Map((catalogs.unidades || []).map(u => [String(u.id), u]));
 
-            const meuId = userData.uid || userData.id;
-            const unidadesPorId = new Map((catalogs.unidades || []).map(u => [String(u.id), u]));
-            const meuProfessorId = userData.professorId || (catalogs.professores || []).find(p => p.uidLogin === meuId)?.id;
+    const lista = [];
+    (catalogs.aulas || []).forEach(aula => {
+        if (!aula.dias?.includes(diaSemanaHoje)) return;
+        if (aula.dataInicio && hojeStr < aula.dataInicio) return;
+        if (aula.dataFim && hojeStr > aula.dataFim) return;
 
-            let count = 0;
-            (catalogs.aulas || []).forEach(aula => {
-                if (!aula.dias?.includes(diaSemanaHoje)) return;
-                if (aula.dataInicio && todayStr < aula.dataInicio) return;
-                if (aula.dataFim && todayStr > aula.dataFim) return;
+        const unidade = unidadesPorId.get(String(aula.unidadeId));
+        let isMyResponsibility = false;
+        if (role === 'admin') isMyResponsibility = true;
+        else if (ehLider(role) && String(aula.unidadeId) === String(userData?.unidadeId)) isMyResponsibility = true;
+        else if (role === 'mentor' && unidade?.mentorId === meuId) isMyResponsibility = true;
+        if (!isMyResponsibility) return;
+        if (feriadoNoDia(hojeStr, unidade || { id: aula.unidadeId }, catalogs.feriados || [])) return;
+        lista.push(aula);
+    });
+    return lista;
+  }, [loadingCatalogs, hojeStr, catalogs, role, userData?.professorId, userData?.unidadeId, meuId]);
 
-                const unidade = unidadesPorId.get(String(aula.unidadeId));
-                let isMyResponsibility = false;
+  // Quais unidades escutar: '*' = rede inteira (admin); senão, as unidades das minhas aulas de hoje.
+  // Vira texto para a escuta só reabrir quando o conjunto de unidades mudar de verdade.
+  const escopoValidacoes = useMemo(() => {
+    if (role === 'admin') return '*';
+    const ids = new Map();
+    minhasAulasHoje.forEach(a => ids.set(String(a.unidadeId), a.unidadeId));
+    return JSON.stringify([...ids.entries()].sort(([a], [b]) => (a < b ? -1 : 1)).map(([, bruto]) => bruto));
+  }, [role, minhasAulasHoje]);
 
-                if (role === 'admin') isMyResponsibility = true;
-                else if (ehLider(role) && String(aula.unidadeId) === String(userData.unidadeId)) isMyResponsibility = true;
-                else if (role === 'professor' && meuProfessorId && String(aula.professorId) === String(meuProfessorId)) isMyResponsibility = true;
-                else if (role === 'mentor' && unidade?.mentorId === meuId) isMyResponsibility = true;
+  // aulaIds validadas hoje no meu escopo, ao vivo.
+  // Guarda junto a "chave" da escuta: resultado de uma escuta antiga (outro dia/escopo) é ignorado.
+  const chaveEscuta = `${hojeStr}|${escopoValidacoes}`;
+  const [resultadoEscuta, setResultadoEscuta] = useState({ chave: null, aulaIds: new Set() });
+  useEffect(() => {
+    if (loadingCatalogs) return undefined;
+    const unidades = escopoValidacoes === '*' ? null : JSON.parse(escopoValidacoes);
+    if (unidades && unidades.length === 0) return undefined; // nada a validar hoje: não lê nada
 
-                if (!isMyResponsibility || validacoesMap.has(aula.id)) return;
-                if (feriadoNoDia(todayStr, unidade || { id: aula.unidadeId }, catalogs.feriados || [])) return;
-                count++;
-            });
-            setPendencias(count);
-        } catch (error) { console.error("Erro pendências:", error); }
-    };
-    fetchPendencias();
-    const interval = setInterval(fetchPendencias, 60000);
-    return () => clearInterval(interval);
-  }, [role, userData, catalogs, loadingCatalogs]);
+    // O Firestore aceita até 30 valores num filtro "in".
+    const consultas = unidades === null
+        ? [query(collection(db, "validacoes"), where("data", "==", hojeStr))]
+        : Array.from({ length: Math.ceil(unidades.length / 30) }, (_, i) =>
+            query(collection(db, "validacoes"), where("data", "==", hojeStr), where("unidadeId", "in", unidades.slice(i * 30, i * 30 + 30))));
+
+    const porConsulta = consultas.map(() => []);
+    const cancelar = consultas.map((q, i) => onSnapshot(q, (snap) => {
+        porConsulta[i] = snap.docs.map(d => d.data().aulaId);
+        setResultadoEscuta({ chave: chaveEscuta, aulaIds: new Set(porConsulta.flat()) });
+    }, (error) => console.error("Erro pendências:", error)));
+    return () => cancelar.forEach(unsub => unsub());
+  }, [escopoValidacoes, hojeStr, loadingCatalogs, chaveEscuta]);
+
+  const pendencias = useMemo(() => {
+    const validadasHoje = resultadoEscuta.chave === chaveEscuta ? resultadoEscuta.aulaIds : new Set();
+    return minhasAulasHoje.filter(aula => !validadasHoje.has(aula.id)).length;
+  }, [minhasAulasHoje, resultadoEscuta, chaveEscuta]);
 
   // --- CÃO DE GUARDA EM TEMPO REAL ---
   useEffect(() => {
@@ -203,6 +236,8 @@ export default function Sidebar({ collapsed }) {
           setTimeout(() => setPinError(false), 2000);
       }
   };
+
+  if (!userData) return null;
 
   return (
     <>

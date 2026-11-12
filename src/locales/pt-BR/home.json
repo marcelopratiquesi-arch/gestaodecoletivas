@@ -21,7 +21,8 @@
       "revenueYesterday": "RECEITA DE ONTEM",
       "monthlyForecast": "PREVISÃO MENSAL",
       "footer": "Ver Detalhes",
-      "monthlyEstimate": "Previsão Mensal (Est.)"
+      "monthlyEstimate": "Previsão Mensal (Est.)",
+      "revenueOf": "RECEITA DE {{dia}}"
     },
     "schedule": {
       "title": "Cronograma",
@@ -32,7 +33,10 @@
       "teacher": "Professor",
       "noMoreClasses": "Sem mais aulas hoje",
       "defaultModality": "Coletiva",
-      "defaultTeacher": "Instrutor"
+      "defaultTeacher": "Instrutor",
+      "now": "Agora",
+      "after": "Depois",
+      "moreToday": "+{{count}} hoje"
     },
     "validation": {
       "title": "Validação Diária",
@@ -41,7 +45,13 @@
       "history": "Histórico",
       "classes": "Aulas",
       "pending": "Pendentes",
-      "allValidated": "Tudo Validado!"
+      "allValidated": "Tudo Validado!",
+      "toValidate": "A validar",
+      "laterToday": "+{{count}} ainda hoje",
+      "oldest": "Mais antiga: {{dia}}",
+      "periodLast7": "ÚLTIMOS 7 DIAS",
+      "periodSince": "DESDE {{dia}}",
+      "noClasses": "Sem aulas no período"
     },
     "monitoring": {
       "title": "Monitoramento de Validação",
@@ -55,29 +65,19 @@
         "excellent": "EXCELENTE",
         "inProgress": "EM ANDAMENTO"
       },
-      "validatedOf": "{{validated}} de {{total}} validadas"
-    },
-    "pratiquePlay": {
-      "title": "PRATIQUE PLAY",
-      "subtitle": "MÚSICAS PARA AULAS",
-      "footer": "Acessar Play",
-      "insideLine1": "PLAYLISTS DAS",
-      "insideLine2": "COLETIVAS"
-    },
-    "linkAluno": {
-      "title": "LINK DO ALUNO",
-      "subtitle": "ACESSO EXTERNO",
-      "footer": "Abrir Portal",
-      "insideLine1": "PORTAL DE",
-      "insideLine2": "ALUNOS"
-    },
-    "settings": {
-      "title": "Configurações",
-      "subtitle": "Painel Administrativo",
-      "footer": "Gerenciar",
-      "units": "Unidades",
-      "mods": "Mods",
-      "profs": "Profs"
+      "validatedOf": "{{validated}} de {{total}} validadas",
+      "subtitleOf": "Status de {{dia}}",
+      "noClasses": "Sem aulas nos últimos 7 dias",
+      "mostLate": "Mais atrasadas",
+      "pendingShort": "{{count}} sem validar"
     }
-  }
+  },
+  "loadError": "Não foi possível carregar os números. Confira a internet e recarregue a página.",
+  "days": {
+    "yesterday": "ontem"
+  },
+  "offline": "Sem internet · números podem estar desatualizados",
+  "updatedAt": "Atualizado às {{hora}}",
+  "refresh": "Atualizar",
+  "shortcuts": "Atalhos"
 }
