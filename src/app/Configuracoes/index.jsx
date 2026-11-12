@@ -2,8 +2,9 @@ import { useState, useMemo, Suspense, lazy } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { 
   Building2, Users, Dumbbell, CalendarDays, 
-  ShieldCheck, Database, LayoutDashboard, Loader2, Headphones 
+  ShieldCheck, Database, LayoutDashboard, Loader2, Headphones, Inbox
 } from "lucide-react";
+import { usePedidosPendentes } from "./Pendencias/usePedidosPendentes";
 import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
 
 // --- LAZY LOADING ---
@@ -13,6 +14,7 @@ const ModalidadesTab = lazy(() => import('./Modalidades/ModalidadesTab').then(mo
 const ProfessoresTab = lazy(() => import('./Professores/ProfessoresTab').then(module => ({ default: module.ProfessoresTab })));
 const FeriadosTab = lazy(() => import('./Feriados/FeriadosTab').then(module => ({ default: module.FeriadosTab })));
 const BackupTab = lazy(() => import('./Backup/BackupTab'));
+const PendenciasTab = lazy(() => import('./Pendencias/PendenciasTab').then(module => ({ default: module.PendenciasTab })));
 
 // 🟢 NOVA ABA: PRATIQUE PLAY
 const PratiquePlayTab = lazy(() => import('./PratiquePlay/PratiquePlayTab').then(module => ({ default: module.PratiquePlayTab })));
@@ -33,17 +35,19 @@ export default function ConfiguracoesPage() {
   const { t } = useTranslation(); // 🟢 CÉREBRO CONECTADO NO COMPONENTE PRINCIPAL
   
   const role = useMemo(() => String(userData?.role || "").trim().toLowerCase(), [userData?.role]);
+  const { pedidos: pedidosPendentes } = usePedidosPendentes();
 
   // 🟢 Abas agora reagem ao idioma em tempo real
   const tabs = useMemo(() => [
     { id: "unidades", label: t('settingsPage.tabs.unidades', 'Unidades'), icon: Building2, roles: ["admin", "mentor"] },
+    { id: "pendencias", label: t('settingsPage.tabs.pendencias'), icon: Inbox, roles: ["admin", "mentor"], contador: pedidosPendentes.length },
     { id: "mentores", label: t('settingsPage.tabs.mentores', 'Mentores'), icon: ShieldCheck, roles: ["admin"] },
     { id: "professores", label: t('settingsPage.tabs.professores', 'Professores'), icon: Users, roles: ["admin", "mentor", "unidade"] },
     { id: "modalidades", label: t('settingsPage.tabs.modalidades', 'Modalidades'), icon: Dumbbell, roles: ["admin", "mentor"] },
     { id: "feriados", label: t('settingsPage.tabs.feriados', 'Feriados'), icon: CalendarDays, roles: ["admin", "mentor"] },
     { id: "pratique-play", label: t('settingsPage.tabs.pratiquePlay', 'Pratique Play'), icon: Headphones, roles: ["admin"] },
     { id: "backup", label: t('settingsPage.tabs.backup', 'Backup'), icon: Database, roles: ["admin"] },
-  ], [t]);
+  ], [t, pedidosPendentes.length]);
 
   const allowedTabs = useMemo(() => tabs.filter(t => t.roles.includes(role)), [role, tabs]);
 
@@ -106,6 +110,9 @@ export default function ConfiguracoesPage() {
             >
               <Icon className={`w-5 h-5 transition-transform duration-300 ${isActive ? "text-red-600 scale-110" : "text-slate-400 group-hover:text-slate-600"}`} />
               {tab.label}
+              {tab.contador > 0 && (
+                <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-red-600 text-white text-[10px] font-black flex items-center justify-center">{tab.contador}</span>
+              )}
             </button>
           );
         })}
@@ -116,6 +123,7 @@ export default function ConfiguracoesPage() {
         <Suspense fallback={<TabLoading />}>
             <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                 {activeTab === "unidades" && allowedTabs.some(t => t.id === 'unidades') && <UnidadesTab />}
+                {activeTab === "pendencias" && allowedTabs.some(t => t.id === 'pendencias') && <PendenciasTab />}
                 {activeTab === "mentores" && allowedTabs.some(t => t.id === 'mentores') && <MentoresTab />}
                 {activeTab === "modalidades" && allowedTabs.some(t => t.id === 'modalidades') && <ModalidadesTab />}
                 {activeTab === "professores" && allowedTabs.some(t => t.id === 'professores') && <ProfessoresTab />}

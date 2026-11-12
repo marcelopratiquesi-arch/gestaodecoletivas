@@ -8,5 +8,11 @@
   "loading": "Accessing...",
   "forgotPassword": "Forgot your password?",
   "support": "Contact support",
-  "version": "v2.5.0 • Pratique Fitness"
+  "version": "v2.5.0 • Pratique Fitness",
+  "google": {
+    "button": "Sign in with Google",
+    "or": "or with username and password",
+    "popupBlocked": "Your browser blocked the Google window. Allow pop-ups for this site and try again.",
+    "notEnabled": "Google sign-in is not enabled yet. Please contact support."
+  }
 }

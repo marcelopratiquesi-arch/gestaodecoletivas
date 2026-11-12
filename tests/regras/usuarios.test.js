@@ -186,3 +186,89 @@ describe('o resto do sistema não mudou', () => {
     await assertSucceeds(addDoc(collection(db, 'auditoria_cronograma'), { x: 1 }));
   });
 });
+
+// ===================== LOGIN PELO GOOGLE + PEDIDO DE ACESSO =====================
+// Quem entra pelo Google ganha um token com sign_in_provider = 'google.com'.
+const google = (uid, email = `${uid}@gmail.com`) =>
+  env.authenticatedContext(uid, { email, firebase: { sign_in_provider: 'google.com' } }).firestore();
+const senha = (uid) =>
+  env.authenticatedContext(uid, { firebase: { sign_in_provider: 'password' } }).firestore();
+const pedido = (extra = {}) => ({
+  nome: 'Fulano Líder', telefone: '+55 31 99999-0000', unidadeId: 'uniA', unidadeNome: 'Unidade A',
+  email: 'novato@gmail.com', status: 'pendente', ...extra,
+});
+
+describe('login pelo Google sem aprovação NÃO vê nada', () => {
+  it('não lê unidades, professores, crachás de outros nem validações', async () => {
+    const db = google('novato');
+    await assertFails(getDoc(doc(db, 'unidades/uniA')));
+    await assertFails(getDoc(doc(db, 'professores/p1')));
+    await assertFails(getDoc(doc(db, 'usuarios/admin1')));
+    await assertFails(getDoc(doc(db, 'validacoes/v1')));
+  });
+  it('não grava nada e não se dá crachá', async () => {
+    const db = google('novato');
+    await assertFails(setDoc(doc(db, 'aulas/aula9'), { x: 1 }));
+    await assertFails(setDoc(doc(db, 'usuarios/novato'), { role: 'unidade', unidadeId: 'uniA' }));
+  });
+  it('lê o PRÓPRIO crachá (para saber se já foi aprovado) e a vitrine pública', async () => {
+    const db = google('novato');
+    await assertSucceeds(getDoc(doc(db, 'usuarios/novato')));
+    await assertSucceeds(getDoc(doc(db, 'publico/vitrine')));
+  });
+  it('login antigo por e-mail e senha continua vendo tudo como antes', async () => {
+    await assertSucceeds(getDoc(doc(senha('loginUniA'), 'unidades/uniA')));
+  });
+  it('líder aprovado pelo Google vê o sistema', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'usuarios/liderG'), { role: 'unidade', unidadeId: 'uniA' });
+    });
+    await assertSucceeds(getDoc(doc(google('liderG'), 'unidades/uniA')));
+  });
+});
+
+describe('pedido de acesso', () => {
+  it('a pessoa cria e lê o próprio pedido', async () => {
+    const db = google('novato', 'novato@gmail.com');
+    await assertSucceeds(setDoc(doc(db, 'solicitacoes_acesso/novato'), pedido()));
+    await assertSucceeds(getDoc(doc(db, 'solicitacoes_acesso/novato')));
+  });
+  it('NÃO cria pedido em nome de outra pessoa nem com e-mail falso', async () => {
+    const db = google('novato', 'novato@gmail.com');
+    await assertFails(setDoc(doc(db, 'solicitacoes_acesso/outro'), pedido()));
+    await assertFails(setDoc(doc(db, 'solicitacoes_acesso/novato'), pedido({ email: 'chefe@gmail.com' })));
+  });
+  it('NÃO se auto-aprova nem inventa campos', async () => {
+    const db = google('novato', 'novato@gmail.com');
+    await assertFails(setDoc(doc(db, 'solicitacoes_acesso/novato'), pedido({ status: 'aprovado' })));
+    await assertFails(setDoc(doc(db, 'solicitacoes_acesso/novato'), pedido({ role: 'admin' })));
+    await assertFails(setDoc(doc(db, 'solicitacoes_acesso/novato'), pedido({ unidadeId: 'naoExiste' })));
+  });
+  it('NÃO lê pedidos dos outros; unidade e professor também não', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'solicitacoes_acesso/novato'), pedido());
+    });
+    await assertFails(getDoc(doc(google('curioso'), 'solicitacoes_acesso/novato')));
+    await assertFails(getDoc(doc(como('loginUniA'), 'solicitacoes_acesso/novato')));
+    await assertFails(getDoc(doc(como('prof1'), 'solicitacoes_acesso/novato')));
+  });
+  it('admin e mentor leem; só o mentor DA UNIDADE (ou admin) aprova/recusa', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'solicitacoes_acesso/novato'), pedido());
+    });
+    await assertSucceeds(getDoc(doc(como('admin1'), 'solicitacoes_acesso/novato')));
+    await assertSucceeds(getDoc(doc(como('mentor2'), 'solicitacoes_acesso/novato')));
+    await assertFails(updateDoc(doc(como('mentor2'), 'solicitacoes_acesso/novato'), { status: 'aprovado' }));
+    await assertSucceeds(updateDoc(doc(como('mentor1'), 'solicitacoes_acesso/novato'), { status: 'recusado', motivo: 'Não é líder' }));
+  });
+  it('mentor dá crachá de líder só para unidade DELE', async () => {
+    await assertSucceeds(setDoc(doc(como('mentor1'), 'usuarios/novato'), { role: 'unidade', unidadeId: 'uniA' }));
+    await assertFails(setDoc(doc(como('mentor1'), 'usuarios/outro'), { role: 'unidade', unidadeId: 'uniB' }));
+  });
+  it('depois de aprovado (com crachá), não mexe mais no próprio pedido', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'usuarios/novato'), { role: 'unidade', unidadeId: 'uniA' });
+    });
+    await assertFails(setDoc(doc(google('novato', 'novato@gmail.com'), 'solicitacoes_acesso/novato'), pedido()));
+  });
+});

@@ -22,7 +22,10 @@ const mapearDocs = (snap) => snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
 export const CatalogProvider = ({ children }) => {
     // 🟢 2. Pegamos o crachá e o status de carregamento do Auth
-    const { user, loading: authLoading } = useAuth();
+    // Quem entrou pelo Google e ainda aguarda aprovação tem "user" mas não tem crachá (userData):
+    // para ele não escuta nada (o banco recusaria e cada recusa ainda gastaria cota).
+    const { user: usuarioAuth, userData, loading: authLoading } = useAuth();
+    const user = userData ? usuarioAuth : null;
 
     const [catalogs, setCatalogs] = useState(CATALOGOS_VAZIOS);
     // "Carregado para quem": o carregamento termina quando todas as escutas do usuário atual responderam.

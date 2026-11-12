@@ -1,0 +1,39 @@
+{
+  "leader": "Location leader",
+  "logout": "Sign out ({{email}})",
+  "loadingUnits": "Loading locations...",
+  "noUnits": "Could not load the list of locations. Please talk to your mentor.",
+  "fields": {
+    "name": "Your full name",
+    "namePlaceholder": "E.g. Mary Smith",
+    "phone": "WhatsApp",
+    "phonePlaceholder": "E.g. +1 (305) 000-0000",
+    "unit": "Location",
+    "unitLeader": "Location you lead",
+    "unitSearch": "Search location...",
+    "unitSelect": "Select the location...",
+    "role": "Role"
+  },
+  "form": {
+    "title": "Request access",
+    "desc": "First time here? Fill in your details. Your mentor will approve the request and then you can use the system.",
+    "send": "Send request",
+    "cancelEdit": "Cancel changes"
+  },
+  "waiting": {
+    "title": "Request sent!",
+    "desc": "Now just wait for your mentor to approve it. Once approved, this screen opens the system automatically.",
+    "edit": "Fix my details"
+  },
+  "refused": {
+    "title": "Your previous request was not approved.",
+    "reason": "Reason: {{reason}}",
+    "retry": "If needed, fix your details and send it again."
+  },
+  "errors": {
+    "name": "Enter your full name.",
+    "phone": "Enter a valid WhatsApp number.",
+    "unit": "Choose the location.",
+    "send": "Could not send the request. Please try again."
+  }
+}

@@ -126,5 +126,23 @@
     "confirm": "Update the public schedule page with the current records?\n\nIt will show only unit names and addresses and teacher names (no email or phone).",
     "done": "Done: public page updated with {{units}} unit(s) and {{teachers}} teacher(s).",
     "error": "Could not update the public page."
+  },
+  "leader": {
+    "title": "Location leader",
+    "label": "Leader: {{name}}",
+    "none": "No leader yet",
+    "howTo": "Locations no longer have a username and password. The leader signs in with their Google account, requests access by choosing this location, and you approve it in the Pending tab.",
+    "created": "Location created! Now the leader signs in with Google and requests access.",
+    "oldLogin": "Old location login",
+    "oldLoginShort": "old login",
+    "oldLoginHint": "Keeps working until it is turned off. Turn it off once the leader is approved.",
+    "turnOffOne": "Turn off old login",
+    "turnOffOneConfirm": "Turn off the old login of {{name}} ({{email}})?\n\nAnyone signing in with that e-mail loses access. Make sure the leader is already approved.",
+    "turnOffAll": "Turn off old logins",
+    "turnOffAllConfirm": "Turn off the old logins of {{count}} location(s) that already have an approved leader?\n\nAnyone signing in with those e-mails loses access.",
+    "turnOffDone": "{{count}} old login(s) turned off.",
+    "turnOffError": "Could not turn off.",
+    "bannerTitle": "{{count}} location(s) already have a leader but the old login is still on",
+    "bannerDesc": "Now that the leader signs in with Google, the old location login (@pratique.com e-mail and password) can be turned off."
   }
 }

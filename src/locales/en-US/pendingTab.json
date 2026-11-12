@@ -1,0 +1,18 @@
+{
+  "title": "Access requests",
+  "subtitle": "People who signed in with Google and asked to lead a location. Once approved, they access the system as that location's leader.",
+  "empty": "No requests waiting for approval.",
+  "leaderOf": "Wants to lead: {{unit}}",
+  "hasLeader": "This location already has a leader: {{name}}. Approving replaces the current leader.",
+  "approve": "Approve",
+  "replace": "Replace leader",
+  "refuse": "Decline",
+  "approveConfirm": "Approve {{name}} as leader of {{unit}}?",
+  "replaceConfirm": "{{unit}} already has the leader {{current}}.\n\nReplace with {{name}}? The current leader loses access.",
+  "replacedReason": "Replaced by {{name}} as the location leader.",
+  "refusePrompt": "Decline {{name}}'s request?\n\nOptionally write the reason (they will see it):",
+  "unitNotFound": "Location not found (it may have been deleted).",
+  "notYourUnit": "This location is not yours.",
+  "approveError": "Could not approve.",
+  "refuseError": "Could not decline."
+}
