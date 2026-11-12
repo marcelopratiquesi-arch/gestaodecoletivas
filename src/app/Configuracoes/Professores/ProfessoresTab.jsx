@@ -135,14 +135,14 @@ export function ProfessoresTab() {
   // ===== STATES DE DADOS EM TEMPO REAL =====
   // ECONOMIA DE COTA: unidades, professores e vínculos vêm da memória ao vivo (CatalogContext), que já está
   // carregada e atualizada em tempo real. Antes esta aba baixava tudo de novo (~1.300 leituras) a cada abertura.
-  // Exceção: o login de UNIDADE tem na memória só os vínculos da própria unidade, e esta aba mostra em quais
-  // outras unidades cada professor dá aula; por isso, só para ele, os vínculos da rede são escutados aqui.
+  // Exceção: unidade e mentor têm na memória só os vínculos das próprias unidades, e esta aba mostra em quais
+  // outras unidades cada professor dá aula; por isso, para eles, os vínculos da rede são escutados aqui.
   const { catalogs: catalogosGlobais, loadingCatalogs } = useCatalogs();
   const professoresTotais = catalogosGlobais.professores || [];
   const unidades = catalogosGlobais.unidades || [];
   const [vinculosDaRede, setVinculosDaRede] = useState(null);
-  const vinculos = role === 'unidade' ? (vinculosDaRede || []) : (catalogosGlobais.vinculos || []);
-  const loading = loadingCatalogs || (role === 'unidade' && vinculosDaRede === null);
+  const vinculos = role !== 'admin' ? (vinculosDaRede || []) : (catalogosGlobais.vinculos || []);
+  const loading = loadingCatalogs || (role !== 'admin' && vinculosDaRede === null);
   
   // UX: Paginação e Ordenação
   const [itensVisiveis, setItensVisiveis] = useState(20);
@@ -200,7 +200,7 @@ export function ProfessoresTab() {
   // 1. MOTOR DE TEMPO REAL (Velocidade da Luz)
   // ==========================================
   useEffect(() => { 
-      if (!podeVer || role !== 'unidade') return;
+      if (!podeVer || role === 'admin') return;
       const unsubVinculos = onSnapshot(collection(db, "vinculos"), snap => {
           setVinculosDaRede(snap.docs.map(d => ({id: d.id, ...d.data()})));
       });
