@@ -10,12 +10,13 @@
   "onlyWithout": "Only without leader",
   "empty": "No locations found.",
   "noLeader": "No leader",
-  "howTo": "Replacing or removing a leader revokes their access immediately. Locations marked \"legacy login\" still sign in with the location e-mail: register the leader and then turn off the legacy login in the Locations tab.",
+  "howTo": "Replacing or removing a leader revokes their access immediately. Units with a \"legacy login\" still sign in with the unit e-mail: on the next sign-in the system requires the person to update their profile and connect their Google account, and they show up here as a leader \"to review\".",
   "kpi": {
     "units": "Locations",
     "withLeader": "With leader",
     "withoutLeader": "Without leader",
-    "requests": "Pending requests"
+    "requests": "Pending requests",
+    "toCheck": "To review"
   },
   "col": {
     "unit": "Location",
@@ -58,6 +59,11 @@
     "password": "The password must have at least {{min}} characters.",
     "emailInUse": "This e-mail already has a login. Use another e-mail, or ask the person to sign in with Google and approve the request.",
     "save": "Could not save.",
-    "remove": "Could not remove the leader."
-  }
+    "remove": "Could not remove the leader.",
+    "confirm": "Could not confirm the leader."
+  },
+  "toCheck": "To review",
+  "confirm": "Confirm leader",
+  "confirmQuestion": "Confirm {{name}} as leader of {{unit}}?",
+  "checkBanner": "{{count}} unit(s) with a new leader to review: the person signed in with the old unit login and took over as leader with their Google account. Check that it is the right person: confirm or remove."
 }

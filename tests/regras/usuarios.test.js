@@ -341,3 +341,72 @@ describe('fechamento do mês (resumos_mensais)', () => {
     await assertFails(updateDoc(doc(como('prof1'), 'resumos_mensais/2026-02'), { porAula: { x: { v: 999999 } } }));
   });
 });
+
+// ===================== CRACHÁ OBRIGATÓRIO PARA TODOS =====================
+// Qualquer pessoa consegue criar uma conta de login por fora das telas; sem crachá ela não vale nada.
+describe('crachá obrigatório para todo tipo de login', () => {
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'usuarios/bloq'), { role: 'bloqueado', nome: 'Ex-funcionário' });
+    });
+  });
+  it('conta com e-mail e senha SEM crachá não lê nem grava nada', async () => {
+    const db = senha('contaCriadaPorFora');
+    await assertFails(getDoc(doc(db, 'unidades/uniA')));
+    await assertFails(getDoc(doc(db, 'usuarios/admin1')));
+    await assertFails(getDoc(doc(db, 'validacoes/v1')));
+    await assertFails(setDoc(doc(db, 'aulas/aula9'), { x: 1 }));
+    await assertFails(updateDoc(doc(db, 'unidades/uniA'), { nome: 'invadida' }));
+    await assertFails(setDoc(doc(db, 'usuarios/contaCriadaPorFora'), { role: 'lider', unidadeId: 'uniA' }));
+  });
+  it('login antigo de unidade desligado (crachá apagado) perde o banco também', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => { await deleteDoc(doc(ctx.firestore(), 'usuarios/loginUniA')); });
+    await assertFails(getDoc(doc(senha('loginUniA'), 'unidades/uniA')));
+    await assertFails(setDoc(doc(senha('loginUniA'), 'aulas/aula9'), { unidadeId: 'uniA' }));
+  });
+  it('papel "bloqueado" não lê nem grava, mas enxerga o próprio crachá', async () => {
+    const db = senha('bloq');
+    await assertFails(getDoc(doc(db, 'unidades/uniA')));
+    await assertFails(setDoc(doc(db, 'aulas/aula9'), { x: 1 }));
+    await assertSucceeds(getDoc(doc(db, 'usuarios/bloq')));
+  });
+  it('a página pública de horários continua aberta sem login', async () => {
+    await assertSucceeds(getDoc(doc(anonimo(), 'publico/vitrine')));
+    await assertSucceeds(getDoc(doc(anonimo(), 'aulas/aula1')));
+  });
+});
+
+// ===================== ATUALIZAÇÃO DE CADASTRO (login antigo -> Google) =====================
+// Depois de conectar o Google à conta, o token passa a trazer a identidade "google.com".
+const comGoogleLigado = (uid) =>
+  env.authenticatedContext(uid, { firebase: { sign_in_provider: 'password', identities: { 'google.com': ['g-' + uid] } } }).firestore();
+const contato = (extra = {}) => ({
+  nome: 'Maria Silva', telefone: '+55 31 99999-0000', email: 'maria@gmail.com', loginGoogle: true, ...extra,
+});
+
+describe('atualização de cadastro pela própria pessoa', () => {
+  it('login de unidade com o Google conectado vira líder e atualiza o contato', async () => {
+    await assertSucceeds(updateDoc(doc(comGoogleLigado('loginUniA'), 'usuarios/loginUniA'),
+      contato({ role: 'lider', emailAntigo: 'unia@pratique.com' })));
+  });
+  it('SEM conectar o Google não atualiza nada', async () => {
+    await assertFails(updateDoc(doc(senha('loginUniA'), 'usuarios/loginUniA'), contato({ role: 'lider' })));
+  });
+  it('não aproveita para virar admin/mentor nem trocar de unidade', async () => {
+    const db = comGoogleLigado('loginUniA');
+    await assertFails(updateDoc(doc(db, 'usuarios/loginUniA'), contato({ role: 'admin' })));
+    await assertFails(updateDoc(doc(db, 'usuarios/loginUniA'), contato({ role: 'mentor' })));
+    await assertFails(updateDoc(doc(db, 'usuarios/loginUniA'), contato({ role: 'lider', unidadeId: 'uniB' })));
+  });
+  it('não mexe no crachá de outra pessoa', async () => {
+    await assertFails(updateDoc(doc(comGoogleLigado('loginUniA'), 'usuarios/loginUniB'), contato({ role: 'lider' })));
+  });
+  it('mentor atualiza o próprio contato, mas não vira admin', async () => {
+    await assertSucceeds(updateDoc(doc(comGoogleLigado('mentor1'), 'usuarios/mentor1'), contato()));
+    await assertFails(updateDoc(doc(comGoogleLigado('mentor1'), 'usuarios/mentor1'), contato({ role: 'admin' })));
+  });
+  it('exige nome e WhatsApp de verdade', async () => {
+    await assertFails(updateDoc(doc(comGoogleLigado('liderA'), 'usuarios/liderA'), contato({ nome: 'a' })));
+    await assertFails(updateDoc(doc(comGoogleLigado('liderA'), 'usuarios/liderA'), contato({ telefone: '1' })));
+  });
+});

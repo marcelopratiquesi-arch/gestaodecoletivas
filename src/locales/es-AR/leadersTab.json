@@ -10,12 +10,13 @@
   "onlyWithout": "Solo sin líder",
   "empty": "No se encontraron sedes.",
   "noLeader": "Sin líder",
-  "howTo": "Cambiar o quitar al líder le saca el acceso en el momento. Las sedes con \"login antiguo\" todavía ingresan con el e-mail de la sede: registrá al líder y después apagá el login antiguo en la pestaña Sedes.",
+  "howTo": "Cambiar o quitar al líder le saca el acceso en el momento. Las sedes con \"acceso anterior\" todavía ingresan con el e-mail de la sede: en el próximo ingreso el sistema obliga a la persona a actualizar su registro y conectar su cuenta de Google, y aparece acá como líder \"a revisar\".",
   "kpi": {
     "units": "Sedes",
     "withLeader": "Con líder",
     "withoutLeader": "Sin líder",
-    "requests": "Pedidos en espera"
+    "requests": "Pedidos en espera",
+    "toCheck": "A revisar"
   },
   "col": {
     "unit": "Sede",
@@ -58,6 +59,11 @@
     "password": "La contraseña debe tener al menos {{min}} caracteres.",
     "emailInUse": "Este e-mail ya tiene login en el sistema. Usá otro e-mail, o pedile a la persona que ingrese con Google y aprobá el pedido.",
     "save": "No se pudo guardar.",
-    "remove": "No se pudo quitar al líder."
-  }
+    "remove": "No se pudo quitar al líder.",
+    "confirm": "No se pudo confirmar al líder."
+  },
+  "toCheck": "A revisar",
+  "confirm": "Confirmar líder",
+  "confirmQuestion": "¿Confirmar a {{name}} como líder de la sede {{unit}}?",
+  "checkBanner": "{{count}} sede(s) con líder nuevo a revisar: la persona ingresó con el acceso anterior de la sede y asumió como líder con su cuenta de Google. Revisá si es la persona correcta: confirmá o quitá."
 }

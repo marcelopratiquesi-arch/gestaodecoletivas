@@ -2,7 +2,7 @@
 // Aprovar = a pessoa vira LÍDER da unidade (crachá com papel "lider"). Cada unidade tem 1 líder só:
 // se já houver um, o sistema pergunta se quer substituir (o antigo perde o acesso).
 import { useState } from "react";
-import { doc, getDoc, writeBatch, serverTimestamp, addDoc, collection, updateDoc } from "firebase/firestore";
+import { doc, getDoc, writeBatch, serverTimestamp, addDoc, collection, updateDoc, deleteField } from "firebase/firestore";
 import { useTranslation } from "react-i18next";
 import { Inbox, Check, X, Loader2, Building2, Phone, Mail, User, Clock } from "lucide-react";
 import { db } from "../../../services/firebase";
@@ -69,7 +69,7 @@ export function PendenciasTab() {
         loginGoogle: true, criadoPor: userId, criadoEm: serverTimestamp(),
       });
       batch.update(doc(db, "unidades", p.unidadeId), {
-        liderUid: p.id, liderNome: p.nome, liderEmail: p.email, liderTelefone: p.telefone, liderTipo: "google", liderDesde: serverTimestamp(),
+        liderUid: p.id, liderNome: p.nome, liderEmail: p.email, liderTelefone: p.telefone, liderTipo: "google", liderDesde: serverTimestamp(), liderAConferir: deleteField(),
       });
       batch.update(doc(db, "solicitacoes_acesso", p.id), {
         status: "aprovado", analisadoPor: userId, analisadoPorNome: meuNome, analisadoEm: serverTimestamp(),

@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { onAuthStateChanged, signOut } from "firebase/auth";
+import { onAuthStateChanged, signOut, unlink } from "firebase/auth";
 import { doc, getDoc, collection, addDoc, serverTimestamp } from "firebase/firestore"; // 🟢 Importações do X-9
 import { auth, db } from "../services/firebase"; // ✅ caminho correto
 
@@ -7,8 +7,13 @@ const AuthContext = createContext(null);
 
 // Entrou pelo Google (login pessoal)? Esse tipo de login qualquer pessoa consegue fazer,
 // então sem crachá ele NÃO é derrubado: vai para a tela de pedido de acesso.
-const entrouPeloGoogle = (firebaseUser) =>
-  (firebaseUser?.providerData || []).some((p) => p.providerId === "google.com");
+const temProvedor = (firebaseUser, id) =>
+  (firebaseUser?.providerData || []).some((p) => p.providerId === id);
+const entrouPeloGoogle = (firebaseUser) => temProvedor(firebaseUser, "google.com");
+
+// Perfis que já são obrigados a trocar o login antigo (e-mail e senha) pelo login pessoal do Google.
+// Professores e admin ficam para uma próxima etapa.
+const PAPEIS_QUE_MIGRAM = ["lider", "unidade", "mentor"];
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);          // firebaseUser
@@ -50,6 +55,12 @@ export function AuthProvider({ children }) {
         setAguardandoAprovacao(false);
         setLoading(false);
         return;
+      }
+
+      // Quem já trocou para o login pessoal não entra mais com a senha antiga: se ela ainda estiver
+      // presa à conta (a remoção falhou na hora da troca), tira agora. Não trava o acesso se falhar.
+      if (snap.data().loginGoogle === true && temProvedor(firebaseUser, "google.com") && temProvedor(firebaseUser, "password")) {
+        unlink(firebaseUser, "password").catch((e) => console.error("Não foi possível remover a senha antiga:", e));
       }
 
       setAguardandoAprovacao(false);
@@ -113,6 +124,11 @@ export function AuthProvider({ children }) {
       logout,
       aguardandoAprovacao,
       recarregarCracha,
+      // Líder (ou login antigo de unidade) e mentor que ainda não conectaram o Google: tela obrigatória
+      // de atualização de cadastro antes de qualquer outra (ver PrivateRoute e pages/AtualizarCadastro).
+      precisaAtualizarCadastro: !!userData
+        && PAPEIS_QUE_MIGRAM.includes(String(userData.role || "").trim().toLowerCase())
+        && userData.loginGoogle !== true,
       role: userData?.role || null,
       isAdmin: userData?.role === "admin",
       isMentor: userData?.role === "mentor",

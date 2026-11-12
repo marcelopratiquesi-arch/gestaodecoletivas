@@ -1,0 +1,34 @@
+{
+  "logout": "Salir ({{email}})",
+  "submit": "Conectar con Google y finalizar",
+  "googleHint": "Al finalizar, elegí TU cuenta personal de Google. A partir de ahora entrás al sistema solo con ella, con el botón \"Ingresar con Google\". El acceso anterior (e-mail y contraseña) deja de funcionar.",
+  "leader": {
+    "title": "Actualizá tu registro de líder",
+    "desc": "El acceso de la sede se está reemplazando por el acceso personal del líder. Completá tus datos y conectá tu cuenta de Google para continuar."
+  },
+  "mentor": {
+    "title": "Actualizá tu registro de mentor",
+    "desc": "El acceso ahora es personal, con tu cuenta de Google. Revisá tus datos y conectá tu cuenta de Google para continuar."
+  },
+  "fields": {
+    "unitLeader": "Sede en la que sos líder",
+    "name": "Tu nombre completo",
+    "namePlaceholder": "Ej: María Silva",
+    "phone": "WhatsApp",
+    "phonePlaceholder": "Ej: +54 11 5555-0000"
+  },
+  "blocked": {
+    "hasLeaderTitle": "Este acceso ya no se usa",
+    "hasLeaderDesc": "La sede {{unit}} ya tiene un líder registrado ({{name}}), que ingresa con su cuenta de Google. Si sos el nuevo líder, hablá con tu mentor.",
+    "noUnitTitle": "Sede no encontrada",
+    "noUnitDesc": "Este acceso no está vinculado a ninguna sede activa. Hablá con tu mentor."
+  },
+  "errors": {
+    "name": "Ingresá tu nombre completo.",
+    "phone": "Ingresá un WhatsApp válido.",
+    "popupBlocked": "El navegador bloqueó la ventana de Google. Permití las ventanas emergentes de este sitio e intentá de nuevo.",
+    "googleInUse": "Esta cuenta de Google ya está en uso en el sistema. Elegí otra cuenta de Google o hablá con tu mentor.",
+    "notEnabled": "El ingreso con Google todavía no está habilitado. Hablá con soporte.",
+    "save": "No se pudo finalizar. Intentá de nuevo."
+  }
+}

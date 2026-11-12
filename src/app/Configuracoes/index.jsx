@@ -5,6 +5,7 @@ import {
   ShieldCheck, Database, LayoutDashboard, Loader2, Headphones, UserCheck
 } from "lucide-react";
 import { usePedidosPendentes } from "./Pendencias/usePedidosPendentes";
+import { useCatalogs } from "../../contexts/CatalogContext";
 import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
 import { ehLider } from '../../permissions';
 import { useLocation } from "react-router-dom";
@@ -38,20 +39,26 @@ export default function ConfiguracoesPage() {
   
   const role = useMemo(() => String(userData?.role || "").trim().toLowerCase(), [userData?.role]);
   const { pedidos: pedidosPendentes } = usePedidosPendentes();
+  // Líderes que assumiram sozinhos (trocaram o login antigo pelo Google) e ainda não foram conferidos.
+  const { catalogs } = useCatalogs();
+  const meuId = userData?.id || userData?.uid;
+  const lideresAConferir = useMemo(() => (catalogs?.unidades || []).filter((u) =>
+    u.liderUid && u.liderAConferir === true && (role === "admin" || (role === "mentor" && u.mentorId === meuId))).length,
+  [catalogs?.unidades, role, meuId]);
 
   // 🟢 Abas agora reagem ao idioma em tempo real
   const tabs = useMemo(() => [
     // Ordem: Mentores, Líderes, Professores, Unidades, Modalidades, Feriados, Pratique Play, Backup.
     // Os pedidos de acesso pelo Google ficam dentro da aba Líderes (o número vermelho mostra quantos aguardam).
     { id: "mentores", label: t('settingsPage.tabs.mentores', 'Mentores'), icon: ShieldCheck, roles: ["admin"] },
-    { id: "lideres", label: t('settingsPage.tabs.lideres'), icon: UserCheck, roles: ["admin", "mentor"], contador: pedidosPendentes.length },
+    { id: "lideres", label: t('settingsPage.tabs.lideres'), icon: UserCheck, roles: ["admin", "mentor"], contador: pedidosPendentes.length + lideresAConferir },
     { id: "professores", label: t('settingsPage.tabs.professores', 'Professores'), icon: Users, roles: ["admin", "mentor", "lider", "unidade"] },
     { id: "unidades", label: t('settingsPage.tabs.unidades', 'Unidades'), icon: Building2, roles: ["admin", "mentor"] },
     { id: "modalidades", label: t('settingsPage.tabs.modalidades', 'Modalidades'), icon: Dumbbell, roles: ["admin", "mentor"] },
     { id: "feriados", label: t('settingsPage.tabs.feriados', 'Feriados'), icon: CalendarDays, roles: ["admin", "mentor"] },
     { id: "pratique-play", label: t('settingsPage.tabs.pratiquePlay', 'Pratique Play'), icon: Headphones, roles: ["admin"] },
     { id: "backup", label: t('settingsPage.tabs.backup', 'Backup'), icon: Database, roles: ["admin"] },
-  ], [t, pedidosPendentes.length]);
+  ], [t, pedidosPendentes.length, lideresAConferir]);
 
   const allowedTabs = useMemo(() => tabs.filter(t => t.roles.includes(role)), [role, tabs]);
 

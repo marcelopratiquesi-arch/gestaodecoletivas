@@ -1,0 +1,34 @@
+{
+  "logout": "Sign out ({{email}})",
+  "submit": "Connect Google and finish",
+  "googleHint": "When you finish, choose YOUR personal Google account. From now on you sign in only with it, using the \"Sign in with Google\" button. The old login (e-mail and password) stops working.",
+  "leader": {
+    "title": "Update your leader profile",
+    "desc": "The unit login is being replaced by the leader's personal login. Fill in your details and connect your Google account to continue."
+  },
+  "mentor": {
+    "title": "Update your mentor profile",
+    "desc": "Access is now personal, through your Google account. Check your details and connect your Google account to continue."
+  },
+  "fields": {
+    "unitLeader": "Unit you lead",
+    "name": "Your full name",
+    "namePlaceholder": "E.g. Maria Silva",
+    "phone": "WhatsApp",
+    "phonePlaceholder": "E.g. +55 31 99999-0000"
+  },
+  "blocked": {
+    "hasLeaderTitle": "This login is no longer used",
+    "hasLeaderDesc": "The unit {{unit}} already has a registered leader ({{name}}), who signs in with their Google account. If you are the new leader, talk to your mentor.",
+    "noUnitTitle": "Unit not found",
+    "noUnitDesc": "This login is not linked to any active unit. Talk to your mentor."
+  },
+  "errors": {
+    "name": "Enter your full name.",
+    "phone": "Enter a valid WhatsApp number.",
+    "popupBlocked": "The browser blocked the Google window. Allow pop-ups for this site and try again.",
+    "googleInUse": "This Google account is already in use in the system. Choose another Google account or talk to your mentor.",
+    "notEnabled": "Google sign-in is not enabled yet. Contact support.",
+    "save": "Could not finish. Please try again."
+  }
+}
