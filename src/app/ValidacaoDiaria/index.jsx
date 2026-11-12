@@ -16,6 +16,8 @@ import { ValidationModal } from './ValidationModal';
 import { getDiaSemana, formatCurrency } from '../../utils/formatters';
 import { idValidacao, deduplicarValidacoes } from '../../utils/validacoes';
 import { feriadoNoDia } from '../../utils/feriados';
+import { aulaNaGradeDoDia } from '../../utils/agendaAulas';
+import { invalidarCacheInicio } from '../../services/cacheInicio';
 import { useTranslation } from 'react-i18next';
 
 // --- HELPERS ---
@@ -332,12 +334,10 @@ export default function ValidacaoDiariaPage() {
       const dataString = dataObj.toISOString().split('T')[0];
       const diaSemanaNome = getDiaSemana(dataObj);
 
-      const aulasDoDia = catalogs.aulas.filter(aula => aula.dias && aula.dias.includes(diaSemanaNome));
+      // Regra única (src/utils/agendaAulas.js): dia da semana + vigência da aula. A Página de Início usa a mesma.
+      const aulasDoDia = catalogs.aulas.filter(aula => aulaNaGradeDoDia(aula, dataString, diaSemanaNome));
 
       aulasDoDia.forEach(aula => {
-        if (aula.dataInicio && dataString < aula.dataInicio) return; 
-        if (aula.dataFim && dataString > aula.dataFim) return;
-
         const unidadeValida = catalogs.unidades.find(u => String(u.id) === String(aula.unidadeId));
         if (!unidadeValida) return; 
 
@@ -480,8 +480,8 @@ export default function ValidacaoDiariaPage() {
       try {
           await deleteDoc(doc(db, 'validacoes', acaoAtual.item.validacao.id));
           await registrarLogAuditoria('EXCLUÍDA', `Cancelamento revertido.`, acaoAtual.item, `Cancelamento por motivo de "${acaoAtual.item.validacao?.motivoCancelamento}" desfeito.`);
-      } catch (error) { alert(t('dailyValidation.alerts.revertError')); } 
-      finally { setProcessando(false); setModalOpen(false); }
+      } catch (error) { alert(t('dailyValidation.alerts.revertError')); }
+      finally { invalidarCacheInicio(); setProcessando(false); setModalOpen(false); }
   };
 
   const handleNovoAulao = () => {
@@ -548,7 +548,8 @@ export default function ValidacaoDiariaPage() {
           }
       }
     } catch (error) { alert(t('dailyValidation.alerts.saveError')); } 
-    finally { setProcessando(false); setModalOpen(false); setAcaoAtual(null); }
+    // Os números da Página de Início mudam com esta validação: ao voltar para lá, recalcula.
+    finally { invalidarCacheInicio(); setProcessando(false); setModalOpen(false); setAcaoAtual(null); }
   };
 
   return (

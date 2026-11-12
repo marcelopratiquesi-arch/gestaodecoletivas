@@ -21,7 +21,8 @@
       "revenueYesterday": "RECEITA DE ONTEM",
       "monthlyForecast": "PREVISÃO MENSAL",
       "footer": "Ver Detalhes",
-      "monthlyEstimate": "Previsão Mensal (Est.)"
+      "monthlyEstimate": "Previsão Mensal (Est.)",
+      "revenueOf": "RECEITA DE {{dia}}"
     },
     "schedule": {
       "title": "Cronograma",
@@ -41,7 +42,13 @@
       "history": "Histórico",
       "classes": "Aulas",
       "pending": "Pendentes",
-      "allValidated": "Tudo Validado!"
+      "allValidated": "Tudo Validado!",
+      "toValidate": "A validar",
+      "laterToday": "+{{count}} ainda hoje",
+      "oldest": "Mais antiga: {{dia}}",
+      "periodLast7": "ÚLTIMOS 7 DIAS",
+      "periodSince": "DESDE {{dia}}",
+      "noClasses": "Sem aulas no período"
     },
     "monitoring": {
       "title": "Monitoramento de Validação",
@@ -55,7 +62,9 @@
         "excellent": "EXCELENTE",
         "inProgress": "EM ANDAMENTO"
       },
-      "validatedOf": "{{validated}} de {{total}} validadas"
+      "validatedOf": "{{validated}} de {{total}} validadas",
+      "subtitleOf": "Status de {{dia}}",
+      "noClasses": "Sem aulas nos últimos 7 dias"
     },
     "pratiquePlay": {
       "title": "PRATIQUE PLAY",
@@ -79,5 +88,9 @@
       "mods": "Mods",
       "profs": "Profs"
     }
+  },
+  "loadError": "Não foi possível carregar os números. Confira a internet e recarregue a página.",
+  "days": {
+    "yesterday": "ontem"
   }
 }
