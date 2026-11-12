@@ -22,11 +22,17 @@ const mapearDocs = (snap) => snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
 export const CatalogProvider = ({ children }) => {
     // 🟢 2. Pegamos o crachá e o status de carregamento do Auth
-    const { user, loading: authLoading } = useAuth();
+    const { user, userData, loading: authLoading } = useAuth();
+
+    // ECONOMIA DE COTA: login de UNIDADE só precisa das aulas e vínculos da própria unidade
+    // (~15 aulas em vez de ~2.000 da rede). As telas da unidade já filtravam só a unidade dela,
+    // então o que aparece na tela não muda. Admin, mentor e professor continuam com tudo, por enquanto.
+    const papel = String(userData?.role || "").trim().toLowerCase();
+    const unidadeDoLogin = papel === "unidade" && userData?.unidadeId ? userData.unidadeId : null;
 
     const [catalogs, setCatalogs] = useState(CATALOGOS_VAZIOS);
     // "Carregado para quem": o carregamento termina quando todas as escutas do usuário atual responderam.
-    const chaveSessao = authLoading ? null : (user?.uid || 'publico');
+    const chaveSessao = authLoading ? null : (user ? `${user.uid}|${unidadeDoLogin ?? "*"}` : 'publico');
     const [carregadoPara, setCarregadoPara] = useState(null);
     const loadingCatalogs = chaveSessao === null || carregadoPara !== chaveSessao;
 
@@ -52,8 +58,8 @@ export const CatalogProvider = ({ children }) => {
             { chave: 'professores', ref: query(collection(db, 'professores'), orderBy('nome')) },
             { chave: 'feriados', ref: collection(db, 'feriados') },
             // 🟢 LIXEIRA (SOFT DELETE): aulas com 'excluido: true' não entram na memória global
-            { chave: 'aulas', ref: collection(db, 'aulas'), filtro: (lista) => lista.filter(aula => aula.excluido !== true), copiaCompleta: 'aulasTodas' },
-            { chave: 'vinculos', ref: collection(db, 'vinculos') },
+            { chave: 'aulas', ref: unidadeDoLogin ? query(collection(db, 'aulas'), where('unidadeId', '==', unidadeDoLogin)) : collection(db, 'aulas'), filtro: (lista) => lista.filter(aula => aula.excluido !== true), copiaCompleta: 'aulasTodas' },
+            { chave: 'vinculos', ref: unidadeDoLogin ? query(collection(db, 'vinculos'), where('unidadeId', '==', unidadeDoLogin)) : collection(db, 'vinculos') },
             { chave: 'mentores', ref: query(collection(db, 'usuarios'), where('role', '==', 'mentor')) },
         ];
 
