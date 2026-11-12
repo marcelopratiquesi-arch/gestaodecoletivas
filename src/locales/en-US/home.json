@@ -21,7 +21,8 @@
       "revenueYesterday": "YESTERDAY'S REVENUE",
       "monthlyForecast": "MONTHLY FORECAST",
       "footer": "View Details",
-      "monthlyEstimate": "Monthly Estimate (Est.)"
+      "monthlyEstimate": "Monthly Estimate (Est.)",
+      "revenueOf": "REVENUE ON {{dia}}"
     },
     "schedule": {
       "title": "Schedule",
@@ -41,7 +42,13 @@
       "history": "History",
       "classes": "Classes",
       "pending": "Pending",
-      "allValidated": "All Validated!"
+      "allValidated": "All Validated!",
+      "toValidate": "To validate",
+      "laterToday": "+{{count}} later today",
+      "oldest": "Oldest: {{dia}}",
+      "periodLast7": "LAST 7 DAYS",
+      "periodSince": "SINCE {{dia}}",
+      "noClasses": "No classes in this period"
     },
     "monitoring": {
       "title": "Validation Monitoring",
@@ -55,7 +62,9 @@
         "excellent": "EXCELLENT",
         "inProgress": "IN PROGRESS"
       },
-      "validatedOf": "{{validated}} of {{total}} validated"
+      "validatedOf": "{{validated}} of {{total}} validated",
+      "subtitleOf": "Status for {{dia}}",
+      "noClasses": "No classes in the last 7 days"
     },
     "pratiquePlay": {
       "title": "PRATIQUE PLAY",
@@ -79,5 +88,9 @@
       "mods": "Mods",
       "profs": "Profs"
     }
+  },
+  "loadError": "Couldn't load the numbers. Check your internet and reload the page.",
+  "days": {
+    "yesterday": "yesterday"
   }
 }

@@ -21,7 +21,8 @@
       "revenueYesterday": "INGRESOS DE AYER",
       "monthlyForecast": "PREVISIÓN MENSUAL",
       "footer": "Ver Detalles",
-      "monthlyEstimate": "Estimación Mensual (Est.)"
+      "monthlyEstimate": "Estimación Mensual (Est.)",
+      "revenueOf": "INGRESOS DEL {{dia}}"
     },
     "schedule": {
       "title": "Cronograma",
@@ -41,7 +42,13 @@
       "history": "Historial",
       "classes": "Clases",
       "pending": "Pendientes",
-      "allValidated": "¡Todo Validado!"
+      "allValidated": "¡Todo Validado!",
+      "toValidate": "Por validar",
+      "laterToday": "+{{count}} más tarde hoy",
+      "oldest": "Más antigua: {{dia}}",
+      "periodLast7": "ÚLTIMOS 7 DÍAS",
+      "periodSince": "DESDE EL {{dia}}",
+      "noClasses": "Sin clases en el período"
     },
     "monitoring": {
       "title": "Monitoreo de Validación",
@@ -55,7 +62,9 @@
         "excellent": "EXCELENTE",
         "inProgress": "EN CURSO"
       },
-      "validatedOf": "{{validated}} de {{total}} validadas"
+      "validatedOf": "{{validated}} de {{total}} validadas",
+      "subtitleOf": "Estado del {{dia}}",
+      "noClasses": "Sin clases en los últimos 7 días"
     },
     "pratiquePlay": {
       "title": "PRATIQUE PLAY",
@@ -79,5 +88,9 @@
       "mods": "Mods",
       "profs": "Profs"
     }
+  },
+  "loadError": "No se pudieron cargar los números. Revisá la conexión y recargá la página.",
+  "days": {
+    "yesterday": "ayer"
   }
 }
