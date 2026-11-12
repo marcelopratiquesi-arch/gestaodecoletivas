@@ -12,11 +12,12 @@ import { createUserWithEmailAndPassword, getAuth, signOut } from "firebase/auth"
 import { initializeApp, getApp, deleteApp } from "firebase/app";
 import { useTranslation } from "react-i18next";
 import {
-  UserCheck, UserPlus, UserX, Search, Loader2, Building2, Mail, Phone, Edit2, X, Check, KeyRound, AlertTriangle, BadgeCheck,
+  UserCheck, UserPlus, UserX, Search, Loader2, Building2, Mail, Phone, Edit2, X, Check, KeyRound, AlertTriangle, BadgeCheck, UserCog,
 } from "lucide-react";
-import { db } from "../../../services/firebase";
+import { db, auth } from "../../../services/firebase";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useCatalogs } from "../../../contexts/CatalogContext";
+import { liderMantemAcesso } from "../../../permissions";
 import { PendenciasTab } from "../Pendencias/PendenciasTab";
 import { usePedidosPendentes } from "../Pendencias/usePedidosPendentes";
 
@@ -84,8 +85,10 @@ export function LideresTab() {
   };
 
   // Tira o acesso do líder atual da unidade (apaga o crachá) dentro de um batch já aberto.
+  // Se o líder também é admin ou mentor, ele só deixa de ser o líder da unidade: o acesso dele fica.
   async function tirarLiderAtual(batch, unidade, motivo) {
     const cracha = await getDoc(doc(db, "usuarios", unidade.liderUid));
+    if (cracha.exists() && liderMantemAcesso(cracha.data().role)) return;
     if (cracha.exists()) batch.delete(cracha.ref);
     const pedido = await getDoc(doc(db, "solicitacoes_acesso", unidade.liderUid));
     if (pedido.exists() && pedido.data().status !== "recusado") {
@@ -212,6 +215,33 @@ export function LideresTab() {
     } finally { setProcessando(null); }
   }
 
+  // Admin ou mentor que também é o líder da unidade: marca a si mesmo como líder, sem criar outra conta.
+  // O crachá dele não muda (continua admin/mentor); só a unidade passa a apontar para ele.
+  async function assumir(unidade) {
+    const temOutroLider = !!unidade.liderUid && unidade.liderUid !== userId;
+    const pergunta = temOutroLider
+      ? t("leadersTab.assumeReplaceQuestion", { unit: unidade.nome, current: unidade.liderNome || unidade.liderEmail })
+      : t("leadersTab.assumeQuestion", { unit: unidade.nome });
+    if (!window.confirm(pergunta)) return;
+    setProcessando(unidade.id);
+    try {
+      const entraPeloGoogle = (auth.currentUser?.providerData || []).some((p) => p.providerId === "google.com");
+      const batch = writeBatch(db);
+      if (temOutroLider) await tirarLiderAtual(batch, unidade, t("leadersTab.replacedReason", { name: meuNome }));
+      batch.update(doc(db, "unidades", unidade.id), {
+        liderUid: userId, liderNome: meuNome, liderEmail: userData?.email || auth.currentUser?.email || "",
+        liderTelefone: userData?.telefone || "", liderTipo: entraPeloGoogle ? "google" : "senha",
+        liderDesde: serverTimestamp(), liderAConferir: deleteField(),
+      });
+      await batch.commit();
+      await registrarAuditoria("NOVA", `${role === "admin" ? "Admin" : "Mentor"} marcou a si mesmo como líder da unidade.`, unidade.nome,
+        `${meuNome}${temOutroLider ? ` substituiu ${unidade.liderNome || unidade.liderEmail}` : ""}`);
+    } catch (err) {
+      console.error(err);
+      alert(t("leadersTab.errors.assume") + " " + (err.message || ""));
+    } finally { setProcessando(null); }
+  }
+
   if (!podeAcessar) return null;
 
   const rotuloAcesso = {
@@ -333,6 +363,10 @@ export function LideresTab() {
                       )}
                       <td className="p-4">
                         <div className="flex justify-end gap-2">
+                          {u.liderUid !== userId && (
+                            <button onClick={() => assumir(u)} disabled={ocupado} title={t("leadersTab.assume")}
+                              className="p-2 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200 hover:bg-amber-50 hover:text-amber-600 disabled:opacity-50"><UserCog className="w-4 h-4" /></button>
+                          )}
                           {u.liderUid ? (
                             <>
                               {u.liderAConferir === true && (

@@ -60,10 +60,14 @@
     "emailInUse": "Este e-mail já tem login no sistema. Use outro e-mail, ou peça para a pessoa entrar com o Google e aprove o pedido.",
     "save": "Não foi possível salvar.",
     "remove": "Não foi possível remover o líder.",
-    "confirm": "Não foi possível confirmar o líder."
+    "confirm": "Não foi possível confirmar o líder.",
+    "assume": "Não foi possível marcar você como líder."
   },
   "toCheck": "A conferir",
   "confirm": "Confirmar líder",
   "confirmQuestion": "Confirmar {{name}} como líder da unidade {{unit}}?",
-  "checkBanner": "{{count}} unidade(s) com líder novo a conferir: a pessoa entrou com o login antigo da unidade e assumiu como líder com a conta Google dela. Confira se é a pessoa certa: confirme ou remova."
+  "checkBanner": "{{count}} unidade(s) com líder novo a conferir: a pessoa entrou com o login antigo da unidade e assumiu como líder com a conta Google dela. Confira se é a pessoa certa: confirme ou remova.",
+  "assume": "Eu sou o líder",
+  "assumeQuestion": "Marcar você como líder da unidade {{unit}}?\n\nSeu acesso continua o mesmo; a unidade só passa a mostrar você como líder.",
+  "assumeReplaceQuestion": "A unidade {{unit}} já tem o líder {{current}}.\n\nMarcar você como líder no lugar? O líder atual perde o acesso."
 }

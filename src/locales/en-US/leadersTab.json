@@ -60,10 +60,14 @@
     "emailInUse": "This e-mail already has a login. Use another e-mail, or ask the person to sign in with Google and approve the request.",
     "save": "Could not save.",
     "remove": "Could not remove the leader.",
-    "confirm": "Could not confirm the leader."
+    "confirm": "Could not confirm the leader.",
+    "assume": "Could not set you as leader."
   },
   "toCheck": "To review",
   "confirm": "Confirm leader",
   "confirmQuestion": "Confirm {{name}} as leader of {{unit}}?",
-  "checkBanner": "{{count}} unit(s) with a new leader to review: the person signed in with the old unit login and took over as leader with their Google account. Check that it is the right person: confirm or remove."
+  "checkBanner": "{{count}} unit(s) with a new leader to review: the person signed in with the old unit login and took over as leader with their Google account. Check that it is the right person: confirm or remove.",
+  "assume": "I am the leader",
+  "assumeQuestion": "Set yourself as leader of {{unit}}?\n\nYour access stays the same; the unit will just show you as its leader.",
+  "assumeReplaceQuestion": "{{unit}} already has the leader {{current}}.\n\nSet yourself as leader instead? The current leader loses access."
 }
