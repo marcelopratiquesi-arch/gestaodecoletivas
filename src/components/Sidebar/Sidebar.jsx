@@ -120,7 +120,7 @@ export default function Sidebar({ collapsed }) {
         lista.push(aula);
     });
     return lista;
-  }, [loadingCatalogs, hojeStr, catalogs, role, userData?.professorId, userData?.unidadeId, meuId]);
+  }, [loadingCatalogs, hojeStr, catalogs, role, userData?.unidadeId, meuId]);
 
   // Quais unidades escutar: '*' = rede inteira (admin); senão, as unidades das minhas aulas de hoje.
   // Vira texto para a escuta só reabrir quando o conjunto de unidades mudar de verdade.
