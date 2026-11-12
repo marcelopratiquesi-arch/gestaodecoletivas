@@ -1,0 +1,63 @@
+{
+  "title": "Leaders",
+  "subtitle": "Each location has 1 leader, who is the person that signs in for it. The leader requests access by signing in with Google (requests show up here at the top) or you register them manually with e-mail and password.",
+  "new": "Register leader",
+  "register": "Register",
+  "edit": "Edit contact",
+  "replace": "Replace leader",
+  "remove": "Remove leader",
+  "search": "Search location, leader, e-mail or phone...",
+  "onlyWithout": "Only without leader",
+  "empty": "No locations found.",
+  "noLeader": "No leader",
+  "howTo": "Replacing or removing a leader revokes their access immediately. Locations marked \"legacy login\" still sign in with the location e-mail: register the leader and then turn off the legacy login in the Locations tab.",
+  "kpi": {
+    "units": "Locations",
+    "withLeader": "With leader",
+    "withoutLeader": "Without leader",
+    "requests": "Pending requests"
+  },
+  "col": {
+    "unit": "Location",
+    "leader": "Leader",
+    "access": "Signs in with",
+    "mentor": "Mentor",
+    "actions": "Actions"
+  },
+  "access": {
+    "google": "Google",
+    "password": "E-mail and password",
+    "legacy": "Legacy location login"
+  },
+  "replaceConfirm": "The location {{unit}} already has the leader {{current}}.\n\nReplace with {{name}}? The current leader loses access.",
+  "replacedReason": "Replaced by {{name}} as the location leader.",
+  "removedReason": "Removed as the location leader.",
+  "removeConfirm": "Remove {{name}} as leader of {{unit}}?\n\nThis person loses access to the system immediately.",
+  "createdManual": "Leader {{name}} registered!\n\nTell them to sign in with the e-mail {{email}} and the password you set.",
+  "modal": {
+    "newTitle": "Register leader",
+    "editTitle": "Edit leader contact",
+    "unit": "Location",
+    "chooseUnit": "Choose the location...",
+    "hasLeader": "leader: {{name}}",
+    "replaceWarning": "This location already has the leader {{name}}. When you save, they lose access and the new leader takes over.",
+    "name": "Full name",
+    "email": "E-mail (used to sign in)",
+    "emailLocked": "The sign-in e-mail can't be changed here. To change it, register the leader again.",
+    "phone": "WhatsApp",
+    "password": "Initial password",
+    "passwordHint": "At least {{min}} characters. Share the password with the leader.",
+    "cancel": "Cancel",
+    "save": "Save"
+  },
+  "errors": {
+    "unit": "Choose the location.",
+    "name": "Enter the full name (at least 3 letters).",
+    "phone": "Enter the leader's WhatsApp.",
+    "email": "Invalid e-mail.",
+    "password": "The password must have at least {{min}} characters.",
+    "emailInUse": "This e-mail already has a login. Use another e-mail, or ask the person to sign in with Google and approve the request.",
+    "save": "Could not save.",
+    "remove": "Could not remove the leader."
+  }
+}

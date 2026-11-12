@@ -8,5 +8,11 @@
   "loading": "Accediendo...",
   "forgotPassword": "¿Olvidaste tu contraseña?",
   "support": "Contacta al soporte",
-  "version": "v2.5.0 • Pratique Fitness"
+  "version": "v2.5.0 • Pratique Fitness",
+  "google": {
+    "button": "Ingresar con Google",
+    "or": "o con usuario y contraseña",
+    "popupBlocked": "El navegador bloqueó la ventana de Google. Permití las ventanas emergentes para este sitio y probá de nuevo.",
+    "notEnabled": "El ingreso con Google todavía no está activado. Contactá al soporte."
+  }
 }

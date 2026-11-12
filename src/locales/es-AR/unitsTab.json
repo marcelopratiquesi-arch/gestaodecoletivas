@@ -126,5 +126,23 @@
     "confirm": "¿Actualizar la página pública de horarios con los registros actuales?\n\nVa a mostrar solo nombre y dirección de las unidades y el nombre de los profesores (sin e-mail ni teléfono).",
     "done": "Listo: página pública actualizada con {{units}} unidad(es) y {{teachers}} profesor(es).",
     "error": "No se pudo actualizar la página pública."
+  },
+  "leader": {
+    "title": "Líder de la sede",
+    "label": "Líder: {{name}}",
+    "none": "Sin líder todavía",
+    "howTo": "La sede ya no tiene usuario y contraseña. Quien ingresa es el líder: pide acceso con su cuenta de Google o vos lo registrás en la pestaña Líderes.",
+    "created": "¡Sede creada! Ahora registrá al líder en la pestaña Líderes (o él pide acceso ingresando con Google).",
+    "oldLogin": "Usuario antiguo de la sede",
+    "oldLoginShort": "usuario antiguo",
+    "oldLoginHint": "Sigue funcionando hasta que se desactive. Desactivalo cuando el líder ya esté aprobado.",
+    "turnOffOne": "Desactivar usuario antiguo",
+    "turnOffOneConfirm": "¿Desactivar el usuario antiguo de la sede {{name}} ({{email}})?\n\nQuien ingresa con ese correo pierde el acceso. Verificá que el líder ya esté aprobado.",
+    "turnOffAll": "Desactivar usuarios antiguos",
+    "turnOffAllConfirm": "¿Desactivar los usuarios antiguos de {{count}} sede(s) que ya tienen líder aprobado?\n\nQuien ingresa con esos correos pierde el acceso.",
+    "turnOffDone": "{{count}} usuario(s) antiguo(s) desactivado(s).",
+    "turnOffError": "No se pudo desactivar.",
+    "bannerTitle": "{{count}} sede(s) ya tienen líder y todavía tienen el usuario antiguo activo",
+    "bannerDesc": "Ahora que el líder ingresa con Google, el usuario antiguo de la sede (correo @pratique.com y contraseña) se puede desactivar."
   }
 }

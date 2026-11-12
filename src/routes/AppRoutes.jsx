@@ -5,6 +5,7 @@ import AppLayout from "../layouts/AppLayout";
 
 // --- Importação das Páginas Reais ---
 import Login from "../pages/login";
+import SolicitarAcesso from "../pages/SolicitarAcesso";
 import Home from "../pages/home";
 import ConfiguracoesPage from "../app/Configuracoes"; 
 import ValidacaoDiaria from "../app/ValidacaoDiaria"; 
@@ -30,7 +31,10 @@ export default function AppRoutes() {
       <Routes>
         {/* --- ROTAS PÚBLICAS (Sem Login) --- */}
         <Route path="/login" element={<Login />} />
-        
+
+        {/* Login pelo Google ainda não aprovado: pedido de acesso / aguardando aprovação */}
+        <Route path="/solicitar-acesso" element={<SolicitarAcesso />} />
+
         {/* Rota do Cronograma Público (Happy Zone) */}
         <Route path="/horarios" element={<PublicSchedule />} />
 
