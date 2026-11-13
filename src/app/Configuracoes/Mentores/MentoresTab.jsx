@@ -1,13 +1,14 @@
 import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "../../../contexts/AuthContext";
 import {
-  collection, updateDoc, deleteDoc, doc, query, where, serverTimestamp, setDoc, onSnapshot, addDoc
+  collection, updateDoc, deleteDoc, doc, query, where, serverTimestamp, setDoc, onSnapshot
 } from "firebase/firestore";
 
 // Auth imports (Instância secundária para não deslogar o admin)
 import { createUserWithEmailAndPassword, getAuth, signOut } from "firebase/auth";
 import { initializeApp, getApp, deleteApp } from "firebase/app"; 
 import { db } from "../../../services/firebase";
+import { registrarAuditoriaAcesso } from "../../../services/auditoriaAcessos";
 
 import { 
     ShieldCheck, Edit2, Trash2, AlertTriangle, CheckCircle2, 
@@ -159,23 +160,18 @@ export function MentoresTab() {
   // ==========================================
   // 0. MOTOR DE AUDITORIA (CÂMERA INVISÍVEL)
   // ==========================================
-  const registrarLogAuditoria = async (tipoAcao, descricao, nomeMentor, detalhes = "") => {
-      try {
-          const nomeUsuario = userData?.nome || userData?.email || 'Administrador do Sistema';
-          await addDoc(collection(db, 'auditoria_cronograma'), {
-              tipoAcao,
-              descricao: `Mentor(a) ${nomeMentor}: ${descricao}`,
-              diffExtras: detalhes,
-              modulo: 'CONFIGURACOES',
-              unidadeNome: 'Gestão/Diretoria', 
-              professorNome: nomeMentor || '-', 
-              modalidadeNome: '-', 
-              usuarioAcaoNome: nomeUsuario,
-              usuarioAcaoId: userId,
-              dataAcao: serverTimestamp()
-          });
-      } catch (e) { console.error("Erro ao gerar log de auditoria", e); }
-  };
+  // Vai para a auditoria única de acessos (quem fez + quem recebeu, com o e-mail do Google).
+  const registrarLogAuditoria = (tipoAcao, descricao, mentor, detalhes = "") =>
+      registrarAuditoriaAcesso({
+          tipoAcao,
+          descricao: `Mentor(a) ${mentor?.nome || '-'}: ${descricao}`,
+          quem: userData,
+          alvo: mentor,
+          papelNovo: tipoAcao === 'NOVA' ? 'mentor' : undefined,
+          papelAnterior: tipoAcao === 'EXCLUÍDA' ? 'mentor' : undefined,
+          detalhes,
+          unidadeNome: 'Gestão/Diretoria',
+      });
 
   // ==========================================
   // 1. MOTOR DE TEMPO REAL
@@ -304,7 +300,7 @@ export function MentoresTab() {
         });
 
         if (mudancas.length > 0) {
-            await registrarLogAuditoria('ALTERADA', 'Dados cadastrais do Mentor atualizados.', nome.trim(), mudancas.join(' | '));
+            await registrarLogAuditoria('ALTERADA', 'Dados cadastrais do Mentor atualizados.', { ...mentorEditando, nome: nome.trim() }, mudancas.join(' | '));
         }
 
         setSucesso(t('mentorsTab.messages.updated', 'Mentor atualizado!'));
@@ -328,7 +324,7 @@ export function MentoresTab() {
         });
 
         await signOut(secondaryAuth);
-        await registrarLogAuditoria('NOVA', 'Novo mentor e credenciais criadas no sistema.', nome.trim(), `Email: ${email.trim().toLowerCase()}`);
+        await registrarLogAuditoria('NOVA', 'Novo mentor e credenciais criadas no sistema.', { id: newUid, nome: nome.trim(), email: email.trim().toLowerCase() });
         
         setSucesso(t('mentorsTab.messages.created', 'Mentor criado com sucesso!'));
       }
@@ -354,7 +350,7 @@ export function MentoresTab() {
           });
 
           if (telAntigo !== telefoneInline.trim()) {
-              await registrarLogAuditoria('ALTERADA', 'Edição rápida do WhatsApp do Mentor.', mentor.nome, `Telefone: ${telAntigo} ➔ ${telefoneInline.trim()}`);
+              await registrarLogAuditoria('ALTERADA', 'Edição rápida do WhatsApp do Mentor.', mentor, `Telefone: ${telAntigo} ➔ ${telefoneInline.trim()}`);
           }
           setEditandoTelefoneId(null);
       } catch (error) { 
@@ -367,7 +363,7 @@ export function MentoresTab() {
     const novoStatus = m.status === 'ativo' ? 'inativo' : 'ativo';
     try { 
         await updateDoc(doc(db, "usuarios", m.id), { status: novoStatus }); 
-        await registrarLogAuditoria('ALTERADA', `Status modificado para ${novoStatus.toUpperCase()}`, m.nome, `Bloqueio/Desbloqueio de acesso rápido.`);
+        await registrarLogAuditoria('ALTERADA', `Status modificado para ${novoStatus.toUpperCase()}`, m, novoStatus === 'inativo' ? 'Acesso ao sistema bloqueado.' : 'Acesso ao sistema liberado.');
     } catch (e) { 
         alert(t('mentorsTab.messages.statusError', 'Erro ao mudar status')); 
     }
@@ -380,7 +376,7 @@ export function MentoresTab() {
     try {
         setSalvando(true);
         await deleteDoc(doc(db, "usuarios", m.id));
-        await registrarLogAuditoria('EXCLUÍDA', 'Mentor e acessos excluídos do sistema.', m.nome, `Exclusão definitiva.`);
+        await registrarLogAuditoria('EXCLUÍDA', 'Mentor e acessos excluídos do sistema.', m, `Exclusão definitiva.`);
     } catch (e) { 
         alert(t('mentorsTab.messages.deleteError', 'Erro ao excluir mentor.') + " " + e.message); 
     } finally { 

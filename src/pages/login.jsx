@@ -5,6 +5,7 @@ import { auth } from "../services/firebase";
 import { User, Lock, Loader2, AlertCircle, ChevronDown, Check } from "lucide-react";
 import { useTranslation } from "react-i18next"; 
 import { LANGUAGES } from "../utils/formatters";
+import { AVISO_SEM_ACESSO } from "../permissions";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -12,7 +13,16 @@ export default function Login() {
 
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
-  const [erro, setErro] = useState("");
+  // Se o sistema acabou de desconectar alguém sem acesso (mentor inativo / bloqueado), avisa aqui.
+  const [erro, setErro] = useState(() => {
+    try {
+      if (sessionStorage.getItem(AVISO_SEM_ACESSO)) {
+        sessionStorage.removeItem(AVISO_SEM_ACESSO);
+        return t("login.accessDisabled");
+      }
+    } catch { /* sem aviso */ }
+    return "";
+  });
   const [loading, setLoading] = useState(false);
   const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
 

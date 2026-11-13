@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { onAuthStateChanged, signOut, unlink } from "firebase/auth";
 import { doc, getDoc, collection, addDoc, serverTimestamp } from "firebase/firestore"; // 🟢 Importações do X-9
 import { auth, db } from "../services/firebase"; // ✅ caminho correto
+import { crachaSemAcesso, AVISO_SEM_ACESSO } from "../permissions";
 
 const AuthContext = createContext(null);
 
@@ -49,6 +50,18 @@ export function AuthProvider({ children }) {
           return;
         }
         // Login antigo sem crachá = sem acesso
+        await signOut(auth);
+        setUser(null);
+        setUserData(null);
+        setAguardandoAprovacao(false);
+        setLoading(false);
+        return;
+      }
+
+      // Crachá sem acesso (mentor inativo ou papel "bloqueado"): sai e avisa na tela de entrada.
+      // O banco já recusa tudo para esses crachás (firestore.rules, logado()).
+      if (crachaSemAcesso(snap.data())) {
+        try { sessionStorage.setItem(AVISO_SEM_ACESSO, "1"); } catch { /* sem aviso, mas sai igual */ }
         await signOut(auth);
         setUser(null);
         setUserData(null);
