@@ -7,7 +7,7 @@
 //      (pages/AtualizarCadastro): assume como líder na hora e fica "a conferir" até o admin/mentor confirmar.
 // Admin vê todas as unidades; mentor só as dele (as regras do banco também garantem isso).
 import { useMemo, useRef, useState } from "react";
-import { doc, getDoc, writeBatch, serverTimestamp, addDoc, collection, deleteField, updateDoc } from "firebase/firestore";
+import { doc, writeBatch, serverTimestamp, addDoc, collection, deleteField, updateDoc } from "firebase/firestore";
 import { createUserWithEmailAndPassword, getAuth, signOut } from "firebase/auth";
 import { initializeApp, getApp, deleteApp } from "firebase/app";
 import { useTranslation } from "react-i18next";
@@ -17,9 +17,10 @@ import {
 import { db, auth } from "../../../services/firebase";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useCatalogs } from "../../../contexts/CatalogContext";
-import { liderMantemAcesso } from "../../../permissions";
 import { PendenciasTab } from "../Pendencias/PendenciasTab";
 import { usePedidosPendentes } from "../Pendencias/usePedidosPendentes";
+import { tirarLiderDaUnidade } from "./saidaDoLider";
+import { TornarLiderModal } from "./TornarLiderModal";
 
 const SENHA_MINIMA = 6;
 // País da unidade em sigla (cadastros antigos guardam o nome por extenso; sem país = Brasil).
@@ -60,6 +61,8 @@ export function LideresTab() {
   const [salvando, setSalvando] = useState(false);
 
   const mentores = useMemo(() => catalogs?.mentores || [], [catalogs?.mentores]);
+  const professores = useMemo(() => catalogs?.professores || [], [catalogs?.professores]);
+  const [tornarLiderAberto, setTornarLiderAberto] = useState(false);
 
   const minhasUnidades = useMemo(() => {
     const todas = catalogs?.unidades || [];
@@ -108,18 +111,10 @@ export function LideresTab() {
     } catch (e) { console.error("Falha ao gravar auditoria", e); }
   };
 
-  // Tira o acesso do líder atual da unidade (apaga o crachá) dentro de um batch já aberto.
-  // Se o líder também é admin ou mentor, ele só deixa de ser o líder da unidade: o acesso dele fica.
-  async function tirarLiderAtual(batch, unidade, motivo) {
-    const cracha = await getDoc(doc(db, "usuarios", unidade.liderUid));
-    if (cracha.exists() && liderMantemAcesso(cracha.data().role)) return;
-    if (cracha.exists()) batch.delete(cracha.ref);
-    const pedido = await getDoc(doc(db, "solicitacoes_acesso", unidade.liderUid));
-    if (pedido.exists() && pedido.data().status !== "recusado") {
-      batch.update(pedido.ref, {
-        status: "recusado", motivo, analisadoPor: userId, analisadoPorNome: meuNome, analisadoEm: serverTimestamp(),
-      });
-    }
+  // Tira o líder atual da unidade dentro de um batch já aberto (ver saidaDoLider.js):
+  // admin/mentor só sai da unidade; líder que também é professor volta a ser professor; os demais perdem o acesso.
+  function tirarLiderAtual(batch, unidade, motivo) {
+    return tirarLiderDaUnidade(batch, { liderUid: unidade.liderUid, professores, motivo, quemId: userId, quemNome: meuNome });
   }
 
   function abrirNovo(unidade) {
@@ -212,13 +207,16 @@ export function LideresTab() {
     setProcessando(unidade.id);
     try {
       const batch = writeBatch(db);
-      await tirarLiderAtual(batch, unidade, t("leadersTab.removedReason"));
+      const saida = await tirarLiderAtual(batch, unidade, t("leadersTab.removedReason"));
       batch.update(doc(db, "unidades", unidade.id), {
         liderUid: deleteField(), liderNome: deleteField(), liderEmail: deleteField(),
         liderTelefone: deleteField(), liderTipo: deleteField(), liderDesde: deleteField(), liderAConferir: deleteField(),
       });
       await batch.commit();
-      await registrarAuditoria("EXCLUIDA", "Líder removido da unidade (perdeu o acesso).", unidade.nome,
+      await registrarAuditoria("EXCLUIDA",
+        saida === "professor" ? "Líder removido da unidade (voltou a ser professor)."
+          : saida === "mantem" ? "Líder removido da unidade (manteve o acesso de admin/mentor)."
+          : "Líder removido da unidade (perdeu o acesso).", unidade.nome,
         `${unidade.liderNome || "-"} (${unidade.liderEmail || "-"})`);
     } catch (err) {
       console.error(err);
@@ -285,9 +283,14 @@ export function LideresTab() {
           </h2>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 max-w-3xl">{t("leadersTab.subtitle")}</p>
         </div>
-        <button onClick={() => abrirNovo(null)} className="px-5 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-black uppercase flex items-center gap-2 shadow-sm self-start md:self-auto">
-          <UserPlus className="w-4 h-4" /> {t("leadersTab.new")}
-        </button>
+        <div className="flex flex-wrap gap-2 self-start md:self-auto">
+          <button onClick={() => setTornarLiderAberto(true)} className="px-5 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-black uppercase flex items-center gap-2 shadow-sm">
+            <UserCog className="w-4 h-4" /> {t("leadersTab.promote.button")}
+          </button>
+          <button onClick={() => abrirNovo(null)} className="px-5 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-black uppercase flex items-center gap-2 shadow-sm">
+            <UserPlus className="w-4 h-4" /> {t("leadersTab.new")}
+          </button>
+        </div>
       </div>
 
       {/* NÚMEROS */}
@@ -470,6 +473,15 @@ export function LideresTab() {
         )}
         <p className="text-[11px] text-slate-400 font-bold">{t("leadersTab.howTo")}</p>
       </div>
+
+      {/* MODAL: TORNAR LÍDER QUEM JÁ TEM ACESSO (professor que vira líder) */}
+      {tornarLiderAberto && (
+        <TornarLiderModal
+          unidades={minhasUnidades} todasUnidades={catalogs?.unidades || []} professores={professores}
+          quemId={userId} quemNome={meuNome} registrarAuditoria={registrarAuditoria}
+          onClose={() => setTornarLiderAberto(false)}
+        />
+      )}
 
       {/* MODAL: CADASTRAR / EDITAR LÍDER */}
       {modal && (

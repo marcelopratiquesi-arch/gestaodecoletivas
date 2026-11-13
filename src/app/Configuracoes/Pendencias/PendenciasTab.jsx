@@ -10,7 +10,7 @@ import { registrarAuditoriaAcesso } from "../../../services/auditoriaAcessos";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useCatalogs } from "../../../contexts/CatalogContext";
 import { usePedidosPendentes } from "./usePedidosPendentes";
-import { liderMantemAcesso } from "../../../permissions";
+import { tirarLiderDaUnidade } from "../Lideres/saidaDoLider";
 
 const formatarData = (ts, idioma) => {
   const d = ts?.toDate?.();
@@ -51,18 +51,13 @@ export function PendenciasTab() {
     try {
       const batch = writeBatch(db);
 
-      // Líder anterior perde o acesso (apaga o crachá) e o pedido dele fica como "substituído".
-      // Se o líder anterior também é admin ou mentor, ele só sai da unidade: o acesso dele fica.
-      const crachaAntigo = temOutroLider ? await getDoc(doc(db, "usuarios", unidade.liderUid)) : null;
-      if (temOutroLider && !(crachaAntigo.exists() && liderMantemAcesso(crachaAntigo.data().role))) {
-        if (crachaAntigo.exists()) batch.delete(crachaAntigo.ref);
-        const pedidoAntigo = await getDoc(doc(db, "solicitacoes_acesso", unidade.liderUid));
-        if (pedidoAntigo.exists()) {
-          batch.update(pedidoAntigo.ref, {
-            status: "recusado", motivo: t("pendingTab.replacedReason", { name: p.nome }),
-            analisadoPor: userId, analisadoPorNome: meuNome, analisadoEm: serverTimestamp(),
-          });
-        }
+      // Líder anterior sai (ver Lideres/saidaDoLider.js): admin/mentor só sai da unidade; líder que também
+      // é professor volta a ser professor; os demais perdem o acesso e o pedido dele fica como "substituído".
+      if (temOutroLider) {
+        await tirarLiderDaUnidade(batch, {
+          liderUid: unidade.liderUid, professores: catalogs?.professores || [],
+          motivo: t("pendingTab.replacedReason", { name: p.nome }), quemId: userId, quemNome: meuNome,
+        });
       }
 
       batch.set(doc(db, "usuarios", p.id), {

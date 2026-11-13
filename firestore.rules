@@ -36,6 +36,11 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/usuarios/$(request.auth.uid))
         && meuPapel() == 'professor';
     }
+    // O mentor logado é o mentor desta unidade? (id vazio = não)
+    function mentorDaUnidadeId(unidadeId) {
+      return unidadeId is string && unidadeId != ''
+        && get(/databases/$(database)/documents/unidades/$(unidadeId)).data.get('mentorId', '') == request.auth.uid;
+    }
     function papelDoAlvo() { return resource.data.get('role', '').lower(); }
     function papelNovo() { return request.resource.data.get('role', '').lower(); }
     function camposAlterados() { return request.resource.data.diff(resource.data).affectedKeys(); }
@@ -208,6 +213,23 @@ service cloud.firestore {
             && camposAlterados().hasOnly(['nome', 'email', 'telefone']))
         || (logado() && meuPapel() in papeisLider() && papelDoAlvo() == 'professor'
             && camposAlterados().hasOnly(['nome', 'email']))
+        // Líder que também é professor (o mentor, só nas unidades DELE; o admin já pode tudo acima):
+        // - tornar líder: um professor (ou um líder ainda sem unidade) vira líder de uma unidade do mentor;
+        // - deixar de ser líder: o líder volta a ser professor, sem unidade.
+        // O vínculo com o professor precisa ser verdadeiro: professores/{professorId}.uidLogin == este login.
+        || (logado() && meuPapel() == 'mentor'
+            && camposAlterados().hasOnly(['role', 'unidadeId', 'professorId'])
+            && request.resource.data.get('professorId', '') is string
+            && request.resource.data.get('professorId', '') != ''
+            && get(/databases/$(database)/documents/professores/$(request.resource.data.professorId)).data.get('uidLogin', '') == uid
+            && ((papelNovo() == 'lider'
+                  && mentorDaUnidadeId(request.resource.data.get('unidadeId', ''))
+                  && (papelDoAlvo() == 'professor'
+                      || (papelDoAlvo() in papeisLider()
+                          && (resource.data.get('unidadeId', '') == '' || mentorDaUnidadeId(resource.data.get('unidadeId', ''))))))
+                || (papelNovo() == 'professor' && papelDoAlvo() in papeisLider()
+                  && !('unidadeId' in request.resource.data)
+                  && mentorDaUnidadeId(resource.data.get('unidadeId', '')))))
         // Atualização de cadastro (troca do login antigo pelo login pessoal do Google): a própria pessoa
         // atualiza SÓ os dados de contato, e só depois de conectar o Google à conta. O papel não muda,
         // exceto o login antigo "unidade", que vira "lider". Unidade, status e o resto ficam como estão.

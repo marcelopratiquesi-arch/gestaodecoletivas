@@ -85,5 +85,33 @@
     "noMentor": "Sin mentor",
     "clear": "Limpiar filtros",
     "showing": "Mostrando {{count}} de {{total}}"
+  },
+  "promote": {
+    "button": "Hacer líder a quien ya tiene acceso",
+    "title": "Hacer líder a quien ya tiene acceso",
+    "help": "Para el profesor de clases grupales que va a ser el líder de la sede. Sigue siendo profesor: ve sus clases y sus pagos. Si un día deja de ser líder, vuelve a ser solo profesor.",
+    "person": "Profesor",
+    "search": "Buscar profesor por nombre o e-mail...",
+    "noTeachers": "No se encontró ningún profesor con login.",
+    "reading": "Revisando el acceso actual...",
+    "now": {
+      "teacher": "hoy es profesor.",
+      "leaderNoUnit": "hoy figura como líder SIN sede (no puede validar). Guardar acá lo corrige.",
+      "leaderOf": "hoy es líder de la sede {{unit}}.",
+      "sameUnit": "ya es el líder de esta sede (guardar solo revisa los datos)."
+    },
+    "confirm": "¿Hacer a {{name}} líder de la sede {{unit}}? Sigue siendo profesor.",
+    "confirmLeaves": "Deja de ser líder de la sede {{unit}}.",
+    "confirmReplaces": "El líder actual, {{current}}, sale de la sede (si también es profesor, vuelve a ser solo profesor).",
+    "done": "{{name}} ahora es líder de la sede {{unit}}.",
+    "save": "Hacer líder",
+    "errors": {
+      "read": "No se pudo revisar el acceso de esta persona.",
+      "noLogin": "este profesor no tiene login en el sistema. Creá el login en la pestaña Profesores primero.",
+      "isManager": "es admin o mentor. Para ser el líder, usa él mismo el botón \"Yo soy el líder\".",
+      "blocked": "tiene el acceso bloqueado. Desbloquealo en Control de Accesos antes.",
+      "otherRole": "tiene otro nivel de acceso ({{role}}). Ajustalo en Control de Accesos antes.",
+      "save": "No se pudo hacer líder."
+    }
   }
 }

@@ -3,7 +3,7 @@
 import { readFileSync } from 'fs';
 import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest';
 import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing';
-import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, addDoc, writeBatch } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, addDoc, writeBatch, deleteField } from 'firebase/firestore';
 
 let env;
 
@@ -524,5 +524,76 @@ describe('convite de mentor', () => {
     await conviteCriado();
     await assertFails(updateDoc(doc(googleVerificado('novoM', 'novomentor@gmail.com'), 'convites_acesso/novomentor@gmail.com'), { papel: 'admin' }));
     await assertFails(updateDoc(doc(googleVerificado('novoM', 'novomentor@gmail.com'), 'convites_acesso/novomentor@gmail.com'), { status: 'usado', usadoPor: 'novoM' }));
+// Professor que vira líder (aba Líderes > "Tornar líder quem já tem acesso") e líder-professor que volta a ser professor.
+describe('líder que também é professor', () => {
+  const montar = async () => env.withSecurityRulesDisabled(async (ctx) => {
+    const db = ctx.firestore();
+    await setDoc(doc(db, 'professores/p1'), { nome: 'Prof', uidLogin: 'prof1' });
+    await setDoc(doc(db, 'professores/p2'), { nome: 'Outro', uidLogin: 'outroLogin' });
+    // Caso real: trocado em Controle de Acessos, ficou "líder sem unidade".
+    await setDoc(doc(db, 'professores/p3'), { nome: 'Sem Unidade', uidLogin: 'liderSemUni' });
+    await setDoc(doc(db, 'usuarios/liderSemUni'), { role: 'lider', professorId: 'p3', nome: 'Sem Unidade' });
+    // Líder da uniA que também é professor.
+    await setDoc(doc(db, 'professores/p4'), { nome: 'Líder Prof', uidLogin: 'liderProf' });
+    await setDoc(doc(db, 'usuarios/liderProf'), { role: 'lider', unidadeId: 'uniA', professorId: 'p4', nome: 'Líder Prof' });
+  });
+
+  it('mentor torna líder um professor da unidade DELE', async () => {
+    await montar();
+    await assertSucceeds(updateDoc(doc(como('mentor1'), 'usuarios/prof1'), { role: 'lider', unidadeId: 'uniA' }));
+  });
+  it('mentor NÃO torna líder em unidade de outro mentor', async () => {
+    await montar();
+    await assertFails(updateDoc(doc(como('mentor1'), 'usuarios/prof1'), { role: 'lider', unidadeId: 'uniB' }));
+  });
+  it('mentor NÃO usa o vínculo de professor de OUTRA pessoa', async () => {
+    await montar();
+    await assertFails(updateDoc(doc(como('mentor1'), 'usuarios/prof1'), { role: 'lider', unidadeId: 'uniA', professorId: 'p2' }));
+  });
+  it('mentor NÃO torna líder sem unidade', async () => {
+    await montar();
+    await assertFails(updateDoc(doc(como('mentor1'), 'usuarios/prof1'), { role: 'lider' }));
+  });
+  it('mentor NÃO promove professor a mentor/admin nem mexe em outros campos', async () => {
+    await montar();
+    await assertFails(updateDoc(doc(como('mentor1'), 'usuarios/prof1'), { role: 'mentor' }));
+    await assertFails(updateDoc(doc(como('mentor1'), 'usuarios/prof1'), { role: 'admin' }));
+    await assertFails(updateDoc(doc(como('mentor1'), 'usuarios/prof1'), { role: 'lider', unidadeId: 'uniA', status: 'x' }));
+  });
+  it('corrige o "líder sem unidade" (caso real)', async () => {
+    await montar();
+    await assertSucceeds(updateDoc(doc(como('mentor1'), 'usuarios/liderSemUni'), { unidadeId: 'uniA', role: 'lider' }));
+  });
+  it('mentor NÃO puxa para si o líder da unidade de outro mentor', async () => {
+    await montar();
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'usuarios/liderProf'), { role: 'lider', unidadeId: 'uniB', professorId: 'p4' });
+    });
+    await assertFails(updateDoc(doc(como('mentor1'), 'usuarios/liderProf'), { unidadeId: 'uniA' }));
+  });
+  it('líder-professor volta a ser professor (unidade do mentor)', async () => {
+    await montar();
+    await assertSucceeds(updateDoc(doc(como('mentor1'), 'usuarios/liderProf'), { role: 'professor', unidadeId: deleteField() }));
+  });
+  it('outro mentor NÃO devolve o líder-professor a professor', async () => {
+    await montar();
+    await assertFails(updateDoc(doc(como('mentor2'), 'usuarios/liderProf'), { role: 'professor', unidadeId: deleteField() }));
+  });
+  it('líder comum (sem vínculo de professor) NÃO vira professor por esse caminho', async () => {
+    await montar();
+    await assertFails(updateDoc(doc(como('mentor1'), 'usuarios/liderA'), { role: 'professor', unidadeId: deleteField() }));
+  });
+  it('o próprio professor/líder NÃO se promove nem troca de unidade', async () => {
+    await montar();
+    await assertFails(updateDoc(doc(como('prof1'), 'usuarios/prof1'), { role: 'lider', unidadeId: 'uniA' }));
+    await assertFails(updateDoc(doc(como('liderProf'), 'usuarios/liderProf'), { unidadeId: 'uniB' }));
+  });
+  it('líder NÃO promove professor a líder', async () => {
+    await montar();
+    await assertFails(updateDoc(doc(como('liderA'), 'usuarios/prof1'), { role: 'lider', unidadeId: 'uniA' }));
+  });
+  it('admin faz tudo isso', async () => {
+    await montar();
+    await assertSucceeds(updateDoc(doc(como('admin1'), 'usuarios/prof1'), { role: 'lider', unidadeId: 'uniB', professorId: 'p1' }));
   });
 });
