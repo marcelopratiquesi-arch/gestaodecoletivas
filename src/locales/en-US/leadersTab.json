@@ -7,7 +7,6 @@
   "replace": "Replace leader",
   "remove": "Remove leader",
   "search": "Search location, leader, e-mail or phone...",
-  "onlyWithout": "Only without leader",
   "empty": "No locations found.",
   "noLeader": "No leader",
   "howTo": "Replacing or removing a leader revokes their access immediately. Units with a \"legacy login\" still sign in with the unit e-mail: on the next sign-in the system requires the person to update their profile and connect their Google account, and they show up here as a leader \"to review\".",
@@ -69,5 +68,22 @@
   "checkBanner": "{{count}} unit(s) with a new leader to review: the person signed in with the old unit login and took over as leader with their Google account. Check that it is the right person: confirm or remove.",
   "assume": "I am the leader",
   "assumeQuestion": "Set yourself as leader of {{unit}}?\n\nYour access stays the same; the unit will just show you as its leader.",
-  "assumeReplaceQuestion": "{{unit}} already has the leader {{current}}.\n\nSet yourself as leader instead? The current leader loses access."
+  "assumeReplaceQuestion": "{{unit}} already has the leader {{current}}.\n\nSet yourself as leader instead? The current leader loses access.",
+  "kpiFilter": "Click to filter the list",
+  "kpiGoToRequests": "Click to see the requests",
+  "filter": {
+    "all": "All",
+    "with": "With leader",
+    "without": "Without leader",
+    "toCheck": "To check",
+    "country": "Country",
+    "state": "State",
+    "mentor": "Mentor",
+    "allCountries": "All countries",
+    "allStates": "All states",
+    "allMentors": "All mentors",
+    "noMentor": "No mentor",
+    "clear": "Clear filters",
+    "showing": "Showing {{count}} of {{total}}"
+  }
 }
