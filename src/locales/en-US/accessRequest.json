@@ -35,5 +35,12 @@
     "phone": "Enter a valid WhatsApp number.",
     "unit": "Choose the location.",
     "send": "Could not send the request. Please try again."
+  },
+  "invite": {
+    "title": "Hi, {{name}}!",
+    "desc": "The administrator has already registered you as a mentor. Check your details and sign in.",
+    "role": "Mentor",
+    "enter": "Sign in as mentor",
+    "error": "Could not finish signing in. Try again or contact the administrator."
   }
 }

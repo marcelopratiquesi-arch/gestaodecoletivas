@@ -1,4 +1,5 @@
 {
+  "accessDisabled": "Seu acesso ao sistema está desativado. Fale com o administrador.",
   "subtitle": "Gestão de Coletivas",
   "emailLabel": "Usuário / E-mail",
   "emailPlaceholder": "seu@email.com",

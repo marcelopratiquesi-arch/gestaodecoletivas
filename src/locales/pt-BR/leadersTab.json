@@ -7,7 +7,6 @@
   "replace": "Trocar líder",
   "remove": "Remover líder",
   "search": "Buscar unidade, líder, e-mail ou telefone...",
-  "onlyWithout": "Só sem líder",
   "empty": "Nenhuma unidade encontrada.",
   "noLeader": "Sem líder",
   "howTo": "Trocar ou remover o líder tira o acesso dele na hora. Unidades com \"login antigo\" ainda entram com o e-mail da unidade: no próximo acesso o sistema obriga a pessoa a atualizar o cadastro e conectar a conta Google dela, e ela aparece aqui como líder \"a conferir\".",
@@ -69,5 +68,22 @@
   "checkBanner": "{{count}} unidade(s) com líder novo a conferir: a pessoa entrou com o login antigo da unidade e assumiu como líder com a conta Google dela. Confira se é a pessoa certa: confirme ou remova.",
   "assume": "Eu sou o líder",
   "assumeQuestion": "Marcar você como líder da unidade {{unit}}?\n\nSeu acesso continua o mesmo; a unidade só passa a mostrar você como líder.",
-  "assumeReplaceQuestion": "A unidade {{unit}} já tem o líder {{current}}.\n\nMarcar você como líder no lugar? O líder atual perde o acesso."
+  "assumeReplaceQuestion": "A unidade {{unit}} já tem o líder {{current}}.\n\nMarcar você como líder no lugar? O líder atual perde o acesso.",
+  "kpiFilter": "Clique para filtrar a lista",
+  "kpiGoToRequests": "Clique para ver os pedidos",
+  "filter": {
+    "all": "Todas",
+    "with": "Com líder",
+    "without": "Sem líder",
+    "toCheck": "A conferir",
+    "country": "País",
+    "state": "Estado",
+    "mentor": "Mentor",
+    "allCountries": "Todos os países",
+    "allStates": "Todos os estados",
+    "allMentors": "Todos os mentores",
+    "noMentor": "Sem mentor",
+    "clear": "Limpar filtros",
+    "showing": "Mostrando {{count}} de {{total}}"
+  }
 }

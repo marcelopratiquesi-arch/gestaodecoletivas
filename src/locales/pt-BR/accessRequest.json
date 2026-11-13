@@ -35,5 +35,12 @@
     "phone": "Digite um WhatsApp válido.",
     "unit": "Escolha a unidade.",
     "send": "Não foi possível enviar o pedido. Tente de novo."
+  },
+  "invite": {
+    "title": "Olá, {{name}}!",
+    "desc": "O administrador já cadastrou você como mentor. Confira os dados e entre.",
+    "role": "Mentor",
+    "enter": "Entrar como mentor",
+    "error": "Não foi possível concluir a entrada. Tente de novo ou fale com o administrador."
   }
 }

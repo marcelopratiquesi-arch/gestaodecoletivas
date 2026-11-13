@@ -7,7 +7,6 @@
   "replace": "Cambiar líder",
   "remove": "Quitar líder",
   "search": "Buscar sede, líder, e-mail o teléfono...",
-  "onlyWithout": "Solo sin líder",
   "empty": "No se encontraron sedes.",
   "noLeader": "Sin líder",
   "howTo": "Cambiar o quitar al líder le saca el acceso en el momento. Las sedes con \"acceso anterior\" todavía ingresan con el e-mail de la sede: en el próximo ingreso el sistema obliga a la persona a actualizar su registro y conectar su cuenta de Google, y aparece acá como líder \"a revisar\".",
@@ -69,5 +68,22 @@
   "checkBanner": "{{count}} sede(s) con líder nuevo a revisar: la persona ingresó con el acceso anterior de la sede y asumió como líder con su cuenta de Google. Revisá si es la persona correcta: confirmá o quitá.",
   "assume": "Yo soy el líder",
   "assumeQuestion": "¿Marcarte como líder de la sede {{unit}}?\n\nTu acceso sigue igual; la sede solo pasa a mostrarte como líder.",
-  "assumeReplaceQuestion": "La sede {{unit}} ya tiene al líder {{current}}.\n\n¿Marcarte como líder en su lugar? El líder actual pierde el acceso."
+  "assumeReplaceQuestion": "La sede {{unit}} ya tiene al líder {{current}}.\n\n¿Marcarte como líder en su lugar? El líder actual pierde el acceso.",
+  "kpiFilter": "Hacé clic para filtrar la lista",
+  "kpiGoToRequests": "Hacé clic para ver las solicitudes",
+  "filter": {
+    "all": "Todas",
+    "with": "Con líder",
+    "without": "Sin líder",
+    "toCheck": "A revisar",
+    "country": "País",
+    "state": "Provincia",
+    "mentor": "Mentor",
+    "allCountries": "Todos los países",
+    "allStates": "Todas las provincias",
+    "allMentors": "Todos los mentores",
+    "noMentor": "Sin mentor",
+    "clear": "Limpiar filtros",
+    "showing": "Mostrando {{count}} de {{total}}"
+  }
 }

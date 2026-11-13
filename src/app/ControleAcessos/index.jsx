@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db, auth } from '../../services/firebase';
-import { collection, getDocs, doc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
+import { registrarAuditoriaAcesso as registrarAuditoria } from '../../services/auditoriaAcessos';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { useAuth } from '../../contexts/AuthContext';
 import { ShieldAlert, Users, Key, ShieldCheck, Mail, Loader2, Search, Edit } from 'lucide-react';
@@ -10,7 +11,7 @@ import SecurePanel from '../../components/SecurePanel';
 import { useTranslation } from 'react-i18next';
 
 export default function ControleAcessosPage() {
-    const { userData, user } = useAuth();
+    const { userData } = useAuth();
     const { t } = useTranslation();
     const [usuarios, setUsuarios] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -41,23 +42,16 @@ export default function ControleAcessosPage() {
     }, [isAdmin]);
 
     // 🟢 O X-9 INTEGRADO (O Olho Que Tudo Vê)
-    const registrarAuditoriaAcesso = async (acao, descricao, usuarioAlvo, oldRole, newRole) => {
-        try {
-            await addDoc(collection(db, 'auditoria_configuracoes'), {
-                tipoAcao: acao,
-                descricao: descricao,
-                modulo: 'CONFIGURACOES',
-                diffExtras: `Alvo: ${usuarioAlvo.nome} (${usuarioAlvo.emailAuth || usuarioAlvo.email})`,
-                estadoAnterior: oldRole ? { nivel_acesso: String(oldRole).toUpperCase(), usuario: usuarioAlvo.nome } : null,
-                estadoNovo: newRole ? { nivel_acesso: String(newRole).toUpperCase(), usuario: usuarioAlvo.nome } : null,
-                usuarioAcaoNome: userData?.nome || 'Administrador',
-                usuarioAcaoId: user.uid,
-                dataAcao: serverTimestamp()
-            });
-        } catch (error) {
-            console.error("Falha ao gravar log de auditoria", error);
-        }
-    };
+    // Auditoria única de acessos (quem fez + quem recebeu, com o e-mail do Google).
+    const registrarAuditoriaAcesso = (acao, descricao, usuarioAlvo, oldRole, newRole) =>
+        registrarAuditoria({
+            tipoAcao: acao,
+            descricao,
+            quem: userData,
+            alvo: usuarioAlvo,
+            papelAnterior: oldRole,
+            papelNovo: newRole,
+        });
 
     const alterarRole = async (userId, userNome, oldRole, newRole) => {
         if (oldRole === newRole) return;
@@ -71,7 +65,7 @@ export default function ControleAcessosPage() {
             await registrarAuditoriaAcesso(
                 'ALTERADA', 
                 `Alteração de Nível de Hierarquia/Acesso`, 
-                { nome: userNome, email: userId }, 
+                usuarios.find(u => u.id === userId) || { id: userId, nome: userNome },
                 oldRole, 
                 newRole
             );
