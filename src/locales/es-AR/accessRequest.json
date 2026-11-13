@@ -4,7 +4,7 @@
   "loadingUnits": "Cargando sedes...",
   "noUnits": "No se pudo cargar la lista de sedes. Hablá con tu mentor.",
   "fields": {
-    "name": "Tu nombre completo",
+    "name": "Nombre completo",
     "namePlaceholder": "Ej: María García",
     "phone": "WhatsApp",
     "phonePlaceholder": "Ej: +54 9 11 0000-0000",
@@ -12,17 +12,21 @@
     "unitLeader": "Sede en la que sos líder",
     "unitSearch": "Buscar sede...",
     "unitSelect": "Seleccioná la sede...",
-    "role": "Función"
+    "role": "Función",
+    "units": "Sedes",
+    "unitsLeader": "Sedes que liderás",
+    "unitsMentor": "Sedes que acompañás",
+    "alsoTeacher": "¿También das clases en estas sedes?"
   },
   "form": {
-    "title": "Pedir acceso",
-    "desc": "¿Primer ingreso? Completá tus datos. Tu mentor va a aprobar el pedido y ahí vas a poder ingresar al sistema.",
-    "send": "Enviar pedido",
+    "title": "Tus datos",
+    "desc": "Revisá y completá. Así el equipo se va a comunicar con vos.",
+    "send": "Enviar pedido de acceso",
     "cancelEdit": "Cancelar cambios"
   },
   "waiting": {
-    "title": "¡Pedido enviado!",
-    "desc": "Ahora solo tenés que esperar que tu mentor lo apruebe. Cuando lo apruebe, esta pantalla abre el sistema sola.",
+    "title": "Pedido enviado",
+    "desc": "Apenas lo aprueben, esta pantalla abre el sistema sola.",
     "edit": "Corregir mis datos"
   },
   "refused": {
@@ -33,7 +37,7 @@
   "errors": {
     "name": "Escribí tu nombre completo.",
     "phone": "Escribí un WhatsApp válido.",
-    "unit": "Elegí la sede.",
+    "unit": "Elegí al menos una sede.",
     "send": "No se pudo enviar el pedido. Probá de nuevo."
   },
   "invite": {
@@ -42,5 +46,17 @@
     "role": "Mentor",
     "enter": "Entrar como mentor",
     "error": "No se pudo completar el ingreso. Intentá de nuevo o hablá con el administrador."
+  },
+  "andTeacher": "y profesor",
+  "connectedAs": "Conectado como {{email}}",
+  "alsoTeacherYes": "Sí, también soy profesor",
+  "alsoTeacherNo": "No",
+  "hints": {
+    "leaderUnits": "Podés elegir hasta {{max}} sedes.",
+    "mentorUnits": "Podés elegir hasta {{max}} sedes. El administrador las revisa en la aprobación."
+  },
+  "approver": {
+    "lider": "Quién aprueba: el mentor de la sede o el administrador.",
+    "mentor": "Quién aprueba: el administrador."
   }
 }

@@ -309,6 +309,50 @@ describe('pedido de acesso', () => {
   });
 });
 
+describe('primeiro acesso: pedido com função e várias unidades', () => {
+  const novo = (extra = {}) => pedido({
+    papel: 'lider', unidadeId: 'uniA', unidadeIds: ['uniA', 'uniB'], unidadeNomes: ['Unidade A', 'Unidade B'],
+    tambemProfessor: true, ...extra,
+  });
+  const gravarPedido = (dados) => env.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), 'solicitacoes_acesso/novato'), dados);
+  });
+
+  it('pede como líder de várias unidades ou como mentor', async () => {
+    const db = google('novato', 'novato@gmail.com');
+    await assertSucceeds(setDoc(doc(db, 'solicitacoes_acesso/novato'), novo()));
+    await assertSucceeds(setDoc(doc(db, 'solicitacoes_acesso/novato'), novo({ papel: 'mentor', tambemProfessor: false })));
+  });
+  it('NÃO pede para ser admin/professor, nem mais de 5 unidades, nem com a 1ª unidade trocada', async () => {
+    const db = google('novato', 'novato@gmail.com');
+    await assertFails(setDoc(doc(db, 'solicitacoes_acesso/novato'), novo({ papel: 'admin' })));
+    await assertFails(setDoc(doc(db, 'solicitacoes_acesso/novato'), novo({ papel: 'professor' })));
+    await assertFails(setDoc(doc(db, 'solicitacoes_acesso/novato'), novo({ unidadeIds: ['uniA', 'b', 'c', 'd', 'e', 'f'] })));
+    await assertFails(setDoc(doc(db, 'solicitacoes_acesso/novato'), novo({ unidadeIds: ['uniB', 'uniA'] })));
+    await assertFails(setDoc(doc(db, 'solicitacoes_acesso/novato'), novo({ unidadeIds: [] })));
+    await assertFails(setDoc(doc(db, 'solicitacoes_acesso/novato'), novo({ tambemProfessor: 'sim' })));
+  });
+  it('pedido de líder: o mentor de QUALQUER unidade do pedido aprova; outro mentor não', async () => {
+    await gravarPedido(novo());
+    await assertSucceeds(updateDoc(doc(como('mentor2'), 'solicitacoes_acesso/novato'), { status: 'aprovado' }));
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'usuarios/mentor3'), { role: 'mentor', nome: 'Mentor 3' });
+    });
+    await gravarPedido(novo());
+    await assertFails(updateDoc(doc(como('mentor3'), 'solicitacoes_acesso/novato'), { status: 'aprovado' }));
+  });
+  it('pedido de MENTOR: só o admin aprova ou recusa', async () => {
+    await gravarPedido(novo({ papel: 'mentor', tambemProfessor: false }));
+    await assertFails(updateDoc(doc(como('mentor1'), 'solicitacoes_acesso/novato'), { status: 'aprovado' }));
+    await assertFails(deleteDoc(doc(como('mentor1'), 'solicitacoes_acesso/novato')));
+    await assertSucceeds(updateDoc(doc(como('admin1'), 'solicitacoes_acesso/novato'), { status: 'aprovado' }));
+  });
+  it('admin dá o crachá de mentor ao aprovar; mentor não', async () => {
+    await assertFails(setDoc(doc(como('mentor1'), 'usuarios/novato'), { role: 'mentor', nome: 'Novo Mentor' }));
+    await assertSucceeds(setDoc(doc(como('admin1'), 'usuarios/novato'), { role: 'mentor', nome: 'Novo Mentor' }));
+  });
+});
+
 describe('aba Líderes: cadastro manual e remoção pelo mentor', () => {
   it('mentor NÃO cadastra líder em unidade de outro mentor', async () => {
     await assertFails(setDoc(doc(como('mentor1'), 'usuarios/intruso'), { role: 'lider', unidadeId: 'uniB' }));

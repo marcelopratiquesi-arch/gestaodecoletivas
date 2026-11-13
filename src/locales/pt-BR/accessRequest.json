@@ -4,7 +4,7 @@
   "loadingUnits": "Carregando unidades...",
   "noUnits": "Não foi possível carregar a lista de unidades. Fale com o seu mentor.",
   "fields": {
-    "name": "Seu nome completo",
+    "name": "Nome completo",
     "namePlaceholder": "Ex: Maria Silva",
     "phone": "WhatsApp",
     "phonePlaceholder": "Ex: +55 31 99999-0000",
@@ -12,17 +12,21 @@
     "unitLeader": "Unidade em que você é líder",
     "unitSearch": "Buscar unidade...",
     "unitSelect": "Selecione a unidade...",
-    "role": "Função"
+    "role": "Função",
+    "units": "Unidades",
+    "unitsLeader": "Unidades que você lidera",
+    "unitsMentor": "Unidades que você acompanha",
+    "alsoTeacher": "Você também dá aulas nessas unidades?"
   },
   "form": {
-    "title": "Pedir acesso",
-    "desc": "Primeiro acesso? Preencha seus dados. O seu mentor vai aprovar o pedido e aí você entra no sistema.",
-    "send": "Enviar pedido",
+    "title": "Seus dados",
+    "desc": "Confira e complete. É assim que a equipe vai falar com você.",
+    "send": "Enviar pedido de acesso",
     "cancelEdit": "Cancelar alteração"
   },
   "waiting": {
-    "title": "Pedido enviado!",
-    "desc": "Agora é só aguardar o seu mentor aprovar. Assim que ele aprovar, esta tela abre o sistema sozinha.",
+    "title": "Pedido enviado",
+    "desc": "Assim que for aprovado, esta tela abre o sistema sozinha.",
     "edit": "Corrigir meus dados"
   },
   "refused": {
@@ -33,7 +37,7 @@
   "errors": {
     "name": "Digite seu nome completo.",
     "phone": "Digite um WhatsApp válido.",
-    "unit": "Escolha a unidade.",
+    "unit": "Escolha pelo menos uma unidade.",
     "send": "Não foi possível enviar o pedido. Tente de novo."
   },
   "invite": {
@@ -42,5 +46,17 @@
     "role": "Mentor",
     "enter": "Entrar como mentor",
     "error": "Não foi possível concluir a entrada. Tente de novo ou fale com o administrador."
+  },
+  "andTeacher": "e professor",
+  "connectedAs": "Conectado como {{email}}",
+  "alsoTeacherYes": "Sim, também sou professor",
+  "alsoTeacherNo": "Não",
+  "hints": {
+    "leaderUnits": "Pode escolher até {{max}} unidades.",
+    "mentorUnits": "Pode escolher até {{max}} unidades. O administrador confere na aprovação."
+  },
+  "approver": {
+    "lider": "Quem aprova: o mentor da unidade ou o administrador.",
+    "mentor": "Quem aprova: o administrador."
   }
 }

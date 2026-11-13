@@ -1,0 +1,64 @@
+{
+  "role": "Función",
+  "change": "Cambiar",
+  "continue": "Continuar",
+  "back": "Volver",
+  "steps": {
+    "role": "Función",
+    "google": "Google",
+    "data": "Tus datos",
+    "approval": "Aprobación"
+  },
+  "first": {
+    "title": "Bienvenido a Pratique Coletivas",
+    "desc": "Tu acceso es personal: cada persona entra con su propia cuenta de Google.",
+    "howTitle": "Cómo funciona",
+    "how1": "Elegís tu función: líder o mentor.",
+    "how2": "Entrás con tu cuenta de Google.",
+    "how3": "Completás tus datos y esperás la aprobación.",
+    "start": "Empezar mi registro",
+    "haveAccess": "¿ya tenés acceso?",
+    "backToLogin": "Volver a Ingresar"
+  },
+  "roles": {
+    "title": "¿Cuál es tu función?",
+    "desc": "Elegí la que ejercés en Pratique.",
+    "soon": "Próximamente",
+    "lider": {
+      "name": "Líder de sede",
+      "desc": "Cuida una o más sedes: horarios, profesores y validación de las clases."
+    },
+    "mentor": {
+      "name": "Mentor",
+      "desc": "Acompaña a los líderes y las sedes de una región."
+    },
+    "professor": {
+      "name": "Profesor de colectivas",
+      "soonDesc": "El acceso personal del profesor llega pronto. Por ahora, hablá con el líder de tu sede."
+    }
+  },
+  "google": {
+    "title": "Entrá con tu cuenta de Google",
+    "desc": "Va a ser tu acceso al sistema.",
+    "hint": "Usá tu correo personal o de trabajo, no el de la sede.",
+    "noPassword": "No necesitás crear contraseña.",
+    "keeps": "Si cambiás de sede, el acceso sigue siendo tuyo.",
+    "button": "Continuar con Google"
+  },
+  "units": {
+    "loading": "Cargando sedes...",
+    "none": "No se pudo cargar la lista de sedes. Hablá con tu mentor.",
+    "search": "Escribí el nombre, la ciudad o el estado",
+    "notFound": "Ninguna sede con \"{{term}}\". Revisá el nombre o hablá con tu mentor.",
+    "max": "Máximo de {{max}} sedes",
+    "remove": "Quitar esta sede"
+  },
+  "help": {
+    "title": "¿Tenés alguna duda?",
+    "mentor": "Hablá con el mentor responsable de tu sede",
+    "mentorNamed_one": "Hablá con {{names}}, mentor responsable de tu sede,",
+    "mentorNamed_other": "Hablá con {{names}}, mentores responsables de tus sedes,",
+    "orManager": "o con el Gestor de Colectivas:",
+    "manager": "Gestor de Colectivas"
+  }
+}

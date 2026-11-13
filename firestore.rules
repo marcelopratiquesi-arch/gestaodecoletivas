@@ -280,20 +280,36 @@ service cloud.firestore {
     // ===================== PEDIDOS DE ACESSO (login pelo Google) =====================
     // Quem entra pelo Google pela 1ª vez ainda não tem crachá: ele só consegue criar/ver o PRÓPRIO pedido
     // (documento com o mesmo id do login). Admin vê todos; mentor vê os pedidos (a tela mostra só os das
-    // unidades dele) e só aprova/recusa os das unidades dele.
+    // unidades dele) e só aprova/recusa pedidos de LÍDER que tenham alguma unidade dele.
+    // O pedido diz a função ("papel": lider ou mentor; pedido antigo sem o campo = lider) e até 5 unidades
+    // ("unidadeIds"; a 1ª é sempre "unidadeId"). Pedido de MENTOR só o admin aprova.
     match /solicitacoes_acesso/{uid} {
       function souDono() { return autenticado() && request.auth.uid == uid; }
-      function mentorDaUnidade(unidadeId) {
-        return logado() && meuPapel() == 'mentor'
-          && get(/databases/$(database)/documents/unidades/$(unidadeId)).data.get('mentorId', '') == request.auth.uid;
+      function idsDoPedido(p) { return p.get('unidadeIds', [p.get('unidadeId', '')]); }
+      // Mentor de alguma das unidades (até 5) de um pedido de líder.
+      function mentorDoPedido(p) {
+        let ids = idsDoPedido(p);
+        return logado() && meuPapel() == 'mentor' && p.get('papel', 'lider') == 'lider'
+          && ids is list && ids.size() >= 1
+          && (mentorDaUnidadeId(ids[0])
+            || (ids.size() > 1 && mentorDaUnidadeId(ids[1]))
+            || (ids.size() > 2 && mentorDaUnidadeId(ids[2]))
+            || (ids.size() > 3 && mentorDaUnidadeId(ids[3]))
+            || (ids.size() > 4 && mentorDaUnidadeId(ids[4])));
       }
       function pedidoValido() {
         let d = request.resource.data;
-        return d.keys().hasOnly(['nome', 'telefone', 'unidadeId', 'unidadeNome', 'email', 'status', 'criadoEm'])
+        let ids = idsDoPedido(d);
+        return d.keys().hasOnly(['nome', 'telefone', 'unidadeId', 'unidadeNome', 'email', 'status', 'criadoEm',
+                                 'papel', 'unidadeIds', 'unidadeNomes', 'tambemProfessor'])
           && d.status == 'pendente'
           && d.email == request.auth.token.email
           && d.nome is string && d.nome.size() >= 3 && d.nome.size() <= 80
           && d.telefone is string && d.telefone.size() >= 6 && d.telefone.size() <= 30
+          && d.get('papel', 'lider') in ['lider', 'mentor']
+          && d.get('tambemProfessor', false) is bool
+          && d.get('unidadeNomes', []) is list && d.get('unidadeNomes', []).size() <= 5
+          && ids is list && ids.size() >= 1 && ids.size() <= 5 && ids[0] == d.get('unidadeId', '')
           && d.unidadeId is string && exists(/databases/$(database)/documents/unidades/$(d.unidadeId));
       }
 
@@ -302,12 +318,12 @@ service cloud.firestore {
       // A própria pessoa faz (ou refaz, depois de recusado) o pedido, enquanto ainda não tem crachá.
       allow create, update: if souDono() && !temCracha() && pedidoValido();
 
-      // Admin ou mentor da unidade aprova/recusa (só os campos da análise).
-      allow update: if (souAdmin() || mentorDaUnidade(resource.data.unidadeId))
+      // Admin ou mentor de uma das unidades aprova/recusa (só os campos da análise).
+      allow update: if (souAdmin() || mentorDoPedido(resource.data))
         && camposAlterados().hasOnly(['status', 'motivo', 'analisadoPor', 'analisadoPorNome', 'analisadoEm'])
         && request.resource.data.status in ['aprovado', 'recusado'];
 
-      allow delete: if souDono() || souAdmin() || mentorDaUnidade(resource.data.unidadeId);
+      allow delete: if souDono() || souAdmin() || mentorDoPedido(resource.data);
     }
 
     // ===================== CONVITES DE MENTOR (cadastro pelo e-mail Google, sem senha) =====================

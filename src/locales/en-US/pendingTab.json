@@ -1,6 +1,6 @@
 {
   "title": "Access requests",
-  "subtitle": "People who signed in with Google and asked to be the leader of a location. Once approved, they access the system as that location's leader.",
+  "subtitle": "People who signed in with Google and asked for access as leader or mentor. Only the administrator approves mentor requests.",
   "empty": "No requests waiting for approval.",
   "leaderOf": "Wants to lead: {{unit}}",
   "hasLeader": "This location already has a leader: {{name}}. Approving replaces the current leader.",
@@ -15,5 +15,15 @@
   "notYourUnit": "This location is not yours.",
   "approveError": "Could not approve.",
   "refuseError": "Could not decline.",
-  "secondConfirm": "{{unit}} already has the leader {{current}}.\n\nAdd {{name}} as 2nd LEADER (both stay)?\n\nOK = 2nd leader · Cancel = see the replace option"
+  "secondConfirm": "{{unit}} already has the leader {{current}}.\n\nAdd {{name}} as 2nd LEADER (both stay)?\n\nOK = 2nd leader · Cancel = see the replace option",
+  "roleLeader": "Leader",
+  "roleMentor": "Mentor",
+  "leaderOfUnits": "Wants to lead:",
+  "mentorOf": "Units they will support (current mentor):",
+  "otherMentor": "another mentor",
+  "otherMentorUnit": "Unit of another mentor: they approve this part.",
+  "alsoTeacher": "Says they also teach",
+  "leftOut": "These units were left out: {{units}}.\n\nEach unit's mentor can add the person later in the Leaders tab.",
+  "approveMentorConfirm": "Approve {{name}} as MENTOR?",
+  "moveUnitsConfirm": "Also move these units to mentor {{name}}?\n\n{{units}}\n\nOK = move · Cancel = approve without changing the units"
 }

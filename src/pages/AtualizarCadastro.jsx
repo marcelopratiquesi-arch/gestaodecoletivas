@@ -1,54 +1,55 @@
 // Tela OBRIGATÓRIA de quem ainda entra com o login antigo (e-mail e senha): líder, login de unidade e mentor.
-// A pessoa confirma nome e WhatsApp e conecta a conta Google dela. A partir daí:
+// Passos: Aviso → Função (a pessoa confirma quem ela é) → Seus dados → Conta Google → Pronto.
+// Ao concluir:
 //   - só entra pelo Google (a senha antiga é removida da conta, então o login antigo deixa de existir);
 //   - o login de UNIDADE vira o login pessoal do LÍDER daquela unidade (mesma conta, papel "lider"),
 //     e a unidade fica marcada "a conferir" para o mentor/admin confirmar quem assumiu.
+// Quem responde que NÃO é o líder (ou não é mais mentor) não segue: a tela pede para falar com o
+// mentor / Gestor das Coletivas (a conta não muda). O acesso pessoal de professor vem numa 2ª etapa.
 // Enquanto não concluir, a pessoa não vê nenhuma tela do sistema (ver PrivateRoute).
 import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { GoogleAuthProvider, linkWithPopup, unlink } from "firebase/auth";
 import { addDoc, collection, doc, getDoc, serverTimestamp, writeBatch } from "firebase/firestore";
 import { useTranslation } from "react-i18next";
-import { Loader2, LogOut, Building2, Phone, User, AlertTriangle, ShieldCheck } from "lucide-react";
+import { Loader2, LogOut, Phone, User, AlertTriangle, CheckCircle2, Info } from "lucide-react";
 import { auth, db } from "../services/firebase";
 import { useAuth } from "../contexts/AuthContext";
-import { ehLider } from "../permissions";
+import { useCatalogs } from "../contexts/CatalogContext";
+import { ehLider, unidadesDoLider } from "../permissions";
+import {
+  FundoAcesso, Marca, Passos, CartaoEscolha, FuncaoEscolhida, CaixaAjuda, BotaoVermelho, BotaoLink, IconeGoogle, classeRotulo,
+} from "../components/acesso/AcessoUI";
 
 const temGoogle = (u) => (u?.providerData || []).some((p) => p.providerId === "google.com");
 const emailDoGoogle = (u) => (u?.providerData || []).find((p) => p.providerId === "google.com")?.email || "";
 
-const Tela = ({ children }) => (
-  <div className="min-h-screen flex items-center justify-center bg-black p-4 font-sans">
-    <div className="w-full max-w-lg bg-zinc-950 border border-zinc-800 rounded-3xl shadow-2xl p-6 md:p-10 text-zinc-200">
-      <h1 className="text-3xl font-black text-white italic tracking-tighter text-center mb-8">
-        PRATIQUE <span className="text-red-600">COLETIVAS</span>
-      </h1>
-      {children}
-    </div>
-  </div>
-);
-
 const Carregando = () => (
-  <Tela><div className="flex justify-center py-10"><Loader2 className="w-8 h-8 animate-spin text-red-600" /></div></Tela>
+  <FundoAcesso><Marca compacta /><div className="flex justify-center py-10"><Loader2 className="w-8 h-8 animate-spin text-red-600" /></div></FundoAcesso>
 );
 
 export default function AtualizarCadastro() {
   const { t } = useTranslation();
   const { user, userData, loading, logout, recarregarCracha, precisaAtualizarCadastro } = useAuth();
+  const { catalogs } = useCatalogs();
 
   const role = String(userData?.role || "").trim().toLowerCase();
   const souLider = ehLider(role);
   const eraLoginDeUnidade = role === "unidade"; // o "nome" desse crachá é o nome da unidade, não o da pessoa
+  const perfil = eraLoginDeUnidade ? "unit" : souLider ? "leader" : "mentor";
   const uid = user?.uid;
   const unidadeId = souLider ? userData?.unidadeId : null;
 
   const [unidade, setUnidade] = useState(undefined); // undefined = carregando; null = não encontrada
   // Esta pessoa é o 2º líder da unidade (a unidade pode ter 2 líderes; ver aba Líderes).
   const souSegundoLider = souLider && !!uid && unidade?.lider2Uid === uid;
+  const [passo, setPasso] = useState("aviso"); // aviso | funcao | dados | google | pronto
+  const [resposta, setResposta] = useState(""); // "segue" = continua na função; "professor" | "saiu" = não segue
   const [nome, setNome] = useState("");
   const [telefone, setTelefone] = useState("");
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState("");
+  const [emailFinal, setEmailFinal] = useState("");
 
   // Líder: confere a unidade (1 leitura) para mostrar o nome e saber se ela já tem outro líder.
   useEffect(() => {
@@ -63,18 +64,17 @@ export default function AtualizarCadastro() {
 
   // Mentor e líder já cadastrado com nome próprio: o formulário já vem preenchido.
   useEffect(() => {
-    if (!userData || eraLoginDeUnidade) return;
-    setNome((v) => v || userData.nome || "");
+    if (!userData) return;
+    if (!eraLoginDeUnidade) setNome((v) => v || userData.nome || "");
     setTelefone((v) => v || userData.telefone || "");
   }, [userData, eraLoginDeUnidade]);
 
-  async function concluir(e) {
-    e.preventDefault();
+  async function concluir() {
     setErro("");
     const nomeLimpo = nome.trim();
     const telefoneLimpo = telefone.trim();
-    if (nomeLimpo.length < 3) return setErro(t("updateProfile.errors.name"));
-    if (telefoneLimpo.replace(/\D/g, "").length < 8) return setErro(t("updateProfile.errors.phone"));
+    if (nomeLimpo.length < 3) { setPasso("dados"); return setErro(t("updateProfile.errors.name")); }
+    if (telefoneLimpo.replace(/\D/g, "").length < 8) { setPasso("dados"); return setErro(t("updateProfile.errors.phone")); }
 
     setSalvando(true);
     try {
@@ -127,7 +127,9 @@ export default function AtualizarCadastro() {
       //    (Se falhar aqui, o sistema tenta de novo sozinho no próximo acesso.)
       try { await unlink(conta, "password"); } catch (e2) { console.error("Não foi possível remover a senha antiga:", e2); }
 
-      await recarregarCracha(); // crachá atualizado: esta tela sai sozinha e abre o sistema
+      // 4) Mostra "Pronto"; o botão "Entrar no sistema" recarrega o crachá e abre o sistema.
+      setEmailFinal(email);
+      setPasso("pronto");
     } catch (err) {
       console.error(err);
       const code = err?.code || "";
@@ -146,17 +148,31 @@ export default function AtualizarCadastro() {
   if (!precisaAtualizarCadastro) return <Navigate to="/app" replace />;
   if (souLider && unidade === undefined) return <Carregando />;
 
-  const rodape = (
-    <button type="button" onClick={logout} disabled={salvando} className="mt-6 w-full flex items-center justify-center gap-2 text-xs font-bold text-zinc-500 hover:text-white uppercase tracking-widest">
-      <LogOut className="w-4 h-4" /> {t("updateProfile.logout", { email: user.email })}
-    </button>
+  const loginAntigo = userData.email || userData.emailAuth || user.email || "";
+  const nomesUnidades = souLider
+    ? unidadesDoLider(userData).map((id) => (catalogs?.unidades || []).find((u) => u.id === id)?.nome || (id === unidade?.id ? unidade.nome : id))
+    : [];
+  const mentorDaUnidade = unidade?.mentorId ? (catalogs?.mentores || []).find((m) => m.id === unidade.mentorId)?.nome : "";
+  const ajuda = <CaixaAjuda mentores={perfil === "mentor" ? [] : [mentorDaUnidade]} />;
+  const etapas = [t("updateProfile.steps.role"), t("updateProfile.steps.data"), t("updateProfile.steps.google"), t("updateProfile.steps.done")];
+  const sair = (
+    <BotaoLink onClick={logout} disabled={salvando}><LogOut className="w-4 h-4" /> {t("updateProfile.logout", { email: user.email })}</BotaoLink>
+  );
+  const textoFuncao = perfil === "mentor"
+    ? t("access.roles.mentor.name")
+    : `${t("access.roles.lider.name")} · ${unidade?.nome || ""}`;
+  const erroBox = erro && (
+    <div className="p-3 mb-4 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-xs font-medium flex items-center gap-2">
+      <AlertTriangle className="w-4 h-4 shrink-0" /> {erro}
+    </div>
   );
 
   // Líder sem unidade válida, ou unidade que já tem OUTRO líder: este login não segue adiante.
   const outroLider = souLider && unidade && unidade.liderUid && unidade.liderUid !== uid && !souSegundoLider;
   if (souLider && (unidade === null || outroLider)) {
     return (
-      <Tela>
+      <FundoAcesso>
+        <Marca compacta />
         <div className="text-center space-y-4">
           <div className="mx-auto w-16 h-16 rounded-full bg-amber-500/10 flex items-center justify-center">
             <AlertTriangle className="w-8 h-8 text-amber-500" />
@@ -169,73 +185,184 @@ export default function AtualizarCadastro() {
               ? t("updateProfile.blocked.hasLeaderDesc", { unit: unidade.nome, name: unidade.liderNome || unidade.liderEmail || "-" })
               : t("updateProfile.blocked.noUnitDesc")}
           </p>
+          {sair}
         </div>
-        {rodape}
-      </Tela>
+        {ajuda}
+      </FundoAcesso>
     );
   }
 
-  const campo = "w-full bg-zinc-900/50 border border-zinc-700 text-white font-bold pl-11 pr-4 py-3 rounded-xl focus:border-red-600 outline-none placeholder:text-zinc-600 placeholder:font-normal";
-  return (
-    <Tela>
-      <h2 className="text-xl font-black text-white text-center">
-        {souLider ? t("updateProfile.leader.title") : t("updateProfile.mentor.title")}
-      </h2>
-      <p className="text-sm text-zinc-400 text-center mt-2 mb-6">
-        {souLider ? t("updateProfile.leader.desc") : t("updateProfile.mentor.desc")}
-      </p>
-
-      {souLider && (
-        <div className="mb-5 p-4 rounded-2xl border border-zinc-800 bg-zinc-900 text-sm flex items-center gap-3">
-          <Building2 className="w-5 h-5 text-red-500 shrink-0" />
-          <div>
-            <p className="text-[10px] font-bold text-zinc-500 uppercase">{t("updateProfile.fields.unitLeader")}</p>
-            <p className="font-black text-white uppercase">{unidade.nome}</p>
-          </div>
+  // ===== 1. AVISO =====
+  if (passo === "aviso") {
+    return (
+      <FundoAcesso>
+        <Marca compacta />
+        <Passos etapas={etapas} atual={0} />
+        <h2 className="text-xl font-black text-white text-center text-balance">{t("updateProfile.notice.title")}</h2>
+        <p className="text-sm text-zinc-400 text-center mt-1.5 mb-5">{t("updateProfile.notice.desc")}</p>
+        <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1 bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2.5 text-xs mb-3">
+          <span className="text-[10px] font-black uppercase tracking-wider text-zinc-500">{t("updateProfile.notice.oldLogin")}</span>
+          <b className="text-white break-all">{loginAntigo}</b>
+          {unidade?.nome && <span className="text-zinc-400">{unidade.nome}</span>}
         </div>
-      )}
-
-      <form onSubmit={concluir} className="space-y-4">
-        <div>
-          <label className="text-[10px] font-bold text-zinc-500 uppercase ml-1">{t("updateProfile.fields.name")}</label>
-          <div className="relative">
-            <User className="absolute left-4 top-3.5 w-4 h-4 text-zinc-500" />
-            <input value={nome} onChange={(e) => setNome(e.target.value)} maxLength={80} disabled={salvando} className={campo} placeholder={t("updateProfile.fields.namePlaceholder")} />
-          </div>
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 text-xs text-zinc-400 leading-relaxed mb-5">
+          <b className="text-white">{t("updateProfile.notice.changesTitle")}</b>
+          <ul className="list-disc pl-4 mt-1.5 space-y-0.5">
+            <li>{t("updateProfile.notice.change1")}</li>
+            <li>{t("updateProfile.notice.change2")}</li>
+            <li>{t("updateProfile.notice.change3")}</li>
+          </ul>
         </div>
-
-        <div>
-          <label className="text-[10px] font-bold text-zinc-500 uppercase ml-1">{t("updateProfile.fields.phone")}</label>
-          <div className="relative">
-            <Phone className="absolute left-4 top-3.5 w-4 h-4 text-zinc-500" />
-            <input value={telefone} onChange={(e) => setTelefone(e.target.value)} maxLength={30} inputMode="tel" disabled={salvando} className={campo} placeholder={t("updateProfile.fields.phonePlaceholder")} />
-          </div>
+        <div className="space-y-2">
+          <BotaoVermelho type="button" onClick={() => setPasso("funcao")}>{t("updateProfile.notice.start")}</BotaoVermelho>
+          {sair}
         </div>
+        {ajuda}
+      </FundoAcesso>
+    );
+  }
 
-        <div className="p-3 rounded-xl border border-zinc-800 bg-zinc-900/60 text-xs text-zinc-400 flex gap-2">
-          <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-          <span>{t("updateProfile.googleHint")}</span>
+  // ===== 2. CONFIRMAR A FUNÇÃO =====
+  if (passo === "funcao") {
+    const opcoes = perfil === "mentor" ? ["segue", "saiu"] : ["segue", "professor", "saiu"];
+    const naoSegue = resposta && resposta !== "segue";
+    return (
+      <FundoAcesso>
+        <Marca compacta />
+        <Passos etapas={etapas} atual={0} />
+        <h2 className="text-xl font-black text-white text-center text-balance">
+          {t(`updateProfile.role.${perfil}.question`, { unit: unidade?.nome || "" })}
+        </h2>
+        <p className="text-sm text-zinc-400 text-center mt-1.5 mb-5">{t("updateProfile.role.desc")}</p>
+        <div className="space-y-2.5">
+          {opcoes.map((op) => (
+            <CartaoEscolha
+              key={op} ativo={resposta === op} onClick={() => setResposta(op)}
+              titulo={t(`updateProfile.role.${perfil}.${op}`)} descricao={t(`updateProfile.role.${perfil}.${op}Desc`)}
+            />
+          ))}
         </div>
-
-        {erro && (
-          <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-xs font-medium flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 shrink-0" /> {erro}
+        {naoSegue && (
+          <div className="mt-4 flex gap-2 text-xs leading-relaxed text-amber-200 bg-amber-500/10 border border-amber-500/30 rounded-xl px-3 py-2.5">
+            <Info className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
+            <span>{t(`updateProfile.role.stop.${resposta}${perfil === "mentor" ? "Mentor" : ""}`)}</span>
           </div>
         )}
-
-        <button type="submit" disabled={salvando} className="w-full bg-white hover:bg-zinc-100 text-zinc-800 font-black text-sm py-4 rounded-xl flex items-center justify-center gap-3 disabled:opacity-60">
-          {salvando ? <Loader2 className="w-5 h-5 animate-spin" /> : (
-            <svg viewBox="0 0 48 48" className="w-5 h-5" aria-hidden="true">
-              <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.2-.1-2.3-.4-3.5z"/>
-              <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/>
-              <path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.3 0-9.7-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/>
-              <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.2-.1-2.3-.4-3.5z"/>
-            </svg>
+        <div className="mt-5 space-y-2">
+          {!naoSegue && (
+            <BotaoVermelho type="button" disabled={!resposta} onClick={() => setPasso("dados")}>{t("access.continue")}</BotaoVermelho>
           )}
-          {t("updateProfile.submit")}
-        </button>
-      </form>
-      {rodape}
-    </Tela>
+          {naoSegue ? sair : <BotaoLink onClick={() => setPasso("aviso")}>{t("access.back")}</BotaoLink>}
+        </div>
+        {ajuda}
+      </FundoAcesso>
+    );
+  }
+
+  // ===== 3. SEUS DADOS =====
+  const campo = "w-full bg-zinc-900/50 border border-zinc-700 text-white font-bold pl-11 pr-4 py-3 rounded-xl focus:border-red-600 outline-none placeholder:text-zinc-600 placeholder:font-normal";
+  if (passo === "dados") {
+    return (
+      <FundoAcesso>
+        <Marca compacta />
+        <Passos etapas={etapas} atual={1} />
+        <h2 className="text-xl font-black text-white text-center">{t("updateProfile.data.title")}</h2>
+        <p className="text-sm text-zinc-400 text-center mt-1.5 mb-5">{t("updateProfile.data.desc")}</p>
+        <FuncaoEscolhida texto={textoFuncao} onTrocar={() => setPasso("funcao")} />
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          setErro("");
+          if (nome.trim().length < 3) return setErro(t("updateProfile.errors.name"));
+          if (telefone.replace(/\D/g, "").length < 8) return setErro(t("updateProfile.errors.phone"));
+          setPasso("google");
+        }} className="space-y-4">
+          <div className="space-y-1">
+            <label htmlFor="atu-nome" className={classeRotulo}>{t("updateProfile.fields.name")}</label>
+            <div className="relative">
+              <User className="absolute left-4 top-3.5 w-4 h-4 text-zinc-500" />
+              <input id="atu-nome" value={nome} onChange={(e) => setNome(e.target.value)} maxLength={80} className={campo} placeholder={t("updateProfile.fields.namePlaceholder")} />
+            </div>
+            {eraLoginDeUnidade && <p className="text-[11px] text-zinc-500 ml-1">{t("updateProfile.data.unitNameHint")}</p>}
+          </div>
+          <div className="space-y-1">
+            <label htmlFor="atu-telefone" className={classeRotulo}>{t("updateProfile.fields.phone")}</label>
+            <div className="relative">
+              <Phone className="absolute left-4 top-3.5 w-4 h-4 text-zinc-500" />
+              <input id="atu-telefone" value={telefone} onChange={(e) => setTelefone(e.target.value)} maxLength={30} inputMode="tel" className={campo} placeholder={t("updateProfile.fields.phonePlaceholder")} />
+            </div>
+          </div>
+          {souLider && (
+            <div className="space-y-1.5">
+              <span className={classeRotulo}>{t("updateProfile.fields.unitsLeader")}</span>
+              <div className="flex flex-wrap gap-1.5">
+                {nomesUnidades.map((n) => (
+                  <span key={n} className="inline-flex rounded-full border border-red-600 bg-red-600/10 text-red-100 text-xs font-bold px-2.5 py-1">{n}</span>
+                ))}
+              </div>
+              <p className="text-[11px] text-zinc-500 ml-1">{t("updateProfile.data.moreUnitsHint")}</p>
+            </div>
+          )}
+          {erroBox}
+          <BotaoVermelho type="submit">{t("access.continue")}</BotaoVermelho>
+          <BotaoLink onClick={() => setPasso("funcao")}>{t("access.back")}</BotaoLink>
+        </form>
+        {ajuda}
+      </FundoAcesso>
+    );
+  }
+
+  // ===== 4. CONTA GOOGLE =====
+  if (passo === "google") {
+    return (
+      <FundoAcesso>
+        <Marca compacta />
+        <Passos etapas={etapas} atual={2} />
+        <h2 className="text-xl font-black text-white text-center">{t("updateProfile.google.title")}</h2>
+        <p className="text-sm text-zinc-400 text-center mt-1.5 mb-5">{t("updateProfile.google.desc")}</p>
+        <FuncaoEscolhida texto={textoFuncao} onTrocar={salvando ? undefined : () => setPasso("funcao")} />
+        <div className="text-xs leading-relaxed text-amber-200 bg-amber-500/10 border border-amber-500/30 rounded-xl px-3 py-2.5 mb-3 break-words">
+          {t("updateProfile.google.warning", { login: loginAntigo })}
+        </div>
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 text-xs text-zinc-400 leading-relaxed mb-5">
+          {t("updateProfile.google.hint")}
+        </div>
+        {erroBox}
+        <div className="space-y-2">
+          <button type="button" onClick={concluir} disabled={salvando} className="w-full bg-white hover:bg-zinc-100 text-zinc-800 font-black text-sm py-4 rounded-xl flex items-center justify-center gap-3 disabled:opacity-60">
+            {salvando ? <Loader2 className="w-5 h-5 animate-spin" /> : <IconeGoogle />}
+            {t("updateProfile.submit")}
+          </button>
+          <BotaoLink onClick={() => setPasso("dados")} disabled={salvando}>{t("access.back")}</BotaoLink>
+        </div>
+        {ajuda}
+      </FundoAcesso>
+    );
+  }
+
+  // ===== 5. PRONTO =====
+  return (
+    <FundoAcesso>
+      <Marca compacta />
+      <Passos etapas={etapas} atual={3} />
+      <div className="text-center space-y-4">
+        <div className="mx-auto w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center">
+          <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+        </div>
+        <h2 className="text-xl font-black text-white">{t("updateProfile.done.title")}</h2>
+        <p className="text-sm text-zinc-400">{t("updateProfile.done.desc")}</p>
+        <div className="text-left bg-zinc-900 border border-zinc-800 rounded-2xl p-4 text-sm space-y-1">
+          <p><span className="text-zinc-500">{t("updateProfile.fields.name")}:</span> <b>{nome.trim()}</b></p>
+          <p><span className="text-zinc-500">{t("updateProfile.fields.phone")}:</span> <b>{telefone.trim()}</b></p>
+          <p><span className="text-zinc-500">{t("access.role")}:</span> <b>{textoFuncao}</b></p>
+          <p className="break-all"><span className="text-zinc-500">{t("updateProfile.done.login")}:</span> <b>{emailFinal}</b></p>
+        </div>
+        {eraLoginDeUnidade && (
+          <div className="text-left text-xs text-zinc-300 bg-blue-500/10 border border-blue-500/30 rounded-xl px-3 py-2.5">
+            {t("updateProfile.done.mentorChecks", { unit: unidade?.nome || "" })}
+          </div>
+        )}
+        <BotaoVermelho type="button" onClick={() => recarregarCracha()}>{t("updateProfile.done.enter")}</BotaoVermelho>
+      </div>
+    </FundoAcesso>
   );
 }
