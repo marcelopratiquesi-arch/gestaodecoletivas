@@ -1,5 +1,6 @@
 // Aba "Líderes": quem responde por cada unidade. A unidade é só um cadastro (nome, endereço...);
-// quem entra no sistema é o LÍDER, com login pessoal. Regra: 1 líder por unidade.
+// quem entra no sistema é o LÍDER, com login pessoal. Cada unidade tem até 2 líderes, e uma pessoa pode ser
+// líder de várias unidades (ver saidaDoLider.js).
 // O líder ganha acesso de dois jeitos:
 //   1) entra com o Google, pede acesso e é aprovado aqui (bloco "Pedidos de acesso", no topo);
 //   2) o admin/mentor cadastra na mão (nome, e-mail, telefone e senha inicial);
@@ -7,7 +8,7 @@
 //      (pages/AtualizarCadastro): assume como líder na hora e fica "a conferir" até o admin/mentor confirmar.
 // Admin vê todas as unidades; mentor só as dele (as regras do banco também garantem isso).
 import { useMemo, useRef, useState } from "react";
-import { doc, getDoc, writeBatch, serverTimestamp, addDoc, collection, deleteField, updateDoc } from "firebase/firestore";
+import { doc, writeBatch, serverTimestamp, addDoc, collection, deleteField, updateDoc } from "firebase/firestore";
 import { createUserWithEmailAndPassword, getAuth, signOut } from "firebase/auth";
 import { initializeApp, getApp, deleteApp } from "firebase/app";
 import { useTranslation } from "react-i18next";
@@ -17,9 +18,10 @@ import {
 import { db, auth } from "../../../services/firebase";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useCatalogs } from "../../../contexts/CatalogContext";
-import { liderMantemAcesso } from "../../../permissions";
 import { PendenciasTab } from "../Pendencias/PendenciasTab";
 import { usePedidosPendentes } from "../Pendencias/usePedidosPendentes";
+import { tirarLiderDaUnidade, camposAoLiberarVaga, textoDaSaida } from "./saidaDoLider";
+import { TornarLiderModal } from "./TornarLiderModal";
 
 const SENHA_MINIMA = 6;
 // País da unidade em sigla (cadastros antigos guardam o nome por extenso; sem país = Brasil).
@@ -60,6 +62,8 @@ export function LideresTab() {
   const [salvando, setSalvando] = useState(false);
 
   const mentores = useMemo(() => catalogs?.mentores || [], [catalogs?.mentores]);
+  const professores = useMemo(() => catalogs?.professores || [], [catalogs?.professores]);
+  const [tornarLider, setTornarLider] = useState(null); // { vaga: 1 | 2, unidade }
 
   const minhasUnidades = useMemo(() => {
     const todas = catalogs?.unidades || [];
@@ -84,7 +88,7 @@ export function LideresTab() {
       .filter((u) => !paisFiltro || siglaPais(u) === paisFiltro)
       .filter((u) => !estadoFiltro || String(u.estado || "").trim().toUpperCase() === estadoFiltro)
       .filter((u) => !mentorFiltro || (mentorFiltro === "-" ? !u.mentorId : u.mentorId === mentorFiltro))
-      .filter((u) => !termo || [u.nome, u.estado, u.liderNome, u.liderEmail, u.liderTelefone]
+      .filter((u) => !termo || [u.nome, u.estado, u.liderNome, u.liderEmail, u.liderTelefone, u.lider2Nome, u.lider2Email, u.lider2Telefone]
         .some((v) => String(v || "").toLowerCase().includes(termo)))
       // Líder novo "a conferir" aparece primeiro.
       .sort((a, b) => Number(b.liderAConferir === true) - Number(a.liderAConferir === true));
@@ -108,18 +112,12 @@ export function LideresTab() {
     } catch (e) { console.error("Falha ao gravar auditoria", e); }
   };
 
-  // Tira o acesso do líder atual da unidade (apaga o crachá) dentro de um batch já aberto.
-  // Se o líder também é admin ou mentor, ele só deixa de ser o líder da unidade: o acesso dele fica.
-  async function tirarLiderAtual(batch, unidade, motivo) {
-    const cracha = await getDoc(doc(db, "usuarios", unidade.liderUid));
-    if (cracha.exists() && liderMantemAcesso(cracha.data().role)) return;
-    if (cracha.exists()) batch.delete(cracha.ref);
-    const pedido = await getDoc(doc(db, "solicitacoes_acesso", unidade.liderUid));
-    if (pedido.exists() && pedido.data().status !== "recusado") {
-      batch.update(pedido.ref, {
-        status: "recusado", motivo, analisadoPor: userId, analisadoPorNome: meuNome, analisadoEm: serverTimestamp(),
-      });
-    }
+  // Tira o líder atual da unidade dentro de um batch já aberto (ver saidaDoLider.js):
+  // admin/mentor só sai da unidade; líder que também é professor volta a ser professor; os demais perdem o acesso.
+  function tirarLiderAtual(batch, unidade, motivo, vaga = 1) {
+    return tirarLiderDaUnidade(batch, {
+      liderUid: vaga === 2 ? unidade.lider2Uid : unidade.liderUid, unidadeId: unidade.id, professores, motivo, quemId: userId, quemNome: meuNome,
+    });
   }
 
   function abrirNovo(unidade) {
@@ -182,7 +180,7 @@ export function LideresTab() {
       const batch = writeBatch(db);
       if (temOutroLider) await tirarLiderAtual(batch, unidade, t("leadersTab.replacedReason", { name: nome }));
       batch.set(doc(db, "usuarios", novoUid), {
-        nome, email, telefone, role: "lider", unidadeId: unidade.id, status: "ativo",
+        nome, email, telefone, role: "lider", unidadeId: unidade.id, unidadeIds: [unidade.id], status: "ativo",
         criadoPor: userId, criadoEm: serverTimestamp(),
       });
       batch.update(doc(db, "unidades", unidade.id), {
@@ -207,19 +205,20 @@ export function LideresTab() {
     }
   }
 
-  async function remover(unidade) {
-    if (!window.confirm(t("leadersTab.removeConfirm", { name: unidade.liderNome || unidade.liderEmail, unit: unidade.nome }))) return;
+  // Tira o 1º (vaga 1) ou o 2º líder (vaga 2). Se sair o 1º e houver 2º, o 2º passa a ser o 1º.
+  async function remover(unidade, vaga = 1) {
+    const nome = vaga === 2 ? (unidade.lider2Nome || unidade.lider2Email) : (unidade.liderNome || unidade.liderEmail);
+    const email = vaga === 2 ? unidade.lider2Email : unidade.liderEmail;
+    if (!window.confirm(t("leadersTab.removeConfirm", { name: nome, unit: unidade.nome }))) return;
     setProcessando(unidade.id);
     try {
       const batch = writeBatch(db);
-      await tirarLiderAtual(batch, unidade, t("leadersTab.removedReason"));
-      batch.update(doc(db, "unidades", unidade.id), {
-        liderUid: deleteField(), liderNome: deleteField(), liderEmail: deleteField(),
-        liderTelefone: deleteField(), liderTipo: deleteField(), liderDesde: deleteField(), liderAConferir: deleteField(),
-      });
+      const saida = await tirarLiderAtual(batch, unidade, t("leadersTab.removedReason"), vaga);
+      batch.update(doc(db, "unidades", unidade.id), camposAoLiberarVaga(unidade, vaga));
       await batch.commit();
-      await registrarAuditoria("EXCLUIDA", "Líder removido da unidade (perdeu o acesso).", unidade.nome,
-        `${unidade.liderNome || "-"} (${unidade.liderEmail || "-"})`);
+      await registrarAuditoria("EXCLUIDA",
+        `${vaga === 2 ? "2º líder" : "Líder"} removido da unidade (${textoDaSaida(saida) || "saiu"}).`, unidade.nome,
+        `${nome || "-"} (${email || "-"})${vaga === 1 && unidade.lider2Uid ? ` | ${unidade.lider2Nome || unidade.lider2Email} passou a ser o 1º líder` : ""}`);
     } catch (err) {
       console.error(err);
       alert(t("leadersTab.errors.remove") + " " + (err.message || ""));
@@ -285,9 +284,14 @@ export function LideresTab() {
           </h2>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 max-w-3xl">{t("leadersTab.subtitle")}</p>
         </div>
-        <button onClick={() => abrirNovo(null)} className="px-5 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-black uppercase flex items-center gap-2 shadow-sm self-start md:self-auto">
-          <UserPlus className="w-4 h-4" /> {t("leadersTab.new")}
-        </button>
+        <div className="flex flex-wrap gap-2 self-start md:self-auto">
+          <button onClick={() => setTornarLider({ vaga: 1, unidade: null })} className="px-5 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-black uppercase flex items-center gap-2 shadow-sm">
+            <UserCog className="w-4 h-4" /> {t("leadersTab.promote.button")}
+          </button>
+          <button onClick={() => abrirNovo(null)} className="px-5 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-black uppercase flex items-center gap-2 shadow-sm">
+            <UserPlus className="w-4 h-4" /> {t("leadersTab.new")}
+          </button>
+        </div>
       </div>
 
       {/* NÚMEROS */}
@@ -418,6 +422,18 @@ export function LideresTab() {
                             </p>
                             <p className="text-[11px] text-slate-500 flex items-center gap-1"><Mail className="w-3 h-3" /> {u.liderEmail || "-"}</p>
                             {u.liderTelefone && <p className="text-[11px] text-slate-500 flex items-center gap-1"><Phone className="w-3 h-3" /> {u.liderTelefone}</p>}
+                            {u.lider2Uid && (
+                              <div className="mt-2 pt-2 border-t border-dashed border-slate-200 dark:border-slate-700 space-y-0.5">
+                                <p className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 flex-wrap">
+                                  {u.lider2Nome || "-"}
+                                  <span className="px-1.5 py-0.5 rounded-md border text-[9px] font-black uppercase bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-900/20 dark:text-violet-300 dark:border-violet-800">{t("leadersTab.second.badge")}</span>
+                                  <button onClick={() => remover(u, 2)} disabled={ocupado} title={t("leadersTab.second.remove")}
+                                    className="p-1 rounded-md text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"><UserX className="w-3.5 h-3.5" /></button>
+                                </p>
+                                <p className="text-[11px] text-slate-500 flex items-center gap-1"><Mail className="w-3 h-3" /> {u.lider2Email || "-"}</p>
+                                {u.lider2Telefone && <p className="text-[11px] text-slate-500 flex items-center gap-1"><Phone className="w-3 h-3" /> {u.lider2Telefone}</p>}
+                              </div>
+                            )}
                           </div>
                         ) : (
                           <span className="text-xs font-bold text-amber-600 flex items-center gap-1"><AlertTriangle className="w-3.5 h-3.5" /> {t("leadersTab.noLeader")}</span>
@@ -445,6 +461,12 @@ export function LideresTab() {
                                   <BadgeCheck className="w-3.5 h-3.5" /> {t("leadersTab.confirm")}
                                 </button>
                               )}
+                              {!u.lider2Uid && (
+                                <button onClick={() => setTornarLider({ vaga: 2, unidade: u })} disabled={ocupado} title={t("leadersTab.second.addHint")}
+                                  className="px-3 py-2 rounded-lg bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300 hover:bg-violet-100 text-[10px] font-black uppercase flex items-center gap-1.5 disabled:opacity-50 whitespace-nowrap">
+                                  <UserPlus className="w-3.5 h-3.5" /> {t("leadersTab.second.add")}
+                                </button>
+                              )}
                               <button onClick={() => abrirEditar(u)} disabled={ocupado} title={t("leadersTab.edit")}
                                 className="p-2 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200 hover:bg-blue-50 hover:text-blue-600 disabled:opacity-50"><Edit2 className="w-4 h-4" /></button>
                               <button onClick={() => abrirNovo(u)} disabled={ocupado} title={t("leadersTab.replace")}
@@ -455,9 +477,15 @@ export function LideresTab() {
                               </button>
                             </>
                           ) : (
-                            <button onClick={() => abrirNovo(u)} className="px-3 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-[10px] font-black uppercase flex items-center gap-1.5">
-                              <UserPlus className="w-3.5 h-3.5" /> {t("leadersTab.register")}
-                            </button>
+                            <>
+                              <button onClick={() => setTornarLider({ vaga: 1, unidade: u })} title={t("leadersTab.promote.title")}
+                                className="px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 hover:bg-amber-100 text-[10px] font-black uppercase flex items-center gap-1.5 whitespace-nowrap">
+                                <UserCog className="w-3.5 h-3.5" /> {t("leadersTab.promote.pick")}
+                              </button>
+                              <button onClick={() => abrirNovo(u)} className="px-3 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-[10px] font-black uppercase flex items-center gap-1.5">
+                                <UserPlus className="w-3.5 h-3.5" /> {t("leadersTab.register")}
+                              </button>
+                            </>
                           )}
                         </div>
                       </td>
@@ -470,6 +498,16 @@ export function LideresTab() {
         )}
         <p className="text-[11px] text-slate-400 font-bold">{t("leadersTab.howTo")}</p>
       </div>
+
+      {/* MODAL: ESCOLHER LÍDER JÁ CADASTRADO (1º ou 2º líder) */}
+      {tornarLider && (
+        <TornarLiderModal
+          unidades={minhasUnidades} todasUnidades={catalogs?.unidades || []} professores={professores} mentores={mentores}
+          vaga={tornarLider.vaga} unidadeInicial={tornarLider.unidade}
+          quemId={userId} quemNome={meuNome} registrarAuditoria={registrarAuditoria}
+          onClose={() => setTornarLider(null)}
+        />
+      )}
 
       {/* MODAL: CADASTRAR / EDITAR LÍDER */}
       {modal && (

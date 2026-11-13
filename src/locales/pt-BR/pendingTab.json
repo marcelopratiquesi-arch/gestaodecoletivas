@@ -14,5 +14,6 @@
   "unitNotFound": "Unidade não encontrada (pode ter sido excluída).",
   "notYourUnit": "Esta unidade não é sua.",
   "approveError": "Não foi possível aprovar.",
-  "refuseError": "Não foi possível recusar."
+  "refuseError": "Não foi possível recusar.",
+  "secondConfirm": "A unidade {{unit}} já tem o líder {{current}}.\n\nAdicionar {{name}} como 2º LÍDER (os dois ficam)?\n\nOK = 2º líder · Cancelar = ver a opção de substituir"
 }
