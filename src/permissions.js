@@ -42,3 +42,11 @@ export function canAccessPage(userData, pageKey) {
 export function getHomePath(userData) {
   return canAccessPage(userData, "inicio") ? "/app" : "/app/validacao-diaria";
 }
+
+// Mesma regra de logado() no firestore.rules: papel "bloqueado" ou mentor com status "inativo" = sem acesso.
+export function crachaSemAcesso(cracha) {
+  const papel = String(cracha?.role || "").trim().toLowerCase();
+  return papel === "bloqueado" || (papel === "mentor" && cracha?.status === "inativo");
+}
+// Recado para a tela de entrada mostrar "seu acesso está desativado" depois que o sistema desconecta.
+export const AVISO_SEM_ACESSO = "pratique_aviso_sem_acesso";

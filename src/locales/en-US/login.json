@@ -1,4 +1,5 @@
 {
+  "accessDisabled": "Your access to the system is disabled. Contact the administrator.",
   "subtitle": "Group Classes Management",
   "emailLabel": "Username / Email",
   "emailPlaceholder": "your@email.com",

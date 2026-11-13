@@ -370,6 +370,30 @@ describe('crachá obrigatório para todo tipo de login', () => {
     await assertFails(setDoc(doc(db, 'aulas/aula9'), { x: 1 }));
     await assertSucceeds(getDoc(doc(db, 'usuarios/bloq')));
   });
+  it('mentor INATIVO não lê nem grava, mas enxerga o próprio crachá', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'usuarios/mentorInativo'), { role: 'mentor', status: 'inativo', nome: 'Mentor Inativo' });
+      await setDoc(doc(ctx.firestore(), 'unidades/uniI'), { nome: 'Unidade I', mentorId: 'mentorInativo' });
+    });
+    const db = senha('mentorInativo');
+    await assertFails(getDoc(doc(db, 'unidades/uniA')));
+    await assertFails(setDoc(doc(db, 'aulas/aula9'), { unidadeId: 'uniI' }));
+    await assertFails(setDoc(doc(db, 'usuarios/novoProf'), { role: 'professor' }));
+    await assertSucceeds(getDoc(doc(db, 'usuarios/mentorInativo')));
+  });
+  it('mentor ATIVO (ou sem status, como os atuais) segue entrando', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'usuarios/mentorAtivo'), { role: 'mentor', status: 'ativo', nome: 'Mentor Ativo' });
+    });
+    await assertSucceeds(getDoc(doc(senha('mentorAtivo'), 'unidades/uniA')));
+    await assertSucceeds(getDoc(doc(senha('mentor1'), 'unidades/uniA')));
+  });
+  it('status "inativo" em outro papel (professor/líder) continua como antes', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'usuarios/profInativo'), { role: 'professor', status: 'inativo', nome: 'Prof' });
+    });
+    await assertSucceeds(getDoc(doc(senha('profInativo'), 'unidades/uniA')));
+  });
   it('a página pública de horários continua aberta sem login', async () => {
     await assertSucceeds(getDoc(doc(anonimo(), 'publico/vitrine')));
     await assertSucceeds(getDoc(doc(anonimo(), 'aulas/aula1')));

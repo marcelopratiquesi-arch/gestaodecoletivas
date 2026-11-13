@@ -11,9 +11,14 @@ service cloud.firestore {
     // regra o consulte mais de uma vez).
     function autenticado() { return request.auth != null; }
     function temCracha() { return exists(/databases/$(database)/documents/usuarios/$(request.auth.uid)); }
+    // Mentor com status "inativo" (aba Mentores) também fica sem acesso. Sem leitura extra: é o mesmo crachá.
+    function crachaAtivo(c) {
+      return c.get('role', '').lower() != 'bloqueado'
+        && !(c.get('role', '').lower() == 'mentor' && c.get('status', '') == 'inativo');
+    }
     function logado() {
       return autenticado() && temCracha()
-        && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.get('role', '').lower() != 'bloqueado';
+        && crachaAtivo(get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data);
     }
 
     // Papel de quem está fazendo a ação, lido do crachá (usuarios/{uid}).

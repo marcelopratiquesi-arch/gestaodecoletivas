@@ -2,10 +2,11 @@
 // Aprovar = a pessoa vira LÍDER da unidade (crachá com papel "lider"). Cada unidade tem 1 líder só:
 // se já houver um, o sistema pergunta se quer substituir (o antigo perde o acesso).
 import { useState } from "react";
-import { doc, getDoc, writeBatch, serverTimestamp, addDoc, collection, updateDoc, deleteField } from "firebase/firestore";
+import { doc, getDoc, writeBatch, serverTimestamp, updateDoc, deleteField } from "firebase/firestore";
 import { useTranslation } from "react-i18next";
 import { Inbox, Check, X, Loader2, Building2, Phone, Mail, User, Clock } from "lucide-react";
 import { db } from "../../../services/firebase";
+import { registrarAuditoriaAcesso } from "../../../services/auditoriaAcessos";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useCatalogs } from "../../../contexts/CatalogContext";
 import { usePedidosPendentes } from "./usePedidosPendentes";
@@ -27,14 +28,13 @@ export function PendenciasTab() {
   const userId = userData?.id || userData?.uid;
   const meuNome = userData?.nome || userData?.email || "Admin";
 
-  const registrarAuditoria = async (tipoAcao, descricao, unidadeNome, detalhes) => {
-    try {
-      await addDoc(collection(db, "auditoria_configuracoes"), {
-        tipoAcao, descricao, diffExtras: detalhes, modulo: "CONFIGURACOES",
-        unidadeNome: unidadeNome || "-", usuarioAcaoNome: meuNome, usuarioAcaoId: userId, dataAcao: serverTimestamp(),
-      });
-    } catch (e) { console.error("Falha ao gravar auditoria", e); }
-  };
+  // Auditoria única de acessos: quem aprovou/recusou e quem pediu (o e-mail do pedido é o do Google).
+  const registrarAuditoria = (tipoAcao, descricao, unidadeNome, detalhes, pedido, papelNovo) =>
+    registrarAuditoriaAcesso({
+      tipoAcao, descricao, detalhes, unidadeNome, papelNovo,
+      quem: userData,
+      alvo: { id: pedido.id, nome: pedido.nome, email: pedido.email, emailGoogle: pedido.email },
+    });
 
   async function aprovar(p) {
     const unidade = (catalogs?.unidades || []).find((u) => u.id === p.unidadeId);
@@ -80,7 +80,7 @@ export function PendenciasTab() {
 
       await registrarAuditoria(
         "NOVA", "Líder aprovado (login pelo Google).", unidade.nome,
-        `${p.nome} (${p.email})${temOutroLider ? ` substituiu ${unidade.liderNome || unidade.liderEmail}` : ""}`
+        temOutroLider ? `Substituiu ${unidade.liderNome || unidade.liderEmail}` : "", p, "lider"
       );
     } catch (e) {
       console.error(e);
@@ -99,7 +99,7 @@ export function PendenciasTab() {
         status: "recusado", motivo: motivo.trim(),
         analisadoPor: userId, analisadoPorNome: meuNome, analisadoEm: serverTimestamp(),
       });
-      await registrarAuditoria("ALTERADA", "Pedido de acesso recusado.", p.unidadeNome, `${p.nome} (${p.email})${motivo.trim() ? ` — ${motivo.trim()}` : ""}`);
+      await registrarAuditoria("ALTERADA", "Pedido de acesso recusado.", p.unidadeNome, motivo.trim() ? `Motivo: ${motivo.trim()}` : "", p);
     } catch (e) {
       console.error(e);
       alert(t("pendingTab.refuseError"));
