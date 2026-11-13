@@ -6,6 +6,7 @@ import { User, Lock, Loader2, AlertCircle, ChevronDown, Check } from "lucide-rea
 import { useTranslation } from "react-i18next"; 
 import { LANGUAGES } from "../utils/formatters";
 import { AVISO_SEM_ACESSO } from "../permissions";
+import PrimeiroAcesso from "../components/acesso/PrimeiroAcesso";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -24,6 +25,9 @@ export default function Login() {
     return "";
   });
   const [loading, setLoading] = useState(false);
+  // Abas do cartão: "entrar" (quem já tem acesso) ou "primeiro" (primeiro acesso / cadastro).
+  const [aba, setAba] = useState("entrar");
+  const trocarAba = (k) => { setAba(k); setErro(""); };
   const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
 
   const changeLanguage = (lng) => {
@@ -153,7 +157,7 @@ export default function Login() {
         <div className="bg-zinc-950/90 backdrop-blur-xl border border-zinc-800 rounded-3xl shadow-2xl p-8 md:p-10 relative overflow-hidden group">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-red-600 to-transparent opacity-50 group-hover:opacity-100 transition-opacity"></div>
 
-          <div className="text-center mb-10">
+          <div className="text-center mb-8">
             <h1 className="text-4xl font-black text-white italic tracking-tighter">
               PRATIQUE <span className="text-red-600">COLETIVAS</span>
             </h1>
@@ -162,7 +166,23 @@ export default function Login() {
             </p>
           </div>
 
-          {/* LOGIN PESSOAL PELO GOOGLE (líderes) */}
+          {/* ABAS: quem já tem acesso / primeiro acesso (cadastro) */}
+          <div role="tablist" className="grid grid-cols-2 gap-1 p-1 mb-6 bg-zinc-900 border border-zinc-800 rounded-2xl">
+            {[["entrar", t("login.tabs.enter")], ["primeiro", t("login.tabs.first")]].map(([k, rotulo]) => (
+              <button
+                key={k} type="button" role="tab" aria-selected={aba === k}
+                onClick={() => trocarAba(k)}
+                className={`py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-colors ${aba === k ? "bg-red-600 text-white" : "text-zinc-500 hover:text-white"}`}
+              >
+                {rotulo}
+              </button>
+            ))}
+          </div>
+
+          {aba === "primeiro" ? (
+            <PrimeiroAcesso onGoogle={handleGoogle} carregando={loadingGoogle} erro={erro} onVoltar={() => trocarAba("entrar")} />
+          ) : (<>
+          {/* LOGIN PESSOAL PELO GOOGLE */}
           <button
             type="button"
             onClick={handleGoogle}
@@ -243,6 +263,16 @@ export default function Login() {
             </button>
           </form>
 
+          {/* Chamada para quem nunca entrou */}
+          <div className="mt-6 p-3.5 rounded-2xl border border-dashed border-zinc-700 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            <p className="flex-1 text-xs text-zinc-400 leading-snug text-center sm:text-left">
+              <b className="text-white">{t("login.firstCall.title")}</b><br />{t("login.firstCall.desc")}
+            </p>
+            <button type="button" onClick={() => trocarAba("primeiro")} className="px-3 py-2 rounded-xl border border-red-600/40 bg-red-600/10 text-red-300 hover:text-white text-[11px] font-black uppercase whitespace-nowrap">
+              {t("login.firstCall.button")}
+            </button>
+          </div>
+
           <div className="mt-8 text-center">
             <p className="text-zinc-600 text-xs font-bold">
                {t("login.forgotPassword")} <a href="#" className="text-zinc-400 hover:text-white underline transition-colors">{t("login.support")}</a>
@@ -251,6 +281,7 @@ export default function Login() {
               {t("login.version")}
             </p>
           </div>
+          </>)}
         </div>
       </div>
     </div>

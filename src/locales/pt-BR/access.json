@@ -1,0 +1,64 @@
+{
+  "role": "Função",
+  "change": "Trocar",
+  "continue": "Continuar",
+  "back": "Voltar",
+  "steps": {
+    "role": "Função",
+    "google": "Google",
+    "data": "Seus dados",
+    "approval": "Aprovação"
+  },
+  "first": {
+    "title": "Bem-vindo à Pratique Coletivas",
+    "desc": "Seu acesso é pessoal: cada pessoa entra com a própria conta Google.",
+    "howTitle": "Como funciona",
+    "how1": "Você escolhe a sua função: líder ou mentor.",
+    "how2": "Entra com a sua conta Google.",
+    "how3": "Preenche seus dados e aguarda a aprovação.",
+    "start": "Começar meu cadastro",
+    "haveAccess": "já tem acesso?",
+    "backToLogin": "Voltar para Entrar"
+  },
+  "roles": {
+    "title": "Qual é a sua função?",
+    "desc": "Escolha a que você exerce na Pratique.",
+    "soon": "Em breve",
+    "lider": {
+      "name": "Líder de unidade",
+      "desc": "Cuida de uma ou mais unidades: horários, professores e validação das aulas."
+    },
+    "mentor": {
+      "name": "Mentor",
+      "desc": "Acompanha os líderes e as unidades de uma região."
+    },
+    "professor": {
+      "name": "Professor de coletivas",
+      "soonDesc": "O acesso pessoal do professor chega em breve. Por enquanto, fale com o líder da sua unidade."
+    }
+  },
+  "google": {
+    "title": "Entre com a sua conta Google",
+    "desc": "Ela vai ser o seu login no sistema.",
+    "hint": "Use o seu e-mail pessoal ou de trabalho, não o da unidade.",
+    "noPassword": "Você não precisa criar senha.",
+    "keeps": "Se trocar de unidade, o acesso continua seu.",
+    "button": "Continuar com Google"
+  },
+  "units": {
+    "loading": "Carregando unidades...",
+    "none": "Não foi possível carregar a lista de unidades. Fale com o seu mentor.",
+    "search": "Digite o nome, a cidade ou o estado",
+    "notFound": "Nenhuma unidade com \"{{term}}\". Confira o nome ou fale com o seu mentor.",
+    "max": "Máximo de {{max}} unidades",
+    "remove": "Tirar esta unidade"
+  },
+  "help": {
+    "title": "Ficou com alguma dúvida?",
+    "mentor": "Fale com o mentor responsável pela sua unidade",
+    "mentorNamed_one": "Fale com {{names}}, mentor responsável pela sua unidade,",
+    "mentorNamed_other": "Fale com {{names}}, mentores responsáveis pelas suas unidades,",
+    "orManager": "ou com o Gestor das Coletivas:",
+    "manager": "Gestor das Coletivas"
+  }
+}

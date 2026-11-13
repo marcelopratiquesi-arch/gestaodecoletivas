@@ -1,0 +1,64 @@
+{
+  "role": "Role",
+  "change": "Change",
+  "continue": "Continue",
+  "back": "Back",
+  "steps": {
+    "role": "Role",
+    "google": "Google",
+    "data": "Your details",
+    "approval": "Approval"
+  },
+  "first": {
+    "title": "Welcome to Pratique Coletivas",
+    "desc": "Your access is personal: each person signs in with their own Google account.",
+    "howTitle": "How it works",
+    "how1": "Choose your role: leader or mentor.",
+    "how2": "Sign in with your Google account.",
+    "how3": "Fill in your details and wait for approval.",
+    "start": "Start my registration",
+    "haveAccess": "already have access?",
+    "backToLogin": "Back to sign in"
+  },
+  "roles": {
+    "title": "What is your role?",
+    "desc": "Choose the one you have at Pratique.",
+    "soon": "Coming soon",
+    "lider": {
+      "name": "Unit leader",
+      "desc": "Runs one or more units: schedules, teachers and class validation."
+    },
+    "mentor": {
+      "name": "Mentor",
+      "desc": "Supports the leaders and units of a region."
+    },
+    "professor": {
+      "name": "Group class teacher",
+      "soonDesc": "Personal access for teachers is coming soon. For now, talk to your unit leader."
+    }
+  },
+  "google": {
+    "title": "Sign in with your Google account",
+    "desc": "It will be your login to the system.",
+    "hint": "Use your personal or work e-mail, not the unit's.",
+    "noPassword": "You don't need to create a password.",
+    "keeps": "If you change units, the access stays yours.",
+    "button": "Continue with Google"
+  },
+  "units": {
+    "loading": "Loading units...",
+    "none": "Could not load the list of units. Talk to your mentor.",
+    "search": "Type the name, city or state",
+    "notFound": "No unit matches \"{{term}}\". Check the name or talk to your mentor.",
+    "max": "Up to {{max}} units",
+    "remove": "Remove this unit"
+  },
+  "help": {
+    "title": "Any questions?",
+    "mentor": "Talk to the mentor in charge of your unit",
+    "mentorNamed_one": "Talk to {{names}}, the mentor in charge of your unit,",
+    "mentorNamed_other": "Talk to {{names}}, the mentors in charge of your units,",
+    "orManager": "or to the Group Classes Manager:",
+    "manager": "Group Classes Manager"
+  }
+}

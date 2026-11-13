@@ -1,6 +1,6 @@
 {
   "logout": "Sair ({{email}})",
-  "submit": "Conectar com o Google e concluir",
+  "submit": "Conectar com Google e concluir",
   "googleHint": "Ao concluir, escolha a SUA conta Google pessoal. A partir de agora você entra no sistema só por ela, com o botão \"Entrar com Google\". O login antigo (e-mail e senha) deixa de funcionar.",
   "leader": {
     "title": "Atualize seu cadastro de líder",
@@ -15,7 +15,8 @@
     "name": "Seu nome completo",
     "namePlaceholder": "Ex: Maria Silva",
     "phone": "WhatsApp",
-    "phonePlaceholder": "Ex: +55 31 99999-0000"
+    "phonePlaceholder": "Ex: +55 31 99999-0000",
+    "unitsLeader": "Unidades que você lidera"
   },
   "blocked": {
     "hasLeaderTitle": "Este login não é mais usado",
@@ -30,5 +31,73 @@
     "googleInUse": "Esta conta Google já está em uso no sistema. Escolha outra conta Google ou fale com o seu mentor.",
     "notEnabled": "O login pelo Google ainda não está liberado. Fale com o suporte.",
     "save": "Não foi possível concluir. Tente de novo."
+  },
+  "steps": {
+    "role": "Função",
+    "data": "Seus dados",
+    "google": "Google",
+    "done": "Pronto"
+  },
+  "notice": {
+    "title": "Seu acesso agora é pessoal",
+    "desc": "Você entrou com o login antigo. Leva 1 minuto para atualizar.",
+    "oldLogin": "Login antigo",
+    "changesTitle": "O que muda",
+    "change1": "Você passa a entrar com a sua conta Google.",
+    "change2": "O login e a senha antigos param de funcionar.",
+    "change3": "A equipe fica com o seu nome e WhatsApp certos.",
+    "start": "Começar"
+  },
+  "role": {
+    "desc": "Escolha a opção certa para o seu caso.",
+    "unit": {
+      "question": "Quem está usando o login da unidade {{unit}}?",
+      "segue": "Sou o líder desta unidade",
+      "segueDesc": "Este login passa a ser o seu login pessoal de líder.",
+      "professor": "Sou professor desta unidade",
+      "professorDesc": "O acesso pessoal de professor chega em breve.",
+      "saiu": "Não sou mais da unidade",
+      "saiuDesc": "Você não continua com este login."
+    },
+    "leader": {
+      "question": "Você continua como líder da unidade {{unit}}?",
+      "segue": "Sim, continuo líder",
+      "segueDesc": "Seus dados são atualizados e você segue normalmente.",
+      "professor": "Não, agora só dou aulas",
+      "professorDesc": "O mentor ajusta o seu acesso para professor.",
+      "saiu": "Não trabalho mais na unidade",
+      "saiuDesc": "Você não continua com este login."
+    },
+    "mentor": {
+      "question": "Você continua como mentor?",
+      "segue": "Sim, continuo mentor",
+      "segueDesc": "Seus dados são atualizados e você segue normalmente.",
+      "saiu": "Não sou mais mentor",
+      "saiuDesc": "Você não continua com este login."
+    },
+    "stop": {
+      "professor": "Não continue com este login. Avise o líder da unidade ou o seu mentor: ele ajusta o seu acesso. O acesso pessoal de professor chega em breve.",
+      "saiu": "Não continue com este login. Avise o seu mentor para desligar este acesso.",
+      "saiuMentor": "Não continue com este login. Avise o Gestor das Coletivas para desligar este acesso."
+    }
+  },
+  "data": {
+    "title": "Confira seus dados",
+    "desc": "Já preenchemos com o que o sistema tem. Corrija o que estiver errado.",
+    "unitNameHint": "Antes aparecia o nome da unidade. Agora é o seu nome.",
+    "moreUnitsHint": "Lidera outra unidade também? Peça ao seu mentor para incluir."
+  },
+  "google": {
+    "title": "Conecte a sua conta Google",
+    "desc": "Ela vai ser o seu login daqui para frente.",
+    "warning": "Depois deste passo, o login {{login}} e a senha antiga param de funcionar.",
+    "hint": "Escolha a SUA conta Google, pessoal ou de trabalho. Não use uma conta da unidade, que outras pessoas também usam."
+  },
+  "done": {
+    "title": "Cadastro atualizado",
+    "desc": "Daqui para frente, entre pelo botão \"Entrar com Google\".",
+    "login": "Login",
+    "enter": "Entrar no sistema",
+    "mentorChecks": "O seu mentor vai conferir que você é o líder da unidade {{unit}}."
   }
 }

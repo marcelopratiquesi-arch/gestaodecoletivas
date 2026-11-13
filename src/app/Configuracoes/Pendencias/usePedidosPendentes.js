@@ -6,6 +6,10 @@ import { db } from "../../../services/firebase";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useCatalogs } from "../../../contexts/CatalogContext";
 
+// Unidades do pedido (pedido antigo só tem unidadeId; o novo tem até 5 em unidadeIds).
+export const idsDoPedido = (p) =>
+  (Array.isArray(p?.unidadeIds) && p.unidadeIds.length ? p.unidadeIds : p?.unidadeId ? [p.unidadeId] : []).map(String);
+
 export function usePedidosPendentes() {
   const { userData } = useAuth();
   const { catalogs } = useCatalogs();
@@ -32,8 +36,9 @@ export function usePedidosPendentes() {
   const visiveis = useMemo(() => {
     if (!podeVer) return [];
     if (role === "admin") return pedidos;
+    // Mentor: só pedidos de LÍDER que tenham alguma unidade dele (pedido de mentor é só do admin).
     const minhas = new Set((catalogs?.unidades || []).filter((u) => u.mentorId === userId).map((u) => u.id));
-    return pedidos.filter((p) => minhas.has(p.unidadeId));
+    return pedidos.filter((p) => (p.papel || "lider") === "lider" && idsDoPedido(p).some((id) => minhas.has(id)));
   }, [podeVer, pedidos, role, catalogs?.unidades, userId]);
 
   return { pedidos: visiveis, carregando: podeVer && carregando };

@@ -1,6 +1,6 @@
 {
   "title": "Pedidos de acesso",
-  "subtitle": "Pessoas que entraram com o Google e pediram para ser líder de uma unidade. Ao aprovar, a pessoa passa a acessar o sistema como líder daquela unidade.",
+  "subtitle": "Pessoas que entraram com o Google e pediram acesso como líder ou mentor. Pedido de mentor só o administrador aprova.",
   "empty": "Nenhum pedido aguardando aprovação.",
   "leaderOf": "Quer ser líder de: {{unit}}",
   "hasLeader": "Esta unidade já tem líder: {{name}}. Aprovar substitui o líder atual.",
@@ -15,5 +15,15 @@
   "notYourUnit": "Esta unidade não é sua.",
   "approveError": "Não foi possível aprovar.",
   "refuseError": "Não foi possível recusar.",
-  "secondConfirm": "A unidade {{unit}} já tem o líder {{current}}.\n\nAdicionar {{name}} como 2º LÍDER (os dois ficam)?\n\nOK = 2º líder · Cancelar = ver a opção de substituir"
+  "secondConfirm": "A unidade {{unit}} já tem o líder {{current}}.\n\nAdicionar {{name}} como 2º LÍDER (os dois ficam)?\n\nOK = 2º líder · Cancelar = ver a opção de substituir",
+  "roleLeader": "Líder",
+  "roleMentor": "Mentor",
+  "leaderOfUnits": "Quer ser líder de:",
+  "mentorOf": "Unidades que vai acompanhar (mentor atual):",
+  "otherMentor": "outro mentor",
+  "otherMentorUnit": "Unidade de outro mentor: ele aprova esta parte.",
+  "alsoTeacher": "Disse que também dá aulas",
+  "leftOut": "Estas unidades ficaram de fora: {{units}}.\n\nO mentor de cada uma pode incluir a pessoa depois pela aba Líderes.",
+  "approveMentorConfirm": "Aprovar {{name}} como MENTOR?",
+  "moveUnitsConfirm": "Passar também estas unidades para o mentor {{name}}?\n\n{{units}}\n\nOK = passar · Cancelar = aprovar sem mexer nas unidades"
 }

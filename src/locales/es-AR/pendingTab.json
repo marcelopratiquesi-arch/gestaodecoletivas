@@ -1,6 +1,6 @@
 {
   "title": "Pedidos de acceso",
-  "subtitle": "Personas que ingresaron con Google y pidieron ser líder de una sede. Al aprobar, la persona accede al sistema como líder de esa sede.",
+  "subtitle": "Personas que entraron con Google y pidieron acceso como líder o mentor. Los pedidos de mentor solo los aprueba el administrador.",
   "empty": "No hay pedidos esperando aprobación.",
   "leaderOf": "Quiere ser líder de: {{unit}}",
   "hasLeader": "Esta sede ya tiene líder: {{name}}. Aprobar reemplaza al líder actual.",
@@ -15,5 +15,15 @@
   "notYourUnit": "Esta sede no es tuya.",
   "approveError": "No se pudo aprobar.",
   "refuseError": "No se pudo rechazar.",
-  "secondConfirm": "La unidad {{unit}} ya tiene el líder {{current}}.\n\n¿Agregar a {{name}} como 2º LÍDER (quedan los dos)?\n\nAceptar = 2º líder · Cancelar = ver la opción de reemplazar"
+  "secondConfirm": "La unidad {{unit}} ya tiene el líder {{current}}.\n\n¿Agregar a {{name}} como 2º LÍDER (quedan los dos)?\n\nAceptar = 2º líder · Cancelar = ver la opción de reemplazar",
+  "roleLeader": "Líder",
+  "roleMentor": "Mentor",
+  "leaderOfUnits": "Quiere ser líder de:",
+  "mentorOf": "Sedes que va a acompañar (mentor actual):",
+  "otherMentor": "otro mentor",
+  "otherMentorUnit": "Sede de otro mentor: él aprueba esta parte.",
+  "alsoTeacher": "Dijo que también da clases",
+  "leftOut": "Estas sedes quedaron afuera: {{units}}.\n\nEl mentor de cada una puede agregar a la persona después en la pestaña Líderes.",
+  "approveMentorConfirm": "¿Aprobar a {{name}} como MENTOR?",
+  "moveUnitsConfirm": "¿Pasar también estas sedes al mentor {{name}}?\n\n{{units}}\n\nAceptar = pasar · Cancelar = aprobar sin cambiar las sedes"
 }
