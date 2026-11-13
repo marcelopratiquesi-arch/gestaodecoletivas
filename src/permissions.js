@@ -22,6 +22,12 @@ export function ehLider(role) {
   return PAPEIS_LIDER.includes(String(role || "").trim().toLowerCase());
 }
 
+// Admin ou mentor que também é líder de uma unidade: ao ser trocado ou removido como líder,
+// sai só da unidade. O crachá (acesso de admin/mentor) NUNCA é apagado por esse caminho.
+export function liderMantemAcesso(role) {
+  return ["admin", "mentor"].includes(String(role || "").trim().toLowerCase());
+}
+
 function getRole(userData) {
   return (userData?.role || "").toString().trim().toLowerCase();
 }

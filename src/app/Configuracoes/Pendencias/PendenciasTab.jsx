@@ -9,6 +9,7 @@ import { db } from "../../../services/firebase";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useCatalogs } from "../../../contexts/CatalogContext";
 import { usePedidosPendentes } from "./usePedidosPendentes";
+import { liderMantemAcesso } from "../../../permissions";
 
 const formatarData = (ts, idioma) => {
   const d = ts?.toDate?.();
@@ -51,8 +52,9 @@ export function PendenciasTab() {
       const batch = writeBatch(db);
 
       // Líder anterior perde o acesso (apaga o crachá) e o pedido dele fica como "substituído".
-      if (temOutroLider) {
-        const crachaAntigo = await getDoc(doc(db, "usuarios", unidade.liderUid));
+      // Se o líder anterior também é admin ou mentor, ele só sai da unidade: o acesso dele fica.
+      const crachaAntigo = temOutroLider ? await getDoc(doc(db, "usuarios", unidade.liderUid)) : null;
+      if (temOutroLider && !(crachaAntigo.exists() && liderMantemAcesso(crachaAntigo.data().role))) {
         if (crachaAntigo.exists()) batch.delete(crachaAntigo.ref);
         const pedidoAntigo = await getDoc(doc(db, "solicitacoes_acesso", unidade.liderUid));
         if (pedidoAntigo.exists()) {

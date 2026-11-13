@@ -60,10 +60,14 @@
     "emailInUse": "Este e-mail ya tiene login en el sistema. Usá otro e-mail, o pedile a la persona que ingrese con Google y aprobá el pedido.",
     "save": "No se pudo guardar.",
     "remove": "No se pudo quitar al líder.",
-    "confirm": "No se pudo confirmar al líder."
+    "confirm": "No se pudo confirmar al líder.",
+    "assume": "No se pudo marcarte como líder."
   },
   "toCheck": "A revisar",
   "confirm": "Confirmar líder",
   "confirmQuestion": "¿Confirmar a {{name}} como líder de la sede {{unit}}?",
-  "checkBanner": "{{count}} sede(s) con líder nuevo a revisar: la persona ingresó con el acceso anterior de la sede y asumió como líder con su cuenta de Google. Revisá si es la persona correcta: confirmá o quitá."
+  "checkBanner": "{{count}} sede(s) con líder nuevo a revisar: la persona ingresó con el acceso anterior de la sede y asumió como líder con su cuenta de Google. Revisá si es la persona correcta: confirmá o quitá.",
+  "assume": "Yo soy el líder",
+  "assumeQuestion": "¿Marcarte como líder de la sede {{unit}}?\n\nTu acceso sigue igual; la sede solo pasa a mostrarte como líder.",
+  "assumeReplaceQuestion": "La sede {{unit}} ya tiene al líder {{current}}.\n\n¿Marcarte como líder en su lugar? El líder actual pierde el acceso."
 }
