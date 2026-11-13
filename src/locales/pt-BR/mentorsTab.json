@@ -73,5 +73,16 @@
     "quickEdit": "Clique para editar rapidamente",
     "fullNamePlaceholder": "Nome completo",
     "passwordPlaceholder": "Mínimo 6 dígitos"
+  },
+  "invite": {
+    "created": "Mentor cadastrado! Avise para ele entrar no sistema com \"Entrar com Google\" usando este e-mail.",
+    "alreadyHasAccess": "Este e-mail já tem acesso ao sistema com outro papel. Para torná-lo mentor, troque o papel em Controle de Acessos.",
+    "cancelConfirm": "Cancelar o cadastro de {{name}} ({{email}})? Ele não vai conseguir entrar como mentor.",
+    "cancelError": "Erro ao cancelar o cadastro.",
+    "cancel": "Cancelar cadastro",
+    "pendingTitle": "Aguardando o 1º acesso ({{count}})",
+    "pendingHelp": "Mentores já cadastrados por você. Assim que cada um entrar com o Google usando o e-mail abaixo, aparece na lista de mentores.",
+    "googleEmail": "E-mail do Google do mentor",
+    "googleEmailHelp": "Sem senha: o mentor entra com o botão \"Entrar com Google\" usando exatamente este e-mail. O seu cadastro já é a aprovação."
   }
 }

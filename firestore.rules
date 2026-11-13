@@ -40,6 +40,30 @@ service cloud.firestore {
     function papelNovo() { return request.resource.data.get('role', '').lower(); }
     function camposAlterados() { return request.resource.data.diff(resource.data).affectedKeys(); }
 
+    // Convite de mentor (convites_acesso/{e-mail Google}): só o admin cria. Vale para quem entrou AGORA
+    // pelo Google com esse e-mail (verificado pelo Google).
+    function emailGoogleVerificado() {
+      return autenticado()
+        && request.auth.token.firebase.sign_in_provider == 'google.com'
+        && request.auth.token.get('email_verified', false) == true
+        && request.auth.token.get('email', '') is string && request.auth.token.email.size() > 3;
+    }
+    function caminhoConvite() { return /databases/$(database)/documents/convites_acesso/$(request.auth.token.email.lower()); }
+    function mentorAceitaConvite(uid) {
+      let d = request.resource.data;
+      let c = get(caminhoConvite()).data;
+      return emailGoogleVerificado() && request.auth.uid == uid
+        && exists(caminhoConvite())
+        && c.status == 'pendente' && c.papel == 'mentor'
+        && d.keys().hasOnly(['nome', 'email', 'telefone', 'pais', 'role', 'status', 'loginGoogle', 'criadoPor', 'criadoEm'])
+        && d.role == 'mentor' && d.status == 'ativo' && d.loginGoogle == true
+        && d.email == request.auth.token.email.lower()
+        && d.nome == c.nome && d.telefone == c.telefone && d.get('pais', '') == c.get('pais', '')
+        && d.criadoPor == c.criadoPor
+        // O convite precisa ser marcado como usado na MESMA gravação (não serve duas vezes).
+        && getAfter(caminhoConvite()).data.status == 'usado';
+    }
+
     // ===================== PÁGINA PÚBLICA DE HORÁRIOS =====================
     // Sem login, a página de horários lê só: a "vitrine" (nome/endereço das unidades e nome dos
     // professores), as aulas e as modalidades. Os cadastros completos de unidades e professores
@@ -174,7 +198,10 @@ service cloud.firestore {
         || (logado() && meuPapel() == 'mentor' && papelNovo() == 'professor')
         || (logado() && meuPapel() == 'mentor' && papelNovo() in papeisLider()
             && get(/databases/$(database)/documents/unidades/$(request.resource.data.unidadeId)).data.get('mentorId', '') == request.auth.uid)
-        || (logado() && meuPapel() in papeisLider() && papelNovo() == 'professor');
+        || (logado() && meuPapel() in papeisLider() && papelNovo() == 'professor')
+        // Mentor novo convidado pelo admin (aba Mentores): no 1º acesso pelo Google, a própria pessoa cria
+        // o crachá dela, SÓ se houver convite pendente para o e-mail Google dela e com os dados do convite.
+        || mentorAceitaConvite(uid);
 
       allow update: if souAdmin()
         || (logado() && meuPapel() == 'mentor' && papelDoAlvo() in ['lider', 'unidade', 'professor']
@@ -235,6 +262,30 @@ service cloud.firestore {
       allow delete: if souDono() || souAdmin() || mentorDaUnidade(resource.data.unidadeId);
     }
 
+    // ===================== CONVITES DE MENTOR (cadastro pelo e-mail Google, sem senha) =====================
+    // O admin cadastra o mentor novo pelo e-mail do Google: isso já É a aprovação. Quando a pessoa entra pelo
+    // Google com esse e-mail, ela mesma cria o crachá (regra mentorAceitaConvite) e marca o convite como usado.
+    // Só o admin vê, cria e cancela convites; a pessoa convidada vê só o dela. Nada é apagado: cancelar = status.
+    match /convites_acesso/{email} {
+      function souConvidado() { return emailGoogleVerificado() && request.auth.token.email.lower() == email; }
+
+      allow read: if souAdmin() || souConvidado();
+
+      allow create, update: if souAdmin()
+        && request.resource.data.papel == 'mentor'
+        && request.resource.data.status in ['pendente', 'cancelado']
+        && request.resource.data.email == email
+        && request.resource.data.nome is string && request.resource.data.nome.size() >= 3
+        && request.resource.data.telefone is string && request.resource.data.telefone.size() >= 6;
+
+      // A pessoa convidada só marca o PRÓPRIO convite como usado, junto com a criação do crachá dela.
+      allow update: if souConvidado() && resource.data.status == 'pendente'
+        && camposAlterados().hasOnly(['status', 'usadoPor', 'usadoEm'])
+        && request.resource.data.status == 'usado'
+        && request.resource.data.usadoPor == request.auth.uid
+        && existsAfter(/databases/$(database)/documents/usuarios/$(request.auth.uid));
+    }
+
     // ===================== FECHAMENTO DO MÊS (resumos_mensais) =====================
     // Resumo pronto das validações de cada mês já passado (Relatórios, Financeiro, Radar).
     // Logados leem; só o admin monta/refaz, para ninguém forjar números.
@@ -245,12 +296,12 @@ service cloud.firestore {
 
     // ===================== DEMAIS COLEÇÕES =====================
     // Logados leem e escrevem (como antes), EXCETO as coleções com regra própria acima
-    // (usuarios, publico, validacoes, solicitacoes_acesso e resumos_mensais).
+    // (usuarios, publico, validacoes, solicitacoes_acesso, convites_acesso e resumos_mensais).
     // Professor não grava nada aqui, só cria registros de auditoria (log da validação e do "Sair").
     // (No Firestore, se QUALQUER regra libera, a ação passa; por isso as exceções precisam estar aqui.)
     match /{colecao}/{resto=**} {
-      allow read: if logado() && colecao != 'solicitacoes_acesso';
-      allow write: if logado() && !(colecao in ['usuarios', 'publico', 'validacoes', 'solicitacoes_acesso', 'resumos_mensais']) && !souProfessor();
+      allow read: if logado() && !(colecao in ['solicitacoes_acesso', 'convites_acesso']);
+      allow write: if logado() && !(colecao in ['usuarios', 'publico', 'validacoes', 'solicitacoes_acesso', 'convites_acesso', 'resumos_mensais']) && !souProfessor();
       allow create: if logado() && colecao in ['auditoria_cronograma', 'auditoria_configuracoes'];
     }
   }

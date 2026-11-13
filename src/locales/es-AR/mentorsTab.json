@@ -73,5 +73,16 @@
     "quickEdit": "Hacé clic para editar rápido",
     "fullNamePlaceholder": "Nombre completo",
     "passwordPlaceholder": "Mínimo 6 caracteres"
+  },
+  "invite": {
+    "created": "¡Mentor registrado! Avisale que entre al sistema con \"Entrar con Google\" usando este correo.",
+    "alreadyHasAccess": "Este correo ya tiene acceso al sistema con otro rol. Para hacerlo mentor, cambiá el rol en Control de Accesos.",
+    "cancelConfirm": "¿Cancelar el registro de {{name}} ({{email}})? No va a poder entrar como mentor.",
+    "cancelError": "Error al cancelar el registro.",
+    "cancel": "Cancelar registro",
+    "pendingTitle": "Esperando el 1er acceso ({{count}})",
+    "pendingHelp": "Mentores que ya registraste. Apenas cada uno entre con Google usando el correo de abajo, aparece en la lista de mentores.",
+    "googleEmail": "Correo de Google del mentor",
+    "googleEmailHelp": "Sin contraseña: el mentor entra con el botón \"Entrar con Google\" usando exactamente este correo. Tu registro ya es la aprobación."
   }
 }

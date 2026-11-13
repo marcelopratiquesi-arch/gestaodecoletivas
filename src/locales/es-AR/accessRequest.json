@@ -35,5 +35,12 @@
     "phone": "Escribí un WhatsApp válido.",
     "unit": "Elegí la sede.",
     "send": "No se pudo enviar el pedido. Probá de nuevo."
+  },
+  "invite": {
+    "title": "¡Hola, {{name}}!",
+    "desc": "El administrador ya te registró como mentor. Revisá los datos y entrá.",
+    "role": "Mentor",
+    "enter": "Entrar como mentor",
+    "error": "No se pudo completar el ingreso. Intentá de nuevo o hablá con el administrador."
   }
 }
