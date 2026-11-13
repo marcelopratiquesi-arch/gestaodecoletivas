@@ -1,0 +1,412 @@
+{
+  "voltar": "Back",
+  "voltarPara": "Back to {{destino}}",
+  "copiar": "Copy",
+  "copiado": "Copied!",
+  "whatsapp": "Open in WhatsApp",
+  "emBreve": "Coming soon",
+  "abrirTelaCompleta": "Open the full screen",
+  "carregando": "Loading...",
+  "naoCarregou": "Could not load. Close and open the card again.",
+  "comparacao": "Compared with the same dates last month",
+  "periodo": "Period",
+  "naoInformado": "Not informed",
+  "infoPrincipais": "Main information",
+  "situacao": "Status",
+  "ativo": "Active",
+  "inativo": "Inactive",
+  "verTudo": "See everything",
+  "pendencias": "Pending items",
+  "aValidar7dias": "To validate (7 days)",
+  "aulasAValidar": "{{n}} class(es) to validate",
+  "aulasNaSemana": "Classes per week",
+  "horariosNaGrade": "{{n}} time slots in the schedule",
+  "semAulaNaGrade": "No classes in the schedule",
+  "semAulaNoPeriodo": "No class validated in the period",
+  "ultimoAcesso": "Last access:",
+  "ultimoAcessoRotulo": "Last access",
+  "acessoSenha": "Signs in with e-mail and password",
+  "acessoGoogle": "Signs in with Google",
+  "desde": "since {{data}}",
+  "aguardandoConferencia": "Waiting for review",
+  "editarNasConfiguracoes": "Edit in Settings",
+  "valores": {
+    "trimestreTitulo": "Quarter trend",
+    "professoresTitulo": "Teacher pay in the period",
+    "investidoNoMes": "Invested this month",
+    "porAula": "{{valor}} per class",
+    "realizadasNoMes": "{{n}} classes held this month",
+    "aulasEAlunos": "{{aulas}} classes · {{alunos}} students",
+    "detalheProfessor": "{{aulas}} classes taught · average of {{media}} students · {{porAula}} per class",
+    "detalheUnidade": "{{aulas}} classes held · average of {{media}} students · {{porAula}} per class",
+    "ateHoje": "So far"
+  },
+  "abrirFicha": {
+    "unidade": "Open the unit card",
+    "professor": "Open the teacher card",
+    "mentor": "Open the mentor card",
+    "lider": "Open the leader card"
+  },
+  "papel": {
+    "unidade": "Unit",
+    "mentor": "Mentor",
+    "lider": "Leader",
+    "professor": "Teacher"
+  },
+  "selos": {
+    "faltam": "{{n}} missing",
+    "tudoEmDia": "All set",
+    "soConsulta": "View only"
+  },
+  "abas": {
+    "geral": "Overview",
+    "panorama": "Everything",
+    "valores": "Amounts",
+    "equipe": "Team",
+    "unidades": "Units",
+    "aulas": "Classes",
+    "cadastro": "Record"
+  },
+  "cadastro": {
+    "nome": "Name",
+    "email": "E-mail",
+    "telefone": "Phone",
+    "pais": "Country",
+    "acesso": "System access",
+    "cpf": "Tax ID (CPF)"
+  },
+  "emDia": {
+    "titulo": "Is everything up to date?",
+    "ok": "Up to date"
+  },
+  "professores": {
+    "titulo": "Teachers",
+    "nome": "Teacher",
+    "contato": "Contact",
+    "unidades": "Units",
+    "aulasSemana": "Classes per week",
+    "aulasDadas": "Classes taught in the period",
+    "recebeu": "Earned in the period",
+    "situacao": "Status",
+    "semContato": "No contact"
+  },
+  "avisos": {
+    "naoEncontrado": "I could not find that record.",
+    "unidadeForaDoEscopo": "That unit is not one of yours.",
+    "unidadeSemLider": "That unit has no leader yet.",
+    "semAcesso": "You do not have access to that card."
+  },
+  "unidade": {
+    "rotulo": "Unit Hub",
+    "selos": {
+      "ativa": "Active",
+      "inativa": "Inactive"
+    },
+    "info": {
+      "mentor": "Mentor: {{nome}}",
+      "lider": "Leader: {{nome}}",
+      "semMentor": "No mentor",
+      "semLider": "No leader",
+      "semTelefone": "Unit has no phone",
+      "liderSemTelefone": "Leader has no phone",
+      "mentorSemTelefone": "Mentor has no phone"
+    },
+    "acoes": {
+      "cronograma": "Schedule",
+      "linkAluno": "Student link"
+    },
+    "cartoes": {
+      "professores": {
+        "titulo": "Active teachers",
+        "frase": "{{n}} linked to the unit",
+        "vazio": "No active teacher"
+      },
+      "alunos": {
+        "titulo": "Students this month",
+        "frase": "Average of {{media}} per class · {{n}} classes"
+      },
+      "equipe": "Leader and mentor"
+    },
+    "abas": {
+      "professores": "Teachers",
+      "grade": "Class schedule",
+      "equipe": "Mentor and Leader",
+      "config": "Settings"
+    },
+    "geral": {
+      "local": "Location",
+      "endereco": "Address",
+      "metragem": "Group class room",
+      "m2": "{{n}} m²"
+    },
+    "resumo": {
+      "titulo": "Numbers for the period",
+      "valor": "Amount invested",
+      "valorFrase": "Paid for classes held",
+      "custoMedio": "Average cost per class",
+      "custoMedioFrase": "Amount invested ÷ classes held",
+      "ocupacao": "Occupancy rate",
+      "ocupacaoFrase": "Average students ÷ room capacity",
+      "ocupacaoSemMetragem": "Room size is missing",
+      "vacancia": "Vacancy rate",
+      "vacanciaFrase": "Empty slots in the schedule (Mon to Fri)",
+      "realizadas": "Classes held",
+      "alunos": "Students",
+      "media": "Average per class"
+    },
+    "emDia": {
+      "itens": {
+        "lider": {
+          "titulo": "Leader registered",
+          "falta": "The unit has no leader yet.",
+          "acao": "Register leader"
+        },
+        "liderConferido": {
+          "titulo": "Leader reviewed",
+          "falta": "The leader signed up alone and has not been reviewed yet.",
+          "acao": "Review leader"
+        },
+        "liderTelefone": {
+          "titulo": "Leader's phone",
+          "falta": "The leader has no phone on file.",
+          "acao": "Complete the record"
+        },
+        "mentor": {
+          "titulo": "Mentor assigned",
+          "falta": "The unit has no mentor.",
+          "acao": "Assign mentor"
+        },
+        "telefone": {
+          "titulo": "Unit phone",
+          "falta": "The unit has no phone.",
+          "acao": "Add phone"
+        },
+        "endereco": {
+          "titulo": "Address and map",
+          "falta": "No address: students cannot see where the unit is.",
+          "acao": "Add address"
+        },
+        "metragem": {
+          "titulo": "Room size",
+          "falta": "Without the room size the occupancy rate cannot be calculated.",
+          "acao": "Add room size"
+        },
+        "grade": {
+          "titulo": "Class schedule",
+          "falta": "The unit has no classes in the schedule.",
+          "acao": "Open the schedule"
+        },
+        "aulasSemProfessor": {
+          "titulo": "Classes with an active teacher",
+          "falta": "{{n}} class(es) with no teacher or an inactive teacher.",
+          "acao": "Open the schedule"
+        },
+        "validacoes": {
+          "titulo": "Classes validated",
+          "falta": "{{n}} class(es) from the last 7 days not validated.",
+          "acao": "Validate now"
+        },
+        "loginAntigo": {
+          "titulo": "Old login turned off",
+          "falta": "The unit's old login still works.",
+          "acao": "Turn off old login"
+        }
+      }
+    },
+    "professores": {
+      "titulo": "Unit teachers",
+      "vazio": "No teacher linked to this unit."
+    },
+    "grade": {
+      "titulo": "Class schedule",
+      "vazio": "No classes in this unit's schedule."
+    },
+    "equipe": {
+      "titulo": "Mentor and Leader"
+    },
+    "config": {
+      "titulo": "Unit record",
+      "estado": "State",
+      "mapa": "Map",
+      "abrirMapa": "Open on the map",
+      "loginAntigo": "Unit's old login",
+      "loginAntigoNaoTem": "None",
+      "loginAntigoDesligado": "Turned off",
+      "loginAntigoLigado": "Still on"
+    }
+  },
+  "lider": {
+    "rotulo": "Leader Hub",
+    "abrirUnidade": "Open the unit",
+    "liderDesde": "Leader since",
+    "conferencia": "Review",
+    "conferido": "Reviewed",
+    "cadastroTitulo": "Leader record",
+    "cartoes": {
+      "professores": "Unit teachers"
+    },
+    "emDia": {
+      "telefone": {
+        "titulo": "Leader's phone",
+        "falta": "The leader has no phone on file.",
+        "acao": "Complete the record"
+      },
+      "conferido": {
+        "titulo": "Record reviewed",
+        "falta": "Signed up alone and has not been reviewed by the mentor yet.",
+        "acao": "Review leader"
+      },
+      "loginAntigo": {
+        "titulo": "Old login turned off",
+        "falta": "The unit's old login still works.",
+        "acao": "Turn off old login"
+      },
+      "aulasSemProfessor": {
+        "titulo": "Classes with an active teacher",
+        "falta": "{{n}} class(es) with no teacher or an inactive teacher.",
+        "acao": "Open the schedule"
+      },
+      "validacoes": {
+        "titulo": "Classes validated",
+        "falta": "{{n}} class(es) from the last 7 days not validated.",
+        "acao": "Validate now"
+      }
+    }
+  },
+  "mentor": {
+    "rotulo": "Mentor Hub",
+    "nUnidades": "{{n}} unit(s)",
+    "lideresDe": "{{n}} of {{total}} units",
+    "unidadesTitulo": "Mentor's units",
+    "lideresTitulo": "Unit leaders",
+    "professoresTitulo": "Unit teachers",
+    "cadastroTitulo": "Mentor record",
+    "cadastroDaUnidade": "Unit record",
+    "semUnidades": "No units with this mentor.",
+    "semLideres": "No unit has a leader yet.",
+    "semProfessores": "No teacher linked to the units.",
+    "loginAntigo": "Still on the old login (e-mail and password)",
+    "gastoPorUnidadeTitulo": "How much each unit spent this month",
+    "totalDoMes": "Total for the units this month:",
+    "cartoes": {
+      "gasto": "Spent this month",
+      "gastoAbrir": "Click to load the amounts",
+      "gastoFrase": "Sum of their units",
+      "unidadesFrase": "Under their responsibility",
+      "professores": "Active teachers",
+      "professoresFrase": "{{n}} linked to the units",
+      "lideres": "Leaders",
+      "semLider": "{{n}} unit(s) with no leader",
+      "todasComLider": "Every unit has a leader"
+    },
+    "emDia": {
+      "ativo": {
+        "titulo": "Active record",
+        "falta": "The mentor is inactive in the system.",
+        "acao": "Open mentors"
+      },
+      "telefone": {
+        "titulo": "Mentor's phone",
+        "falta": "The mentor has no phone on file.",
+        "acao": "Add phone"
+      },
+      "loginGoogle": {
+        "titulo": "Personal login (Google)",
+        "falta": "Has not replaced the old login with Google yet. They do it themselves when signing in.",
+        "acao": "Open mentors"
+      },
+      "unidades": {
+        "titulo": "Has units",
+        "falta": "No unit is assigned to this mentor.",
+        "acao": "Open units"
+      },
+      "semLider": {
+        "titulo": "Units with a leader",
+        "falta": "{{n}} unit(s) with no leader.",
+        "acao": "Register leaders"
+      },
+      "lideresAConferir": {
+        "titulo": "Leaders reviewed",
+        "falta": "{{n}} leader(s) waiting for review.",
+        "acao": "Review leaders"
+      },
+      "validacoes": {
+        "titulo": "Classes validated",
+        "falta": "{{n}} class(es) from the last 7 days not validated in their units.",
+        "acao": "Validate now"
+      }
+    }
+  },
+  "professor": {
+    "rotulo": "Teacher Hub",
+    "nUnidades": "{{n}} units",
+    "semUnidade": "No unit linked",
+    "semTelefone": "Teacher has no phone",
+    "semEmail": "Teacher has no e-mail",
+    "semAulas": "No classes in the schedule with this teacher.",
+    "semLogin": "No login created",
+    "loginCriado": "Login created",
+    "vinculo": "Link",
+    "numerosTitulo": "Classes taught in the period",
+    "aulasDadas": "Classes taught",
+    "aReceber": "To receive",
+    "aReceberFrase": "Sum of the classes taught",
+    "modalidades": "Class types",
+    "porUnidadeTitulo": "How much was earned in each unit in the period",
+    "ultimasTitulo": "Latest classes taught",
+    "semAulaRecente": "No class taught since {{data}}",
+    "data": "Date",
+    "modalidade": "Class type",
+    "valor": "Amount",
+    "substituicao": "Substitution",
+    "aulao": "Special class",
+    "cadastradoEm": "Registered on",
+    "gradeTitulo": "Teacher's schedule",
+    "unidadesTitulo": "Teacher's units",
+    "cadastroTitulo": "Teacher record",
+    "cartoes": {
+      "aReceber": "To receive this month",
+      "ultimaAula": "Last class taught",
+      "aulasNoPeriodo": "{{n}} class(es) taught in the period",
+      "umaUnidade": "Linked unit",
+      "cadastro": "Record status"
+    },
+    "emDia": {
+      "ativo": {
+        "titulo": "Active record",
+        "falta": "The teacher is inactive in the system.",
+        "acao": "Open teachers"
+      },
+      "telefone": {
+        "titulo": "Phone (WhatsApp)",
+        "falta": "No valid phone on file.",
+        "acao": "Add phone"
+      },
+      "email": {
+        "titulo": "E-mail",
+        "falta": "No e-mail on file.",
+        "acao": "Add e-mail"
+      },
+      "login": {
+        "titulo": "System login",
+        "falta": "Has no login yet to validate their own classes.",
+        "acao": "Open teachers"
+      },
+      "vinculo": {
+        "titulo": "Linked to a unit",
+        "falta": "Has no active link to any unit.",
+        "acao": "Link to a unit"
+      },
+      "grade": {
+        "titulo": "Classes in the schedule",
+        "falta": "Has no classes in the schedule.",
+        "acao": "Open the schedule"
+      },
+      "validacoes": {
+        "titulo": "This month's classes validated",
+        "falta": "{{n}} of their class(es) this month not validated.",
+        "acao": "Open validation"
+      }
+    }
+  }
+}

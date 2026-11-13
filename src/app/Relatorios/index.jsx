@@ -5,6 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../services/firebase';
 import { collection, getDocs, onSnapshot, query, where, documentId, orderBy } from 'firebase/firestore';
 import { useTranslation } from "react-i18next"; // 🟢 MOTOR DE IDIOMAS ACIONADO
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { deduplicarValidacoes } from '../../utils/validacoes';
 import { feriadoNoDia, normalizarPais } from '../../utils/feriados';
 import { valorDaValidacao } from '../../utils/valores';
@@ -325,6 +326,28 @@ export default function RelatorioPage() {
 
     return { paises, estados, mentores, unidadesFiltradas: units };
   }, [catalogs, paisesFiltro, estadosFiltro, mentoresFiltro, t]);
+
+  // Abrir já filtrado numa unidade (e num mês): /app/relatorio-gerencial?unidade=ID&mes=AAAA-MM
+  // (atalho da Central da Unidade e do Radar). Só vale para unidade que a pessoa pode ver (a lista de
+  // unidades já vem recortada pelo perfil); aplicado uma vez por chegada, depois os filtros são livres.
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const unidadePedida = searchParams.get('unidade');
+  const chavePedido = unidadePedida ? `${location.key}|${unidadePedida}` : null;
+  const [pedidoAplicado, setPedidoAplicado] = useState(null);
+  if (chavePedido && pedidoAplicado !== chavePedido && !ehLider(role) && role !== 'professor') {
+      const unidadeDoPedido = catalogs.unidades.find(u => String(u.id) === unidadePedida);
+      if (unidadeDoPedido) {
+          setPedidoAplicado(chavePedido);
+          setPaisesFiltro([]); setEstadosFiltro([]); setMentoresFiltro([]);
+          setUnidadesFiltro([unidadeDoPedido.id]);
+          const mesPedido = searchParams.get('mes');
+          if (/^\d{4}-\d{2}$/.test(mesPedido || '') && mesPedido <= getTodayStr().slice(0, 7)) {
+              setModoFiltro('mes');
+              setMesFiltro(mesPedido);
+          }
+      }
+  }
 
   // Quais unidades buscar no banco. Até 30 unidades -> busca só elas (muito mais rápido e gasta menos
   // da cota gratuita). Mais que isso -> busca tudo e filtra na tela, como antes.

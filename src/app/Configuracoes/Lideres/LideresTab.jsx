@@ -19,6 +19,8 @@ import { useAuth } from "../../../contexts/AuthContext";
 import { useCatalogs } from "../../../contexts/CatalogContext";
 import { PendenciasTab } from "../Pendencias/PendenciasTab";
 import { usePedidosPendentes } from "../Pendencias/usePedidosPendentes";
+import LinkUnidade from "../../../centrais/LinkUnidade";
+import LinkCentral from "../../../centrais/LinkCentral";
 
 const SENHA_MINIMA = 6;
 const emailValido = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
@@ -304,14 +306,14 @@ export function LideresTab() {
                   return (
                     <tr key={u.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/20">
                       <td className="p-4">
-                        <p className="font-black text-slate-800 dark:text-slate-200 uppercase text-xs">{u.nome}</p>
+                        <LinkUnidade unidade={u} className="font-black text-slate-800 dark:text-slate-200 uppercase text-xs">{u.nome}</LinkUnidade>
                         <p className="text-[11px] text-slate-400 font-bold">{u.estado || "-"}{u.status && u.status !== "ativa" ? ` · ${u.status}` : ""}</p>
                       </td>
                       <td className="p-4">
                         {u.liderUid ? (
                           <div className="space-y-0.5">
                             <p className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 flex-wrap">
-                              {u.liderNome || "-"}
+                              <LinkCentral tipo="lider" alvo={u}>{u.liderNome || "-"}</LinkCentral>
                               {u.liderAConferir === true && (
                                 <span className="px-1.5 py-0.5 rounded-md border text-[9px] font-black uppercase bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-700">{t("leadersTab.toCheck")}</span>
                               )}

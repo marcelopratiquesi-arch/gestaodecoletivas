@@ -73,6 +73,14 @@ export default function ConfiguracoesPage() {
     return firstAllowed ? firstAllowed.id : 'unidades';
   });
 
+  // Se a pessoa já está nas Configurações e chega um novo atalho (ex.: botão "Resolver" de uma Central),
+  // troca para a aba pedida. Cada chegada tem uma chave própria (location.key); aplicado uma vez por chegada.
+  const [chegadaVista, setChegadaVista] = useState(location.key);
+  if (location.key !== chegadaVista) {
+    setChegadaVista(location.key);
+    if (abaPedida && tabs.some(t => t.id === abaPedida && t.roles.includes(role))) setActiveTab(abaPedida);
+  }
+
   if (role === 'professor') {
     return (
       <div className="flex h-[80vh] items-center justify-center flex-col gap-4 text-slate-400 animate-fade-in">

@@ -14,6 +14,7 @@ import {
     Loader2, User, Search, Mail, Lock, ChevronDown, ChevronUp, Ban, PowerOff, Plus, X, Phone, Check
 } from "lucide-react";
 import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
+import LinkCentral from "../../../centrais/LinkCentral";
 
 // 🌍 PADRÃO OURO INTERNACIONAL — cada país com sua cor de identidade
 const PAIS_CONFIG = {
@@ -512,7 +513,7 @@ export function MentoresTab() {
 
                     {/* NOME E EMAIL */}
                     <td className="p-4">
-                      <div className="font-black text-slate-800 dark:text-white text-base">{m.nome}</div>
+                      <LinkCentral tipo="mentor" alvo={m} className="font-black text-slate-800 dark:text-white text-base">{m.nome}</LinkCentral>
                       <div className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5 flex items-center gap-1">
                           <Mail className="w-3 h-3"/> {m.email}
                       </div>
