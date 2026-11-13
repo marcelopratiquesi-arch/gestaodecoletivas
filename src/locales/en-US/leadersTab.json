@@ -1,6 +1,6 @@
 {
   "title": "Leaders",
-  "subtitle": "Each location has 1 leader, who is the person that signs in for it. The leader requests access by signing in with Google (requests show up here at the top) or you register them manually with e-mail and password.",
+  "subtitle": "Each unit has up to 2 leaders, who access the system for it, and one person can lead several units. A leader requests access by signing in with Google (requests show up above), you pick someone who already has access, or you register them by hand with e-mail and password.",
   "new": "Register leader",
   "register": "Register",
   "edit": "Edit contact",
@@ -87,31 +87,48 @@
     "showing": "Showing {{count}} of {{total}}"
   },
   "promote": {
-    "button": "Make an existing user leader",
-    "title": "Make an existing user leader",
-    "help": "For the group class teacher who will lead the location. They remain a teacher: they still see their classes and payments. If they stop being the leader, they go back to being only a teacher.",
-    "person": "Teacher",
-    "search": "Search teacher by name or e-mail...",
-    "noTeachers": "No teacher with a login found.",
+    "button": "Pick an existing user as leader",
+    "title": "Pick an existing user as leader",
+    "help": "Pick someone who already uses the system: teacher, leader of another unit or mentor. A teacher stays a teacher; a leader of another unit will lead both; a mentor/admin keeps their access.",
+    "person": "Person",
+    "search": "Search by name or e-mail...",
     "reading": "Checking current access...",
     "now": {
       "teacher": "is currently a teacher.",
       "leaderNoUnit": "is currently a leader WITHOUT a location (cannot validate). Saving here fixes it.",
-      "leaderOf": "is currently the leader of {{unit}}.",
-      "sameUnit": "is already the leader of this location (saving only checks the data)."
+      "leaderOf": "currently leads {{unit}}. They stay there and will also lead this unit.",
+      "sameUnit": "already leads this unit.",
+      "manager": "is an admin or mentor: their access doesn't change; the unit just shows them as leader."
     },
-    "confirm": "Make {{name}} the leader of {{unit}}? They remain a teacher.",
-    "confirmLeaves": "They stop being the leader of {{unit}}.",
-    "confirmReplaces": "The current leader, {{current}}, leaves the location (if also a teacher, they go back to being only a teacher).",
-    "done": "{{name}} is now the leader of {{unit}}.",
+    "confirm": "Make {{name}} leader of {{unit}}?",
+    "confirmReplaces": "{{current}} leaves this spot (a teacher goes back to being only a teacher; a leader of other units stays there).",
+    "done": "{{name}} now leads {{unit}}.",
     "save": "Make leader",
     "errors": {
       "read": "Could not check this person's access.",
       "noLogin": "this teacher has no login. Create the login in the Teachers tab first.",
-      "isManager": "is an admin or mentor. To be the leader, they use the \"I am the leader\" button themselves.",
       "blocked": "has blocked access. Unblock it in Access Control first.",
       "otherRole": "has a different access level ({{role}}). Adjust it in Access Control first.",
-      "save": "Could not make leader."
-    }
+      "save": "Could not make leader.",
+      "noTeacherLink": "couldn't find this person's teacher record."
+    },
+    "pick": "Existing user",
+    "titleSecond": "Add 2nd leader",
+    "helpSecond": "The 2nd leader has the same permissions as the 1st. Pick someone who already uses the system: teacher, leader of another unit or mentor. A leader of another unit will lead both.",
+    "noPeople": "Nobody found.",
+    "tag": {
+      "teacher": "Teacher",
+      "leader": "Leader",
+      "mentor": "Mentor"
+    },
+    "confirmSecond": "Add {{name}} as 2nd leader of {{unit}}?",
+    "replaceWarning": "This spot belongs to {{name}}. When you save, they leave and the chosen person takes over.",
+    "doneSecond": "{{name}} is now the 2nd leader of {{unit}}."
+  },
+  "second": {
+    "badge": "2nd leader",
+    "add": "2nd leader",
+    "addHint": "Add a 2nd leader to this unit (someone who already has access)",
+    "remove": "Remove the 2nd leader"
   }
 }

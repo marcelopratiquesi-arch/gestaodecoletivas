@@ -14,5 +14,6 @@
   "unitNotFound": "Sede no encontrada (puede haber sido eliminada).",
   "notYourUnit": "Esta sede no es tuya.",
   "approveError": "No se pudo aprobar.",
-  "refuseError": "No se pudo rechazar."
+  "refuseError": "No se pudo rechazar.",
+  "secondConfirm": "La unidad {{unit}} ya tiene el líder {{current}}.\n\n¿Agregar a {{name}} como 2º LÍDER (quedan los dos)?\n\nAceptar = 2º líder · Cancelar = ver la opción de reemplazar"
 }

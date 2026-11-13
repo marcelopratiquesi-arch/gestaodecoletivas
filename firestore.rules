@@ -157,7 +157,7 @@ service cloud.firestore {
 
     function liderPodeGravar(vid, d) {
       return meuPapel() in papeisLider()
-        && d.unidadeId == meuUsuario().get('unidadeId', '')
+        && (d.unidadeId == meuUsuario().get('unidadeId', '') || d.unidadeId in meuUsuario().get('unidadeIds', []))
         && idCerto(vid, d) && mesmaAulaEDia(d)
         && diaDa(d.data) <= hojeLocal()
         && diaDa(d.data) >= hojeLocal() - duration.value(60, 'd')
@@ -198,11 +198,51 @@ service cloud.firestore {
       // Cada um sempre pode ler o próprio crachá (quem entrou pelo Google descobre se já foi aprovado).
       allow read: if logado() || (autenticado() && request.auth.uid == uid);
 
+      // ---------- Liderança de várias unidades ----------
+      // O crachá do líder guarda a unidade principal em "unidadeId" e TODAS as que ele comanda em "unidadeIds"
+      // (a principal é sempre a 1ª da lista). Crachá antigo só tem "unidadeId". Uma unidade pode ter 2 líderes.
+      function unidadesDoAlvo() {
+        return !(papelDoAlvo() in papeisLider()) ? []
+          : ('unidadeIds' in resource.data ? resource.data.unidadeIds
+            : (resource.data.get('unidadeId', '') == '' ? [] : [resource.data.unidadeId]));
+      }
+      // O vínculo com o cadastro de professor é verdadeiro: professores/{professorId}.uidLogin == este login.
+      function vinculoDeProfessorOk(uid) {
+        return request.resource.data.get('professorId', '') is string
+          && request.resource.data.get('professorId', '') != ''
+          && get(/databases/$(database)/documents/professores/$(request.resource.data.professorId)).data.get('uidLogin', '') == uid;
+      }
+      // O mentor mexe em UMA unidade por vez ("unidadeAlterada"), e só numa unidade DELE:
+      //  - entra: professor ou líder (de outra unidade, mesmo de outro mentor) passa a ser líder também desta;
+      //  - sai, mas continua líder das outras unidades;
+      //  - sai da única unidade: o líder que também é professor volta a ser professor.
+      // A lista nova tem que ser exatamente a antiga mais (ou menos) essa unidade; nenhum outro campo muda.
+      function mentorMudaLideranca(uid) {
+        let novo = request.resource.data;
+        let x = novo.get('unidadeAlterada', '');
+        let antes = unidadesDoAlvo();
+        let depois = novo.get('unidadeIds', []);
+        return camposAlterados().hasOnly(['role', 'unidadeId', 'unidadeIds', 'professorId', 'unidadeAlterada'])
+          && mentorDaUnidadeId(x)
+          && (
+            (!(x in antes) && depois == antes.concat([x])
+              && papelNovo() == 'lider' && novo.get('unidadeId', '') == depois[0]
+              && ((papelDoAlvo() in papeisLider() && novo.get('professorId', '') == resource.data.get('professorId', ''))
+                  || (papelDoAlvo() == 'professor' && vinculoDeProfessorOk(uid))))
+            || (x in antes && depois == antes.removeAll([x]) && depois.size() > 0
+              && papelNovo() == papelDoAlvo() && novo.get('unidadeId', '') == depois[0]
+              && novo.get('professorId', '') == resource.data.get('professorId', ''))
+            || (antes == [x] && papelNovo() == 'professor' && vinculoDeProfessorOk(uid)
+              && !('unidadeId' in novo) && !('unidadeIds' in novo))
+          );
+      }
+
       // Mentor só cria crachá de líder/unidade para as unidades DELE (aprovação de pedido de acesso).
       allow create: if souAdmin()
         || (logado() && meuPapel() == 'mentor' && papelNovo() == 'professor')
         || (logado() && meuPapel() == 'mentor' && papelNovo() in papeisLider()
-            && get(/databases/$(database)/documents/unidades/$(request.resource.data.unidadeId)).data.get('mentorId', '') == request.auth.uid)
+            && get(/databases/$(database)/documents/unidades/$(request.resource.data.unidadeId)).data.get('mentorId', '') == request.auth.uid
+            && request.resource.data.get('unidadeIds', [request.resource.data.unidadeId]) == [request.resource.data.unidadeId])
         || (logado() && meuPapel() in papeisLider() && papelNovo() == 'professor')
         // Mentor novo convidado pelo admin (aba Mentores): no 1º acesso pelo Google, a própria pessoa cria
         // o crachá dela, SÓ se houver convite pendente para o e-mail Google dela e com os dados do convite.
@@ -213,23 +253,8 @@ service cloud.firestore {
             && camposAlterados().hasOnly(['nome', 'email', 'telefone']))
         || (logado() && meuPapel() in papeisLider() && papelDoAlvo() == 'professor'
             && camposAlterados().hasOnly(['nome', 'email']))
-        // Líder que também é professor (o mentor, só nas unidades DELE; o admin já pode tudo acima):
-        // - tornar líder: um professor (ou um líder ainda sem unidade) vira líder de uma unidade do mentor;
-        // - deixar de ser líder: o líder volta a ser professor, sem unidade.
-        // O vínculo com o professor precisa ser verdadeiro: professores/{professorId}.uidLogin == este login.
-        || (logado() && meuPapel() == 'mentor'
-            && camposAlterados().hasOnly(['role', 'unidadeId', 'professorId'])
-            && request.resource.data.get('professorId', '') is string
-            && request.resource.data.get('professorId', '') != ''
-            && get(/databases/$(database)/documents/professores/$(request.resource.data.professorId)).data.get('uidLogin', '') == uid
-            && ((papelNovo() == 'lider'
-                  && mentorDaUnidadeId(request.resource.data.get('unidadeId', ''))
-                  && (papelDoAlvo() == 'professor'
-                      || (papelDoAlvo() in papeisLider()
-                          && (resource.data.get('unidadeId', '') == '' || mentorDaUnidadeId(resource.data.get('unidadeId', ''))))))
-                || (papelNovo() == 'professor' && papelDoAlvo() in papeisLider()
-                  && !('unidadeId' in request.resource.data)
-                  && mentorDaUnidadeId(resource.data.get('unidadeId', '')))))
+        // Mentor muda a liderança de UMA unidade DELE no crachá de alguém (aba Líderes; o admin já pode tudo acima).
+        || (logado() && meuPapel() == 'mentor' && mentorMudaLideranca(uid))
         // Atualização de cadastro (troca do login antigo pelo login pessoal do Google): a própria pessoa
         // atualiza SÓ os dados de contato, e só depois de conectar o Google à conta. O papel não muda,
         // exceto o login antigo "unidade", que vira "lider". Unidade, status e o resto ficam como estão.
@@ -243,7 +268,8 @@ service cloud.firestore {
 
       allow delete: if souAdmin()
         || (logado() && meuPapel() == 'mentor' && papelDoAlvo() in papeisLider()
-            && get(/databases/$(database)/documents/unidades/$(resource.data.unidadeId)).data.get('mentorId', '') == request.auth.uid);
+            && get(/databases/$(database)/documents/unidades/$(resource.data.unidadeId)).data.get('mentorId', '') == request.auth.uid
+            && unidadesDoAlvo().size() <= 1);
 
       // Favoritos do Pratique Play: cada pessoa mexe só nos próprios.
       match /favoritos_play/{faixaId} {

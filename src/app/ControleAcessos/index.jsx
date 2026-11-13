@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { db, auth } from '../../services/firebase';
 import { collection, getDocs, getDoc, doc, updateDoc, writeBatch, deleteField } from 'firebase/firestore';
 import { registrarAuditoriaAcesso as registrarAuditoria } from '../../services/auditoriaAcessos';
-import { ehLider as ehPapelLider } from '../../permissions';
+import { ehLider as ehPapelLider, unidadesDoLider } from '../../permissions';
+import { camposAoLiberarVaga } from '../Configuracoes/Lideres/saidaDoLider';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { useAuth } from '../../contexts/AuthContext';
 import { ShieldAlert, Users, Key, ShieldCheck, Mail, Loader2, Search, Edit } from 'lucide-react';
@@ -69,17 +70,16 @@ export default function ControleAcessosPage() {
         try {
             const alvo = usuarios.find(u => u.id === userId);
             if (ehPapelLider(oldRole) && !ehPapelLider(newRole)) {
-                // Deixou de ser líder: sai da unidade (e a unidade deixa de mostrar essa pessoa como líder).
+                // Deixou de ser líder: sai de TODAS as unidades dele (e elas deixam de mostrar essa pessoa como líder;
+                // se ele era o 1º líder e havia um 2º, o 2º passa a ser o 1º).
                 const batch = writeBatch(db);
-                batch.update(doc(db, 'usuarios', userId), { role: newRole, unidadeId: deleteField() });
-                if (alvo?.unidadeId) {
-                    const unidade = await getDoc(doc(db, 'unidades', String(alvo.unidadeId)));
-                    if (unidade.exists() && unidade.data().liderUid === userId) {
-                        batch.update(unidade.ref, {
-                            liderUid: deleteField(), liderNome: deleteField(), liderEmail: deleteField(), liderTelefone: deleteField(),
-                            liderTipo: deleteField(), liderDesde: deleteField(), liderAConferir: deleteField(),
-                        });
-                    }
+                batch.update(doc(db, 'usuarios', userId), { role: newRole, unidadeId: deleteField(), unidadeIds: deleteField() });
+                for (const id of unidadesDoLider(alvo)) {
+                    const unidade = await getDoc(doc(db, 'unidades', String(id)));
+                    if (!unidade.exists()) continue;
+                    const dados = unidade.data();
+                    if (dados.liderUid === userId) batch.update(unidade.ref, camposAoLiberarVaga(dados, 1));
+                    else if (dados.lider2Uid === userId) batch.update(unidade.ref, camposAoLiberarVaga(dados, 2));
                 }
                 await batch.commit();
             } else {

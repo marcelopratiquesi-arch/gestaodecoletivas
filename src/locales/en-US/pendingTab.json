@@ -14,5 +14,6 @@
   "unitNotFound": "Location not found (it may have been deleted).",
   "notYourUnit": "This location is not yours.",
   "approveError": "Could not approve.",
-  "refuseError": "Could not decline."
+  "refuseError": "Could not decline.",
+  "secondConfirm": "{{unit}} already has the leader {{current}}.\n\nAdd {{name}} as 2nd LEADER (both stay)?\n\nOK = 2nd leader · Cancel = see the replace option"
 }

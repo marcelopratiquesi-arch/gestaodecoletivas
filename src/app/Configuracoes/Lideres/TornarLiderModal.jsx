@@ -1,45 +1,69 @@
-// "Tornar líder quem já tem acesso": um professor de coletiva (ou alguém que ficou como "líder sem
-// unidade" por ter sido trocado em Controle de Acessos) passa a ser o LÍDER de uma unidade.
-// O líder pode ser professor: o vínculo com o cadastro de professor é mantido no crachá (professorId),
-// então ele continua vendo as aulas e os pagamentos dele. Se um dia deixar de ser líder, volta a ser professor.
+// "Escolher líder já cadastrado": quem já entra no sistema passa a ser líder de uma unidade,
+// como 1º líder (vaga 1) ou como 2º líder (vaga 2). Pode ser:
+// - professor de coletiva com login: vira líder e continua professor (o vínculo fica no crachá, professorId);
+//   se um dia deixar de ser líder, volta a ser só professor;
+// - líder de outra unidade: passa a cuidar das duas (não sai da outra);
+// - mentor ou admin: o acesso dele não muda; a unidade só passa a mostrar essa pessoa como líder.
 import { useMemo, useState } from "react";
-import { doc, getDoc, writeBatch, serverTimestamp, deleteField } from "firebase/firestore";
+import { doc, getDoc, writeBatch } from "firebase/firestore";
 import { useTranslation } from "react-i18next";
 import { X, Check, Loader2, Search, UserCog, AlertTriangle } from "lucide-react";
 import { db } from "../../../services/firebase";
-import { ehLider, liderMantemAcesso } from "../../../permissions";
-import { professorDoLogin, tirarLiderDaUnidade } from "./saidaDoLider";
+import { ehLider, liderMantemAcesso, unidadesDoLider } from "../../../permissions";
+import { professorDoLogin, tirarLiderDaUnidade, crachaAoEntrar, dadosDaVaga, textoDaSaida } from "./saidaDoLider";
 
-export function TornarLiderModal({ unidades, todasUnidades, professores, unidadeInicial, quemId, quemNome, registrarAuditoria, onClose }) {
+export function TornarLiderModal({ unidades, todasUnidades, professores, mentores = [], unidadeInicial, vaga = 1, quemId, quemNome, registrarAuditoria, onClose }) {
   const { t } = useTranslation();
   const [unidadeId, setUnidadeId] = useState(unidadeInicial?.id || "");
   const [busca, setBusca] = useState("");
-  const [pessoa, setPessoa] = useState(null);      // professor escolhido
+  const [pessoa, setPessoa] = useState(null);      // candidato escolhido
   const [cracha, setCracha] = useState(null);      // { existe, dados }
   const [lendo, setLendo] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState("");
 
-  // Só professores que já têm login (o crachá é o do login dele).
-  const candidatos = useMemo(() => {
-    const termo = busca.trim().toLowerCase();
-    return professores
-      .filter((p) => p.uidLogin)
-      .filter((p) => !termo || [p.nome, p.email].some((v) => String(v || "").toLowerCase().includes(termo)))
-      .sort((a, b) => String(a.nome || "").localeCompare(String(b.nome || "")))
-      .slice(0, 50);
-  }, [professores, busca]);
-
-  const unidade = unidades.find((u) => u.id === unidadeId);
   const nomeDaUnidade = (id) => (todasUnidades.find((u) => String(u.id) === String(id))?.nome || id);
 
-  async function escolher(p) {
+  // Todo mundo que já entra no sistema e pode ser líder: professores com login, líderes das unidades e mentores.
+  // (Uma pessoa aparece uma vez só, com as etiquetas do que ela é hoje.)
+  const todosCandidatos = useMemo(() => {
+    const porUid = new Map();
+    const juntar = (uid, dados, etiqueta) => {
+      if (!uid) return;
+      const atual = porUid.get(uid) || { uid, nome: "", email: "", telefone: "", etiquetas: [] };
+      porUid.set(uid, {
+        ...atual,
+        nome: atual.nome || dados.nome || "", email: atual.email || dados.email || "", telefone: atual.telefone || dados.telefone || "",
+        professorId: atual.professorId || dados.professorId,
+        etiquetas: atual.etiquetas.includes(etiqueta) ? atual.etiquetas : [...atual.etiquetas, etiqueta],
+      });
+    };
+    professores.filter((p) => p.uidLogin).forEach((p) =>
+      juntar(String(p.uidLogin), { nome: p.nome, email: p.email, telefone: p.telefone || p.whatsapp, professorId: String(p.id) }, "professor"));
+    todasUnidades.forEach((u) => {
+      if (u.liderUid) juntar(String(u.liderUid), { nome: u.liderNome, email: u.liderEmail, telefone: u.liderTelefone }, "lider");
+      if (u.lider2Uid) juntar(String(u.lider2Uid), { nome: u.lider2Nome, email: u.lider2Email, telefone: u.lider2Telefone }, "lider");
+    });
+    mentores.forEach((m) => juntar(String(m.id), { nome: m.nome, email: m.email, telefone: m.telefone }, "mentor"));
+    return [...porUid.values()].sort((a, b) => String(a.nome).localeCompare(String(b.nome)));
+  }, [professores, todasUnidades, mentores]);
+
+  const candidatos = useMemo(() => {
+    const termo = busca.trim().toLowerCase();
+    return todosCandidatos
+      .filter((c) => !termo || [c.nome, c.email].some((v) => String(v || "").toLowerCase().includes(termo)))
+      .slice(0, 60);
+  }, [todosCandidatos, busca]);
+
+  const unidade = unidades.find((u) => u.id === unidadeId);
+
+  async function escolher(c) {
     setErro("");
-    setPessoa(p);
+    setPessoa(c);
     setCracha(null);
     setLendo(true);
     try {
-      const snap = await getDoc(doc(db, "usuarios", String(p.uidLogin)));
+      const snap = await getDoc(doc(db, "usuarios", c.uid));
       setCracha({ existe: snap.exists(), dados: snap.exists() ? snap.data() : null });
     } catch (e) {
       console.error(e);
@@ -49,72 +73,68 @@ export function TornarLiderModal({ unidades, todasUnidades, professores, unidade
 
   // Situação atual da pessoa, para mostrar antes de confirmar.
   const situacao = useMemo(() => {
-    if (!cracha) return null;
+    if (!cracha || !pessoa) return null;
     if (!cracha.existe) return { bloqueia: t("leadersTab.promote.errors.noLogin") };
+    if (unidade && (unidade.liderUid === pessoa.uid || unidade.lider2Uid === pessoa.uid)) {
+      return { bloqueia: t("leadersTab.promote.now.sameUnit") };
+    }
     const papel = String(cracha.dados.role || "").trim().toLowerCase();
-    if (liderMantemAcesso(papel)) return { bloqueia: t("leadersTab.promote.errors.isManager") };
+    if (liderMantemAcesso(papel)) return { texto: t("leadersTab.promote.now.manager") };
     if (papel === "bloqueado") return { bloqueia: t("leadersTab.promote.errors.blocked") };
     if (ehLider(papel)) {
-      const atual = cracha.dados.unidadeId;
-      if (!atual) return { texto: t("leadersTab.promote.now.leaderNoUnit"), aviso: true };
-      if (String(atual) === String(unidadeId)) return { texto: t("leadersTab.promote.now.sameUnit") };
-      return { texto: t("leadersTab.promote.now.leaderOf", { unit: nomeDaUnidade(atual) }), sai: atual };
+      const lista = unidadesDoLider(cracha.dados);
+      if (lista.length === 0) return { texto: t("leadersTab.promote.now.leaderNoUnit"), aviso: true };
+      return { texto: t("leadersTab.promote.now.leaderOf", { unit: lista.map(nomeDaUnidade).join(", ") }) };
     }
     if (papel === "professor") return { texto: t("leadersTab.promote.now.teacher") };
     return { bloqueia: t("leadersTab.promote.errors.otherRole", { role: papel || "-" }) };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cracha, unidadeId, t]);
+  }, [cracha, pessoa, unidade, t]);
+
+  const atualDaVaga = unidade ? (vaga === 2 ? unidade.lider2Uid : unidade.liderUid) : null;
+  const nomeAtualDaVaga = unidade ? (vaga === 2 ? (unidade.lider2Nome || unidade.lider2Email) : (unidade.liderNome || unidade.liderEmail)) : "";
 
   async function confirmar() {
     setErro("");
     if (!unidade) return setErro(t("leadersTab.errors.unit"));
     if (!pessoa || !cracha || situacao?.bloqueia) return;
 
-    const uid = String(pessoa.uidLogin);
+    const uid = pessoa.uid;
     const dados = cracha.dados;
-    const professorId = professorDoLogin(uid, dados, professores) || String(pessoa.id);
+    const papel = String(dados.role || "").trim().toLowerCase();
+    const professorId = papel === "professor" ? (professorDoLogin(uid, dados, professores) || pessoa.professorId || null) : null;
+    if (papel === "professor" && !professorId) return setErro(t("leadersTab.promote.errors.noTeacherLink"));
     const nome = dados.nome || pessoa.nome || "";
-    const temOutroLider = unidade.liderUid && unidade.liderUid !== uid;
+    const substitui = atualDaVaga && atualDaVaga !== uid;
 
-    const linhas = [t("leadersTab.promote.confirm", { name: nome, unit: unidade.nome })];
-    if (situacao?.sai) linhas.push(t("leadersTab.promote.confirmLeaves", { unit: nomeDaUnidade(situacao.sai) }));
-    if (temOutroLider) linhas.push(t("leadersTab.promote.confirmReplaces", { current: unidade.liderNome || unidade.liderEmail }));
+    const linhas = [t(vaga === 2 ? "leadersTab.promote.confirmSecond" : "leadersTab.promote.confirm", { name: nome, unit: unidade.nome })];
+    if (substitui) linhas.push(t("leadersTab.promote.confirmReplaces", { current: nomeAtualDaVaga }));
     if (!window.confirm(linhas.join("\n\n"))) return;
 
     setSalvando(true);
     try {
       const batch = writeBatch(db);
       let saidaDoAnterior = "nada";
-      if (temOutroLider) {
+      if (substitui) {
         saidaDoAnterior = await tirarLiderDaUnidade(batch, {
-          liderUid: unidade.liderUid, professores, motivo: t("leadersTab.replacedReason", { name: nome }), quemId, quemNome,
+          liderUid: atualDaVaga, unidadeId: unidade.id, professores,
+          motivo: t("leadersTab.replacedReason", { name: nome }), quemId, quemNome,
         });
       }
-
-      // Se era líder de outra unidade, aquela unidade fica sem líder.
-      if (situacao?.sai) {
-        const antiga = todasUnidades.find((u) => String(u.id) === String(situacao.sai));
-        if (antiga && antiga.liderUid === uid) {
-          batch.update(doc(db, "unidades", String(antiga.id)), {
-            liderUid: deleteField(), liderNome: deleteField(), liderEmail: deleteField(), liderTelefone: deleteField(),
-            liderTipo: deleteField(), liderDesde: deleteField(), liderAConferir: deleteField(),
-          });
-        }
-      }
-
-      batch.update(doc(db, "usuarios", uid), { role: "lider", unidadeId: String(unidade.id), professorId });
-      batch.update(doc(db, "unidades", String(unidade.id)), {
-        liderUid: uid, liderNome: nome, liderEmail: dados.email || pessoa.email || "",
-        liderTelefone: dados.telefone || pessoa.telefone || "", liderTipo: dados.loginGoogle === true ? "google" : "senha",
-        liderDesde: serverTimestamp(), liderAConferir: deleteField(),
-      });
+      const novoCracha = crachaAoEntrar(dados, unidade.id, professorId);
+      if (novoCracha) batch.update(doc(db, "usuarios", uid), novoCracha);
+      batch.update(doc(db, "unidades", String(unidade.id)), dadosDaVaga(vaga, {
+        uid, nome, email: dados.email || pessoa.email, telefone: dados.telefone || pessoa.telefone,
+        tipo: dados.loginGoogle === true ? "google" : "senha",
+      }));
       await batch.commit();
 
-      const extras = [`${nome} (${dados.email || pessoa.email || "-"}) — continua professor`];
-      if (situacao?.sai) extras.push(`Deixou de ser líder de ${nomeDaUnidade(situacao.sai)}`);
-      if (temOutroLider) extras.push(`Substituiu ${unidade.liderNome || unidade.liderEmail} (${saidaDoAnterior === "professor" ? "voltou a ser professor" : saidaDoAnterior === "mantem" ? "manteve o acesso" : "perdeu o acesso"})`);
-      await registrarAuditoria("ALTERADA", "Professor passou a ser líder da unidade.", unidade.nome, extras.join("\n"));
-      alert(t("leadersTab.promote.done", { name: nome, unit: unidade.nome }));
+      const extras = [`${nome} (${dados.email || pessoa.email || "-"}) — era ${papel || "-"}`];
+      if (novoCracha && novoCracha.unidadeIds.length > 1) extras.push(`Agora lidera: ${novoCracha.unidadeIds.map(nomeDaUnidade).join(", ")}`);
+      if (substitui) extras.push(`Substituiu ${nomeAtualDaVaga} (${textoDaSaida(saidaDoAnterior)})`);
+      await registrarAuditoria(vaga === 2 ? "NOVA" : "ALTERADA",
+        vaga === 2 ? "2º líder colocado na unidade." : "Líder escolhido entre quem já tem acesso.", unidade.nome, extras.join("\n"));
+      alert(t(vaga === 2 ? "leadersTab.promote.doneSecond" : "leadersTab.promote.done", { name: nome, unit: unidade.nome }));
       onClose();
     } catch (e) {
       console.error(e);
@@ -122,16 +142,18 @@ export function TornarLiderModal({ unidades, todasUnidades, professores, unidade
     } finally { setSalvando(false); }
   }
 
+  const rotuloEtiqueta = { professor: t("leadersTab.promote.tag.teacher"), lider: t("leadersTab.promote.tag.leader"), mentor: t("leadersTab.promote.tag.mentor") };
+
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => !salvando && onClose()}>
       <div onClick={(e) => e.stopPropagation()} className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 space-y-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-black text-slate-800 dark:text-white flex items-center gap-2">
-            <UserCog className="w-5 h-5 text-amber-600" /> {t("leadersTab.promote.title")}
+            <UserCog className="w-5 h-5 text-amber-600" /> {t(vaga === 2 ? "leadersTab.promote.titleSecond" : "leadersTab.promote.title")}
           </h3>
           <button type="button" onClick={onClose} disabled={salvando} className="p-1 text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
         </div>
-        <p className="text-xs text-slate-500 dark:text-slate-400">{t("leadersTab.promote.help")}</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400">{t(vaga === 2 ? "leadersTab.promote.helpSecond" : "leadersTab.promote.help")}</p>
 
         <label className="block space-y-1">
           <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t("leadersTab.modal.unit")}</span>
@@ -151,14 +173,19 @@ export function TornarLiderModal({ unidades, todasUnidades, professores, unidade
             <input value={busca} onChange={(e) => setBusca(e.target.value)} disabled={salvando} placeholder={t("leadersTab.promote.search")}
               className="w-full pl-9 pr-3 py-3 rounded-xl bg-slate-100 dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-red-500" />
           </div>
-          <div className="max-h-48 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-700/50">
+          <div className="max-h-56 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-700/50">
             {candidatos.length === 0 ? (
-              <p className="p-3 text-xs text-slate-400 font-bold">{t("leadersTab.promote.noTeachers")}</p>
-            ) : candidatos.map((p) => (
-              <button type="button" key={p.id} onClick={() => escolher(p)} disabled={salvando}
-                className={`w-full text-left p-3 text-sm hover:bg-slate-50 dark:hover:bg-slate-700/30 ${pessoa?.id === p.id ? "bg-emerald-50 dark:bg-emerald-900/20" : ""}`}>
-                <span className="font-bold text-slate-800 dark:text-slate-100">{p.nome}</span>
-                <span className="block text-[11px] text-slate-500">{p.email || "-"}</span>
+              <p className="p-3 text-xs text-slate-400 font-bold">{t("leadersTab.promote.noPeople")}</p>
+            ) : candidatos.map((c) => (
+              <button type="button" key={c.uid} onClick={() => escolher(c)} disabled={salvando}
+                className={`w-full text-left p-3 text-sm hover:bg-slate-50 dark:hover:bg-slate-700/30 ${pessoa?.uid === c.uid ? "bg-emerald-50 dark:bg-emerald-900/20" : ""}`}>
+                <span className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5 flex-wrap">
+                  {c.nome || "-"}
+                  {c.etiquetas.map((e) => (
+                    <span key={e} className="px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300">{rotuloEtiqueta[e]}</span>
+                  ))}
+                </span>
+                <span className="block text-[11px] text-slate-500">{c.email || "-"}</span>
               </button>
             ))}
           </div>
@@ -170,8 +197,8 @@ export function TornarLiderModal({ unidades, todasUnidades, professores, unidade
             <p className="flex items-start gap-2">{(situacao.bloqueia || situacao.aviso) && <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />} {pessoa.nome}: {situacao.bloqueia || situacao.texto}</p>
           </div>
         )}
-        {unidade?.liderUid && pessoa && unidade.liderUid !== String(pessoa.uidLogin) && (
-          <p className="text-xs font-bold text-amber-600 bg-amber-50 dark:bg-amber-900/20 p-3 rounded-xl">{t("leadersTab.modal.replaceWarning", { name: unidade.liderNome || unidade.liderEmail })}</p>
+        {atualDaVaga && pessoa && atualDaVaga !== pessoa.uid && (
+          <p className="text-xs font-bold text-amber-600 bg-amber-50 dark:bg-amber-900/20 p-3 rounded-xl">{t("leadersTab.promote.replaceWarning", { name: nomeAtualDaVaga })}</p>
         )}
 
         {erro && <p className="text-xs font-bold text-red-600 bg-red-50 dark:bg-red-900/20 p-3 rounded-xl">{erro}</p>}

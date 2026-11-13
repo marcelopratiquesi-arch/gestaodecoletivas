@@ -53,8 +53,8 @@
       "confirmReset": "¿Enviar link para restablecer la contraseña al e-mail: {{email}}?",
       "resetSent": "✅ ¡Link de recuperación enviado a {{email}}!",
       "resetError": "Error al enviar el e-mail. Revisá que el e-mail sea correcto en Firebase Auth.",
-      "useLeadersTab": "Para hacer líder a {{name}}, usá Configuración › Líderes › \"Hacer líder a quien ya tiene acceso\". Ahí elegís la sede y sigue siendo profesor."
+      "useLeadersTab": "Para hacer líder a {{name}}, usá Configuración › Líderes › \"Elegir líder ya registrado\". Ahí elegís la sede y sigue siendo profesor."
     },
-    "leaderNoUnit": "Líder sin sede: no puede validar. Corregilo en Configuración › Líderes › Hacer líder a quien ya tiene acceso."
+    "leaderNoUnit": "Líder sin sede: no puede validar. Corregilo en Configuración › Líderes › Elegir líder ya registrado."
   }
 }

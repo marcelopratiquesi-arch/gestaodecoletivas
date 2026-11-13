@@ -175,3 +175,21 @@ describe('mentor e admin', () => {
     await assertSucceeds(deleteDoc(doc(como('admin1'), 'validacoes/feitaHoje')));
   });
 });
+
+// Líder de várias unidades: o crachá lista todas em "unidadeIds" (a principal continua em "unidadeId").
+describe('líder de duas unidades', () => {
+  const montar = () => env.withSecurityRulesDisabled(async (ctx) => {
+    const db = ctx.firestore();
+    await setDoc(doc(db, 'usuarios/liderAB'), { role: 'lider', unidadeId: 'uniA', unidadeIds: ['uniA', 'uniB'] });
+    await setDoc(doc(db, 'usuarios/liderSoA'), { role: 'lider', unidadeId: 'uniA', unidadeIds: ['uniA'] });
+  });
+  it('valida aula da unidade principal', async () => { await montar(); await assertSucceeds(validacao('liderAB', 'aulaP1', HOJE)); });
+  it('valida aula da segunda unidade', async () => {
+    await montar();
+    await assertSucceeds(validacao('liderAB', 'aulaB', HOJE, { unidadeId: 'uniB' }));
+  });
+  it('quem só tem a uniA na lista NÃO valida a uniB', async () => {
+    await montar();
+    await assertFails(validacao('liderSoA', 'aulaB', HOJE, { unidadeId: 'uniB' }));
+  });
+});
