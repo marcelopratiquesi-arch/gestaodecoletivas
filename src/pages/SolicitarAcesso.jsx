@@ -2,14 +2,17 @@
 // 1ª vez: preenche nome, WhatsApp e a unidade em que é líder → vira um pedido em solicitacoes_acesso/{uid}.
 // Depois: fica "aguardando aprovação" (não vê nada do sistema) até um mentor/admin aprovar na aba Pendências.
 // A lista de unidades vem da vitrine pública (só nomes), porque sem aprovação a pessoa não lê os cadastros.
+// Mentor cadastrado pelo admin com este e-mail do Google (convites_acesso/{e-mail}): em vez do pedido,
+// aparece "Entrar como mentor" — o cadastro feito pelo admin já é a aprovação (regra mentorAceitaConvite).
 import { useEffect, useMemo, useState } from "react";
 import { Navigate } from "react-router-dom";
-import { doc, getDoc, onSnapshot, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, onSnapshot, setDoc, serverTimestamp, writeBatch } from "firebase/firestore";
 import { useTranslation } from "react-i18next";
-import { Loader2, Clock, LogOut, Building2, Phone, User, Send, AlertTriangle, Search, Pencil } from "lucide-react";
+import { Loader2, Clock, LogOut, Building2, Phone, User, Send, AlertTriangle, Search, Pencil, ShieldCheck } from "lucide-react";
 import { db } from "../services/firebase";
 import { useAuth } from "../contexts/AuthContext";
 import { VITRINE_CAMINHO } from "../services/vitrinePublica";
+import { registrarAuditoriaAcesso } from "../services/auditoriaAcessos";
 
 const Tela = ({ children }) => (
   <div className="min-h-screen flex items-center justify-center bg-black p-4 font-sans">
@@ -27,6 +30,8 @@ export default function SolicitarAcesso() {
   const { user, userData, loading, logout, recarregarCracha } = useAuth();
 
   const [pedido, setPedido] = useState(undefined); // undefined = carregando; null = ainda não pediu
+  const [convite, setConvite] = useState(undefined); // convite de mentor pendente para este e-mail (null = não tem)
+  const [aceitando, setAceitando] = useState(false);
   const [unidades, setUnidades] = useState(null);
   const [editando, setEditando] = useState(false);
 
@@ -48,6 +53,49 @@ export default function SolicitarAcesso() {
       (e) => { console.error(e); setPedido(null); }
     );
   }, [uid, userData]);
+
+  // Convite de mentor feito pelo admin para este e-mail do Google (1 leitura).
+  const emailGoogle = String(user?.email || "").toLowerCase();
+  useEffect(() => {
+    if (!uid || userData) return;
+    if (!emailGoogle) { setConvite(null); return; }
+    getDoc(doc(db, "convites_acesso", emailGoogle))
+      .then((snap) => {
+        const c = snap.exists() ? snap.data() : null;
+        setConvite(c?.status === "pendente" && c?.papel === "mentor" ? c : null);
+      })
+      .catch(() => setConvite(null));
+  }, [uid, userData, emailGoogle]);
+
+  async function aceitarConvite() {
+    setErro("");
+    setAceitando(true);
+    try {
+      // Cópia exata dos dados do convite (o banco confere campo a campo).
+      const batch = writeBatch(db);
+      batch.set(doc(db, "usuarios", uid), {
+        nome: convite.nome, email: emailGoogle, telefone: convite.telefone, pais: convite.pais || "",
+        role: "mentor", status: "ativo", loginGoogle: true,
+        criadoPor: convite.criadoPor, criadoEm: serverTimestamp(),
+      });
+      batch.update(doc(db, "convites_acesso", emailGoogle), { status: "usado", usadoPor: uid, usadoEm: serverTimestamp() });
+      await batch.commit();
+      await registrarAuditoriaAcesso({
+        tipoAcao: "NOVA",
+        descricao: `Mentor(a) ${convite.nome}: 1º acesso pelo Google (cadastrado pelo admin).`,
+        quem: { id: uid, nome: convite.nome, email: emailGoogle },
+        alvo: { id: uid, nome: convite.nome, email: emailGoogle, emailGoogle },
+        papelNovo: "mentor",
+        detalhes: `Aprovado por: ${convite.criadoPorNome || "-"} (uid ${convite.criadoPor})`,
+        unidadeNome: "Gestão/Diretoria",
+      });
+      await recarregarCracha();
+    } catch (err) {
+      console.error(err);
+      setErro(t("accessRequest.invite.error"));
+      setAceitando(false);
+    }
+  }
 
   useEffect(() => {
     if (pedido?.status === "aprovado") recarregarCracha();
@@ -114,13 +162,42 @@ export default function SolicitarAcesso() {
   if (loading) return <Tela><div className="flex justify-center py-10"><Loader2 className="w-8 h-8 animate-spin text-red-600" /></div></Tela>;
   if (!user) return <Navigate to="/login" replace />;
   if (userData) return <Navigate to="/app" replace />;
-  if (pedido === undefined) return <Tela><div className="flex justify-center py-10"><Loader2 className="w-8 h-8 animate-spin text-red-600" /></div></Tela>;
+  if (pedido === undefined || convite === undefined) return <Tela><div className="flex justify-center py-10"><Loader2 className="w-8 h-8 animate-spin text-red-600" /></div></Tela>;
 
   const rodape = (
     <button type="button" onClick={logout} className="mt-6 w-full flex items-center justify-center gap-2 text-xs font-bold text-zinc-500 hover:text-white uppercase tracking-widest">
       <LogOut className="w-4 h-4" /> {t("accessRequest.logout", { email: user.email })}
     </button>
   );
+
+  // ===== MENTOR CADASTRADO PELO ADMIN =====
+  if (convite) {
+    return (
+      <Tela>
+        <div className="text-center space-y-4">
+          <div className="mx-auto w-16 h-16 rounded-full bg-blue-500/10 flex items-center justify-center">
+            <ShieldCheck className="w-8 h-8 text-blue-500" />
+          </div>
+          <h2 className="text-xl font-black text-white">{t("accessRequest.invite.title", { name: convite.nome })}</h2>
+          <p className="text-sm text-zinc-400">{t("accessRequest.invite.desc")}</p>
+          <div className="text-left bg-zinc-900 border border-zinc-800 rounded-2xl p-4 text-sm space-y-1">
+            <p><span className="text-zinc-500">{t("accessRequest.fields.name")}:</span> <b>{convite.nome}</b></p>
+            <p><span className="text-zinc-500">{t("accessRequest.fields.phone")}:</span> <b>{convite.telefone}</b></p>
+            <p><span className="text-zinc-500">{t("accessRequest.fields.role")}:</span> <b>{t("accessRequest.invite.role")}</b></p>
+          </div>
+          {erro && (
+            <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-xs font-medium flex items-center gap-2 text-left">
+              <AlertTriangle className="w-4 h-4 shrink-0" /> {erro}
+            </div>
+          )}
+          <button type="button" onClick={aceitarConvite} disabled={aceitando} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black uppercase text-sm py-4 rounded-xl flex items-center justify-center gap-2 disabled:opacity-60">
+            {aceitando ? <Loader2 className="w-5 h-5 animate-spin" /> : <ShieldCheck className="w-4 h-4" />} {t("accessRequest.invite.enter")}
+          </button>
+        </div>
+        {rodape}
+      </Tela>
+    );
+  }
 
   // ===== AGUARDANDO APROVAÇÃO =====
   if (!precisaFormulario) {

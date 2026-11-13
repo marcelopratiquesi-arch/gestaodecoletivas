@@ -1,19 +1,20 @@
 import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "../../../contexts/AuthContext";
 import {
-  collection, updateDoc, deleteDoc, doc, query, where, serverTimestamp, setDoc, onSnapshot
+  collection, updateDoc, deleteDoc, doc, query, where, serverTimestamp, setDoc, onSnapshot, getDocs, limit
 } from "firebase/firestore";
 
-// Auth imports (Instância secundária para não deslogar o admin)
-import { createUserWithEmailAndPassword, getAuth, signOut } from "firebase/auth";
-import { initializeApp, getApp, deleteApp } from "firebase/app"; 
+// Mentor novo NÃO tem senha: o admin cadastra o e-mail do Google (convite em convites_acesso/{e-mail}).
+// No 1º acesso pelo Google com esse e-mail, a pessoa entra direto como mentor (pages/SolicitarAcesso).
 import { db } from "../../../services/firebase";
 import { registrarAuditoriaAcesso } from "../../../services/auditoriaAcessos";
 
 import { 
     ShieldCheck, Edit2, Trash2, AlertTriangle, CheckCircle2, 
-    Loader2, User, Search, Mail, Lock, ChevronDown, ChevronUp, Ban, PowerOff, Plus, X, Phone, Check
+    Loader2, User, Search, Mail, ChevronDown, ChevronUp, Ban, PowerOff, Plus, X, Phone, Check, Clock
 } from "lucide-react";
+
+const EMAIL_VALIDO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
 
 // 🌍 PADRÃO OURO INTERNACIONAL — cada país com sua cor de identidade
@@ -131,6 +132,7 @@ export function MentoresTab() {
 
   // Dados
   const [mentores, setMentores] = useState([]);
+  const [convites, setConvites] = useState([]); // mentores cadastrados que ainda não fizeram o 1º acesso
   const [loading, setLoading] = useState(true);
   
   // UX
@@ -148,7 +150,6 @@ export function MentoresTab() {
   const [mentorEditando, setMentorEditando] = useState(null);
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
-  const [senha, setSenha] = useState("");
   const [pais, setPais] = useState(PAIS_DEFAULT); // 🟢 CAMPO INTERNACIONAL
   const [telefone, setTelefone] = useState("");
   const [status, setStatus] = useState("ativo");
@@ -190,7 +191,14 @@ export function MentoresTab() {
         setLoading(false);
     });
 
-    return () => unsub();
+    // Convites pendentes (lista pequena, só o admin lê).
+    const unsubConvites = onSnapshot(
+        query(collection(db, "convites_acesso"), where("status", "==", "pendente")),
+        (snap) => setConvites(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
+        (error) => console.error("Erro ao ler convites de mentor:", error)
+    );
+
+    return () => { unsub(); unsubConvites(); };
   }, [podeAcessar]);
 
   // ==========================================
@@ -246,8 +254,7 @@ export function MentoresTab() {
   function abrirModalNovo() {
     setMentorEditando(null); 
     setNome(""); 
-    setEmail(""); 
-    setSenha(""); 
+    setEmail("");
     setPais(PAIS_DEFAULT); // 🟢 RESET DO PAÍS
     setTelefone(""); 
     setStatus("ativo");
@@ -259,8 +266,7 @@ export function MentoresTab() {
   function abrirModalEditar(m) {
     setMentorEditando(m); 
     setNome(m.nome || ""); 
-    setEmail(m.email || ""); 
-    setSenha(""); 
+    setEmail(m.email || "");
     setPais(m.pais || PAIS_DEFAULT); // 🟢 CARREGA O PAÍS (fallback Brasil se ausente)
     setTelefone(m.telefone || ""); 
     setStatus(m.status || "ativo");
@@ -278,9 +284,7 @@ export function MentoresTab() {
     if (!nome.trim()) { setSalvando(false); return setErro(t('mentorsTab.messages.nameRequired', 'Nome é obrigatório.')); }
     if (!telefone.trim()) { setSalvando(false); return setErro(t('mentorsTab.extra.whatsappRequired')); }
     if (!email.trim()) { setSalvando(false); return setErro(t('mentorsTab.messages.emailRequired', 'E-mail é obrigatório.')); }
-    if (!mentorEditando && senha.length < 6) { setSalvando(false); return setErro(t('mentorsTab.messages.weakPassword', 'Senha mín. 6 dígitos.')); }
-
-    let secondaryApp = null;
+    if (!mentorEditando && !EMAIL_VALIDO.test(email.trim())) { setSalvando(false); return setErro(t('mentorsTab.messages.invalidEmail', 'E-mail inválido.')); }
 
     try {
       if (mentorEditando) {
@@ -305,38 +309,48 @@ export function MentoresTab() {
 
         setSucesso(t('mentorsTab.messages.updated', 'Mentor atualizado!'));
       } else {
-        // 🟢 AUDITORIA: Novo mentor criado
-        secondaryApp = initializeApp(getApp().options, "SecondaryAppMentor");
-        const secondaryAuth = getAuth(secondaryApp);
+        // Mentor novo = convite pelo e-mail do Google (sem senha). Cadastrar aqui já é a aprovação do admin.
+        const emailGoogle = email.trim().toLowerCase();
 
-        const userCred = await createUserWithEmailAndPassword(secondaryAuth, email.trim().toLowerCase(), senha);
-        const newUid = userCred.user.uid;
+        // Quem já tem acesso (outro papel) troca de papel em Controle de Acessos, não por convite.
+        const jaTem = await getDocs(query(collection(db, "usuarios"), where("email", "==", emailGoogle), limit(1)));
+        if (!jaTem.empty) { setSalvando(false); return setErro(t('mentorsTab.invite.alreadyHasAccess')); }
 
-        await setDoc(doc(db, "usuarios", newUid), {
-          nome: nome.trim(), 
-          email: email.trim().toLowerCase(), 
+        await setDoc(doc(db, "convites_acesso", emailGoogle), {
+          papel: "mentor",
+          status: "pendente",
+          email: emailGoogle,
+          nome: nome.trim(),
           pais, // 🟢 SALVA O PAÍS
           telefone: telefone.trim(),
-          role: "mentor", 
-          status: status,
-          criadoPor: userId, 
+          criadoPor: userId,
+          criadoPorNome: userData?.nome || userData?.email || "Admin",
           criadoEm: serverTimestamp()
         });
 
-        await signOut(secondaryAuth);
-        await registrarLogAuditoria('NOVA', 'Novo mentor e credenciais criadas no sistema.', { id: newUid, nome: nome.trim(), email: email.trim().toLowerCase() });
-        
-        setSucesso(t('mentorsTab.messages.created', 'Mentor criado com sucesso!'));
+        await registrarLogAuditoria('NOVA', 'Mentor cadastrado pelo e-mail do Google (aguardando o 1º acesso).',
+            { id: null, nome: nome.trim(), email: emailGoogle, emailGoogle });
+
+        setSucesso(t('mentorsTab.invite.created'));
       }
       
       setTimeout(() => { setModalAberto(false); setSucesso(""); }, 1000);
 
-    } catch (e) { 
-      if (e.code === 'auth/email-already-in-use') setErro(t('mentorsTab.messages.emailExists', 'Este e-mail já está cadastrado.'));
-      else setErro("Erro: " + e.message); 
-    } finally { 
-      if (secondaryApp) await deleteApp(secondaryApp).catch(() => {});
-      setSalvando(false); 
+    } catch (e) {
+      setErro("Erro: " + e.message);
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  // CANCELAR CONVITE (não apaga: fica registrado como cancelado)
+  async function cancelarConvite(c) {
+    if (!window.confirm(t('mentorsTab.invite.cancelConfirm', { name: c.nome, email: c.email }))) return;
+    try {
+        await updateDoc(doc(db, "convites_acesso", c.id), { status: "cancelado", canceladoPor: userId, canceladoEm: serverTimestamp() });
+        await registrarLogAuditoria('ALTERADA', 'Cadastro pelo e-mail do Google cancelado antes do 1º acesso.', { id: null, nome: c.nome, email: c.email, emailGoogle: c.email });
+    } catch (e) {
+        alert(t('mentorsTab.invite.cancelError') + " " + e.message);
     }
   }
 
@@ -457,6 +471,29 @@ export function MentoresTab() {
               <ChevronDown className="absolute right-4 top-3.5 w-4 h-4 text-slate-400 pointer-events-none"/>
           </div>
       </div>
+
+      {/* CADASTRADOS PELO E-MAIL DO GOOGLE, AINDA SEM O 1º ACESSO */}
+      {convites.length > 0 && (
+        <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-2xl p-4 space-y-3">
+            <p className="text-xs font-black text-amber-700 dark:text-amber-400 flex items-center gap-2">
+                <Clock className="w-4 h-4"/> {t('mentorsTab.invite.pendingTitle', { count: convites.length })}
+            </p>
+            <p className="text-[11px] font-medium normal-case text-amber-700/80 dark:text-amber-400/80">{t('mentorsTab.invite.pendingHelp')}</p>
+            <div className="grid gap-2 md:grid-cols-2">
+                {convites.map(c => (
+                    <div key={c.id} className="flex items-center justify-between gap-3 bg-white dark:bg-slate-800 border border-amber-100 dark:border-slate-700 rounded-xl px-4 py-3">
+                        <div className="min-w-0">
+                            <p className="font-black text-slate-800 dark:text-white text-sm truncate">{c.nome}</p>
+                            <p className="text-xs text-slate-500 font-mono normal-case flex items-center gap-1 truncate"><Mail className="w-3 h-3 shrink-0"/> {c.email}</p>
+                        </div>
+                        <button onClick={() => cancelarConvite(c)} className="p-2 rounded-lg bg-slate-100 text-slate-500 hover:bg-red-600 hover:text-white dark:bg-slate-700 dark:text-slate-300 transition-colors shrink-0" title={t('mentorsTab.invite.cancel')}>
+                            <X className="w-4 h-4"/>
+                        </button>
+                    </div>
+                ))}
+            </div>
+        </div>
+      )}
 
       {/* TABELA */}
       <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden shadow-sm">
@@ -630,6 +667,7 @@ export function MentoresTab() {
                           <ChevronDown className="absolute right-4 top-3.5 w-4 h-4 text-slate-400 pointer-events-none"/>
                       </div>
                   </div>
+                  {mentorEditando && (
                   <div>
                       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-1 block">{t('mentorsTab.modal.status', 'Status')}</label>
                       <div className="relative">
@@ -644,6 +682,7 @@ export function MentoresTab() {
                           <ChevronDown className="absolute right-4 top-3.5 w-4 h-4 text-slate-400 pointer-events-none"/>
                       </div>
                   </div>
+                  )}
               </div>
 
               {/* 🟢 WHATSAPP COM MÁSCARA DINÂMICA POR PAÍS */}
@@ -666,7 +705,7 @@ export function MentoresTab() {
               </div>
 
               <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-1 block">{t('mentorsTab.modal.email', 'Login (E-mail)')}</label>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-1 block">{mentorEditando ? t('mentorsTab.modal.email', 'Login (E-mail)') : t('mentorsTab.invite.googleEmail')}</label>
                   <div className="relative">
                       <Mail className="absolute left-4 top-3.5 w-4 h-4 text-slate-400"/>
                       <input 
@@ -674,26 +713,13 @@ export function MentoresTab() {
                           onChange={e=>setEmail(e.target.value)} 
                           disabled={!!mentorEditando} 
                           className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-blue-500 rounded-xl text-sm font-bold outline-none disabled:opacity-50 dark:text-white" 
-                          placeholder="mentor@pratique.com" 
+                          placeholder={mentorEditando ? "mentor@pratique.com" : "nome@gmail.com"}
                       />
                   </div>
+                  {!mentorEditando && (
+                      <p className="text-[11px] font-medium normal-case text-slate-500 dark:text-slate-400 mt-2 pl-1">{t('mentorsTab.invite.googleEmailHelp')}</p>
+                  )}
               </div>
-              
-              {!mentorEditando && (
-                  <div>
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-1 block">{t('mentorsTab.modal.password', 'Senha Inicial')}</label>
-                      <div className="relative">
-                          <Lock className="absolute left-4 top-3.5 w-4 h-4 text-slate-400"/>
-                          <input 
-                              type="password" 
-                              value={senha} 
-                              onChange={e=>setSenha(e.target.value)} 
-                              className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-blue-500 rounded-xl text-sm font-bold outline-none dark:text-white" 
-                              placeholder={t('mentorsTab.extra.passwordPlaceholder')} 
-                          />
-                      </div>
-                  </div>
-              )}
 
               <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-700 mt-6">
                   <button 

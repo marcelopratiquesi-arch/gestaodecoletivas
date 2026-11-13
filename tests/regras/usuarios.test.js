@@ -3,7 +3,7 @@
 import { readFileSync } from 'fs';
 import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest';
 import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing';
-import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, addDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, addDoc, writeBatch } from 'firebase/firestore';
 
 let env;
 
@@ -432,5 +432,97 @@ describe('atualização de cadastro pela própria pessoa', () => {
   it('exige nome e WhatsApp de verdade', async () => {
     await assertFails(updateDoc(doc(comGoogleLigado('liderA'), 'usuarios/liderA'), contato({ nome: 'a' })));
     await assertFails(updateDoc(doc(comGoogleLigado('liderA'), 'usuarios/liderA'), contato({ telefone: '1' })));
+  });
+});
+
+// ===================== CONVITE DE MENTOR (cadastro pelo e-mail Google, sem senha) =====================
+// Login real pelo Google: o token traz o e-mail já verificado pelo Google.
+const googleVerificado = (uid, email) =>
+  env.authenticatedContext(uid, { email, email_verified: true, firebase: { sign_in_provider: 'google.com' } }).firestore();
+const convite = (extra = {}) => ({
+  papel: 'mentor', status: 'pendente', email: 'novomentor@gmail.com', nome: 'Novo Mentor',
+  telefone: '(31) 99999-0000', pais: 'BR', criadoPor: 'admin1', ...extra,
+});
+const crachaDoConvite = (extra = {}) => ({
+  nome: 'Novo Mentor', email: 'novomentor@gmail.com', telefone: '(31) 99999-0000', pais: 'BR',
+  role: 'mentor', status: 'ativo', loginGoogle: true, criadoPor: 'admin1', ...extra,
+});
+const conviteCriado = (extra = {}) => env.withSecurityRulesDisabled(async (ctx) => {
+  await setDoc(doc(ctx.firestore(), 'convites_acesso/novomentor@gmail.com'), convite(extra));
+});
+// Aceitar = criar o crachá e marcar o convite como usado na mesma gravação.
+const aceitar = (db, uid, cracha = crachaDoConvite()) => {
+  const b = writeBatch(db);
+  b.set(doc(db, `usuarios/${uid}`), cracha);
+  b.update(doc(db, 'convites_acesso/novomentor@gmail.com'), { status: 'usado', usadoPor: uid });
+  return b.commit();
+};
+
+describe('convite de mentor', () => {
+  it('só o admin cria convite', async () => {
+    await assertSucceeds(setDoc(doc(como('admin1'), 'convites_acesso/novomentor@gmail.com'), convite()));
+    await assertFails(setDoc(doc(como('mentor1'), 'convites_acesso/outro@gmail.com'), convite({ email: 'outro@gmail.com' })));
+    await assertFails(setDoc(doc(como('liderA'), 'convites_acesso/outro@gmail.com'), convite({ email: 'outro@gmail.com' })));
+    await assertFails(setDoc(doc(googleVerificado('novato', 'novato@gmail.com'), 'convites_acesso/novato@gmail.com'), convite({ email: 'novato@gmail.com' })));
+  });
+  it('convite só serve para mentor (admin não convida admin por aqui)', async () => {
+    await assertFails(setDoc(doc(como('admin1'), 'convites_acesso/novomentor@gmail.com'), convite({ papel: 'admin' })));
+  });
+  it('mentor, líder e estranhos não leem convites', async () => {
+    await conviteCriado();
+    await assertFails(getDoc(doc(como('mentor1'), 'convites_acesso/novomentor@gmail.com')));
+    await assertFails(getDoc(doc(como('liderA'), 'convites_acesso/novomentor@gmail.com')));
+    await assertFails(getDoc(doc(googleVerificado('curioso', 'curioso@gmail.com'), 'convites_acesso/novomentor@gmail.com')));
+    await assertSucceeds(getDoc(doc(como('admin1'), 'convites_acesso/novomentor@gmail.com')));
+    await assertSucceeds(getDoc(doc(googleVerificado('novoM', 'novomentor@gmail.com'), 'convites_acesso/novomentor@gmail.com')));
+  });
+  it('a pessoa convidada entra pelo Google e vira mentor', async () => {
+    await conviteCriado();
+    await assertSucceeds(aceitar(googleVerificado('novoM', 'novomentor@gmail.com'), 'novoM'));
+    // e daí em diante já tem acesso
+    await assertSucceeds(getDoc(doc(googleVerificado('novoM', 'novomentor@gmail.com'), 'unidades/uniA')));
+  });
+  it('sem convite, ninguém se cria mentor', async () => {
+    await assertFails(aceitar(googleVerificado('novoM', 'novomentor@gmail.com'), 'novoM'));
+    await assertFails(setDoc(doc(googleVerificado('novoM', 'novomentor@gmail.com'), 'usuarios/novoM'), crachaDoConvite()));
+  });
+  it('convite de outro e-mail não serve', async () => {
+    await conviteCriado();
+    await assertFails(aceitar(googleVerificado('intruso', 'intruso@gmail.com'), 'intruso'));
+  });
+  it('e-mail não verificado ou login por senha não serve', async () => {
+    await conviteCriado();
+    const naoVerificado = env.authenticatedContext('novoM', { email: 'novomentor@gmail.com', firebase: { sign_in_provider: 'google.com' } }).firestore();
+    await assertFails(aceitar(naoVerificado, 'novoM'));
+    const porSenha = env.authenticatedContext('novoM', { email: 'novomentor@gmail.com', email_verified: true, firebase: { sign_in_provider: 'password' } }).firestore();
+    await assertFails(aceitar(porSenha, 'novoM'));
+  });
+  it('não aproveita o convite para virar admin nem mudar os dados', async () => {
+    await conviteCriado();
+    const db = googleVerificado('novoM', 'novomentor@gmail.com');
+    await assertFails(aceitar(db, 'novoM', crachaDoConvite({ role: 'admin' })));
+    await assertFails(aceitar(db, 'novoM', crachaDoConvite({ nome: 'Outro Nome' })));
+    await assertFails(aceitar(db, 'novoM', crachaDoConvite({ unidadeId: 'uniA' })));
+    await assertFails(aceitar(db, 'novoM', crachaDoConvite({ criadoPor: 'novoM' })));
+  });
+  it('precisa marcar o convite como usado (não serve duas vezes)', async () => {
+    await conviteCriado();
+    await assertFails(setDoc(doc(googleVerificado('novoM', 'novomentor@gmail.com'), 'usuarios/novoM'), crachaDoConvite()));
+  });
+  it('convite cancelado ou já usado não serve', async () => {
+    await conviteCriado({ status: 'cancelado' });
+    await assertFails(aceitar(googleVerificado('novoM', 'novomentor@gmail.com'), 'novoM'));
+    await conviteCriado({ status: 'usado', usadoPor: 'outro' });
+    await assertFails(aceitar(googleVerificado('novoM2', 'novomentor@gmail.com'), 'novoM2'));
+  });
+  it('admin cancela o convite (sem apagar)', async () => {
+    await conviteCriado();
+    await assertSucceeds(updateDoc(doc(como('admin1'), 'convites_acesso/novomentor@gmail.com'), { status: 'cancelado' }));
+    await assertFails(deleteDoc(doc(como('admin1'), 'convites_acesso/novomentor@gmail.com')));
+  });
+  it('a pessoa convidada não mexe no convite além de marcá-lo como usado', async () => {
+    await conviteCriado();
+    await assertFails(updateDoc(doc(googleVerificado('novoM', 'novomentor@gmail.com'), 'convites_acesso/novomentor@gmail.com'), { papel: 'admin' }));
+    await assertFails(updateDoc(doc(googleVerificado('novoM', 'novomentor@gmail.com'), 'convites_acesso/novomentor@gmail.com'), { status: 'usado', usadoPor: 'novoM' }));
   });
 });

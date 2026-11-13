@@ -73,5 +73,16 @@
     "quickEdit": "Click to edit quickly",
     "fullNamePlaceholder": "Full name",
     "passwordPlaceholder": "At least 6 characters"
+  },
+  "invite": {
+    "created": "Mentor registered! Tell them to sign in with \"Sign in with Google\" using this e-mail.",
+    "alreadyHasAccess": "This e-mail already has access with another role. To make them a mentor, change the role in Access Control.",
+    "cancelConfirm": "Cancel the registration of {{name}} ({{email}})? They will not be able to sign in as a mentor.",
+    "cancelError": "Error cancelling the registration.",
+    "cancel": "Cancel registration",
+    "pendingTitle": "Waiting for first sign-in ({{count}})",
+    "pendingHelp": "Mentors you already registered. As soon as each one signs in with Google using the e-mail below, they show up in the mentors list.",
+    "googleEmail": "Mentor's Google e-mail",
+    "googleEmailHelp": "No password: the mentor signs in with the \"Sign in with Google\" button using exactly this e-mail. Your registration is the approval."
   }
 }
