@@ -8,6 +8,9 @@ import {
 // No 1º acesso pelo Google com esse e-mail, a pessoa entra direto como mentor (pages/SolicitarAcesso).
 import { db } from "../../../services/firebase";
 import { registrarAuditoriaAcesso } from "../../../services/auditoriaAcessos";
+import { BotaoDocumento, DocumentoModal } from "../Documento/DocumentoModal";
+import CampoDocumento from "../../../components/acesso/CampoDocumento";
+import { documentoValido, limparDocumento, tipoDocumentoPadrao } from "../../../utils/documento";
 
 import { 
     ShieldCheck, Edit2, Trash2, AlertTriangle, CheckCircle2, 
@@ -122,7 +125,7 @@ const getPhonePlaceholder = (pais = PAIS_DEFAULT) => {
 
 export function MentoresTab() {
   const { userData } = useAuth();
-  const { t } = useTranslation(); // 🟢 TRADUTOR CONECTADO
+  const { t, i18n } = useTranslation(); // 🟢 TRADUTOR CONECTADO
   
   const role = useMemo(() => String(userData?.role || "").trim().toLowerCase(), [userData?.role]);
   const userId = useMemo(() => userData?.id || userData?.uid, [userData]);
@@ -153,6 +156,9 @@ export function MentoresTab() {
   const [pais, setPais] = useState(PAIS_DEFAULT); // 🟢 CAMPO INTERNACIONAL
   const [telefone, setTelefone] = useState("");
   const [status, setStatus] = useState("ativo");
+  const [docTipo, setDocTipo] = useState("cpf"); // documento opcional no convite de mentor novo
+  const [docNumero, setDocNumero] = useState("");
+  const [docAlvo, setDocAlvo] = useState(null); // { id, nome, email }: documento de um mentor em edição
 
   // Edição Inline do Telefone na Tabela
   const [editandoTelefoneId, setEditandoTelefoneId] = useState(null);
@@ -253,6 +259,7 @@ export function MentoresTab() {
   // ==========================================
   function abrirModalNovo() {
     setMentorEditando(null); 
+    setDocTipo(tipoDocumentoPadrao(i18n.language)); setDocNumero("");
     setNome(""); 
     setEmail("");
     setPais(PAIS_DEFAULT); // 🟢 RESET DO PAÍS
@@ -316,7 +323,11 @@ export function MentoresTab() {
         const jaTem = await getDocs(query(collection(db, "usuarios"), where("email", "==", emailGoogle), limit(1)));
         if (!jaTem.empty) { setSalvando(false); return setErro(t('mentorsTab.invite.alreadyHasAccess')); }
 
+        if (docNumero.trim() && !documentoValido(docTipo, docNumero)) { setSalvando(false); return setErro(t("document.errors.invalid")); }
+
         await setDoc(doc(db, "convites_acesso", emailGoogle), {
+          // Documento opcional: o mentor novo só o copia para a gaveta privada dele no 1º acesso (pages/InformarDocumento).
+          ...(docNumero.trim() ? { documento: { tipo: docTipo, numero: limparDocumento(docNumero) } } : {}),
           papel: "mentor",
           status: "pendente",
           email: emailGoogle,
@@ -598,6 +609,7 @@ export function MentoresTab() {
                     {/* AÇÕES */}
                     <td className="p-4 text-right">
                         <div className="flex gap-2 justify-end opacity-40 group-hover:opacity-100 transition-opacity">
+                            <BotaoDocumento onClick={() => setDocAlvo({ id: m.id, nome: m.nome, email: m.email })} />
                             <button onClick={() => abrirModalEditar(m)} className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-600 dark:hover:text-white transition-colors" title={t('mentorsTab.table.edit', 'Editar Completo')}>
                                 <Edit2 className="w-4 h-4"/>
                             </button>
@@ -617,6 +629,8 @@ export function MentoresTab() {
       </div>
 
       {/* MODAL */}
+      {docAlvo && <DocumentoModal alvo={docAlvo} onClose={() => setDocAlvo(null)} />}
+
       {modalAberto && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-slate-800 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-700">
@@ -703,6 +717,13 @@ export function MentoresTab() {
                       />
                   </div>
               </div>
+
+              {!mentorEditando && (
+                <div className="space-y-1">
+                  <CampoDocumento claro id="convite-documento" tipo={docTipo} onTipo={setDocTipo} valor={docNumero} onValor={setDocNumero} desabilitado={salvando} />
+                  <p className="text-[11px] text-slate-400 ml-1">{t("document.invite.hint")}</p>
+                </div>
+              )}
 
               <div>
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-1 block">{mentorEditando ? t('mentorsTab.modal.email', 'Login (E-mail)') : t('mentorsTab.invite.googleEmail')}</label>

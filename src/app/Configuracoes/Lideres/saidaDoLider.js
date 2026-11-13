@@ -20,7 +20,7 @@ export function professorDoLogin(uid, cracha, professores = []) {
 }
 
 // Lista de unidades do crachá exatamente como o banco a enxerga (o banco compara a lista inteira).
-function listaDoCracha(cracha) {
+export function listaDoCracha(cracha) {
   if (Array.isArray(cracha?.unidadeIds)) return cracha.unidadeIds.map(String);
   return cracha?.unidadeId ? [String(cracha.unidadeId)] : [];
 }

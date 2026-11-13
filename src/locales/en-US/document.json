@@ -1,0 +1,57 @@
+{
+  "label": "ID document",
+  "typeLabel": "Document type",
+  "types": {
+    "cpf": "CPF (Brazil)",
+    "dni": "DNI (Argentina)",
+    "ssn": "SSN (United States)"
+  },
+  "short": {
+    "cpf": "CPF",
+    "dni": "DNI",
+    "ssn": "SSN"
+  },
+  "placeholder": {
+    "cpf": "000.000.000-00",
+    "dni": "00.000.000",
+    "ssn": "000-00-0000"
+  },
+  "hint": "Required. It is kept in a protected area: only you, the administrator and your unit mentor can see it.",
+  "errors": {
+    "invalid": "Invalid document. Please check the numbers.",
+    "inUse": "This document is already registered for someone else. If this is a mistake, talk to your mentor.",
+    "save": "Could not save the document. Please try again."
+  },
+  "gate": {
+    "title": "Only your ID document is missing",
+    "desc": "To keep records accurate, we need your ID document (CPF in Brazil, DNI in Argentina, SSN in the United States). After you save, the system opens normally.",
+    "save": "Save and enter",
+    "checking": "Checking your record...",
+    "logout": "Sign out ({{email}})"
+  },
+  "modal": {
+    "title": "Document of {{name}}",
+    "current": "Current document",
+    "none": "Not provided yet",
+    "noAccess": "You do not have permission to see this document.",
+    "save": "Save document",
+    "saved": "Document saved.",
+    "edit": "Document",
+    "cancel": "Close",
+    "auditNew": "ID document provided.",
+    "auditChange": "ID document corrected.",
+    "auditType": "Type: {{type}}"
+  },
+  "search": {
+    "title": "Find a record by document",
+    "placeholder": "Type the document",
+    "button": "Search",
+    "notFound": "No record with this document.",
+    "found": "Record: {{name}}",
+    "unknownName": "Person without a name in the system"
+  },
+  "invite": {
+    "label": "Document (optional)",
+    "hint": "If you know it, fill it in now. Otherwise the person fills it in at first access."
+  }
+}

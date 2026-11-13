@@ -3,7 +3,7 @@ import { useAuth } from "../contexts/AuthContext";
 import i18n from "../i18n";
 
 export default function PrivateRoute({ children }) {
-  const { userData, loading, aguardandoAprovacao, precisaAtualizarCadastro } = useAuth();
+  const { userData, loading, aguardandoAprovacao, precisaAtualizarCadastro, precisaDocumento } = useAuth();
 
   // 1) enquanto carrega o "crachá" (Firestore), NÃO redireciona
   if (loading) return <div style={{ padding: 20 }}>{i18n.t('layout.loading')}</div>;
@@ -16,6 +16,9 @@ export default function PrivateRoute({ children }) {
 
   // 4) login antigo (e-mail e senha) de líder/unidade/mentor = primeiro atualiza o cadastro e conecta o Google
   if (precisaAtualizarCadastro) return <Navigate to="/atualizar-cadastro" replace />;
+
+  // 5) cadastro atualizado, mas ainda sem o documento de identificação (CPF/DNI/SSN)
+  if (precisaDocumento) return <Navigate to="/informar-documento" replace />;
 
   return children;
 }

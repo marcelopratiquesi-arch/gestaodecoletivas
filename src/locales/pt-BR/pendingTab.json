@@ -25,5 +25,31 @@
   "alsoTeacher": "Disse que também dá aulas",
   "leftOut": "Estas unidades ficaram de fora: {{units}}.\n\nO mentor de cada uma pode incluir a pessoa depois pela aba Líderes.",
   "approveMentorConfirm": "Aprovar {{name}} como MENTOR?",
-  "moveUnitsConfirm": "Passar também estas unidades para o mentor {{name}}?\n\n{{units}}\n\nOK = passar · Cancelar = aprovar sem mexer nas unidades"
+  "moveUnitsConfirm": "Passar também estas unidades para o mentor {{name}}?\n\n{{units}}\n\nOK = passar · Cancelar = aprovar sem mexer nas unidades",
+  "extra": {
+    "title": "Pedidos de outra unidade",
+    "subtitle": "Líderes que pediram para liderar mais uma unidade. Cada mentor aprova as unidades dele.",
+    "wants": "Quer liderar também:",
+    "alreadyLeads": "Já lidera: {{units}}",
+    "refusePrompt": "Recusar o pedido de {{name}} para liderar {{unit}}?\n\nSe quiser, escreva o motivo:",
+    "alreadyLeader": "Esta pessoa já era líder de {{unit}}. O pedido foi fechado."
+  },
+  "exits": {
+    "exitsTitle": "Saídas de acesso",
+    "exitsSubtitle": "Pessoas que disseram que não fazem mais parte. O acesso delas já foi desligado. Se foi engano, desfaça.",
+    "leaderLeft": "Saiu da liderança",
+    "mentorLeft": "Saiu da função de mentor",
+    "keptProfessor": "Continua como professor",
+    "blocked": "Acesso desligado",
+    "undo": "Desfazer",
+    "ack": "Ciente",
+    "undoConfirm": "Desfazer a saída de {{name}}? A pessoa volta a ter o acesso de antes.",
+    "undoMentorOnlyAdmin": "Só o administrador desfaz a saída de um mentor.",
+    "undone": "Saída desfeita.",
+    "undoneBusy": "Saída desfeita, mas estas unidades já têm outros líderes e ficaram de fora: {{units}}. Inclua a pessoa depois pela aba Líderes.",
+    "undoError": "Não foi possível desfazer.",
+    "ackError": "Não foi possível dar ciência.",
+    "onlyAdmin": "Só o administrador trata a saída de mentor.",
+    "mentorUnits": "Unidades dele (precisam de novo mentor):"
+  }
 }

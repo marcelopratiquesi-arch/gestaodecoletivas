@@ -15,6 +15,8 @@ const entrouPeloGoogle = (firebaseUser) => temProvedor(firebaseUser, "google.com
 // Perfis que já são obrigados a trocar o login antigo (e-mail e senha) pelo login pessoal do Google.
 // Professores e admin ficam para uma próxima etapa.
 const PAPEIS_QUE_MIGRAM = ["lider", "unidade", "mentor"];
+// Quem precisa informar o documento de identificação (CPF/DNI/SSN). Professor entra numa etapa futura.
+const PAPEIS_COM_DOCUMENTO = ["lider", "unidade", "mentor", "admin", "administrador", "master"];
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);          // firebaseUser
@@ -142,6 +144,11 @@ export function AuthProvider({ children }) {
       precisaAtualizarCadastro: !!userData
         && PAPEIS_QUE_MIGRAM.includes(String(userData.role || "").trim().toLowerCase())
         && userData.loginGoogle !== true,
+      // Já atualizou o cadastro mas ainda não informou o documento: tela obrigatória (ver PrivateRoute e pages/InformarDocumento).
+      precisaDocumento: !!userData
+        && PAPEIS_COM_DOCUMENTO.includes(String(userData.role || "").trim().toLowerCase())
+        && userData.documentoOk !== true
+        && !(PAPEIS_QUE_MIGRAM.includes(String(userData.role || "").trim().toLowerCase()) && userData.loginGoogle !== true),
       role: userData?.role || null,
       isAdmin: userData?.role === "admin",
       isMentor: userData?.role === "mentor",

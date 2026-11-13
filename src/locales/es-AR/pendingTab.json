@@ -25,5 +25,31 @@
   "alsoTeacher": "Dijo que también da clases",
   "leftOut": "Estas sedes quedaron afuera: {{units}}.\n\nEl mentor de cada una puede agregar a la persona después en la pestaña Líderes.",
   "approveMentorConfirm": "¿Aprobar a {{name}} como MENTOR?",
-  "moveUnitsConfirm": "¿Pasar también estas sedes al mentor {{name}}?\n\n{{units}}\n\nAceptar = pasar · Cancelar = aprobar sin cambiar las sedes"
+  "moveUnitsConfirm": "¿Pasar también estas sedes al mentor {{name}}?\n\n{{units}}\n\nAceptar = pasar · Cancelar = aprobar sin cambiar las sedes",
+  "extra": {
+    "title": "Pedidos de otra sede",
+    "subtitle": "Líderes que pidieron liderar una sede más. Cada mentor aprueba las sedes suyas.",
+    "wants": "Quiere liderar también:",
+    "alreadyLeads": "Ya lidera: {{units}}",
+    "refusePrompt": "¿Rechazar el pedido de {{name}} para liderar {{unit}}?\n\nSi querés, escribí el motivo:",
+    "alreadyLeader": "Esta persona ya era líder de {{unit}}. El pedido se cerró."
+  },
+  "exits": {
+    "exitsTitle": "Salidas de acceso",
+    "exitsSubtitle": "Personas que dijeron que ya no forman parte. Su acceso ya está desactivado. Si fue un error, deshacé.",
+    "leaderLeft": "Dejó el liderazgo",
+    "mentorLeft": "Dejó la función de mentor",
+    "keptProfessor": "Sigue como profesor",
+    "blocked": "Acceso desactivado",
+    "undo": "Deshacer",
+    "ack": "Enterado",
+    "undoConfirm": "¿Deshacer la salida de {{name}}? La persona recupera el acceso anterior.",
+    "undoMentorOnlyAdmin": "Solo el administrador deshace la salida de un mentor.",
+    "undone": "Salida deshecha.",
+    "undoneBusy": "Salida deshecha, pero estas unidades ya tienen otros líderes y quedaron afuera: {{units}}. Incluí a la persona después desde la pestaña Líderes.",
+    "undoError": "No se pudo deshacer.",
+    "ackError": "No se pudo marcar como enterado.",
+    "onlyAdmin": "Solo el administrador trata la salida de un mentor.",
+    "mentorUnits": "Sus unidades (necesitan nuevo mentor):"
+  }
 }

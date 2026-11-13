@@ -25,5 +25,31 @@
   "alsoTeacher": "Says they also teach",
   "leftOut": "These units were left out: {{units}}.\n\nEach unit's mentor can add the person later in the Leaders tab.",
   "approveMentorConfirm": "Approve {{name}} as MENTOR?",
-  "moveUnitsConfirm": "Also move these units to mentor {{name}}?\n\n{{units}}\n\nOK = move · Cancel = approve without changing the units"
+  "moveUnitsConfirm": "Also move these units to mentor {{name}}?\n\n{{units}}\n\nOK = move · Cancel = approve without changing the units",
+  "extra": {
+    "title": "Requests for another unit",
+    "subtitle": "Leaders who asked to lead one more unit. Each mentor approves their own units.",
+    "wants": "Also wants to lead:",
+    "alreadyLeads": "Already leads: {{units}}",
+    "refusePrompt": "Refuse {{name}}'s request to lead {{unit}}?\n\nIf you want, write the reason:",
+    "alreadyLeader": "This person was already a leader of {{unit}}. The request was closed."
+  },
+  "exits": {
+    "exitsTitle": "Access exits",
+    "exitsSubtitle": "People who said they are no longer part of it. Their access is already off. If it was a mistake, undo it.",
+    "leaderLeft": "Left leadership",
+    "mentorLeft": "Left the mentor role",
+    "keptProfessor": "Continues as a teacher",
+    "blocked": "Access turned off",
+    "undo": "Undo",
+    "ack": "Noted",
+    "undoConfirm": "Undo {{name}}'s exit? The person gets the previous access back.",
+    "undoMentorOnlyAdmin": "Only the administrator can undo a mentor's exit.",
+    "undone": "Exit undone.",
+    "undoneBusy": "Exit undone, but these units already have other leaders and were left out: {{units}}. Add the person later in the Leaders tab.",
+    "undoError": "Could not undo.",
+    "ackError": "Could not mark as noted.",
+    "onlyAdmin": "Only the administrator handles a mentor exit.",
+    "mentorUnits": "Their units (need a new mentor):"
+  }
 }
