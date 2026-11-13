@@ -4,8 +4,12 @@
 //   - só entra pelo Google (a senha antiga é removida da conta, então o login antigo deixa de existir);
 //   - o login de UNIDADE vira o login pessoal do LÍDER daquela unidade (mesma conta, papel "lider"),
 //     e a unidade fica marcada "a conferir" para o mentor/admin confirmar quem assumiu.
-// Quem responde que NÃO é o líder (ou não é mais mentor) não segue: a tela pede para falar com o
-// mentor / Gestor das Coletivas (a conta não muda). O acesso pessoal de professor vem numa 2ª etapa.
+// Quem responde "não sou mais da unidade" / "não sou mais mentor" confirma a saída: o acesso é desligado NA HORA
+// (ver Configuracoes/Lideres/saidaDaFuncao.js), a unidade fica sem líder e o mentor (ou o admin) é avisado em
+// Pendências, onde pode desfazer. Líder que também é professor pode sair só da liderança e continuar professor.
+// Líder que também comanda OUTRAS unidades escolhe no filtro do passo "Seus dados": cada uma vira um pedido
+// (pedidos_unidade) que o mentor daquela unidade aprova em Pendências (ver Lideres/pedidoOutraUnidade.js).
+// "Agora só dou aulas" ainda não tem acesso pessoal (vem numa etapa futura): a tela orienta a falar com o mentor.
 // Enquanto não concluir, a pessoa não vê nenhuma tela do sistema (ver PrivateRoute).
 import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
@@ -17,9 +21,12 @@ import { auth, db } from "../services/firebase";
 import { useAuth } from "../contexts/AuthContext";
 import { useCatalogs } from "../contexts/CatalogContext";
 import { ehLider, unidadesDoLider } from "../permissions";
+import { professorLigadoAoLogin, sairDaFuncao } from "../app/Configuracoes/Lideres/saidaDaFuncao";
+import { pedirOutrasUnidades, MAX_UNIDADES_EXTRAS } from "../app/Configuracoes/Lideres/pedidoOutraUnidade";
 import {
-  FundoAcesso, Marca, Passos, CartaoEscolha, FuncaoEscolhida, CaixaAjuda, BotaoVermelho, BotaoLink, IconeGoogle, classeRotulo,
+  FundoAcesso, Marca, Passos, CartaoEscolha, FuncaoEscolhida, SeletorUnidades, CaixaAjuda, BotaoVermelho, BotaoLink, IconeGoogle, classeRotulo,
 } from "../components/acesso/AcessoUI";
+import { useUnidadesPublicas } from "../components/acesso/acessoDados";
 
 const temGoogle = (u) => (u?.providerData || []).some((p) => p.providerId === "google.com");
 const emailDoGoogle = (u) => (u?.providerData || []).find((p) => p.providerId === "google.com")?.email || "";
@@ -50,6 +57,8 @@ export default function AtualizarCadastro() {
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState("");
   const [emailFinal, setEmailFinal] = useState("");
+  const [saidaTipo, setSaidaTipo] = useState(""); // líder que também é professor: "professor" | "tudo"
+  const [saiu, setSaiu] = useState(""); // depois de confirmar a saída: "bloqueado" | "professor" | "mentor"
 
   // Líder: confere a unidade (1 leitura) para mostrar o nome e saber se ela já tem outro líder.
   useEffect(() => {
@@ -62,12 +71,40 @@ export default function AtualizarCadastro() {
     return () => { vivo = false; };
   }, [uid, precisaAtualizarCadastro, souLider, unidadeId]);
 
+  // Líder que também comanda OUTRAS unidades: escolhe no filtro; cada uma vira um pedido para o mentor dela (Pendências).
+  const [extrasIds, setExtrasIds] = useState([]);
+  const unidadesPublicas = useUnidadesPublicas(precisaAtualizarCadastro && souLider && passo === "dados");
+  const jaLidera = souLider ? unidadesDoLider(userData) : [];
+  const unidadesParaPedir = unidadesPublicas ? unidadesPublicas.filter((u) => !jaLidera.includes(u.id)) : null;
+
   // Mentor e líder já cadastrado com nome próprio: o formulário já vem preenchido.
   useEffect(() => {
     if (!userData) return;
     if (!eraLoginDeUnidade) setNome((v) => v || userData.nome || "");
     setTelefone((v) => v || userData.telefone || "");
   }, [userData, eraLoginDeUnidade]);
+
+  // Líder que também é professor (cadastro de professor ligado a este login): pode continuar como professor.
+  const professorId = souLider && !eraLoginDeUnidade ? professorLigadoAoLogin(uid, catalogs?.professores || []) : null;
+
+  async function confirmarSaida() {
+    setErro("");
+    if (professorId && !saidaTipo) return setErro(t("updateProfile.exit.professorQ"));
+    setSalvando(true);
+    try {
+      const resultado = await sairDaFuncao({
+        uid, cracha: userData, email: userData.email || userData.emailAuth || user.email || "",
+        unidades: catalogs?.unidades || [], professores: catalogs?.professores || [],
+        continuaProfessor: !!professorId && saidaTipo === "professor",
+      });
+      setSaiu(resultado);
+    } catch (e) {
+      console.error(e);
+      setErro(t("updateProfile.exit.error"));
+    } finally {
+      setSalvando(false);
+    }
+  }
 
   async function concluir() {
     setErro("");
@@ -108,6 +145,14 @@ export default function AtualizarCadastro() {
           ...(assumindoAgora ? { liderDesde: serverTimestamp(), liderAConferir: true } : {}),
           // O login antigo da unidade É esta conta: ele deixa de existir (agora é o login pessoal do líder).
           ...(unidade.uidLogin === uid ? { loginAntigoDesligado: true, loginAntigoDesligadoEm: serverTimestamp() } : {}),
+        });
+      }
+      // Pedidos de outras unidades (só quem é líder): o mentor de cada uma aprova em Pendências.
+      if (souLider && extrasIds.length) {
+        const nomes = Object.fromEntries((unidadesPublicas || []).map((u) => [u.id, u.nome]));
+        pedirOutrasUnidades(batch, {
+          uid, nome: nomeLimpo, email, telefone: telefoneLimpo, unidadeIds: extrasIds, nomes,
+          atuais: unidadesDoLider(userData).map((id) => (catalogs?.unidades || []).find((u) => u.id === id)?.nome || (id === unidade?.id ? unidade.nome : id)),
         });
       }
       await batch.commit();
@@ -167,6 +212,23 @@ export default function AtualizarCadastro() {
     </div>
   );
 
+  // Saída registrada: o acesso já foi desligado. O botão recarrega o crachá (quem ficou sem acesso é desconectado).
+  if (saiu) {
+    return (
+      <FundoAcesso>
+        <Marca compacta />
+        <div className="text-center space-y-4">
+          <div className="mx-auto w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center">
+            <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+          </div>
+          <h2 className="text-xl font-black text-white">{t("updateProfile.exit.doneTitle")}</h2>
+          <p className="text-sm text-zinc-400">{t(saiu === "professor" ? "updateProfile.exit.doneProfessor" : "updateProfile.exit.doneBlocked")}</p>
+          <BotaoVermelho type="button" onClick={() => recarregarCracha()}>{t("updateProfile.exit.doneButton")}</BotaoVermelho>
+        </div>
+      </FundoAcesso>
+    );
+  }
+
   // Líder sem unidade válida, ou unidade que já tem OUTRO líder: este login não segue adiante.
   const outroLider = souLider && unidade && unidade.liderUid && unidade.liderUid !== uid && !souSegundoLider;
   if (souLider && (unidade === null || outroLider)) {
@@ -225,7 +287,8 @@ export default function AtualizarCadastro() {
   // ===== 2. CONFIRMAR A FUNÇÃO =====
   if (passo === "funcao") {
     const opcoes = perfil === "mentor" ? ["segue", "saiu"] : ["segue", "professor", "saiu"];
-    const naoSegue = resposta && resposta !== "segue";
+    const saindo = resposta === "saiu";
+    const naoSegue = resposta && resposta !== "segue" && !saindo; // "professor": só orienta, não muda a conta
     return (
       <FundoAcesso>
         <Marca compacta />
@@ -242,6 +305,30 @@ export default function AtualizarCadastro() {
             />
           ))}
         </div>
+        {saindo && (
+          <div className="mt-4 space-y-3">
+            <div className="flex gap-2 text-xs leading-relaxed text-amber-200 bg-amber-500/10 border border-amber-500/30 rounded-xl px-3 py-2.5">
+              <Info className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
+              <span>
+                {t(perfil === "mentor" ? "updateProfile.exit.mentorWarn" : "updateProfile.exit.leaderWarn")}
+                {perfil !== "mentor" && nomesUnidades.length > 1 && <> {t("updateProfile.exit.manyUnits", { units: nomesUnidades.join(", ") })}</>}
+              </span>
+            </div>
+            {professorId && (
+              <div className="space-y-2">
+                <p className="text-sm font-bold text-white">{t("updateProfile.exit.professorQ")}</p>
+                <CartaoEscolha ativo={saidaTipo === "professor"} onClick={() => setSaidaTipo("professor")}
+                  titulo={t("updateProfile.exit.keepProfessor")} descricao={t("updateProfile.exit.keepProfessorDesc")} />
+                <CartaoEscolha ativo={saidaTipo === "tudo"} onClick={() => setSaidaTipo("tudo")}
+                  titulo={t("updateProfile.exit.leaveAll")} descricao={t("updateProfile.exit.leaveAllDesc")} />
+              </div>
+            )}
+            {erroBox}
+            <BotaoVermelho type="button" disabled={salvando || (!!professorId && !saidaTipo)} onClick={confirmarSaida}>
+              {salvando ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : t("updateProfile.exit.confirm")}
+            </BotaoVermelho>
+          </div>
+        )}
         {naoSegue && (
           <div className="mt-4 flex gap-2 text-xs leading-relaxed text-amber-200 bg-amber-500/10 border border-amber-500/30 rounded-xl px-3 py-2.5">
             <Info className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
@@ -249,10 +336,10 @@ export default function AtualizarCadastro() {
           </div>
         )}
         <div className="mt-5 space-y-2">
-          {!naoSegue && (
+          {!naoSegue && !saindo && (
             <BotaoVermelho type="button" disabled={!resposta} onClick={() => setPasso("dados")}>{t("access.continue")}</BotaoVermelho>
           )}
-          {naoSegue ? sair : <BotaoLink onClick={() => setPasso("aviso")}>{t("access.back")}</BotaoLink>}
+          {naoSegue ? sair : saindo ? <BotaoLink onClick={() => { setResposta(""); setErro(""); }} disabled={salvando}>{t("access.back")}</BotaoLink> : <BotaoLink onClick={() => setPasso("aviso")}>{t("access.back")}</BotaoLink>}
         </div>
         {ajuda}
       </FundoAcesso>
@@ -299,6 +386,14 @@ export default function AtualizarCadastro() {
                   <span key={n} className="inline-flex rounded-full border border-red-600 bg-red-600/10 text-red-100 text-xs font-bold px-2.5 py-1">{n}</span>
                 ))}
               </div>
+            </div>
+          )}
+          {souLider && (
+            <div className="space-y-1">
+              <SeletorUnidades
+                unidades={unidadesParaPedir} selecionadas={extrasIds} onChange={setExtrasIds} max={MAX_UNIDADES_EXTRAS}
+                rotulo={t("updateProfile.data.moreUnitsLabel")}
+              />
               <p className="text-[11px] text-zinc-500 ml-1">{t("updateProfile.data.moreUnitsHint")}</p>
             </div>
           )}
@@ -356,6 +451,11 @@ export default function AtualizarCadastro() {
           <p><span className="text-zinc-500">{t("access.role")}:</span> <b>{textoFuncao}</b></p>
           <p className="break-all"><span className="text-zinc-500">{t("updateProfile.done.login")}:</span> <b>{emailFinal}</b></p>
         </div>
+        {extrasIds.length > 0 && (
+          <div className="text-left text-xs text-zinc-300 bg-blue-500/10 border border-blue-500/30 rounded-xl px-3 py-2.5">
+            {t("updateProfile.done.extraRequested")}
+          </div>
+        )}
         {eraLoginDeUnidade && (
           <div className="text-left text-xs text-zinc-300 bg-blue-500/10 border border-blue-500/30 rounded-xl px-3 py-2.5">
             {t("updateProfile.done.mentorChecks", { unit: unidade?.nome || "" })}

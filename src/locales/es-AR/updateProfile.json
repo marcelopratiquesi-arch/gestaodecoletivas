@@ -76,16 +76,15 @@
       "saiuDesc": "No seguís con este acceso."
     },
     "stop": {
-      "professor": "No sigas con este acceso. Avisale al líder de la sede o a tu mentor: él ajusta tu acceso. El acceso personal del profesor llega pronto.",
-      "saiu": "No sigas con este acceso. Avisale a tu mentor para que lo desactive.",
-      "saiuMentor": "No sigas con este acceso. Avisale al Gestor de Colectivas para que lo desactive."
+      "professor": "No sigas con este acceso. Avisale al líder de la sede o a tu mentor: él ajusta tu acceso. El acceso personal del profesor llega pronto."
     }
   },
   "data": {
     "title": "Revisá tus datos",
     "desc": "Ya completamos con lo que tiene el sistema. Corregí lo que esté mal.",
     "unitNameHint": "Antes aparecía el nombre de la sede. Ahora es tu nombre.",
-    "moreUnitsHint": "¿Liderás otra sede también? Pedile a tu mentor que la agregue."
+    "moreUnitsLabel": "¿Liderás otra sede también? (opcional)",
+    "moreUnitsHint": "Cada sede que elijas se vuelve un pedido: su mentor lo aprueba. Tu mentor también puede sumarte después."
   },
   "google": {
     "title": "Conectá tu cuenta de Google",
@@ -98,6 +97,25 @@
     "desc": "De ahora en adelante, entrá con el botón \"Ingresar con Google\".",
     "login": "Acceso",
     "enter": "Entrar al sistema",
+    "extraRequested": "Se enviaron los pedidos de las otras sedes. Cuando el mentor de cada una apruebe, te van a aparecer.",
     "mentorChecks": "Tu mentor va a confirmar que sos el líder de la sede {{unit}}."
+  },
+  "exit": {
+    "leaderTitle": "Dejar el liderazgo",
+    "leaderWarn": "Al confirmar, tu acceso se desactiva ahora. La unidad queda sin líder y se avisa a tu mentor. Si fue un error, él puede deshacerlo.",
+    "manyUnits": "Dejás todas las unidades que liderás: {{units}}.",
+    "professorQ": "También sos profesor. ¿Qué preferís?",
+    "keepProfessor": "Dejar el liderazgo y seguir como profesor",
+    "keepProfessorDesc": "Dejás de ser líder, pero seguís entrando para ver tus clases.",
+    "leaveAll": "Dejar todo",
+    "leaveAllDesc": "Perdés todo el acceso al sistema.",
+    "mentorTitle": "Dejar la función de mentor",
+    "mentorWarn": "Al confirmar, tu acceso de mentor se desactiva ahora y se avisa al Gestor de las Colectivas (administrador). Él reorganiza tus unidades. Si fue un error, él puede deshacerlo.",
+    "confirm": "Confirmar salida",
+    "error": "No se pudo registrar la salida. Probá de nuevo.",
+    "doneTitle": "Salida registrada",
+    "doneBlocked": "Tu acceso fue desactivado. ¡Gracias por tu trabajo!",
+    "doneProfessor": "Dejaste el liderazgo y seguís como profesor.",
+    "doneButton": "Continuar"
   }
 }

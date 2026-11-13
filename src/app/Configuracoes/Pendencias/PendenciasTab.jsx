@@ -3,10 +3,12 @@
 //   mentor ficam de fora e ele pode acrescentar depois pela aba Líderes). Cada unidade tem até 2 líderes:
 //   se a vaga estiver ocupada, o sistema pergunta se entra como 2º líder ou se substitui.
 // - Pedido de MENTOR: só o admin aprova; pode também passar as unidades escolhidas para o mentor novo.
+// - Avisos de SAÍDA ("não sou mais da unidade" / "não sou mais mentor"): o acesso da pessoa já foi desligado;
+//   o mentor da unidade ou o admin desfaz (volta tudo como era) ou dá ciência. Saída de mentor: só o admin.
 import { useState } from "react";
 import { doc, writeBatch, serverTimestamp, updateDoc } from "firebase/firestore";
 import { useTranslation } from "react-i18next";
-import { Inbox, Check, X, Loader2, Building2, Phone, Mail, User, Clock, ShieldCheck, Dumbbell } from "lucide-react";
+import { Inbox, Check, X, Loader2, Building2, Phone, Mail, User, Clock, ShieldCheck, Dumbbell, UserMinus, Undo2 } from "lucide-react";
 import { db } from "../../../services/firebase";
 import { registrarAuditoriaAcesso } from "../../../services/auditoriaAcessos";
 import { publicarUnidades } from "../../../services/vitrinePublica";
@@ -14,6 +16,8 @@ import { useAuth } from "../../../contexts/AuthContext";
 import { useCatalogs } from "../../../contexts/CatalogContext";
 import { usePedidosPendentes, idsDoPedido } from "./usePedidosPendentes";
 import { tirarLiderDaUnidade, dadosDaVaga } from "../Lideres/saidaDoLider";
+import { desfazerSaida, darCienciaDaSaida } from "../Lideres/saidaDaFuncao";
+import { aprovarPedidoUnidade, recusarPedidoUnidade } from "../Lideres/pedidoOutraUnidade";
 
 const formatarData = (ts, idioma) => {
   const d = ts?.toDate?.();
@@ -24,7 +28,7 @@ export function PendenciasTab() {
   const { t, i18n } = useTranslation();
   const { userData } = useAuth();
   const { catalogs } = useCatalogs();
-  const { pedidos, carregando } = usePedidosPendentes();
+  const { pedidos, saidas, extras, carregando } = usePedidosPendentes();
   const [processando, setProcessando] = useState(null);
 
   const role = String(userData?.role || "").trim().toLowerCase();
@@ -153,6 +157,70 @@ export function PendenciasTab() {
     }
   }
 
+  async function desfazer(a) {
+    if (a.papel === "mentor" && !souAdmin) return alert(t("pendingTab.exits.undoMentorOnlyAdmin"));
+    if (!window.confirm(t("pendingTab.exits.undoConfirm", { name: a.nome }))) return;
+    setProcessando(a.id);
+    try {
+      const { ocupadas } = await desfazerSaida({ aviso: a, quem: { id: userId, nome: meuNome, cracha: userData } });
+      alert(ocupadas.length ? t("pendingTab.exits.undoneBusy", { units: ocupadas.join(", ") }) : t("pendingTab.exits.undone"));
+    } catch (e) {
+      console.error(e);
+      alert(t("pendingTab.exits.undoError") + " " + (e.message || ""));
+    } finally {
+      setProcessando(null);
+    }
+  }
+
+  async function darCiencia(a) {
+    if (a.papel === "mentor" && !souAdmin) return alert(t("pendingTab.exits.onlyAdmin"));
+    setProcessando(a.id);
+    try {
+      await darCienciaDaSaida({ aviso: a, quem: { id: userId, nome: meuNome } });
+    } catch (e) {
+      console.error(e);
+      alert(t("pendingTab.exits.ackError"));
+    } finally {
+      setProcessando(null);
+    }
+  }
+
+  // Pedido de OUTRA unidade (líder que já tem acesso e quer liderar mais uma).
+  async function aprovarExtra(x) {
+    const unidade = todasUnidades.find((u) => u.id === x.unidadeId);
+    if (!unidade) return alert(t("pendingTab.unitNotFound"));
+    if (!souAdmin && unidade.mentorId !== userId) return alert(t("pendingTab.notYourUnit"));
+    const escolha = escolherVaga(unidade, { id: x.uid, nome: x.nome });
+    if (!escolha) return;
+    setProcessando(x.id);
+    try {
+      const r = await aprovarPedidoUnidade({
+        pedido: x, unidade, ...escolha, professores: catalogs?.professores || [],
+        quem: { id: userId, nome: meuNome, cracha: userData },
+      });
+      if (r === "jaEra") alert(t("pendingTab.extra.alreadyLeader", { unit: unidade.nome }));
+    } catch (e) {
+      console.error(e);
+      alert(t("pendingTab.approveError") + " " + (e.message || ""));
+    } finally {
+      setProcessando(null);
+    }
+  }
+
+  async function recusarExtra(x) {
+    const motivo = window.prompt(t("pendingTab.extra.refusePrompt", { name: x.nome, unit: x.unidadeNome }), "");
+    if (motivo === null) return;
+    setProcessando(x.id);
+    try {
+      await recusarPedidoUnidade({ pedido: x, motivo, quem: { id: userId, nome: meuNome, cracha: userData } });
+    } catch (e) {
+      console.error(e);
+      alert(t("pendingTab.refuseError"));
+    } finally {
+      setProcessando(null);
+    }
+  }
+
   async function recusar(p) {
     const motivo = window.prompt(t("pendingTab.refusePrompt", { name: p.nome }), "");
     if (motivo === null) return;
@@ -181,9 +249,106 @@ export function PendenciasTab() {
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">{t("pendingTab.subtitle")}</p>
       </div>
 
+      {extras.length > 0 && (
+        <div className="space-y-3">
+          <div>
+            <h3 className="text-lg font-black text-slate-800 dark:text-white flex items-center gap-2"><Building2 className="w-5 h-5 text-red-500" /> {t("pendingTab.extra.title")}</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{t("pendingTab.extra.subtitle")}</p>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            {extras.map((x) => {
+              const ocupado = processando === x.id;
+              const unidade = todasUnidades.find((u) => u.id === x.unidadeId);
+              const liderAtual = unidade?.liderUid && unidade.liderUid !== x.uid ? (unidade.liderNome || unidade.liderEmail) : null;
+              return (
+                <div key={x.id} className="p-5 rounded-2xl border border-red-200 dark:border-red-900/60 bg-white dark:bg-slate-800 shadow-sm space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-black text-slate-800 dark:text-white flex items-center gap-2"><User className="w-4 h-4 text-blue-500" /> {x.nome}</p>
+                      <p className="text-xs text-slate-500 flex items-center gap-2 mt-1 break-all"><Mail className="w-3 h-3 shrink-0" /> {x.email}</p>
+                      <p className="text-xs text-slate-500 flex items-center gap-2 mt-1"><Phone className="w-3 h-3" /> {x.telefone}</p>
+                    </div>
+                    <span className="text-[10px] text-slate-400 flex items-center gap-1 whitespace-nowrap"><Clock className="w-3 h-3" /> {formatarData(x.criadoEm, i18n.language)}</span>
+                  </div>
+                  <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 text-sm space-y-1">
+                    <p className="text-[10px] font-black uppercase text-slate-400">{t("pendingTab.extra.wants")}</p>
+                    <p className="flex items-center gap-2 font-bold text-slate-700 dark:text-slate-200"><Building2 className="w-4 h-4 text-slate-400 shrink-0" /> {unidade?.nome || x.unidadeNome || x.unidadeId}</p>
+                    {!unidade && <p className="text-xs text-red-500 font-bold ml-6">{t("pendingTab.unitNotFound")}</p>}
+                    {liderAtual && <p className="text-xs text-amber-600 dark:text-amber-400 font-bold ml-6">{t("pendingTab.hasLeader", { name: liderAtual })}</p>}
+                    {(x.unidadesAtuais || []).length > 0 && (
+                      <p className="text-xs text-slate-500 pt-1">{t("pendingTab.extra.alreadyLeads", { units: x.unidadesAtuais.join(", ") })}</p>
+                    )}
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <button onClick={() => recusarExtra(x)} disabled={ocupado} className="px-4 py-2 rounded-lg text-xs font-black uppercase bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200 hover:bg-red-50 hover:text-red-600 flex items-center gap-1.5 disabled:opacity-50">
+                      <X className="w-3.5 h-3.5" /> {t("pendingTab.refuse")}
+                    </button>
+                    <button onClick={() => aprovarExtra(x)} disabled={ocupado || !unidade} className="px-4 py-2 rounded-lg text-xs font-black uppercase bg-emerald-500 hover:bg-emerald-600 text-white flex items-center gap-1.5 disabled:opacity-50">
+                      {ocupado ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />} {t("pendingTab.approve")}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {saidas.length > 0 && (
+        <div className="space-y-3">
+          <div>
+            <h3 className="text-lg font-black text-slate-800 dark:text-white flex items-center gap-2"><UserMinus className="w-5 h-5 text-amber-500" /> {t("pendingTab.exits.exitsTitle")}</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{t("pendingTab.exits.exitsSubtitle")}</p>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            {saidas.map((a) => {
+              const ehMentor = a.papel === "mentor";
+              const ocupado = processando === a.id;
+              const semPermissao = ehMentor && !souAdmin;
+              return (
+                <div key={a.id} className="p-5 rounded-2xl border border-amber-200 dark:border-amber-800 bg-white dark:bg-slate-800 shadow-sm space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-black text-slate-800 dark:text-white flex items-center gap-2"><User className="w-4 h-4 text-blue-500" /> {a.nome}</p>
+                      <p className="text-xs text-slate-500 flex items-center gap-2 mt-1 break-all"><Mail className="w-3 h-3 shrink-0" /> {a.email}</p>
+                      <p className="text-xs text-slate-500 flex items-center gap-2 mt-1"><Phone className="w-3 h-3" /> {a.telefone}</p>
+                    </div>
+                    <div className="flex flex-col items-end gap-1.5">
+                      <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
+                        {t(ehMentor ? "pendingTab.exits.mentorLeft" : "pendingTab.exits.leaderLeft")}
+                      </span>
+                      <span className="text-[10px] text-slate-400 flex items-center gap-1 whitespace-nowrap"><Clock className="w-3 h-3" /> {formatarData(a.criadoEm, i18n.language)}</span>
+                    </div>
+                  </div>
+                  <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 text-sm space-y-1">
+                    {ehMentor
+                      ? <p className="text-[10px] font-black uppercase text-slate-400">{t("pendingTab.exits.mentorUnits")}</p>
+                      : null}
+                    {(a.unidadeNomes || []).map((n) => (
+                      <p key={n} className="flex items-center gap-2 font-bold text-slate-700 dark:text-slate-200"><Building2 className="w-4 h-4 text-slate-400 shrink-0" /> {n}</p>
+                    ))}
+                    <p className={`text-xs font-bold pt-1 ${a.continuaProfessor ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
+                      {t(a.continuaProfessor ? "pendingTab.exits.keptProfessor" : "pendingTab.exits.blocked")}
+                    </p>
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <button onClick={() => darCiencia(a)} disabled={ocupado || semPermissao} className="px-4 py-2 rounded-lg text-xs font-black uppercase bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200 hover:bg-slate-200 flex items-center gap-1.5 disabled:opacity-50">
+                      <Check className="w-3.5 h-3.5" /> {t("pendingTab.exits.ack")}
+                    </button>
+                    <button onClick={() => desfazer(a)} disabled={ocupado || semPermissao} className="px-4 py-2 rounded-lg text-xs font-black uppercase bg-emerald-500 hover:bg-emerald-600 text-white flex items-center gap-1.5 disabled:opacity-50">
+                      {ocupado ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Undo2 className="w-3.5 h-3.5" />} {t("pendingTab.exits.undo")}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {carregando ? (
         <div className="py-16 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-red-500" /></div>
-      ) : pedidos.length === 0 ? (
+      ) : pedidos.length === 0 && saidas.length === 0 && extras.length === 0 ? (
         <div className="py-16 text-center text-slate-400 font-bold text-sm">
           <Inbox className="w-10 h-10 mx-auto mb-3 opacity-30" /> {t("pendingTab.empty")}
         </div>

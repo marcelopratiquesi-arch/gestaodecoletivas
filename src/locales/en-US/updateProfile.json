@@ -76,16 +76,15 @@
       "saiuDesc": "You do not continue with this login."
     },
     "stop": {
-      "professor": "Do not continue with this login. Tell the unit leader or your mentor: they will adjust your access. Personal access for teachers is coming soon.",
-      "saiu": "Do not continue with this login. Ask your mentor to turn this access off.",
-      "saiuMentor": "Do not continue with this login. Ask the Group Classes Manager to turn this access off."
+      "professor": "Do not continue with this login. Tell the unit leader or your mentor: they will adjust your access. Personal access for teachers is coming soon."
     }
   },
   "data": {
     "title": "Check your details",
     "desc": "We filled in what the system has. Fix anything that is wrong.",
     "unitNameHint": "This used to show the unit's name. Now it is your name.",
-    "moreUnitsHint": "Do you lead another unit too? Ask your mentor to add it."
+    "moreUnitsLabel": "Do you lead another unit too? (optional)",
+    "moreUnitsHint": "Each unit you pick becomes a request: its mentor approves it. Your mentor can also add you later."
   },
   "google": {
     "title": "Connect your Google account",
@@ -98,6 +97,25 @@
     "desc": "From now on, sign in with the \"Sign in with Google\" button.",
     "login": "Login",
     "enter": "Enter the system",
+    "extraRequested": "Your requests for the other units were sent. When each unit's mentor approves, they will show up for you.",
     "mentorChecks": "Your mentor will confirm that you are the leader of unit {{unit}}."
+  },
+  "exit": {
+    "leaderTitle": "Leave leadership",
+    "leaderWarn": "When you confirm, your access is turned off right away. The unit is left without a leader and your mentor is notified. If this was a mistake, they can undo it.",
+    "manyUnits": "You leave every unit you lead: {{units}}.",
+    "professorQ": "You are also a teacher. What do you prefer?",
+    "keepProfessor": "Leave leadership and keep going as a teacher",
+    "keepProfessorDesc": "You stop being a leader, but you can still sign in to see your classes.",
+    "leaveAll": "Leave everything",
+    "leaveAllDesc": "You lose all access to the system.",
+    "mentorTitle": "Leave the mentor role",
+    "mentorWarn": "When you confirm, your mentor access is turned off right away and the Group Classes Manager (administrator) is notified. They will reassign your units. If this was a mistake, they can undo it.",
+    "confirm": "Confirm exit",
+    "error": "Could not record the exit. Try again.",
+    "doneTitle": "Exit recorded",
+    "doneBlocked": "Your access has been turned off. Thank you for your work!",
+    "doneProfessor": "You left leadership and continue as a teacher.",
+    "doneButton": "Continue"
   }
 }

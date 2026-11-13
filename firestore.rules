@@ -237,6 +237,51 @@ service cloud.firestore {
           );
       }
 
+      // ---------- Saída da função ("não sou mais da unidade" / "não sou mais mentor") ----------
+      // A PRÓPRIA pessoa se tira do acesso, na hora, sem apagar o crachá (para dar para desfazer):
+      //  - líder: vira 'bloqueado', ou volta a ser 'professor' se também é professor (perde só a liderança);
+      //  - mentor: fica com status 'inativo' (já é sem acesso, ver crachaAtivo).
+      // O crachá guarda de onde ela saiu (papelAntes, unidadeIdsAntes, saidaEm) e o aviso fica em saidas_acesso.
+      function saidaDaFuncao(uid) {
+        let novo = request.resource.data;
+        let antes = unidadesDoAlvo();
+        return request.auth.uid == uid
+          && novo.get('saidaEm', null) == request.time
+          && novo.get('papelAntes', '') == papelDoAlvo()
+          && (
+            (papelDoAlvo() in papeisLider() && papelNovo() == 'bloqueado'
+              && camposAlterados().hasOnly(['role', 'papelAntes', 'unidadeIdsAntes', 'saidaEm'])
+              && novo.get('unidadeIdsAntes', []) == antes)
+            || (papelDoAlvo() in papeisLider() && papelNovo() == 'professor' && vinculoDeProfessorOk(uid)
+              && camposAlterados().hasOnly(['role', 'unidadeId', 'unidadeIds', 'professorId', 'papelAntes', 'unidadeIdsAntes', 'saidaEm'])
+              && novo.get('unidadeIdsAntes', []) == antes
+              && !('unidadeId' in novo) && !('unidadeIds' in novo))
+            || (papelDoAlvo() == 'mentor' && papelNovo() == 'mentor' && novo.get('status', '') == 'inativo'
+              && camposAlterados().hasOnly(['status', 'papelAntes', 'saidaEm']))
+          );
+      }
+      // Mentor de alguma das unidades (até 5) de uma lista.
+      function mentorDeAlguma(ids) {
+        return ids is list && ids.size() >= 1 && ids.size() <= 5
+          && (mentorDaUnidadeId(ids[0])
+            || (ids.size() > 1 && mentorDaUnidadeId(ids[1]))
+            || (ids.size() > 2 && mentorDaUnidadeId(ids[2]))
+            || (ids.size() > 3 && mentorDaUnidadeId(ids[3]))
+            || (ids.size() > 4 && mentorDaUnidadeId(ids[4])));
+      }
+      // Desfazer a saída de um LÍDER (mentor de uma das unidades dele): volta a função e as unidades de antes.
+      function mentorDesfazSaida() {
+        let novo = request.resource.data;
+        let ids = resource.data.get('unidadeIdsAntes', []);
+        return papelDoAlvo() in ['bloqueado', 'professor']
+          && resource.data.get('papelAntes', '') in papeisLider()
+          && mentorDeAlguma(ids)
+          && camposAlterados().hasOnly(['role', 'unidadeId', 'unidadeIds', 'papelAntes', 'unidadeIdsAntes', 'saidaEm'])
+          && papelNovo() == resource.data.papelAntes
+          && novo.get('unidadeIds', []) == ids && novo.get('unidadeId', '') == ids[0]
+          && !('papelAntes' in novo) && !('unidadeIdsAntes' in novo) && !('saidaEm' in novo);
+      }
+
       // Mentor só cria crachá de líder/unidade para as unidades DELE (aprovação de pedido de acesso).
       allow create: if souAdmin()
         || (logado() && meuPapel() == 'mentor' && papelNovo() == 'professor')
@@ -255,6 +300,9 @@ service cloud.firestore {
             && camposAlterados().hasOnly(['nome', 'email']))
         // Mentor muda a liderança de UMA unidade DELE no crachá de alguém (aba Líderes; o admin já pode tudo acima).
         || (logado() && meuPapel() == 'mentor' && mentorMudaLideranca(uid))
+        // Saída da função pela própria pessoa, e o mentor da unidade desfaz (ver saidaDaFuncao acima).
+        || (logado() && saidaDaFuncao(uid))
+        || (logado() && meuPapel() == 'mentor' && mentorDesfazSaida())
         // Atualização de cadastro (troca do login antigo pelo login pessoal do Google): a própria pessoa
         // atualiza SÓ os dados de contato, e só depois de conectar o Google à conta. O papel não muda,
         // exceto o login antigo "unidade", que vira "lider". Unidade, status e o resto ficam como estão.
@@ -326,6 +374,82 @@ service cloud.firestore {
       allow delete: if souDono() || souAdmin() || mentorDoPedido(resource.data);
     }
 
+    // ===================== AVISOS DE SAÍDA (saidas_acesso) =====================
+    // Quando alguém diz "não sou mais da unidade" / "não sou mais mentor", o acesso dele é desligado na hora
+    // (ver saidaDaFuncao em usuarios) e este aviso aparece em Pendências: o mentor da unidade (ou o admin) pode
+    // desfazer ou dar ciência. Aviso de MENTOR só o admin trata. Id do aviso = login da pessoa.
+    match /saidas_acesso/{uid} {
+      function mentorDoAviso(a) {
+        return logado() && meuPapel() == 'mentor' && a.get('papel', 'lider') == 'lider'
+          && a.get('unidadeIds', []) is list && a.get('unidadeIds', []).size() >= 1 && a.get('unidadeIds', []).size() <= 5
+          && (mentorDaUnidadeId(a.unidadeIds[0])
+            || (a.unidadeIds.size() > 1 && mentorDaUnidadeId(a.unidadeIds[1]))
+            || (a.unidadeIds.size() > 2 && mentorDaUnidadeId(a.unidadeIds[2]))
+            || (a.unidadeIds.size() > 3 && mentorDaUnidadeId(a.unidadeIds[3]))
+            || (a.unidadeIds.size() > 4 && mentorDaUnidadeId(a.unidadeIds[4])));
+      }
+      function avisoValido() {
+        let d = request.resource.data;
+        let cracha = getAfter(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data;
+        return request.auth.uid == uid
+          && d.keys().hasOnly(['nome', 'email', 'telefone', 'papel', 'unidadeIds', 'unidadeNomes', 'continuaProfessor', 'status', 'criadoEm'])
+          && d.status == 'pendente' && d.criadoEm == request.time
+          && d.papel in ['lider', 'mentor']
+          && d.nome is string && d.nome.size() <= 80 && d.email is string && d.telefone is string
+          && d.get('continuaProfessor', false) is bool
+          && d.get('unidadeNomes', []) is list && d.get('unidadeNomes', []).size() <= 30
+          && d.get('unidadeIds', []) == cracha.get('unidadeIdsAntes', [])
+          && cracha.get('saidaEm', null) == request.time
+          && cracha.get('papelAntes', '') != '';
+      }
+
+      allow read: if souAdmin() || (logado() && meuPapel() == 'mentor');
+      // A própria pessoa cria o aviso JUNTO com a saída dela (mesma gravação).
+      allow create, update: if autenticado() && avisoValido();
+      // Admin ou mentor da unidade trata o aviso (só os campos da análise).
+      allow update: if (souAdmin() || mentorDoAviso(resource.data))
+        && camposAlterados().hasOnly(['status', 'analisadoPor', 'analisadoPorNome', 'analisadoEm'])
+        && request.resource.data.status in ['desfeita', 'ciente'];
+    }
+
+    // ===================== PEDIDOS DE OUTRA UNIDADE (pedidos_unidade) =====================
+    // O líder (já com crachá) pede, na atualização de cadastro, para liderar mais uma unidade. Um documento por
+    // unidade pedida (id = login + "_" + unidade), então cada mentor vê e resolve só os pedidos das unidades dele.
+    // A própria pessoa cria; o mentor da unidade (ou o admin) aprova/recusa; aprovar também grava o crachá e a
+    // unidade (regra mentorMudaLideranca em usuarios).
+    match /pedidos_unidade/{pid} {
+      function pedidoUnidadeValido() {
+        let d = request.resource.data;
+        let cracha = get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data;
+        let minhas = 'unidadeIds' in cracha ? cracha.unidadeIds : [cracha.get('unidadeId', '')];
+        return logado() && cracha.get('role', '').lower() in papeisLider()
+          && d.keys().hasOnly(['uid', 'nome', 'email', 'telefone', 'unidadeId', 'unidadeNome', 'unidadesAtuais', 'status', 'criadoEm'])
+          && d.uid == request.auth.uid
+          && d.unidadeId is string && d.unidadeId != ''
+          && pid == request.auth.uid + '_' + d.unidadeId
+          && !(d.unidadeId in minhas)
+          && exists(/databases/$(database)/documents/unidades/$(d.unidadeId))
+          && d.status == 'pendente' && d.criadoEm == request.time
+          && d.nome is string && d.nome.size() >= 3 && d.nome.size() <= 80
+          && d.telefone is string && d.telefone.size() >= 6 && d.telefone.size() <= 30
+          && d.email is string && d.email.size() <= 120
+          && d.get('unidadeNome', '') is string && d.get('unidadeNome', '').size() <= 120
+          && d.get('unidadesAtuais', []) is list && d.get('unidadesAtuais', []).size() <= 30;
+      }
+
+      allow read: if logado() && (resource.data.uid == request.auth.uid || meuPapel() in ['admin', 'administrador', 'master', 'mentor']);
+      // A própria pessoa faz (ou refaz, depois de recusado) o pedido.
+      allow create: if pedidoUnidadeValido();
+      allow update: if pedidoUnidadeValido() && resource.data.uid == request.auth.uid;
+      // Admin ou mentor da unidade aprova/recusa (só os campos da análise).
+      allow update: if resource.data.status == 'pendente'
+        && (souAdmin() || (logado() && meuPapel() == 'mentor' && mentorDaUnidadeId(resource.data.unidadeId)))
+        && camposAlterados().hasOnly(['status', 'motivo', 'analisadoPor', 'analisadoPorNome', 'analisadoEm'])
+        && request.resource.data.status in ['aprovado', 'recusado'];
+      allow delete: if logado() && (resource.data.uid == request.auth.uid || souAdmin()
+        || (meuPapel() == 'mentor' && mentorDaUnidadeId(resource.data.unidadeId)));
+    }
+
     // ===================== CONVITES DE MENTOR (cadastro pelo e-mail Google, sem senha) =====================
     // O admin cadastra o mentor novo pelo e-mail do Google: isso já É a aprovação. Quando a pessoa entra pelo
     // Google com esse e-mail, ela mesma cria o crachá (regra mentorAceitaConvite) e marca o convite como usado.
@@ -364,8 +488,8 @@ service cloud.firestore {
     // Professor não grava nada aqui, só cria registros de auditoria (log da validação e do "Sair").
     // (No Firestore, se QUALQUER regra libera, a ação passa; por isso as exceções precisam estar aqui.)
     match /{colecao}/{resto=**} {
-      allow read: if logado() && !(colecao in ['solicitacoes_acesso', 'convites_acesso']);
-      allow write: if logado() && !(colecao in ['usuarios', 'publico', 'validacoes', 'solicitacoes_acesso', 'convites_acesso', 'resumos_mensais']) && !souProfessor();
+      allow read: if logado() && !(colecao in ['solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade']);
+      allow write: if logado() && !(colecao in ['usuarios', 'publico', 'validacoes', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'resumos_mensais']) && !souProfessor();
       allow create: if logado() && colecao in ['auditoria_cronograma', 'auditoria_configuracoes'];
     }
   }

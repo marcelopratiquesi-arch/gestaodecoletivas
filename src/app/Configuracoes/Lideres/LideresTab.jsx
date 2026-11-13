@@ -40,7 +40,7 @@ export function LideresTab() {
   const { t } = useTranslation();
   const { userData } = useAuth();
   const { catalogs, loadingCatalogs } = useCatalogs();
-  const { pedidos } = usePedidosPendentes();
+  const { total: totalPendencias } = usePedidosPendentes();
 
   const role = String(userData?.role || "").trim().toLowerCase();
   const userId = userData?.id || userData?.uid;
@@ -301,14 +301,14 @@ export function LideresTab() {
           { id: "com", rotulo: t("leadersTab.kpi.withLeader"), valor: kpis.comLider, cor: "text-emerald-600" },
           { id: "sem", rotulo: t("leadersTab.kpi.withoutLeader"), valor: kpis.semLider, cor: "text-amber-600" },
           { id: "conferir", rotulo: t("leadersTab.kpi.toCheck"), valor: kpis.aConferir, cor: "text-red-600" },
-          { id: "pedidos", rotulo: t("leadersTab.kpi.requests"), valor: pedidos.length, cor: "text-red-600" },
+          { id: "pedidos", rotulo: t("leadersTab.kpi.requests"), valor: totalPendencias, cor: "text-red-600" },
         ].map((k) => {
           const ativo = k.id === situacao;
           const clicar = () => (k.id === "pedidos"
             ? pedidosRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
             : setSituacao(k.id));
           return (
-            <button key={k.id} type="button" onClick={clicar} disabled={k.id === "pedidos" && pedidos.length === 0}
+            <button key={k.id} type="button" onClick={clicar} disabled={k.id === "pedidos" && totalPendencias === 0}
               title={k.id === "pedidos" ? t("leadersTab.kpiGoToRequests") : t("leadersTab.kpiFilter")}
               className={`p-4 rounded-2xl border text-left transition-all disabled:cursor-default ${ativo
                 ? "border-red-500 ring-2 ring-red-500/30 bg-white dark:bg-slate-800 shadow-sm"
@@ -321,7 +321,7 @@ export function LideresTab() {
       </div>
 
       {/* PEDIDOS DE ACESSO (login pelo Google) */}
-      {pedidos.length > 0 && (
+      {totalPendencias > 0 && (
         <div ref={pedidosRef} className="scroll-mt-4 rounded-2xl border border-amber-200 dark:border-amber-800 bg-amber-50/40 dark:bg-amber-900/10 -mx-2">
           <PendenciasTab />
         </div>
