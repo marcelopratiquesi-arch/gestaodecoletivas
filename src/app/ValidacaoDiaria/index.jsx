@@ -27,7 +27,7 @@ import { invalidarCacheInicio } from '../../services/cacheInicio';
 import { useValidacoesDoProfessor, meuProfessorId } from '../../hooks/useValidacoesDoProfessor';
 import { useMediaAlunos, numeroEstranho } from '../../hooks/useMediaAlunos';
 import { useTranslation } from 'react-i18next';
-import { ehLider } from '../../permissions';
+import { ehLider, unidadesDoLider } from '../../permissions';
 
 // --- HELPERS ---
 const getTodayStr = hojeLocal;
@@ -145,7 +145,9 @@ export default function ValidacaoDiariaPage() {
   // --- PERMISSÕES ---
   const role = useMemo(() => String(userData?.role || "").trim().toLowerCase(), [userData?.role]);
   const userId = useMemo(() => userData?.id || userData?.uid, [userData]);
-  const userUnidadeId = useMemo(() => userData?.unidadeId, [userData]);
+  // Líder pode comandar mais de uma unidade: lista em texto ("id1,id2") para servir de dependência estável.
+  const unidadesLiderKey = useMemo(() => unidadesDoLider(userData).join(","), [userData]);
+  const liderDeVarias = ehLider(role) && unidadesLiderKey.includes(",");
   const isMaster = useMemo(() => ['admin', 'mentor'].includes(role), [role]);
 
   // Vindo do "Resolver agora" da Página de Início: abre já no período das pendências, nas unidades
@@ -200,7 +202,8 @@ export default function ValidacaoDiariaPage() {
     if (role === 'mentor') {
       unitsData = unitsData.filter(u => u.mentorId === userId);
     } else if (ehLider(role)) {
-      unitsData = unitsData.filter(u => String(u.id) === String(userUnidadeId));
+      const minhas = new Set(unidadesLiderKey.split(","));
+      unitsData = unitsData.filter(u => minhas.has(String(u.id)));
     } else if (role === 'professor') {
       const meuId = meuProfessorId(userData, globalCatalogs.professores);
       if (meuId) {
@@ -213,7 +216,7 @@ export default function ValidacaoDiariaPage() {
     }
 
     return { ...globalCatalogs, unidades: unitsData };
-  }, [globalCatalogs, loadingCatalogs, role, userId, userUnidadeId, userData]);
+  }, [globalCatalogs, loadingCatalogs, role, userId, unidadesLiderKey, userData]);
 
   // --- PERÍODO NA TELA E VALIDAÇÕES DO PROFESSOR ---
   const periodo = useMemo(() => {
@@ -257,10 +260,10 @@ export default function ValidacaoDiariaPage() {
 
   // Se for unidade, auto-seleciona
   useEffect(() => {
-      if (ehLider(role) && userUnidadeId) {
-          setFiltroUnidade([userUnidadeId]);
+      if (ehLider(role) && unidadesLiderKey && !unidadesLiderKey.includes(",")) {
+          setFiltroUnidade([unidadesLiderKey]);
       }
-  }, [role, userUnidadeId]);
+  }, [role, unidadesLiderKey]);
 
   // 🟢 CASCATA DE FILTROS: Limpa as opções "filhas" quando o "pai" muda
   const handleEstadoChange = (v) => {
@@ -371,7 +374,11 @@ export default function ValidacaoDiariaPage() {
     // (O professor não passa por aqui: as validações dele vêm do useValidacoesDoProfessor.)
     const consultas = [];
     if (ehLider(role)) {
-        consultas.push({ q: query(ref, ...periodo, where('unidadeId', '==', userUnidadeId)) });
+        // Só as unidades dele (as escolhidas no filtro, se ele tiver mais de uma).
+        const minhas = unidadesLiderKey.split(",").filter(Boolean);
+        const escolhidas = filtroUnidade.filter(id => minhas.includes(String(id)));
+        const alvo = (escolhidas.length > 0 ? escolhidas : minhas).slice(0, 30);
+        if (alvo.length > 0) consultas.push({ q: query(ref, ...periodo, where('unidadeId', 'in', alvo)) });
     } else if (filtroUnidade.length > 0 && filtroUnidade.length <= 30) {
         // Admin/mentor com unidades escolhidas: busca só essas unidades, e não a rede inteira (poupa a cota gratuita).
         consultas.push({ q: query(ref, ...periodo, where('unidadeId', 'in', filtroUnidade)) });
@@ -401,7 +408,7 @@ export default function ValidacaoDiariaPage() {
     return () => cancelar.forEach(unsub => unsub());
     // filtroUnidade entra como texto para não reabrir a escuta quando só a referência da lista muda
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [modoFiltro, dataFiltro, mesFiltro, periodoFiltro, filtroUnidade.join(','), catalogs.unidades.length, catalogs.professores, role, userId, userUnidadeId, isCofreFechado, loadingCatalogs]);
+  }, [modoFiltro, dataFiltro, mesFiltro, periodoFiltro, filtroUnidade.join(','), catalogs.unidades.length, catalogs.professores, role, userId, unidadesLiderKey, isCofreFechado, loadingCatalogs]);
 
   // ==========================================
   // 3. PROCESSADOR DE GRADE VISUAL
@@ -844,7 +851,7 @@ export default function ValidacaoDiariaPage() {
                     </>
                 )}
                 
-                {!ehLider(role) && (
+                {(!ehLider(role) || liderDeVarias) && (
                     <FilterMultiSelect options={unidadesFiltradasSelect} selected={filtroUnidade} onChange={setFiltroUnidade} placeholder={t('dailyValidation.filters.units')} icon={MapPin} searchable={true} />
                 )}
 

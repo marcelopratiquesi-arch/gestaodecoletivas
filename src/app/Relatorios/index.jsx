@@ -1,4 +1,4 @@
-import { ehLider } from '../../permissions';
+import { ehLider, unidadesDoLider } from '../../permissions';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import { useAuth } from '../../contexts/AuthContext';
@@ -206,6 +206,8 @@ export default function RelatorioPage() {
   const { t } = useTranslation(); // 🟢 MOTOR DE IDIOMAS ACIONADO
 
   const role = String(userData?.role || "").toLowerCase();
+  // Líder pode comandar mais de uma unidade ("id1,id2"; ver unidadesDoLider em permissions.js).
+  const unidadesLiderKey = unidadesDoLider(userData).join(',');
   const userId = userData?.id || userData?.uid;
 
   const [loading, setLoading] = useState(true);
@@ -252,7 +254,7 @@ export default function RelatorioPage() {
 
   const clearFilters = () => {
       setPaisesFiltro([]); setEstadosFiltro([]); setMentoresFiltro([]);
-      setUnidadesFiltro(ehLider(role) ? [userData.unidadeId] : []);
+      setUnidadesFiltro(ehLider(role) ? unidadesLiderKey.split(',') : []);
       setModalidadesFiltro([]); setProfessoresFiltro([]); setTurnosFiltro([]); setFiltroKPI(null);
   };
 
@@ -273,7 +275,7 @@ export default function RelatorioPage() {
       try {
         let qUnidades = query(collection(db, 'unidades'), orderBy('nome'));
         if (role === 'mentor') qUnidades = query(collection(db, 'unidades'), where('mentorId', '==', userId));
-        else if (ehLider(role)) qUnidades = query(collection(db, 'unidades'), where(documentId(), '==', userData.unidadeId));
+        else if (ehLider(role)) qUnidades = query(collection(db, 'unidades'), where(documentId(), 'in', unidadesLiderKey.split(',').slice(0, LIMITE_IN)));
 
         const usersQuery = query(collection(db, 'usuarios'), where('role', '==', 'mentor'));
 
@@ -295,13 +297,13 @@ export default function RelatorioPage() {
           feriados: feriadosSnap.docs.map(d => ({ id: d.id, ...d.data() }))
         });
 
-        if (ehLider(role)) setUnidadesFiltro([userData.unidadeId]);
+        if (ehLider(role)) setUnidadesFiltro(unidadesLiderKey.split(','));
 
       } catch (e) { console.error("Erro loading catálogos:", e); }
       finally { setLoading(false); }
     };
     loadCatalogs();
-  }, [role, userId, userData?.unidadeId]);
+  }, [role, userId, unidadesLiderKey]);
 
   // Listas Dinâmicas de Filtros (país e estado já vêm padronizados do carregamento)
   const listasFiltros = useMemo(() => {
@@ -345,7 +347,7 @@ export default function RelatorioPage() {
 
   // Aplica o recorte do usuário (unidade / professor / unidades filtradas) numa consulta.
   const recortarConsulta = (q, ids) => {
-      if (ehLider(role)) return query(q, where('unidadeId', '==', userData.unidadeId));
+      if (ehLider(role)) return query(q, where('unidadeId', 'in', unidadesLiderKey.split(',').slice(0, LIMITE_IN)));
       if (role === 'professor') return meuProfessorId ? query(q, where('professorId', '==', meuProfessorId)) : q;
       if (ids) return query(q, where('unidadeId', 'in', ids));
       return q;
@@ -795,7 +797,7 @@ export default function RelatorioPage() {
                         <MultiSelectDropdown label={t('reports.filters.mentor', 'Mentor')} options={(listasFiltros.mentores || []).map(m => ({id: m.id, label: m.nome}))} selected={mentoresFiltro} onChange={setMentoresFiltro} placeholder={t('common.multiSelect.all')} />
                     </>
                 )}
-                {!ehLider(role) && (
+                {(!ehLider(role) || unidadesLiderKey.includes(',')) && (
                     <MultiSelectDropdown label={t('reports.filters.unit', 'Unidade')} options={(listasFiltros.unidadesFiltradas || []).map(u => ({id: u.id, label: u.nome.toUpperCase()}))} selected={unidadesFiltro} onChange={setUnidadesFiltro} placeholder={t('common.multiSelect.all')} />
                 )}
                 <MultiSelectDropdown label={t('reports.filters.modality', 'Modalidade')} options={(catalogs.modalidades || []).map(m => ({id: m.id, label: m.nome.toUpperCase()}))} selected={modalidadesFiltro} onChange={setModalidadesFiltro} placeholder={t('common.multiSelect.all')} />

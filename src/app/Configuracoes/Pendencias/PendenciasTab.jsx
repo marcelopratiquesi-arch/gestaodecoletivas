@@ -2,7 +2,7 @@
 // Aprovar = a pessoa vira LÍDER da unidade (crachá com papel "lider"). Cada unidade tem 1 líder só:
 // se já houver um, o sistema pergunta se quer substituir (o antigo perde o acesso).
 import { useState } from "react";
-import { doc, getDoc, writeBatch, serverTimestamp, updateDoc, deleteField } from "firebase/firestore";
+import { doc, writeBatch, serverTimestamp, updateDoc } from "firebase/firestore";
 import { useTranslation } from "react-i18next";
 import { Inbox, Check, X, Loader2, Building2, Phone, Mail, User, Clock } from "lucide-react";
 import { db } from "../../../services/firebase";
@@ -10,7 +10,7 @@ import { registrarAuditoriaAcesso } from "../../../services/auditoriaAcessos";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useCatalogs } from "../../../contexts/CatalogContext";
 import { usePedidosPendentes } from "./usePedidosPendentes";
-import { liderMantemAcesso } from "../../../permissions";
+import { tirarLiderDaUnidade, dadosDaVaga } from "../Lideres/saidaDoLider";
 
 const formatarData = (ts, idioma) => {
   const d = ts?.toDate?.();
@@ -41,45 +41,46 @@ export function PendenciasTab() {
     if (!unidade) return alert(t("pendingTab.unitNotFound"));
     if (role === "mentor" && unidade.mentorId !== userId) return alert(t("pendingTab.notYourUnit"));
 
-    const temOutroLider = unidade.liderUid && unidade.liderUid !== p.id;
-    const pergunta = temOutroLider
-      ? t("pendingTab.replaceConfirm", { unit: unidade.nome, current: unidade.liderNome || unidade.liderEmail, name: p.nome })
-      : t("pendingTab.approveConfirm", { name: p.nome, unit: unidade.nome });
-    if (!window.confirm(pergunta)) return;
+    const jaTemLider = unidade.liderUid && unidade.liderUid !== p.id;
+    // A unidade pode ter 2 líderes: se já tem 1 e a 2ª vaga está livre, primeiro oferece entrar como 2º líder.
+    let vaga = 1;
+    if (jaTemLider && !unidade.lider2Uid
+      && window.confirm(t("pendingTab.secondConfirm", { unit: unidade.nome, current: unidade.liderNome || unidade.liderEmail, name: p.nome }))) {
+      vaga = 2;
+    } else {
+      const pergunta = jaTemLider
+        ? t("pendingTab.replaceConfirm", { unit: unidade.nome, current: unidade.liderNome || unidade.liderEmail, name: p.nome })
+        : t("pendingTab.approveConfirm", { name: p.nome, unit: unidade.nome });
+      if (!window.confirm(pergunta)) return;
+    }
+    const temOutroLider = vaga === 1 && jaTemLider;
 
     setProcessando(p.id);
     try {
       const batch = writeBatch(db);
 
-      // Líder anterior perde o acesso (apaga o crachá) e o pedido dele fica como "substituído".
-      // Se o líder anterior também é admin ou mentor, ele só sai da unidade: o acesso dele fica.
-      const crachaAntigo = temOutroLider ? await getDoc(doc(db, "usuarios", unidade.liderUid)) : null;
-      if (temOutroLider && !(crachaAntigo.exists() && liderMantemAcesso(crachaAntigo.data().role))) {
-        if (crachaAntigo.exists()) batch.delete(crachaAntigo.ref);
-        const pedidoAntigo = await getDoc(doc(db, "solicitacoes_acesso", unidade.liderUid));
-        if (pedidoAntigo.exists()) {
-          batch.update(pedidoAntigo.ref, {
-            status: "recusado", motivo: t("pendingTab.replacedReason", { name: p.nome }),
-            analisadoPor: userId, analisadoPorNome: meuNome, analisadoEm: serverTimestamp(),
-          });
-        }
+      // Líder anterior sai (ver Lideres/saidaDoLider.js): admin/mentor só sai da unidade; líder que também
+      // é professor volta a ser professor; os demais perdem o acesso e o pedido dele fica como "substituído".
+      if (temOutroLider) {
+        await tirarLiderDaUnidade(batch, {
+          liderUid: unidade.liderUid, unidadeId: unidade.id, professores: catalogs?.professores || [],
+          motivo: t("pendingTab.replacedReason", { name: p.nome }), quemId: userId, quemNome: meuNome,
+        });
       }
 
       batch.set(doc(db, "usuarios", p.id), {
         nome: p.nome, email: p.email, telefone: p.telefone,
-        role: "lider", unidadeId: p.unidadeId, status: "ativo",
+        role: "lider", unidadeId: p.unidadeId, unidadeIds: [p.unidadeId], status: "ativo",
         loginGoogle: true, criadoPor: userId, criadoEm: serverTimestamp(),
       });
-      batch.update(doc(db, "unidades", p.unidadeId), {
-        liderUid: p.id, liderNome: p.nome, liderEmail: p.email, liderTelefone: p.telefone, liderTipo: "google", liderDesde: serverTimestamp(), liderAConferir: deleteField(),
-      });
+      batch.update(doc(db, "unidades", p.unidadeId), dadosDaVaga(vaga, { uid: p.id, nome: p.nome, email: p.email, telefone: p.telefone, tipo: "google" }));
       batch.update(doc(db, "solicitacoes_acesso", p.id), {
         status: "aprovado", analisadoPor: userId, analisadoPorNome: meuNome, analisadoEm: serverTimestamp(),
       });
       await batch.commit();
 
       await registrarAuditoria(
-        "NOVA", "Líder aprovado (login pelo Google).", unidade.nome,
+        "NOVA", vaga === 2 ? "2º líder aprovado (login pelo Google)." : "Líder aprovado (login pelo Google).", unidade.nome,
         temOutroLider ? `Substituiu ${unidade.liderNome || unidade.liderEmail}` : "", p, "lider"
       );
     } catch (e) {

@@ -52,7 +52,9 @@
       "noEmail": "This user has no valid login e-mail registered.",
       "confirmReset": "Send a password reset link to the e-mail: {{email}}?",
       "resetSent": "✅ Recovery link sent to {{email}}!",
-      "resetError": "Error sending e-mail. Check that the e-mail is correct in Firebase Auth."
-    }
+      "resetError": "Error sending e-mail. Check that the e-mail is correct in Firebase Auth.",
+      "useLeadersTab": "To make {{name}} a leader, use Settings › Leaders › \"Pick an existing user as leader\". There you choose the location and they remain a teacher."
+    },
+    "leaderNoUnit": "Leader without a location: cannot validate. Fix it in Settings › Leaders › Pick an existing user as leader."
   }
 }

@@ -4,6 +4,7 @@ import {
   collection, addDoc, updateDoc, doc, query, where, serverTimestamp, writeBatch, onSnapshot, getDocs, deleteField
 } from "firebase/firestore";
 import { db } from "../../../services/firebase";
+import { tirarLiderDaUnidade } from "../Lideres/saidaDoLider";
 import { publicarUnidade, publicarUnidades, removerUnidadeDaVitrine, ehCampoPublicoUnidade, reconstruirVitrine } from "../../../services/vitrinePublica";
 import { useTranslation } from "react-i18next";
 
@@ -727,13 +728,26 @@ export function UnidadesTab() {
         setSalvando(true);
         const qVinculos = query(collection(db, "vinculos"), where("unidadeId", "==", u.id));
         const snapVinculos = await getDocs(qVinculos);
-        const qUsers = query(collection(db, "usuarios"), where("unidadeId", "==", u.id));
-        const snapUsers = await getDocs(qUsers);
+        // Líderes desta unidade (principal ou não, 1º ou 2º líder) e o login antigo dela.
+        const [snapUsers, snapUsersLista] = await Promise.all([
+          getDocs(query(collection(db, "usuarios"), where("unidadeId", "==", u.id))),
+          getDocs(query(collection(db, "usuarios"), where("unidadeIds", "array-contains", u.id))),
+        ]);
+        const lideres = new Set([...snapUsers.docs, ...snapUsersLista.docs].map((d) => d.id));
+        if (u.liderUid) lideres.add(String(u.liderUid));
+        if (u.lider2Uid) lideres.add(String(u.lider2Uid));
         
         const batch = writeBatch(db);
         batch.delete(doc(db, "unidades", u.id));
         snapVinculos.forEach((v) => batch.delete(v.ref));
-        snapUsers.forEach((userDoc) => batch.delete(userDoc.ref));
+        // Quem lidera outras unidades continua nelas; líder que também é professor volta a ser professor;
+        // admin/mentor não perde o acesso; os demais perdem (como antes).
+        for (const uid of lideres) {
+          await tirarLiderDaUnidade(batch, {
+            liderUid: uid, unidadeId: u.id, professores: [], motivo: "Unidade excluída.",
+            quemId: userId, quemNome: userData?.nome || userData?.email || "",
+          });
+        }
         
         await batch.commit();
         await removerUnidadeDaVitrine(u.id);

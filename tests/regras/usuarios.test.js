@@ -3,7 +3,7 @@
 import { readFileSync } from 'fs';
 import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest';
 import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing';
-import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, addDoc, writeBatch } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, addDoc, writeBatch, deleteField } from 'firebase/firestore';
 
 let env;
 
@@ -524,5 +524,139 @@ describe('convite de mentor', () => {
     await conviteCriado();
     await assertFails(updateDoc(doc(googleVerificado('novoM', 'novomentor@gmail.com'), 'convites_acesso/novomentor@gmail.com'), { papel: 'admin' }));
     await assertFails(updateDoc(doc(googleVerificado('novoM', 'novomentor@gmail.com'), 'convites_acesso/novomentor@gmail.com'), { status: 'usado', usadoPor: 'novoM' }));
+  });
+});
+
+// Liderança pela aba Líderes: professor que vira líder, 2º líder da unidade, líder de várias unidades,
+// e quem deixa de ser líder (volta a ser professor ou continua nas outras unidades).
+// O mentor mexe em UMA unidade dele por vez ("unidadeAlterada").
+describe('liderança: professor-líder, 2º líder e líder de várias unidades', () => {
+  const montar = async () => env.withSecurityRulesDisabled(async (ctx) => {
+    const db = ctx.firestore();
+    await setDoc(doc(db, 'unidades/uniC'), { nome: 'Unidade C', mentorId: 'mentor1' });
+    await setDoc(doc(db, 'professores/p1'), { nome: 'Prof', uidLogin: 'prof1' });
+    await setDoc(doc(db, 'professores/p2'), { nome: 'Outro', uidLogin: 'outroLogin' });
+    // Caso real: trocado em Controle de Acessos, ficou "líder sem unidade".
+    await setDoc(doc(db, 'professores/p3'), { nome: 'Sem Unidade', uidLogin: 'liderSemUni' });
+    await setDoc(doc(db, 'usuarios/liderSemUni'), { role: 'lider', professorId: 'p3', nome: 'Sem Unidade' });
+    // Líder da uniA que também é professor.
+    await setDoc(doc(db, 'professores/p4'), { nome: 'Líder Prof', uidLogin: 'liderProf' });
+    await setDoc(doc(db, 'usuarios/liderProf'), { role: 'lider', unidadeId: 'uniA', professorId: 'p4', nome: 'Líder Prof' });
+    // Líder de duas unidades (uniB do mentor2 e uniA do mentor1).
+    await setDoc(doc(db, 'usuarios/liderBA'), { role: 'lider', unidadeId: 'uniB', unidadeIds: ['uniB', 'uniA'], nome: 'Líder BA' });
+  });
+  const entra = (quem, alvo, x, lista, extra = {}) =>
+    updateDoc(doc(como(quem), 'usuarios/' + alvo), { role: 'lider', unidadeId: lista[0], unidadeIds: lista, unidadeAlterada: x, ...extra });
+
+  // ---- professor vira líder ----
+  it('mentor torna líder um professor, numa unidade DELE', async () => {
+    await montar();
+    await assertSucceeds(entra('mentor1', 'prof1', 'uniA', ['uniA']));
+  });
+  it('mentor NÃO torna líder em unidade de outro mentor', async () => {
+    await montar();
+    await assertFails(entra('mentor1', 'prof1', 'uniB', ['uniB']));
+  });
+  it('mentor NÃO usa o vínculo de professor de OUTRA pessoa', async () => {
+    await montar();
+    await assertFails(entra('mentor1', 'prof1', 'uniA', ['uniA'], { professorId: 'p2' }));
+  });
+  it('mentor NÃO torna líder sem dizer a unidade, nem com lista diferente', async () => {
+    await montar();
+    await assertFails(updateDoc(doc(como('mentor1'), 'usuarios/prof1'), { role: 'lider' }));
+    await assertFails(updateDoc(doc(como('mentor1'), 'usuarios/prof1'), { role: 'lider', unidadeId: 'uniA' }));
+    await assertFails(entra('mentor1', 'prof1', 'uniA', ['uniA', 'uniB']));
+    await assertFails(entra('mentor1', 'prof1', 'uniA', ['uniB', 'uniA']));
+  });
+  it('mentor NÃO promove professor a mentor/admin nem mexe em outros campos', async () => {
+    await montar();
+    await assertFails(updateDoc(doc(como('mentor1'), 'usuarios/prof1'), { role: 'mentor' }));
+    await assertFails(updateDoc(doc(como('mentor1'), 'usuarios/prof1'), { role: 'admin' }));
+    await assertFails(entra('mentor1', 'prof1', 'uniA', ['uniA'], { status: 'x' }));
+    await assertFails(entra('mentor1', 'prof1', 'uniA', ['uniA'], { role: 'mentor' }));
+  });
+  it('corrige o "líder sem unidade" (caso real)', async () => {
+    await montar();
+    await assertSucceeds(entra('mentor1', 'liderSemUni', 'uniA', ['uniA']));
+  });
+
+  // ---- líder passa a cuidar de mais uma unidade (2º líder) ----
+  it('mentor coloca o líder de OUTRA unidade (de outro mentor) também na unidade dele', async () => {
+    await montar();
+    await assertSucceeds(entra('mentor1', 'liderB', 'uniA', ['uniB', 'uniA']));
+  });
+  it('líder antigo (só "unidadeId") ganha a lista certa', async () => {
+    await montar();
+    await assertSucceeds(entra('mentor1', 'liderProf', 'uniC', ['uniA', 'uniC']));
+  });
+  it('mentor NÃO tira a unidade principal do líder ao acrescentar', async () => {
+    await montar();
+    await assertFails(entra('mentor1', 'liderB', 'uniA', ['uniA']));
+    await assertFails(entra('mentor1', 'liderB', 'uniA', ['uniA', 'uniB']));
+  });
+  it('mentor NÃO acrescenta unidade de outro mentor', async () => {
+    await montar();
+    await assertFails(entra('mentor1', 'liderA', 'uniB', ['uniA', 'uniB']));
+  });
+  it('mentor NÃO troca o vínculo de professor de um líder', async () => {
+    await montar();
+    await assertFails(entra('mentor1', 'liderProf', 'uniC', ['uniA', 'uniC'], { professorId: 'p1' }));
+  });
+
+  // ---- sai de uma unidade ----
+  it('líder de duas unidades sai de uma (a do mentor) e continua na outra', async () => {
+    await montar();
+    await assertSucceeds(updateDoc(doc(como('mentor1'), 'usuarios/liderBA'), { unidadeId: 'uniB', unidadeIds: ['uniB'], unidadeAlterada: 'uniA' }));
+  });
+  it('a principal muda quando ele sai dela', async () => {
+    await montar();
+    await assertSucceeds(updateDoc(doc(como('mentor2'), 'usuarios/liderBA'), { unidadeId: 'uniA', unidadeIds: ['uniA'], unidadeAlterada: 'uniB' }));
+  });
+  it('mentor NÃO tira o líder da unidade de outro mentor', async () => {
+    await montar();
+    await assertFails(updateDoc(doc(como('mentor1'), 'usuarios/liderBA'), { unidadeId: 'uniA', unidadeIds: ['uniA'], unidadeAlterada: 'uniB' }));
+  });
+  it('mentor NÃO apaga o crachá de quem lidera outras unidades', async () => {
+    await montar();
+    await assertFails(deleteDoc(doc(como('mentor2'), 'usuarios/liderBA')));
+    await assertSucceeds(deleteDoc(doc(como('mentor1'), 'usuarios/liderA')));
+  });
+  it('líder-professor volta a ser professor (unidade do mentor)', async () => {
+    await montar();
+    await assertSucceeds(updateDoc(doc(como('mentor1'), 'usuarios/liderProf'), { role: 'professor', unidadeId: deleteField(), unidadeAlterada: 'uniA' }));
+  });
+  it('outro mentor NÃO devolve o líder-professor a professor', async () => {
+    await montar();
+    await assertFails(updateDoc(doc(como('mentor2'), 'usuarios/liderProf'), { role: 'professor', unidadeId: deleteField(), unidadeAlterada: 'uniA' }));
+    await assertFails(updateDoc(doc(como('mentor2'), 'usuarios/liderProf'), { role: 'professor', unidadeId: deleteField(), unidadeAlterada: 'uniB' }));
+  });
+  it('líder comum (sem vínculo de professor) NÃO vira professor por esse caminho', async () => {
+    await montar();
+    await assertFails(updateDoc(doc(como('mentor1'), 'usuarios/liderA'), { role: 'professor', unidadeId: deleteField(), unidadeAlterada: 'uniA' }));
+  });
+  it('líder de duas unidades NÃO volta a professor saindo de uma só', async () => {
+    await montar();
+    await assertFails(updateDoc(doc(como('mentor1'), 'usuarios/liderBA'), { role: 'professor', unidadeId: deleteField(), unidadeIds: deleteField(), unidadeAlterada: 'uniA' }));
+  });
+
+  // ---- ninguém se promove ----
+  it('o próprio professor/líder NÃO se promove nem troca de unidade', async () => {
+    await montar();
+    await assertFails(entra('prof1', 'prof1', 'uniA', ['uniA']));
+    await assertFails(updateDoc(doc(como('liderProf'), 'usuarios/liderProf'), { unidadeId: 'uniB' }));
+    await assertFails(entra('liderA', 'liderA', 'uniB', ['uniA', 'uniB']));
+  });
+  it('líder NÃO promove professor a líder', async () => {
+    await montar();
+    await assertFails(entra('liderA', 'prof1', 'uniA', ['uniA']));
+  });
+  it('mentor NÃO cria crachá de líder já com várias unidades', async () => {
+    await montar();
+    await assertFails(setDoc(doc(como('mentor1'), 'usuarios/novoLider'), { role: 'lider', unidadeId: 'uniA', unidadeIds: ['uniA', 'uniB'], nome: 'Novo' }));
+    await assertSucceeds(setDoc(doc(como('mentor1'), 'usuarios/novoLider'), { role: 'lider', unidadeId: 'uniA', unidadeIds: ['uniA'], nome: 'Novo' }));
+  });
+  it('admin faz tudo isso', async () => {
+    await montar();
+    await assertSucceeds(updateDoc(doc(como('admin1'), 'usuarios/prof1'), { role: 'lider', unidadeId: 'uniB', unidadeIds: ['uniB', 'uniA'], professorId: 'p1' }));
   });
 });

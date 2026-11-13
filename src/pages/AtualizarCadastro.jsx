@@ -43,6 +43,8 @@ export default function AtualizarCadastro() {
   const unidadeId = souLider ? userData?.unidadeId : null;
 
   const [unidade, setUnidade] = useState(undefined); // undefined = carregando; null = não encontrada
+  // Esta pessoa é o 2º líder da unidade (a unidade pode ter 2 líderes; ver aba Líderes).
+  const souSegundoLider = souLider && !!uid && unidade?.lider2Uid === uid;
   const [nome, setNome] = useState("");
   const [telefone, setTelefone] = useState("");
   const [salvando, setSalvando] = useState(false);
@@ -88,14 +90,19 @@ export default function AtualizarCadastro() {
       const emailAntigo = userData.email || userData.emailAuth || "";
 
       // 2) Atualiza o crachá e, se for líder, o cadastro da unidade (tudo junto ou nada).
-      const assumindoAgora = souLider && unidade?.liderUid !== uid;
+      const assumindoAgora = souLider && !souSegundoLider && unidade?.liderUid !== uid;
       const batch = writeBatch(db);
       batch.update(doc(db, "usuarios", uid), {
         nome: nomeLimpo, telefone: telefoneLimpo, email, loginGoogle: true, cadastroAtualizadoEm: serverTimestamp(),
         ...(eraLoginDeUnidade ? { role: "lider" } : {}),
         ...(emailAntigo && emailAntigo !== email ? { emailAntigo } : {}),
       });
-      if (souLider) {
+      if (souSegundoLider) {
+        // 2º líder da unidade: só atualiza o contato dele (o 1º líder continua o mesmo).
+        batch.update(doc(db, "unidades", unidade.id), {
+          lider2Nome: nomeLimpo, lider2Email: email, lider2Telefone: telefoneLimpo, lider2Tipo: "google",
+        });
+      } else if (souLider) {
         batch.update(doc(db, "unidades", unidade.id), {
           liderUid: uid, liderNome: nomeLimpo, liderEmail: email, liderTelefone: telefoneLimpo, liderTipo: "google",
           ...(assumindoAgora ? { liderDesde: serverTimestamp(), liderAConferir: true } : {}),
@@ -146,7 +153,7 @@ export default function AtualizarCadastro() {
   );
 
   // Líder sem unidade válida, ou unidade que já tem OUTRO líder: este login não segue adiante.
-  const outroLider = souLider && unidade && unidade.liderUid && unidade.liderUid !== uid;
+  const outroLider = souLider && unidade && unidade.liderUid && unidade.liderUid !== uid && !souSegundoLider;
   if (souLider && (unidade === null || outroLider)) {
     return (
       <Tela>
