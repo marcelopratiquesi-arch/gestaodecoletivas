@@ -8,8 +8,9 @@
 // aparece "Entrar como mentor" — o cadastro feito pelo admin já é a aprovação (regra mentorAceitaConvite).
 import { useEffect, useMemo, useState } from "react";
 import { Navigate } from "react-router-dom";
-import { doc, getDoc, onSnapshot, setDoc, serverTimestamp, writeBatch } from "firebase/firestore";
+import { doc, getDoc, onSnapshot, serverTimestamp, writeBatch } from "firebase/firestore";
 import { useTranslation } from "react-i18next";
+import i18n from "../i18n";
 import { Loader2, Clock, LogOut, Phone, User, Send, AlertTriangle, Pencil, ShieldCheck } from "lucide-react";
 import { db } from "../services/firebase";
 import { useAuth } from "../contexts/AuthContext";
@@ -18,6 +19,9 @@ import {
   FundoAcesso, Marca, Passos, CartaoEscolha, FuncaoEscolhida, SeletorUnidades, CaixaAjuda, BotaoVermelho, BotaoLink,
   classeRotulo, MAX_UNIDADES_PEDIDO,
 } from "../components/acesso/AcessoUI";
+import CampoDocumento from "../components/acesso/CampoDocumento";
+import { documentoValido, formatarDocumento, tipoDocumentoPadrao } from "../utils/documento";
+import { documentoNoLote, gravarComAviso, lerDocumentoDoPedido, ERRO_DOCUMENTO_EM_USO } from "../services/documentoService";
 import { ICONE_FUNCAO, useUnidadesPublicas, lerPapelPedido, guardarPapelPedido, FUNCOES_PEDIDO } from "../components/acesso/acessoDados";
 
 const Carregando = () => (
@@ -42,6 +46,9 @@ export default function SolicitarAcesso() {
   const [telefone, setTelefone] = useState("");
   const [unidadeIds, setUnidadeIds] = useState([]);
   const [tambemProfessor, setTambemProfessor] = useState(false);
+  const [docTipo, setDocTipo] = useState(() => tipoDocumentoPadrao(i18n.language));
+  const [docNumero, setDocNumero] = useState("");
+  const [docAnterior, setDocAnterior] = useState(null); // documento do pedido anterior (se refizer o pedido)
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState("");
 
@@ -108,6 +115,17 @@ export default function SolicitarAcesso() {
   const unidades = useUnidadesPublicas(precisaFormulario || !!pedido);
   const porId = useMemo(() => new Map((unidades || []).map((u) => [u.id, u])), [unidades]);
 
+  // Pedido anterior (recusado ou em edição): traz o documento que já tinha informado.
+  useEffect(() => {
+    if (!precisaFormulario || !uid || !pedido) return;
+    lerDocumentoDoPedido(uid).then((d) => {
+      if (!d) return;
+      setDocAnterior(d);
+      setDocTipo((v) => d.tipo || v);
+      setDocNumero((v) => v || formatarDocumento(d.tipo, d.numero));
+    }).catch((e) => console.error(e));
+  }, [precisaFormulario, uid, pedido]);
+
   // Preenche o formulário com o pedido anterior (ou com o nome da conta Google e a função escolhida no login).
   useEffect(() => {
     if (!precisaFormulario) return;
@@ -124,11 +142,13 @@ export default function SolicitarAcesso() {
     if (nome.trim().length < 3) return setErro(t("accessRequest.errors.name"));
     if (telefone.replace(/\D/g, "").length < 8) return setErro(t("accessRequest.errors.phone"));
     if (!unidadeIds.length) return setErro(t("accessRequest.errors.unit"));
+    if (!documentoValido(docTipo, docNumero)) return setErro(t("document.errors.invalid"));
 
     setEnviando(true);
     try {
       const ids = unidadeIds.slice(0, MAX_UNIDADES_PEDIDO);
-      await setDoc(doc(db, "solicitacoes_acesso", uid), {
+      const batch = writeBatch(db);
+      batch.set(doc(db, "solicitacoes_acesso", uid), {
         nome: nome.trim(),
         telefone: telefone.trim(),
         papel,
@@ -139,13 +159,16 @@ export default function SolicitarAcesso() {
         tambemProfessor: papel === "lider" && tambemProfessor,
         email: user.email,
         status: "pendente",
+        documentoOk: true, // o número fica na gaveta privada do pedido, nunca aqui
         criadoEm: serverTimestamp(),
       });
+      documentoNoLote(batch, { uid, tipo: docTipo, numero: docNumero, anterior: docAnterior, noPedido: true });
+      await gravarComAviso(batch);
       guardarPapelPedido(papel);
       setEditando(false);
     } catch (err) {
       console.error(err);
-      setErro(t("accessRequest.errors.send"));
+      setErro(err?.message === ERRO_DOCUMENTO_EM_USO ? t("document.errors.inUse") : t("accessRequest.errors.send"));
     } finally {
       setEnviando(false);
     }
@@ -303,6 +326,11 @@ export default function SolicitarAcesso() {
         <p className="text-[11px] text-zinc-500 -mt-2 ml-1">
           {t(papel === "mentor" ? "accessRequest.hints.mentorUnits" : "accessRequest.hints.leaderUnits", { max: MAX_UNIDADES_PEDIDO })}
         </p>
+
+        <div className="space-y-1">
+          <CampoDocumento id="pedido-documento" tipo={docTipo} onTipo={setDocTipo} valor={docNumero} onValor={setDocNumero} desabilitado={enviando} />
+          <p className="text-[11px] text-zinc-500 ml-1">{t("document.hint")}</p>
+        </div>
 
         {papel === "lider" && (
           <div className="space-y-1.5">

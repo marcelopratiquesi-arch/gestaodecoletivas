@@ -16,6 +16,7 @@ import { Navigate } from "react-router-dom";
 import { GoogleAuthProvider, linkWithPopup, unlink } from "firebase/auth";
 import { addDoc, collection, doc, getDoc, serverTimestamp, writeBatch } from "firebase/firestore";
 import { useTranslation } from "react-i18next";
+import i18n from "../i18n";
 import { Loader2, LogOut, Phone, User, AlertTriangle, CheckCircle2, Info } from "lucide-react";
 import { auth, db } from "../services/firebase";
 import { useAuth } from "../contexts/AuthContext";
@@ -27,6 +28,9 @@ import {
   FundoAcesso, Marca, Passos, CartaoEscolha, FuncaoEscolhida, SeletorUnidades, CaixaAjuda, BotaoVermelho, BotaoLink, IconeGoogle, classeRotulo,
 } from "../components/acesso/AcessoUI";
 import { useUnidadesPublicas } from "../components/acesso/acessoDados";
+import CampoDocumento from "../components/acesso/CampoDocumento";
+import { documentoValido, formatarDocumento, tipoDocumentoPadrao } from "../utils/documento";
+import { documentoNoLote, gravarComAviso, lerDocumento, ERRO_DOCUMENTO_EM_USO } from "../services/documentoService";
 
 const temGoogle = (u) => (u?.providerData || []).some((p) => p.providerId === "google.com");
 const emailDoGoogle = (u) => (u?.providerData || []).find((p) => p.providerId === "google.com")?.email || "";
@@ -54,6 +58,9 @@ export default function AtualizarCadastro() {
   const [resposta, setResposta] = useState(""); // "segue" = continua na função; "professor" | "saiu" = não segue
   const [nome, setNome] = useState("");
   const [telefone, setTelefone] = useState("");
+  const [docTipo, setDocTipo] = useState(() => tipoDocumentoPadrao(i18n.language));
+  const [docNumero, setDocNumero] = useState("");
+  const [docAnterior, setDocAnterior] = useState(null); // documento já guardado (ex.: informado pelo admin)
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState("");
   const [emailFinal, setEmailFinal] = useState("");
@@ -84,6 +91,17 @@ export default function AtualizarCadastro() {
     setTelefone((v) => v || userData.telefone || "");
   }, [userData, eraLoginDeUnidade]);
 
+  // Se o documento já está guardado (informado antes), o campo já vem preenchido.
+  useEffect(() => {
+    if (!uid || !precisaAtualizarCadastro) return;
+    lerDocumento(uid).then((d) => {
+      if (!d) return;
+      setDocAnterior(d);
+      setDocTipo(d.tipo);
+      setDocNumero((v) => v || formatarDocumento(d.tipo, d.numero));
+    }).catch((e) => console.error(e));
+  }, [uid, precisaAtualizarCadastro]);
+
   // Líder que também é professor (cadastro de professor ligado a este login): pode continuar como professor.
   const professorId = souLider && !eraLoginDeUnidade ? professorLigadoAoLogin(uid, catalogs?.professores || []) : null;
 
@@ -113,6 +131,8 @@ export default function AtualizarCadastro() {
     if (nomeLimpo.length < 3) { setPasso("dados"); return setErro(t("updateProfile.errors.name")); }
     if (telefoneLimpo.replace(/\D/g, "").length < 8) { setPasso("dados"); return setErro(t("updateProfile.errors.phone")); }
 
+    if (!documentoValido(docTipo, docNumero)) { setPasso("dados"); return setErro(t("document.errors.invalid")); }
+
     setSalvando(true);
     try {
       // 1) Conecta o Google à MESMA conta (se já conectou numa tentativa anterior, pula).
@@ -130,7 +150,7 @@ export default function AtualizarCadastro() {
       const assumindoAgora = souLider && !souSegundoLider && unidade?.liderUid !== uid;
       const batch = writeBatch(db);
       batch.update(doc(db, "usuarios", uid), {
-        nome: nomeLimpo, telefone: telefoneLimpo, email, loginGoogle: true, cadastroAtualizadoEm: serverTimestamp(),
+        nome: nomeLimpo, telefone: telefoneLimpo, email, loginGoogle: true, cadastroAtualizadoEm: serverTimestamp(), documentoOk: true,
         ...(eraLoginDeUnidade ? { role: "lider" } : {}),
         ...(emailAntigo && emailAntigo !== email ? { emailAntigo } : {}),
       });
@@ -155,7 +175,8 @@ export default function AtualizarCadastro() {
           atuais: unidadesDoLider(userData).map((id) => (catalogs?.unidades || []).find((u) => u.id === id)?.nome || (id === unidade?.id ? unidade.nome : id)),
         });
       }
-      await batch.commit();
+      documentoNoLote(batch, { uid, tipo: docTipo, numero: docNumero, anterior: docAnterior });
+      await gravarComAviso(batch);
 
       try {
         await addDoc(collection(db, "auditoria_configuracoes"), {
@@ -182,6 +203,7 @@ export default function AtualizarCadastro() {
       else if (code === "auth/popup-blocked") setErro(t("updateProfile.errors.popupBlocked"));
       else if (code === "auth/credential-already-in-use" || code === "auth/email-already-in-use") setErro(t("updateProfile.errors.googleInUse"));
       else if (code === "auth/operation-not-allowed" || code === "auth/unauthorized-domain") setErro(t("updateProfile.errors.notEnabled"));
+      else if (err?.message === ERRO_DOCUMENTO_EM_USO) { setPasso("dados"); setErro(t("document.errors.inUse")); }
       else setErro(t("updateProfile.errors.save"));
     } finally {
       setSalvando(false);
@@ -361,6 +383,7 @@ export default function AtualizarCadastro() {
           setErro("");
           if (nome.trim().length < 3) return setErro(t("updateProfile.errors.name"));
           if (telefone.replace(/\D/g, "").length < 8) return setErro(t("updateProfile.errors.phone"));
+          if (!documentoValido(docTipo, docNumero)) return setErro(t("document.errors.invalid"));
           setPasso("google");
         }} className="space-y-4">
           <div className="space-y-1">
@@ -377,6 +400,10 @@ export default function AtualizarCadastro() {
               <Phone className="absolute left-4 top-3.5 w-4 h-4 text-zinc-500" />
               <input id="atu-telefone" value={telefone} onChange={(e) => setTelefone(e.target.value)} maxLength={30} inputMode="tel" className={campo} placeholder={t("updateProfile.fields.phonePlaceholder")} />
             </div>
+          </div>
+          <div className="space-y-1">
+            <CampoDocumento id="atu-documento" tipo={docTipo} onTipo={setDocTipo} valor={docNumero} onValor={setDocNumero} />
+            <p className="text-[11px] text-zinc-500 ml-1">{t("document.hint")}</p>
           </div>
           {souLider && (
             <div className="space-y-1.5">

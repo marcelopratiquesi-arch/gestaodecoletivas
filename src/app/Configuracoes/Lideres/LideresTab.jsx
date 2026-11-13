@@ -13,7 +13,7 @@ import { createUserWithEmailAndPassword, getAuth, signOut } from "firebase/auth"
 import { initializeApp, getApp, deleteApp } from "firebase/app";
 import { useTranslation } from "react-i18next";
 import {
-  UserCheck, UserPlus, UserX, Search, Loader2, Building2, Mail, Phone, Edit2, X, Check, KeyRound, AlertTriangle, BadgeCheck, UserCog,
+  IdCard, UserCheck, UserPlus, UserX, Search, Loader2, Building2, Mail, Phone, Edit2, X, Check, KeyRound, AlertTriangle, BadgeCheck, UserCog,
 } from "lucide-react";
 import { db, auth } from "../../../services/firebase";
 import { useAuth } from "../../../contexts/AuthContext";
@@ -22,6 +22,7 @@ import { PendenciasTab } from "../Pendencias/PendenciasTab";
 import { usePedidosPendentes } from "../Pendencias/usePedidosPendentes";
 import { tirarLiderDaUnidade, camposAoLiberarVaga, textoDaSaida } from "./saidaDoLider";
 import { TornarLiderModal } from "./TornarLiderModal";
+import { BotaoDocumento, DocumentoModal, BuscaDocumento } from "../Documento/DocumentoModal";
 
 const SENHA_MINIMA = 6;
 // País da unidade em sigla (cadastros antigos guardam o nome por extenso; sem país = Brasil).
@@ -64,6 +65,7 @@ export function LideresTab() {
   const mentores = useMemo(() => catalogs?.mentores || [], [catalogs?.mentores]);
   const professores = useMemo(() => catalogs?.professores || [], [catalogs?.professores]);
   const [tornarLider, setTornarLider] = useState(null); // { vaga: 1 | 2, unidade }
+  const [docAlvo, setDocAlvo] = useState(null); // { id, nome, email }: documento (CPF/DNI/SSN) em edição
 
   const minhasUnidades = useMemo(() => {
     const todas = catalogs?.unidades || [];
@@ -294,6 +296,8 @@ export function LideresTab() {
         </div>
       </div>
 
+      {role === "admin" && <BuscaDocumento />}
+
       {/* NÚMEROS */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         {[
@@ -427,6 +431,8 @@ export function LideresTab() {
                                 <p className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 flex-wrap">
                                   {u.lider2Nome || "-"}
                                   <span className="px-1.5 py-0.5 rounded-md border text-[9px] font-black uppercase bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-900/20 dark:text-violet-300 dark:border-violet-800">{t("leadersTab.second.badge")}</span>
+                                  <button onClick={() => setDocAlvo({ id: u.lider2Uid, nome: u.lider2Nome, email: u.lider2Email })} title={t("document.modal.edit")}
+                                    className="p-1 rounded-md text-slate-400 hover:bg-blue-50 hover:text-blue-600"><IdCard className="w-3.5 h-3.5" /></button>
                                   <button onClick={() => remover(u, 2)} disabled={ocupado} title={t("leadersTab.second.remove")}
                                     className="p-1 rounded-md text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"><UserX className="w-3.5 h-3.5" /></button>
                                 </p>
@@ -467,6 +473,7 @@ export function LideresTab() {
                                   <UserPlus className="w-3.5 h-3.5" /> {t("leadersTab.second.add")}
                                 </button>
                               )}
+                              <BotaoDocumento onClick={() => setDocAlvo({ id: u.liderUid, nome: u.liderNome, email: u.liderEmail })} disabled={ocupado} />
                               <button onClick={() => abrirEditar(u)} disabled={ocupado} title={t("leadersTab.edit")}
                                 className="p-2 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200 hover:bg-blue-50 hover:text-blue-600 disabled:opacity-50"><Edit2 className="w-4 h-4" /></button>
                               <button onClick={() => abrirNovo(u)} disabled={ocupado} title={t("leadersTab.replace")}
@@ -498,6 +505,8 @@ export function LideresTab() {
         )}
         <p className="text-[11px] text-slate-400 font-bold">{t("leadersTab.howTo")}</p>
       </div>
+
+      {docAlvo && <DocumentoModal alvo={docAlvo} onClose={() => setDocAlvo(null)} />}
 
       {/* MODAL: ESCOLHER LÍDER JÁ CADASTRADO (1º ou 2º líder) */}
       {tornarLider && (

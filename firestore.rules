@@ -45,6 +45,54 @@ service cloud.firestore {
     function papelNovo() { return request.resource.data.get('role', '').lower(); }
     function camposAlterados() { return request.resource.data.diff(resource.data).affectedKeys(); }
 
+    // Mentor de alguma das unidades (até 5) de uma lista.
+    function mentorDeAlguma(ids) {
+      return ids is list && ids.size() >= 1 && ids.size() <= 5
+        && (mentorDaUnidadeId(ids[0])
+          || (ids.size() > 1 && mentorDaUnidadeId(ids[1]))
+          || (ids.size() > 2 && mentorDaUnidadeId(ids[2]))
+          || (ids.size() > 3 && mentorDaUnidadeId(ids[3]))
+          || (ids.size() > 4 && mentorDaUnidadeId(ids[4])));
+    }
+    // Unidades de um líder (pelo crachá dele); vazio se a pessoa não é líder.
+    function unidadesDoLiderUid(uid) {
+      let a = get(/databases/$(database)/documents/usuarios/$(uid)).data;
+      return !(a.get('role', '').lower() in papeisLider()) ? []
+        : ('unidadeIds' in a ? a.unidadeIds : (a.get('unidadeId', '') == '' ? [] : [a.unidadeId]));
+    }
+    // Mentor de alguma unidade desse líder.
+    function mentorDoLider(uid) {
+      return logado() && meuPapel() == 'mentor' && exists(/databases/$(database)/documents/usuarios/$(uid))
+        && mentorDeAlguma(unidadesDoLiderUid(uid));
+    }
+    function idsDoPedido(p) { return p.get('unidadeIds', [p.get('unidadeId', '')]); }
+    // Mentor de alguma das unidades (até 5) de um pedido de líder.
+    function mentorDoPedido(p) {
+      let ids = idsDoPedido(p);
+      return logado() && meuPapel() == 'mentor' && p.get('papel', 'lider') == 'lider'
+        && ids is list && ids.size() >= 1
+        && (mentorDaUnidadeId(ids[0])
+          || (ids.size() > 1 && mentorDaUnidadeId(ids[1]))
+          || (ids.size() > 2 && mentorDaUnidadeId(ids[2]))
+          || (ids.size() > 3 && mentorDaUnidadeId(ids[3]))
+          || (ids.size() > 4 && mentorDaUnidadeId(ids[4])));
+    }
+    // Documento de identificação (CPF no Brasil, DNI na Argentina, SSN nos EUA). Fica numa gaveta privada
+    // (coleção documentos_privados/{uid}), nunca no crachá aberto. Quem mexe: a própria pessoa, o admin e o
+    // mentor dos líderes das unidades dele. Os dígitos são conferidos na tela; aqui só o formato.
+    function documentoFormatoOk(d) {
+      return d.tipo is string && d.numero is string
+        && ((d.tipo == 'cpf' && d.numero.matches('^[0-9]{11}$'))
+          || (d.tipo == 'dni' && d.numero.matches('^[0-9]{7,8}$'))
+          || (d.tipo == 'ssn' && d.numero.matches('^[0-9]{9}$')));
+    }
+    function documentoValido() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['tipo', 'numero', 'atualizadoEm', 'atualizadoPor']) && documentoFormatoOk(d)
+        && d.get('atualizadoPor', request.auth.uid) == request.auth.uid;
+    }
+    function caminhoDocumentoUsuario(uid) { return /databases/$(database)/documents/documentos_privados/$(uid); }
+
     // Convite de mentor (convites_acesso/{e-mail Google}): só o admin cria. Vale para quem entrou AGORA
     // pelo Google com esse e-mail (verificado pelo Google).
     function emailGoogleVerificado() {
@@ -260,15 +308,6 @@ service cloud.firestore {
               && camposAlterados().hasOnly(['status', 'papelAntes', 'saidaEm']))
           );
       }
-      // Mentor de alguma das unidades (até 5) de uma lista.
-      function mentorDeAlguma(ids) {
-        return ids is list && ids.size() >= 1 && ids.size() <= 5
-          && (mentorDaUnidadeId(ids[0])
-            || (ids.size() > 1 && mentorDaUnidadeId(ids[1]))
-            || (ids.size() > 2 && mentorDaUnidadeId(ids[2]))
-            || (ids.size() > 3 && mentorDaUnidadeId(ids[3]))
-            || (ids.size() > 4 && mentorDaUnidadeId(ids[4])));
-      }
       // Desfazer a saída de um LÍDER (mentor de uma das unidades dele): volta a função e as unidades de antes.
       function mentorDesfazSaida() {
         let novo = request.resource.data;
@@ -303,12 +342,17 @@ service cloud.firestore {
         // Saída da função pela própria pessoa, e o mentor da unidade desfaz (ver saidaDaFuncao acima).
         || (logado() && saidaDaFuncao(uid))
         || (logado() && meuPapel() == 'mentor' && mentorDesfazSaida())
+        // Depois de gravar o documento na gaveta privada, a PRÓPRIA pessoa só marca "documentoOk" no crachá
+        // (o banco confere que o documento existe de verdade, na mesma gravação ou antes).
+        || (logado() && request.auth.uid == uid && camposAlterados().hasOnly(['documentoOk'])
+            && request.resource.data.documentoOk == true && existsAfter(caminhoDocumentoUsuario(uid)))
         // Atualização de cadastro (troca do login antigo pelo login pessoal do Google): a própria pessoa
         // atualiza SÓ os dados de contato, e só depois de conectar o Google à conta. O papel não muda,
         // exceto o login antigo "unidade", que vira "lider". Unidade, status e o resto ficam como estão.
         || (logado() && request.auth.uid == uid
             && 'google.com' in request.auth.token.firebase.identities
-            && camposAlterados().hasOnly(['nome', 'telefone', 'email', 'emailAntigo', 'role', 'loginGoogle', 'cadastroAtualizadoEm'])
+            && camposAlterados().hasOnly(['nome', 'telefone', 'email', 'emailAntigo', 'role', 'loginGoogle', 'cadastroAtualizadoEm', 'documentoOk'])
+            && (!('documentoOk' in request.resource.data) || (request.resource.data.documentoOk == true && existsAfter(caminhoDocumentoUsuario(uid))))
             && request.resource.data.loginGoogle == true
             && request.resource.data.nome is string && request.resource.data.nome.size() >= 3 && request.resource.data.nome.size() <= 80
             && request.resource.data.telefone is string && request.resource.data.telefone.size() >= 6 && request.resource.data.telefone.size() <= 30
@@ -333,23 +377,12 @@ service cloud.firestore {
     // ("unidadeIds"; a 1ª é sempre "unidadeId"). Pedido de MENTOR só o admin aprova.
     match /solicitacoes_acesso/{uid} {
       function souDono() { return autenticado() && request.auth.uid == uid; }
-      function idsDoPedido(p) { return p.get('unidadeIds', [p.get('unidadeId', '')]); }
-      // Mentor de alguma das unidades (até 5) de um pedido de líder.
-      function mentorDoPedido(p) {
-        let ids = idsDoPedido(p);
-        return logado() && meuPapel() == 'mentor' && p.get('papel', 'lider') == 'lider'
-          && ids is list && ids.size() >= 1
-          && (mentorDaUnidadeId(ids[0])
-            || (ids.size() > 1 && mentorDaUnidadeId(ids[1]))
-            || (ids.size() > 2 && mentorDaUnidadeId(ids[2]))
-            || (ids.size() > 3 && mentorDaUnidadeId(ids[3]))
-            || (ids.size() > 4 && mentorDaUnidadeId(ids[4])));
-      }
       function pedidoValido() {
         let d = request.resource.data;
         let ids = idsDoPedido(d);
         return d.keys().hasOnly(['nome', 'telefone', 'unidadeId', 'unidadeNome', 'email', 'status', 'criadoEm',
-                                 'papel', 'unidadeIds', 'unidadeNomes', 'tambemProfessor'])
+                                 'papel', 'unidadeIds', 'unidadeNomes', 'tambemProfessor', 'documentoOk'])
+          && d.get('documentoOk', true) == true
           && d.status == 'pendente'
           && d.email == request.auth.token.email
           && d.nome is string && d.nome.size() >= 3 && d.nome.size() <= 80
@@ -372,6 +405,54 @@ service cloud.firestore {
         && request.resource.data.status in ['aprovado', 'recusado'];
 
       allow delete: if souDono() || souAdmin() || mentorDoPedido(resource.data);
+
+    }
+
+    // ===================== DOCUMENTO DE IDENTIFICAÇÃO (CPF / DNI / SSN) =====================
+    // Gaveta privada do documento de quem tem crachá. Id = login da pessoa. Lê: a pessoa, o admin e o mentor
+    // dos líderes das unidades dele. Grava: os mesmos (a pessoa corrige o próprio; o mentor corrige o dos líderes dele).
+    match /documentos_privados/{uid} {
+      allow read: if (logado() && request.auth.uid == uid) || souAdmin() || mentorDoLider(uid);
+      allow create, update: if documentoValido()
+        && ((logado() && request.auth.uid == uid) || souAdmin() || mentorDoLider(uid));
+      allow delete: if souAdmin();
+    }
+
+    // Documento informado no pedido de acesso (ainda sem crachá). Id = login da pessoa: ela grava; ela, o admin
+    // e o mentor do pedido leem. Depois de aprovada, ela o copia para a gaveta do crachá (tela "Informar documento").
+    match /documentos_do_pedido/{uid} {
+      allow read: if (autenticado() && request.auth.uid == uid) || souAdmin()
+        || (exists(/databases/$(database)/documents/solicitacoes_acesso/$(uid))
+            && mentorDoPedido(get(/databases/$(database)/documents/solicitacoes_acesso/$(uid)).data));
+      allow create, update: if autenticado() && request.auth.uid == uid && documentoValido();
+      allow delete: if (autenticado() && request.auth.uid == uid) || souAdmin();
+    }
+
+    // ===================== DOCUMENTOS ÚNICOS (um documento = uma pessoa) =====================
+    // Reserva do documento: o código é "tipo_numero" e dentro só vai o login dono. Quem tentar gravar um
+    // documento que já existe para OUTRA pessoa é recusado. Só o admin lê (para achar cadastros).
+    match /documentos_unicos/{id} {
+      function podeMexerNoDe(alvo) {
+        return (autenticado() && request.auth.uid == alvo) || souAdmin() || mentorDoLider(alvo);
+      }
+      function declaradoEm(caminho) {
+        return existsAfter(caminho)
+          && getAfter(caminho).data.numero == request.resource.data.numero
+          && getAfter(caminho).data.tipo == request.resource.data.tipo;
+      }
+      allow read: if souAdmin();
+      allow create: if request.resource.data.keys().hasOnly(['uid', 'tipo', 'numero'])
+        && request.resource.data.uid is string
+        && documentoFormatoOk(request.resource.data)
+        && id == request.resource.data.tipo + '_' + request.resource.data.numero
+        && podeMexerNoDe(request.resource.data.uid)
+        // o documento tem que estar declarado na gaveta privada (do crachá ou do pedido), na mesma gravação
+        && (declaradoEm(caminhoDocumentoUsuario(request.resource.data.uid))
+            || (request.auth.uid == request.resource.data.uid
+                && declaradoEm(/databases/$(database)/documents/documentos_do_pedido/$(request.auth.uid))));
+      // Reescrever igual (mesmo dono, mesmos dados) é aceito; trocar de dono, não.
+      allow update: if request.resource.data == resource.data && podeMexerNoDe(resource.data.uid);
+      allow delete: if podeMexerNoDe(resource.data.uid);
     }
 
     // ===================== AVISOS DE SAÍDA (saidas_acesso) =====================
@@ -484,12 +565,12 @@ service cloud.firestore {
 
     // ===================== DEMAIS COLEÇÕES =====================
     // Logados leem e escrevem (como antes), EXCETO as coleções com regra própria acima
-    // (usuarios, publico, validacoes, solicitacoes_acesso, convites_acesso e resumos_mensais).
+    // (usuarios, publico, validacoes, solicitacoes_acesso, convites_acesso, documentos_* e resumos_mensais).
     // Professor não grava nada aqui, só cria registros de auditoria (log da validação e do "Sair").
     // (No Firestore, se QUALQUER regra libera, a ação passa; por isso as exceções precisam estar aqui.)
     match /{colecao}/{resto=**} {
-      allow read: if logado() && !(colecao in ['solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade']);
-      allow write: if logado() && !(colecao in ['usuarios', 'publico', 'validacoes', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'resumos_mensais']) && !souProfessor();
+      allow read: if logado() && !(colecao in ['solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos']);
+      allow write: if logado() && !(colecao in ['usuarios', 'publico', 'validacoes', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'resumos_mensais', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos']) && !souProfessor();
       allow create: if logado() && colecao in ['auditoria_cronograma', 'auditoria_configuracoes'];
     }
   }
