@@ -1,4 +1,4 @@
-import { ehLider } from '../../permissions';
+import { ehLider, unidadesDoLider } from '../../permissions';
 import React, { useState, useEffect, useMemo } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
@@ -113,14 +113,14 @@ export default function Sidebar({ collapsed }) {
         const unidade = unidadesPorId.get(String(aula.unidadeId));
         let isMyResponsibility = false;
         if (role === 'admin') isMyResponsibility = true;
-        else if (ehLider(role) && String(aula.unidadeId) === String(userData?.unidadeId)) isMyResponsibility = true;
+        else if (ehLider(role) && unidadesDoLider(userData).includes(String(aula.unidadeId))) isMyResponsibility = true;
         else if (role === 'mentor' && unidade?.mentorId === meuId) isMyResponsibility = true;
         if (!isMyResponsibility) return;
         if (feriadoNoDia(hojeStr, unidade || { id: aula.unidadeId }, catalogs.feriados || [])) return;
         lista.push(aula);
     });
     return lista;
-  }, [loadingCatalogs, hojeStr, catalogs, role, userData?.unidadeId, meuId]);
+  }, [loadingCatalogs, hojeStr, catalogs, role, userData, meuId]);
 
   // Quais unidades escutar: '*' = rede inteira (admin); senão, as unidades das minhas aulas de hoje.
   // Vira texto para a escuta só reabrir quando o conjunto de unidades mudar de verdade.

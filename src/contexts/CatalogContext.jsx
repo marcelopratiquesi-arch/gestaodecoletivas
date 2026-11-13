@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { collection, onSnapshot, query, orderBy, where } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { useAuth } from './AuthContext'; // 🟢 1. Importamos o porteiro (Autenticação)
-import { ehLider } from '../permissions';
+import { ehLider, unidadesDoLider } from '../permissions';
 
 const CatalogContext = createContext();
 
@@ -99,11 +99,12 @@ export const CatalogProvider = ({ children }) => {
 
     // ---------- Quais unidades interessam ('*' = rede inteira; null = ainda não dá para saber) ----------
     const basePronta = chaveSessao !== null && baseCarregadaPara === chaveSessao;
+    const unidadesLiderKey = unidadesDoLider(userData).sort().join(',');
     const escopo = useMemo(() => {
         if (chaveSessao === null) return null;
         if (!uid) return '*';
         // Líder sem unidade (ainda não foi ligado a nenhuma) não vê nada; antes via a rede inteira.
-        if (ehLider(papel)) return userData?.unidadeId ? [String(userData.unidadeId)] : [];
+        if (ehLider(papel)) return unidadesLiderKey ? unidadesLiderKey.split(',') : [];
         if (papel === 'mentor') {
             if (!basePronta) return null;
             return base.unidades.filter(u => u.mentorId === uid).map(u => String(u.id)).sort();
@@ -113,7 +114,7 @@ export const CatalogProvider = ({ children }) => {
             return [...new Set(base.meusVinculos.map(v => String(v.unidadeId)).filter(Boolean))].sort();
         }
         return '*'; // admin (e professor antigo sem professorId no crachá: como antes)
-    }, [chaveSessao, uid, papel, userData?.unidadeId, meuProfessorId, basePronta, base.unidades, base.meusVinculos]);
+    }, [chaveSessao, uid, papel, unidadesLiderKey, meuProfessorId, basePronta, base.unidades, base.meusVinculos]);
 
     // Vira texto: as escutas só reabrem quando o conjunto de unidades muda de verdade.
     const chaveEscopo = escopo === null ? null : `${chaveSessao}#${escopo === '*' ? '*' : escopo.join(',')}`;
