@@ -69,5 +69,33 @@
   "checkBanner": "{{count}} unit(s) with a new leader to review: the person signed in with the old unit login and took over as leader with their Google account. Check that it is the right person: confirm or remove.",
   "assume": "I am the leader",
   "assumeQuestion": "Set yourself as leader of {{unit}}?\n\nYour access stays the same; the unit will just show you as its leader.",
-  "assumeReplaceQuestion": "{{unit}} already has the leader {{current}}.\n\nSet yourself as leader instead? The current leader loses access."
+  "assumeReplaceQuestion": "{{unit}} already has the leader {{current}}.\n\nSet yourself as leader instead? The current leader loses access.",
+  "promote": {
+    "button": "Make an existing user leader",
+    "title": "Make an existing user leader",
+    "help": "For the group class teacher who will lead the location. They remain a teacher: they still see their classes and payments. If they stop being the leader, they go back to being only a teacher.",
+    "person": "Teacher",
+    "search": "Search teacher by name or e-mail...",
+    "noTeachers": "No teacher with a login found.",
+    "reading": "Checking current access...",
+    "now": {
+      "teacher": "is currently a teacher.",
+      "leaderNoUnit": "is currently a leader WITHOUT a location (cannot validate). Saving here fixes it.",
+      "leaderOf": "is currently the leader of {{unit}}.",
+      "sameUnit": "is already the leader of this location (saving only checks the data)."
+    },
+    "confirm": "Make {{name}} the leader of {{unit}}? They remain a teacher.",
+    "confirmLeaves": "They stop being the leader of {{unit}}.",
+    "confirmReplaces": "The current leader, {{current}}, leaves the location (if also a teacher, they go back to being only a teacher).",
+    "done": "{{name}} is now the leader of {{unit}}.",
+    "save": "Make leader",
+    "errors": {
+      "read": "Could not check this person's access.",
+      "noLogin": "this teacher has no login. Create the login in the Teachers tab first.",
+      "isManager": "is an admin or mentor. To be the leader, they use the \"I am the leader\" button themselves.",
+      "blocked": "has blocked access. Unblock it in Access Control first.",
+      "otherRole": "has a different access level ({{role}}). Adjust it in Access Control first.",
+      "save": "Could not make leader."
+    }
+  }
 }

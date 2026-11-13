@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db, auth } from '../../services/firebase';
-import { collection, getDocs, doc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, getDoc, doc, updateDoc, addDoc, serverTimestamp, writeBatch, deleteField } from 'firebase/firestore';
+import { ehLider as ehPapelLider } from '../../permissions';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { useAuth } from '../../contexts/AuthContext';
 import { ShieldAlert, Users, Key, ShieldCheck, Mail, Loader2, Search, Edit } from 'lucide-react';
@@ -61,11 +62,35 @@ export default function ControleAcessosPage() {
 
     const alterarRole = async (userId, userNome, oldRole, newRole) => {
         if (oldRole === newRole) return;
+        // Líder precisa de UNIDADE. Trocar aqui só mudava o nível e deixava a pessoa "líder de nenhuma
+        // unidade" (sem validar nada). Quem vira líder passa pela aba Líderes, que pergunta a unidade.
+        // (Trocar o login antigo "unidade" por "lider" continua aqui: esse crachá já tem unidade.)
+        if (ehPapelLider(newRole) && !ehPapelLider(oldRole)) {
+            alert(t('misc.access.messages.useLeadersTab', { name: userNome }));
+            return;
+        }
         if (!window.confirm(t('misc.access.messages.confirmRole', { name: userNome, role: t(`misc.access.roles.${newRole}`, newRole).toUpperCase() }))) return;
 
         setProcessando(userId);
         try {
-            await updateDoc(doc(db, 'usuarios', userId), { role: newRole });
+            const alvo = usuarios.find(u => u.id === userId);
+            if (ehPapelLider(oldRole) && !ehPapelLider(newRole)) {
+                // Deixou de ser líder: sai da unidade (e a unidade deixa de mostrar essa pessoa como líder).
+                const batch = writeBatch(db);
+                batch.update(doc(db, 'usuarios', userId), { role: newRole, unidadeId: deleteField() });
+                if (alvo?.unidadeId) {
+                    const unidade = await getDoc(doc(db, 'unidades', String(alvo.unidadeId)));
+                    if (unidade.exists() && unidade.data().liderUid === userId) {
+                        batch.update(unidade.ref, {
+                            liderUid: deleteField(), liderNome: deleteField(), liderEmail: deleteField(), liderTelefone: deleteField(),
+                            liderTipo: deleteField(), liderDesde: deleteField(), liderAConferir: deleteField(),
+                        });
+                    }
+                }
+                await batch.commit();
+            } else {
+                await updateDoc(doc(db, 'usuarios', userId), { role: newRole });
+            }
             
             // X-9 EM AÇÃO
             await registrarAuditoriaAcesso(
@@ -219,6 +244,9 @@ export default function ControleAcessosPage() {
                                                             {processando === u.id ? <Loader2 className="w-3 h-3 animate-spin text-slate-400"/> : <Edit className="w-3 h-3 opacity-50"/>}
                                                         </div>
                                                     </div>
+                                                    {ehPapelLider(roleAtual) && !u.unidadeId && (
+                                                        <p className="mt-1.5 w-48 text-[10px] font-bold text-amber-700 dark:text-amber-300 leading-snug">{t('misc.access.leaderNoUnit')}</p>
+                                                    )}
                                                 </td>
 
                                                 <td className="p-5 text-right">

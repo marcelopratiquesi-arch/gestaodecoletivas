@@ -69,5 +69,33 @@
   "checkBanner": "{{count}} unidade(s) com líder novo a conferir: a pessoa entrou com o login antigo da unidade e assumiu como líder com a conta Google dela. Confira se é a pessoa certa: confirme ou remova.",
   "assume": "Eu sou o líder",
   "assumeQuestion": "Marcar você como líder da unidade {{unit}}?\n\nSeu acesso continua o mesmo; a unidade só passa a mostrar você como líder.",
-  "assumeReplaceQuestion": "A unidade {{unit}} já tem o líder {{current}}.\n\nMarcar você como líder no lugar? O líder atual perde o acesso."
+  "assumeReplaceQuestion": "A unidade {{unit}} já tem o líder {{current}}.\n\nMarcar você como líder no lugar? O líder atual perde o acesso.",
+  "promote": {
+    "button": "Tornar líder quem já tem acesso",
+    "title": "Tornar líder quem já tem acesso",
+    "help": "Para o professor de coletiva que vai ser o líder da unidade. Ele continua sendo professor: vê as aulas e os pagamentos dele. Se um dia deixar de ser líder, volta a ser só professor.",
+    "person": "Professor",
+    "search": "Buscar professor por nome ou e-mail...",
+    "noTeachers": "Nenhum professor com login encontrado.",
+    "reading": "Conferindo o acesso atual...",
+    "now": {
+      "teacher": "hoje é professor.",
+      "leaderNoUnit": "hoje está como líder SEM unidade (não consegue validar). Salvar aqui corrige.",
+      "leaderOf": "hoje é líder da unidade {{unit}}.",
+      "sameUnit": "já é o líder desta unidade (salvar só confere os dados)."
+    },
+    "confirm": "Tornar {{name}} líder da unidade {{unit}}? Ele continua sendo professor.",
+    "confirmLeaves": "Ele deixa de ser líder da unidade {{unit}}.",
+    "confirmReplaces": "O líder atual, {{current}}, sai da unidade (se também for professor, volta a ser só professor).",
+    "done": "{{name}} agora é líder da unidade {{unit}}.",
+    "save": "Tornar líder",
+    "errors": {
+      "read": "Não foi possível conferir o acesso desta pessoa.",
+      "noLogin": "esse professor não tem login no sistema. Crie o login na aba Professores primeiro.",
+      "isManager": "é admin ou mentor. Para ser o líder, ele mesmo usa o botão \"Eu sou o líder\".",
+      "blocked": "está com o acesso bloqueado. Desbloqueie em Controle de Acessos antes.",
+      "otherRole": "tem um nível de acesso diferente ({{role}}). Ajuste em Controle de Acessos antes.",
+      "save": "Não foi possível tornar líder."
+    }
+  }
 }

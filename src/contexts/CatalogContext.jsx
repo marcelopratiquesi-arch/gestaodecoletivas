@@ -102,7 +102,8 @@ export const CatalogProvider = ({ children }) => {
     const escopo = useMemo(() => {
         if (chaveSessao === null) return null;
         if (!uid) return '*';
-        if (ehLider(papel)) return userData?.unidadeId ? [String(userData.unidadeId)] : '*';
+        // Líder sem unidade (ainda não foi ligado a nenhuma) não vê nada; antes via a rede inteira.
+        if (ehLider(papel)) return userData?.unidadeId ? [String(userData.unidadeId)] : [];
         if (papel === 'mentor') {
             if (!basePronta) return null;
             return base.unidades.filter(u => u.mentorId === uid).map(u => String(u.id)).sort();
