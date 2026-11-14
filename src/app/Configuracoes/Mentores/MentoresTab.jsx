@@ -232,6 +232,11 @@ export function MentoresTab() {
       }
 
       return resultado.sort((a, b) => {
+          if (sortConfig.field === 'ultimoAcesso') {
+              // sem registro = 0 → aparece primeiro na ordem crescente (quem está há mais tempo sem entrar)
+              const diff = (a.ultimoAcesso?.toMillis?.() || 0) - (b.ultimoAcesso?.toMillis?.() || 0);
+              return sortConfig.direction === 'asc' ? diff : -diff;
+          }
           let valA = (a[sortConfig.field] || "").toLowerCase();
           let valB = (b[sortConfig.field] || "").toLowerCase();
           
@@ -526,7 +531,9 @@ export function MentoresTab() {
                 <th className="p-4 text-xs font-bold text-slate-500 uppercase cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('telefone')}>
                     <div className="flex items-center gap-2">{t('mentorsTab.table.phone', 'WhatsApp')} <SortIcon field="telefone"/></div>
                 </th>
-                <th className="p-4 text-xs font-bold text-slate-500 uppercase">{t('mentorsTab.table.access', 'Acesso')}</th>
+                <th className="p-4 text-xs font-bold text-slate-500 uppercase cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('ultimoAcesso')}>
+                    <div className="flex items-center gap-2">{t('mentorsTab.table.access', 'Acesso')} <SortIcon field="ultimoAcesso"/></div>
+                </th>
                 <th className="p-4 text-xs font-bold text-slate-500 uppercase text-right">{t('mentorsTab.table.actions', 'Ações')}</th>
               </tr>
             </thead>
@@ -613,10 +620,19 @@ export function MentoresTab() {
                     </td>
                     
                     {/* ACESSO: último login registrado */}
-                    <td className="p-4 text-xs font-bold text-slate-600 dark:text-slate-300 whitespace-nowrap">
-                      {m.ultimoAcesso?.toDate
-                        ? m.ultimoAcesso.toDate().toLocaleString(i18n.language, { dateStyle: 'short', timeStyle: 'short' })
-                        : <span className="text-slate-400 font-medium normal-case">{t('mentorsTab.table.neverSeen', 'Sem registro')}</span>}
+                    <td className="p-4 text-xs whitespace-nowrap">
+                      {m.ultimoAcesso?.toDate ? (() => {
+                        const data = m.ultimoAcesso.toDate();
+                        const dias = Math.max(0, Math.floor((Date.now() - data.getTime()) / 86400000));
+                        const cor = dias <= 7 ? 'text-emerald-600 dark:text-emerald-400' : dias <= 30 ? 'text-amber-600 dark:text-amber-400' : 'text-red-600 dark:text-red-400';
+                        const rotulo = new Intl.RelativeTimeFormat(i18n.language, { numeric: 'auto' }).format(-dias, 'day');
+                        return (
+                          <div title={data.toLocaleString(i18n.language, { dateStyle: 'short', timeStyle: 'short' })}>
+                            <div className={`font-bold ${cor}`}>{rotulo}</div>
+                            <div className="text-[10px] text-slate-400 font-medium">{data.toLocaleDateString(i18n.language)}</div>
+                          </div>
+                        );
+                      })() : <span className="text-slate-400 font-medium normal-case">{t('mentorsTab.table.neverSeen', 'Sem registro')}</span>}
                     </td>
 
                     {/* AÇÕES */}
