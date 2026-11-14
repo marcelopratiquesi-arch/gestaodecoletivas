@@ -45,17 +45,19 @@ export function TornarLiderModal({ unidades, todasUnidades, professores, mentore
       if (u.liderUid) juntar(String(u.liderUid), { nome: u.liderNome, email: u.liderEmail, telefone: u.liderTelefone }, "lider");
       if (u.lider2Uid) juntar(String(u.lider2Uid), { nome: u.lider2Nome, email: u.lider2Email, telefone: u.lider2Telefone }, "lider");
     });
-    mentores.forEach((m) => juntar(String(m.id), { nome: m.nome, email: m.email, telefone: m.telefone }, "mentor"));
+    // Mentor está acima do líder: nunca é 2º líder (só pode ser escolhido como 1º).
+    if (vaga !== 2) mentores.forEach((m) => juntar(String(m.id), { nome: m.nome, email: m.email, telefone: m.telefone }, "mentor"));
     return [...porUid.values()].sort((a, b) => String(a.nome).localeCompare(String(b.nome)));
-  }, [professores, todasUnidades, mentores]);
+  }, [professores, todasUnidades, mentores, vaga]);
 
   const candidatos = useMemo(() => {
     const termo = busca.trim().toLowerCase();
     return todosCandidatos
+      .filter((c) => vaga !== 2 || !c.etiquetas.includes("mentor"))
       .filter((c) => tipo === "todos" || c.etiquetas.includes(tipo))
       .filter((c) => !termo || [c.nome, c.email].some((v) => String(v || "").toLowerCase().includes(termo)))
       .slice(0, 60);
-  }, [todosCandidatos, busca, tipo]);
+  }, [todosCandidatos, busca, tipo, vaga]);
 
   const unidade = unidades.find((u) => u.id === unidadeId);
 
@@ -176,7 +178,7 @@ export function TornarLiderModal({ unidades, todasUnidades, professores, mentore
               className="w-full pl-9 pr-3 py-3 rounded-xl bg-slate-100 dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-red-500" />
           </div>
           <div className="flex flex-wrap gap-1.5">
-            {[["todos", t("leadersTab.promote.tagAll")], ["professor", t("leadersTab.promote.tag.teacher")], ["lider", t("leadersTab.promote.tag.leader")], ["mentor", t("leadersTab.promote.tag.mentor")]].map(([id, rotulo]) => (
+            {[["todos", t("leadersTab.promote.tagAll")], ["professor", t("leadersTab.promote.tag.teacher")], ["lider", t("leadersTab.promote.tag.leader")], ["mentor", t("leadersTab.promote.tag.mentor")]].filter(([id]) => !(vaga === 2 && id === "mentor")).map(([id, rotulo]) => (
               <button key={id} type="button" onClick={() => setTipo(id)} aria-pressed={tipo === id}
                 className={`px-3 py-1.5 rounded-lg text-[11px] font-black uppercase transition-colors ${tipo === id ? "bg-red-600 text-white" : "bg-slate-100 dark:bg-slate-900 text-slate-500 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"}`}>{rotulo}</button>
             ))}
