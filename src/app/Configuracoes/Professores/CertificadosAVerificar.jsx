@@ -7,7 +7,7 @@ import { Award, Check, X, Loader2, Building2, User, Info } from "lucide-react";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useCatalogs } from "../../../contexts/CatalogContext";
 import { unidadesDoLider } from "../../../permissions";
-import { listarPendentes, recusarCertificado, verificarCertificado } from "../../../services/certificadoService";
+import { adicionarWorkshopAoProfessor, listarPendentes, recusarCertificado, verificarCertificado } from "../../../services/certificadoService";
 
 export default function CertificadosAVerificar() {
   const { t } = useTranslation();
@@ -49,7 +49,16 @@ export default function CertificadosAVerificar() {
     } else if (!window.confirm(t("certificates.review.verifyConfirm", { name: c.nome, workshop: c.workshop }))) return;
     setProcessando(c.id);
     try {
-      if (recusar) await recusarCertificado(c, motivo, quem); else await verificarCertificado(c, quem);
+      if (recusar) await recusarCertificado(c, motivo, quem);
+      else {
+        await verificarCertificado(c, quem);
+        // Verificado: o workshop entra na lista do professor (vale para todas as unidades dele).
+        const prof = (catalogs?.professores || []).find((p) => p.uidLogin && String(p.uidLogin) === String(c.uid));
+        if (prof) {
+          try { await adicionarWorkshopAoProfessor({ professorId: prof.id, nome: c.workshop, data: c.dataFeito, por: meuNome, id: c.id }); }
+          catch (err) { console.error("Não foi possível incluir na lista do professor", err); }
+        }
+      }
       await carregar();
     } catch (e) {
       console.error(e);

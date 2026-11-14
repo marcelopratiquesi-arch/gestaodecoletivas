@@ -17,7 +17,11 @@
   "cancel": "Cancelar",
   "sent": "Certificados enviados",
   "empty": "Todavía no enviaste ningún certificado.",
-  "status": { "pendente": "Esperando revisión", "verificado": "Verificado", "recusado": "Rechazado" },
+  "status": {
+    "pendente": "Esperando revisión",
+    "verificado": "Verificado",
+    "recusado": "Rechazado"
+  },
   "reason": "Motivo: {{reason}}",
   "resend": "Corregir y reenviar",
   "delete": "Borrar",
@@ -35,13 +39,12 @@
   "manager": {
     "button": "Workshops (certificados)",
     "title": "Workshops de {{name}}",
-    "subtitle": "Certificados que envió el profesor y los que agregues vos. Lo que agregás ya queda verificado.",
+    "subtitle": "Valen para todas las sedes del profesor. Agregá el workshop que hizo y la fecha de finalización.",
     "add": "Agregar certificado",
     "addButton": "Agregar",
-    "unit": "Sede",
     "empty": "Este profesor todavía no tiene certificados.",
-    "byManager": "agregado por un gestor",
-    "byTeacher": "enviado por el profesor"
+    "dateLabel": "Fecha de finalización",
+    "by": "agregado por {{name}}"
   },
   "review": {
     "title": "Certificados de workshop para revisar",

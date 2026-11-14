@@ -17,7 +17,11 @@
   "cancel": "Cancel",
   "sent": "Certificates sent",
   "empty": "You haven't sent any certificate yet.",
-  "status": { "pendente": "Waiting for review", "verificado": "Verified", "recusado": "Refused" },
+  "status": {
+    "pendente": "Waiting for review",
+    "verificado": "Verified",
+    "recusado": "Refused"
+  },
   "reason": "Reason: {{reason}}",
   "resend": "Fix and resend",
   "delete": "Delete",
@@ -35,13 +39,12 @@
   "manager": {
     "button": "Workshops (certificates)",
     "title": "{{name}}'s workshops",
-    "subtitle": "Certificates the teacher sent and the ones you add. What you add is already verified.",
+    "subtitle": "They count for all of the teacher’s units. Add the workshop they took and the completion date.",
     "add": "Add certificate",
     "addButton": "Add",
-    "unit": "Unit",
     "empty": "No certificates for this teacher yet.",
-    "byManager": "added by a manager",
-    "byTeacher": "sent by the teacher"
+    "dateLabel": "Completion date",
+    "by": "added by {{name}}"
   },
   "review": {
     "title": "Workshop certificates to review",

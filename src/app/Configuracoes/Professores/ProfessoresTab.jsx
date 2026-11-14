@@ -996,7 +996,6 @@ export function ProfessoresTab() {
       {profWorkshops && (
         <CertificadosDoProfessor
           professor={profWorkshops}
-          unidades={getUnidadesVinculadas(profWorkshops.id).filter(u => u.podeMexer).map(u => ({ id: u.unidadeId, nome: u.nome }))}
           onClose={() => setProfWorkshops(null)}
         />
       )}

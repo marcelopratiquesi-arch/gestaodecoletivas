@@ -603,39 +603,16 @@ service cloud.firestore {
           && d.foto.matches('data:image/jpeg;base64,.*');
       }
 
-      // Certificado ADICIONADO PELO GESTOR (líder da unidade, mentor dela ou admin) para um professor do cadastro,
-      // com ou sem login pessoal: já entra verificado, quem adicionou fica registrado. Id = "prof_" + id do professor
-      // + "_" + código curto. "uid" é o login do professor (ou vazio, se ele ainda não tem).
-      function certDoGestor() {
-        let d = request.resource.data;
-        return logado()
-          && d.keys().hasOnly(['uid', 'professorId', 'unidadeId', 'nome', 'workshop', 'dataFeito', 'foto', 'status', 'criadoEm',
-                               'analisadoPor', 'analisadoPorNome', 'analisadoEm'])
-          && d.professorId is string && d.professorId != ''
-          && cid.matches('prof_' + d.professorId + '_[A-Za-z0-9]{4,24}')
-          && exists(/databases/$(database)/documents/professores/$(d.professorId))
-          && d.uid is string && d.uid.size() <= 128
-          && d.unidadeId is string && certVerificador(d.unidadeId)
-          && d.status == 'verificado' && d.criadoEm == request.time && d.analisadoEm == request.time
-          && d.analisadoPor == request.auth.uid && d.analisadoPorNome is string && d.analisadoPorNome.size() <= 80
-          && d.nome is string && d.nome.size() >= 3 && d.nome.size() <= 80
-          && d.workshop is string && d.workshop.size() >= 3 && d.workshop.size() <= 120
-          && d.dataFeito is string && d.dataFeito.matches('^20[0-9]{2}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$')
-          && d.foto is string && d.foto.size() >= 200 && d.foto.size() <= 700000
-          && d.foto.matches('data:image/jpeg;base64,.*');
-      }
-
       allow read: if (logado() && resource.data.uid == request.auth.uid) || certVerificador(resource.data.unidadeId);
       // O dono envia; e pode corrigir/reenviar enquanto não foi verificado (recusado volta a pendente).
-      allow create: if certValido() || certDoGestor();
+      allow create: if certValido();
       allow update: if certValido() && resource.data.uid == request.auth.uid && resource.data.status in ['pendente', 'recusado'];
       // Admin, mentor ou líder da unidade verifica ou recusa (só os campos da análise).
       allow update: if resource.data.status == 'pendente' && certVerificador(resource.data.unidadeId)
         && camposAlterados().hasOnly(['status', 'motivo', 'analisadoPor', 'analisadoPorNome', 'analisadoEm'])
         && request.resource.data.status in ['verificado', 'recusado'];
-      // Apaga: o dono (se ainda não verificado), o admin, e o gestor da unidade os que foram adicionados por gestor (com professorId).
-      allow delete: if (logado() && resource.data.uid == request.auth.uid && resource.data.status != 'verificado') || souAdmin()
-        || (resource.data.get('professorId', '') != '' && certVerificador(resource.data.unidadeId));
+      // Apaga: o dono (se ainda não verificado) ou o admin.
+      allow delete: if (logado() && resource.data.uid == request.auth.uid && resource.data.status != 'verificado') || souAdmin();
     }
 
     // ===================== DEMAIS COLEÇÕES =====================

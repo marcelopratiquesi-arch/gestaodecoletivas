@@ -1,7 +1,7 @@
 // Certificados de workshop do professor (coleção certificados_professor; ver regras no firestore.rules).
 // Um documento por certificado, id = login + "_" + código curto. A foto (JPEG base64) fica só nesse documento.
 // Quem verifica: o líder da unidade, o mentor dela ou o admin.
-import { collection, deleteDoc, doc, getDocs, query, serverTimestamp, setDoc, updateDoc, where } from "firebase/firestore";
+import { arrayUnion, collection, deleteDoc, doc, getDocs, query, serverTimestamp, setDoc, updateDoc, where } from "firebase/firestore";
 import { db } from "./firebase";
 import { registrarAuditoriaAcesso } from "./auditoriaAcessos";
 
@@ -41,36 +41,19 @@ export async function listarPendentes({ admin, unidadeIds }) {
 }
 
 /**
- * Todos os certificados de um professor do cadastro (qualquer status), para o gestor ver na aba Professores:
- * os que o gestor adicionou (professorId) e os que o próprio professor enviou pelo login (uid).
- * Mentor/líder: só das unidades dele (o banco exige a unidade na consulta). Admin: sem limite de unidade.
+ * Workshops do PROFESSOR (valem para todas as unidades dele): ficam num campo do próprio cadastro,
+ * professores/{id}.workshops = [{ id, nome, data, por, em }]. Sem foto (economia de dados) e sem leituras
+ * extras: o cadastro já chega ao vivo pelo CatalogContext. O gestor (líder, mentor ou admin) adiciona; o que
+ * o professor envia com foto e o gestor verifica (certificados_professor) também entra aqui ao verificar.
  */
-export async function listarDoProfessor({ professorId, uidLogin, admin, unidadeIds }) {
-  const filtroUnidade = admin ? [] : [where("unidadeId", "in", unidadeIds.slice(0, 10))];
-  const consultas = [query(colecao(), where("professorId", "==", professorId), ...filtroUnidade)];
-  if (uidLogin) consultas.push(query(colecao(), where("uid", "==", uidLogin), ...filtroUnidade));
-  const snaps = await Promise.all(consultas.map((q) => getDocs(q)));
-  const porId = new Map();
-  snaps.forEach((s) => s.docs.forEach((d) => porId.set(d.id, { id: d.id, ...d.data() })));
-  return [...porId.values()].sort(porDataDesc);
+export async function adicionarWorkshopAoProfessor({ professorId, nome, data, por, id }) {
+  const item = { id: id || codigoCurto(), nome: String(nome).trim(), data, por: String(por || "-").slice(0, 80), em: new Date().toISOString() };
+  await updateDoc(doc(db, "professores", String(professorId)), { workshops: arrayUnion(item) });
+  return item;
 }
 
-/** Gestor (líder, mentor ou admin) adiciona um certificado para um professor do cadastro: já entra verificado. */
-export async function adicionarCertificadoDoProfessor({ professor, unidadeId, workshop, dataFeito, foto, quem }) {
-  const cid = `prof_${professor.id}_${codigoCurto()}`;
-  await setDoc(doc(db, "certificados_professor", cid), {
-    uid: String(professor.uidLogin || ""), professorId: String(professor.id), unidadeId: String(unidadeId || ""),
-    nome: String(professor.nome || "-").slice(0, 80), workshop: workshop.trim(), dataFeito, foto,
-    status: "verificado", criadoEm: serverTimestamp(),
-    analisadoPor: quem.id, analisadoPorNome: String(quem.nome || "-").slice(0, 80), analisadoEm: serverTimestamp(),
-  });
-  try {
-    await registrarAuditoriaAcesso({
-      tipoAcao: "NOVA", descricao: "Certificado de workshop adicionado pelo gestor.", unidadeNome: "-", quem: quem.cracha,
-      detalhes: `Workshop: ${workshop.trim()} (${dataFeito})`, alvo: { id: professor.id, nome: professor.nome },
-    });
-  } catch (e) { console.error("Falha ao gravar auditoria", e); }
-  return cid;
+export async function removerWorkshopDoProfessor({ professorId, atuais, id }) {
+  await updateDoc(doc(db, "professores", String(professorId)), { workshops: (atuais || []).filter((w) => w.id !== id) });
 }
 
 async function analisar(certificado, status, motivo, quem) {
