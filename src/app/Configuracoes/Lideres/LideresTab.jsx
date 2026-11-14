@@ -20,7 +20,7 @@ import { useAuth } from "../../../contexts/AuthContext";
 import { useCatalogs } from "../../../contexts/CatalogContext";
 import { PendenciasTab } from "../Pendencias/PendenciasTab";
 import { usePedidosPendentes } from "../Pendencias/usePedidosPendentes";
-import { tirarLiderDaUnidade, camposAoLiberarVaga, textoDaSaida } from "./saidaDoLider";
+import { tirarLiderDaUnidade, camposAoLiberarVaga, textoDaSaida, dadosDaVaga } from "./saidaDoLider";
 import { TornarLiderModal } from "./TornarLiderModal";
 import { BotaoDocumento, DocumentoModal, BuscaDocumento } from "../Documento/DocumentoModal";
 
@@ -129,10 +129,10 @@ export function LideresTab() {
     });
   }
 
-  function abrirNovo(unidade) {
+  function abrirNovo(unidade, vaga = 1) {
     setErro("");
     setForm({ unidadeId: unidade?.id || "", nome: "", email: "", telefone: "", senha: "" });
-    setModal({ modo: "novo", unidade: unidade || null });
+    setModal({ modo: "novo", unidade: unidade || null, vaga });
   }
 
   function abrirEditar(unidade) {
@@ -173,8 +173,10 @@ export function LideresTab() {
     if (!emailValido(email)) return setErro(t("leadersTab.errors.email"));
     if (form.senha.length < SENHA_MINIMA) return setErro(t("leadersTab.errors.password", { min: SENHA_MINIMA }));
 
-    const temOutroLider = !!unidade.liderUid;
-    if (temOutroLider && !window.confirm(t("leadersTab.replaceConfirm", { unit: unidade.nome, current: unidade.liderNome || unidade.liderEmail, name: nome }))) return;
+    const vaga = modal.vaga === 2 ? 2 : 1;
+    const uidDaVaga = vaga === 2 ? unidade.lider2Uid : unidade.liderUid;
+    const temOutroLider = !!uidDaVaga;
+    if (temOutroLider && !window.confirm(t("leadersTab.replaceConfirm", { unit: unidade.nome, current: (vaga === 2 ? unidade.lider2Nome || unidade.lider2Email : unidade.liderNome || unidade.liderEmail), name: nome }))) return;
 
     setSalvando(true);
     let appSecundario = null;
@@ -187,15 +189,17 @@ export function LideresTab() {
       await signOut(authSecundario);
 
       const batch = writeBatch(db);
-      if (temOutroLider) await tirarLiderAtual(batch, unidade, t("leadersTab.replacedReason", { name: nome }));
+      if (temOutroLider) await tirarLiderAtual(batch, unidade, t("leadersTab.replacedReason", { name: nome }), vaga);
       batch.set(doc(db, "usuarios", novoUid), {
         nome, email, telefone, role: "lider", unidadeId: unidade.id, unidadeIds: [unidade.id], status: "ativo",
         criadoPor: userId, criadoEm: serverTimestamp(),
       });
-      batch.update(doc(db, "unidades", unidade.id), {
-        liderUid: novoUid, liderNome: nome, liderEmail: email, liderTelefone: telefone,
-        liderTipo: "senha", liderDesde: serverTimestamp(), liderAConferir: deleteField(),
-      });
+      batch.update(doc(db, "unidades", unidade.id), vaga === 2
+        ? dadosDaVaga(2, { uid: novoUid, nome, email, telefone, tipo: "senha" })
+        : {
+          liderUid: novoUid, liderNome: nome, liderEmail: email, liderTelefone: telefone,
+          liderTipo: "senha", liderDesde: serverTimestamp(), liderAConferir: deleteField(),
+        });
       await batch.commit();
 
       await registrarAuditoria("NOVA", "Líder cadastrado manualmente (e-mail e senha).", unidade.nome,
@@ -521,6 +525,7 @@ export function LideresTab() {
         <TornarLiderModal
           unidades={minhasUnidades} todasUnidades={catalogs?.unidades || []} professores={professores} mentores={mentores}
           vaga={tornarLider.vaga} unidadeInicial={tornarLider.unidade}
+          onCadastrar={(u, v) => { setTornarLider(null); abrirNovo(u, v); }}
           quemId={userId} quemNome={meuNome} registrarAuditoria={registrarAuditoria}
           onClose={() => setTornarLider(null)}
         />
@@ -551,8 +556,8 @@ export function LideresTab() {
 
             {(() => {
               const alvo = minhasUnidades.find((u) => u.id === form.unidadeId);
-              return modal.modo === "novo" && alvo?.liderUid ? (
-                <p className="text-xs font-bold text-amber-600 bg-amber-50 dark:bg-amber-900/20 p-3 rounded-xl">{t("leadersTab.modal.replaceWarning", { name: alvo.liderNome || alvo.liderEmail })}</p>
+              return modal.modo === "novo" && (modal.vaga === 2 ? alvo?.lider2Uid : alvo?.liderUid) ? (
+                <p className="text-xs font-bold text-amber-600 bg-amber-50 dark:bg-amber-900/20 p-3 rounded-xl">{t("leadersTab.modal.replaceWarning", { name: modal.vaga === 2 ? (alvo.lider2Nome || alvo.lider2Email) : (alvo.liderNome || alvo.liderEmail) })}</p>
               ) : null;
             })()}
 
