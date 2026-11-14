@@ -1,0 +1,46 @@
+{
+  "title": "Meus workshops",
+  "subtitle": "Informe os workshops que você fez. Envie a foto do certificado: o líder da sua unidade, o seu mentor ou o administrador confere e marca como verificado.",
+  "noUnit": "O seu cadastro ainda não tem unidade. Peça ao líder da sua unidade para ajustar o seu acesso.",
+  "add": "Enviar um certificado",
+  "fix": "Corrigir e reenviar",
+  "fields": {
+    "workshop": "Nome do workshop",
+    "workshopPlaceholder": "Ex.: Workshop Pratique Pilates 2025",
+    "date": "Data em que fez",
+    "photo": "Foto do certificado"
+  },
+  "choosePhoto": "Escolher foto",
+  "changePhoto": "Trocar foto",
+  "photoHint": "Pode tirar a foto pelo celular. Ela é reduzida automaticamente. Deixe o nome e a data bem legíveis.",
+  "send": "Enviar",
+  "cancel": "Cancelar",
+  "sent": "Certificados enviados",
+  "empty": "Você ainda não enviou nenhum certificado.",
+  "status": { "pendente": "Aguardando conferência", "verificado": "Verificado", "recusado": "Recusado" },
+  "reason": "Motivo: {{reason}}",
+  "resend": "Corrigir e reenviar",
+  "delete": "Apagar",
+  "deleteConfirm": "Apagar o certificado \"{{name}}\"?",
+  "errors": {
+    "name": "Escreva o nome do workshop (pelo menos 3 letras).",
+    "date": "Escolha a data em que você fez o workshop (não pode ser no futuro).",
+    "noPhoto": "Escolha a foto do certificado.",
+    "notImage": "Este arquivo não é uma imagem. Escolha uma foto.",
+    "photo": "Não foi possível preparar esta foto. Tente outra.",
+    "save": "Não foi possível enviar. Tente de novo.",
+    "delete": "Não foi possível apagar.",
+    "load": "Não foi possível carregar os seus certificados."
+  },
+  "review": {
+    "title": "Certificados de workshop para conferir",
+    "subtitle": "Professores enviaram a foto do certificado. Confira o nome, o workshop e a data na foto.",
+    "enlarge": "Ampliar a foto",
+    "doneOn": "Feito em {{date}}",
+    "verify": "Verificar",
+    "refuse": "Recusar",
+    "verifyConfirm": "Confirmar que o certificado de {{name}} (\"{{workshop}}\") está correto?",
+    "refusePrompt": "Recusar o certificado \"{{workshop}}\" de {{name}}?\n\nEscreva o motivo (o professor vai ver):",
+    "error": "Não foi possível salvar a conferência."
+  }
+}
