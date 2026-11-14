@@ -7,15 +7,16 @@
 import { useMemo, useState } from "react";
 import { doc, getDoc, writeBatch } from "firebase/firestore";
 import { useTranslation } from "react-i18next";
-import { X, Check, Loader2, Search, UserCog, AlertTriangle } from "lucide-react";
+import { X, Check, Loader2, Search, UserCog, UserPlus, AlertTriangle } from "lucide-react";
 import { db } from "../../../services/firebase";
 import { ehLider, liderMantemAcesso, unidadesDoLider } from "../../../permissions";
 import { professorDoLogin, tirarLiderDaUnidade, crachaAoEntrar, dadosDaVaga, textoDaSaida } from "./saidaDoLider";
 
-export function TornarLiderModal({ unidades, todasUnidades, professores, mentores = [], unidadeInicial, vaga = 1, quemId, quemNome, registrarAuditoria, onClose }) {
+export function TornarLiderModal({ unidades, todasUnidades, professores, mentores = [], unidadeInicial, vaga = 1, quemId, quemNome, registrarAuditoria, onCadastrar, onClose }) {
   const { t } = useTranslation();
   const [unidadeId, setUnidadeId] = useState(unidadeInicial?.id || "");
   const [busca, setBusca] = useState("");
+  const [tipo, setTipo] = useState("todos"); // todos | professor | lider | mentor
   const [pessoa, setPessoa] = useState(null);      // candidato escolhido
   const [cracha, setCracha] = useState(null);      // { existe, dados }
   const [lendo, setLendo] = useState(false);
@@ -51,9 +52,10 @@ export function TornarLiderModal({ unidades, todasUnidades, professores, mentore
   const candidatos = useMemo(() => {
     const termo = busca.trim().toLowerCase();
     return todosCandidatos
+      .filter((c) => tipo === "todos" || c.etiquetas.includes(tipo))
       .filter((c) => !termo || [c.nome, c.email].some((v) => String(v || "").toLowerCase().includes(termo)))
       .slice(0, 60);
-  }, [todosCandidatos, busca]);
+  }, [todosCandidatos, busca, tipo]);
 
   const unidade = unidades.find((u) => u.id === unidadeId);
 
@@ -172,6 +174,18 @@ export function TornarLiderModal({ unidades, todasUnidades, professores, mentore
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input value={busca} onChange={(e) => setBusca(e.target.value)} disabled={salvando} placeholder={t("leadersTab.promote.search")}
               className="w-full pl-9 pr-3 py-3 rounded-xl bg-slate-100 dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-red-500" />
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {[["todos", t("leadersTab.promote.tagAll")], ["professor", t("leadersTab.promote.tag.teacher")], ["lider", t("leadersTab.promote.tag.leader")], ["mentor", t("leadersTab.promote.tag.mentor")]].map(([id, rotulo]) => (
+              <button key={id} type="button" onClick={() => setTipo(id)} aria-pressed={tipo === id}
+                className={`px-3 py-1.5 rounded-lg text-[11px] font-black uppercase transition-colors ${tipo === id ? "bg-red-600 text-white" : "bg-slate-100 dark:bg-slate-900 text-slate-500 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"}`}>{rotulo}</button>
+            ))}
+            {onCadastrar && (
+              <button type="button" onClick={() => onCadastrar(unidade || null, vaga)} disabled={salvando}
+                className="ml-auto px-3 py-1.5 rounded-lg text-[11px] font-black uppercase bg-emerald-500 hover:bg-emerald-600 text-white flex items-center gap-1.5 disabled:opacity-50">
+                <UserPlus className="w-3.5 h-3.5" /> {t("leadersTab.promote.registerNew")}
+              </button>
+            )}
           </div>
           <div className="max-h-56 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-700/50">
             {candidatos.length === 0 ? (

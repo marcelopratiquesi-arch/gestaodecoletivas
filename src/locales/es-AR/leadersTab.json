@@ -123,7 +123,9 @@
     },
     "confirmSecond": "¿Agregar a {{name}} como 2º líder de la unidad {{unit}}?",
     "replaceWarning": "Este lugar ya es de {{name}}. Al guardar, sale y entra la persona elegida.",
-    "doneSecond": "{{name}} ahora es el 2º líder de la unidad {{unit}}."
+    "doneSecond": "{{name}} ahora es el 2º líder de la unidad {{unit}}.",
+    "tagAll": "Todos",
+    "registerNew": "Registrar nuevo"
   },
   "second": {
     "badge": "2º líder",
