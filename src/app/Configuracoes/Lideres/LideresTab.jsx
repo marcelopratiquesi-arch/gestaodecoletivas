@@ -23,6 +23,10 @@ import { usePedidosPendentes } from "../Pendencias/usePedidosPendentes";
 import { tirarLiderDaUnidade, camposAoLiberarVaga, textoDaSaida, dadosDaVaga } from "./saidaDoLider";
 import { TornarLiderModal } from "./TornarLiderModal";
 import { BotaoDocumento, DocumentoModal, BuscaDocumento } from "../Documento/DocumentoModal";
+import i18n from "../../../i18n";
+import CampoDocumento from "../../../components/acesso/CampoDocumento";
+import { documentoNoLote, gravarComAviso, ERRO_DOCUMENTO_EM_USO } from "../../../services/documentoService";
+import { documentoValido, tipoDocumentoPadrao } from "../../../utils/documento";
 
 const SENHA_MINIMA = 6;
 // País da unidade em sigla (cadastros antigos guardam o nome por extenso; sem país = Brasil).
@@ -59,7 +63,7 @@ export function LideresTab() {
 
   // Modal de cadastro manual / edição de contato
   const [modal, setModal] = useState(null); // { modo: 'novo' | 'editar', unidade }
-  const [form, setForm] = useState({ unidadeId: "", nome: "", email: "", telefone: "", senha: "" });
+  const [form, setForm] = useState({ unidadeId: "", nome: "", email: "", telefone: "", senha: "", tipoDoc: tipoDocumentoPadrao(i18n.language), documento: "" });
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
 
@@ -131,7 +135,7 @@ export function LideresTab() {
 
   function abrirNovo(unidade, vaga = 1) {
     setErro("");
-    setForm({ unidadeId: unidade?.id || "", nome: "", email: "", telefone: "", senha: "" });
+    setForm({ unidadeId: unidade?.id || "", nome: "", email: "", telefone: "", senha: "", tipoDoc: tipoDocumentoPadrao(i18n.language), documento: "" });
     setModal({ modo: "novo", unidade: unidade || null, vaga });
   }
 
@@ -171,6 +175,7 @@ export function LideresTab() {
     }
 
     if (!emailValido(email)) return setErro(t("leadersTab.errors.email"));
+    if (!documentoValido(form.tipoDoc, form.documento)) return setErro(t("document.errors.invalid"));
     if (form.senha.length < SENHA_MINIMA) return setErro(t("leadersTab.errors.password", { min: SENHA_MINIMA }));
 
     const vaga = modal.vaga === 2 ? 2 : 1;
@@ -186,7 +191,6 @@ export function LideresTab() {
       const authSecundario = getAuth(appSecundario);
       const cred = await createUserWithEmailAndPassword(authSecundario, email, form.senha);
       const novoUid = cred.user.uid;
-      await signOut(authSecundario);
 
       const batch = writeBatch(db);
       if (temOutroLider) await tirarLiderAtual(batch, unidade, t("leadersTab.replacedReason", { name: nome }), vaga);
@@ -200,7 +204,16 @@ export function LideresTab() {
           liderUid: novoUid, liderNome: nome, liderEmail: email, liderTelefone: telefone,
           liderTipo: "senha", liderDesde: serverTimestamp(), liderAConferir: deleteField(),
         });
-      await batch.commit();
+      // O CPF/documento vai para a gaveta privada (nunca para auditoria nem lista). Só o admin pode marcar o crachá.
+      documentoNoLote(batch, { uid: novoUid, tipo: form.tipoDoc, numero: form.documento, marcarCracha: role === "admin" });
+      try {
+        await gravarComAviso(batch);
+      } catch (errBatch) {
+        // Não deixa conta de login "órfã" (senão o e-mail ficaria preso numa nova tentativa).
+        await cred.user.delete().catch(() => {});
+        throw errBatch;
+      }
+      await signOut(authSecundario);
 
       await registrarAuditoria("NOVA", "Líder cadastrado manualmente (e-mail e senha).", unidade.nome,
         `${nome} (${email})${temOutroLider ? ` substituiu ${unidade.liderNome || unidade.liderEmail}` : ""}`);
@@ -210,6 +223,7 @@ export function LideresTab() {
       console.error(err);
       if (err.code === "auth/email-already-in-use") setErro(t("leadersTab.errors.emailInUse"));
       else if (err.code === "auth/invalid-email") setErro(t("leadersTab.errors.email"));
+      else if (err.message === ERRO_DOCUMENTO_EM_USO) setErro(t("document.errors.inUse"));
       else if (err.code === "auth/weak-password") setErro(t("leadersTab.errors.password", { min: SENHA_MINIMA }));
       else setErro(t("leadersTab.errors.save") + " " + (err.message || ""));
     } finally {
@@ -579,6 +593,11 @@ export function LideresTab() {
               <input value={form.telefone} onChange={(e) => setForm({ ...form, telefone: e.target.value })} disabled={salvando} maxLength={30} placeholder="+55 31 99999-9999"
                 className="w-full p-3 rounded-xl bg-slate-100 dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-red-500" />
             </label>
+
+            {modal.modo === "novo" && (
+              <CampoDocumento claro id="novo-lider-documento" tipo={form.tipoDoc} onTipo={(v) => setForm((f) => ({ ...f, tipoDoc: v }))}
+                valor={form.documento} onValor={(v) => setForm((f) => ({ ...f, documento: v }))} desabilitado={salvando} />
+            )}
 
             {modal.modo === "novo" && (
               <label className="block space-y-1">
