@@ -16,7 +16,10 @@
     "units": "Unidades",
     "unitsLeader": "Unidades que você lidera",
     "unitsMentor": "Unidades que você acompanha",
-    "alsoTeacher": "Você também dá aulas nessas unidades?"
+    "alsoTeacher": "Você também dá aulas nessas unidades?",
+    "unitTeacher": "Sua unidade",
+    "modalities": "Modalidades que você dá (opcional)",
+    "modalitiesPlaceholder": "Ex.: Zumba, Pilates"
   },
   "form": {
     "title": "Seus dados",
@@ -38,7 +41,8 @@
     "name": "Digite seu nome completo.",
     "phone": "Digite um WhatsApp válido.",
     "unit": "Escolha pelo menos uma unidade.",
-    "send": "Não foi possível enviar o pedido. Tente de novo."
+    "send": "Não foi possível enviar o pedido. Tente de novo.",
+    "modalities": "As modalidades podem ter no máximo 120 caracteres."
   },
   "invite": {
     "title": "Olá, {{name}}!",
@@ -53,10 +57,13 @@
   "alsoTeacherNo": "Não",
   "hints": {
     "leaderUnits": "Pode escolher até {{max}} unidades.",
-    "mentorUnits": "Pode escolher até {{max}} unidades. O administrador confere na aprovação."
+    "mentorUnits": "Pode escolher até {{max}} unidades. O administrador confere na aprovação.",
+    "teacherUnit": "Escolha a sua unidade principal. O líder pode incluir outras unidades depois.",
+    "modalities": "Pode deixar em branco. O líder ajusta depois."
   },
   "approver": {
     "lider": "Quem aprova: o mentor da unidade ou o administrador.",
-    "mentor": "Quem aprova: o administrador."
+    "mentor": "Quem aprova: o administrador.",
+    "professor": "Quem aprova: o líder da sua unidade, o mentor ou o administrador."
   }
 }

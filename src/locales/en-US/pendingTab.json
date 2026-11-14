@@ -51,5 +51,14 @@
     "ackError": "Could not mark as noted.",
     "onlyAdmin": "Only the administrator handles a mentor exit.",
     "mentorUnits": "Their units (need a new mentor):"
+  },
+  "teacher": {
+    "title": "Teacher requests",
+    "subtitle": "Approving enables the teacher login. You link their classes afterwards, in the teachers list.",
+    "approveConfirm": "Approve {{name}} as a teacher at {{unit}}?",
+    "approved": "{{name}} approved. Now link their classes in the teachers list.",
+    "modalities": "Class types",
+    "noModalities": "not provided",
+    "documentOk": "✓ ID document provided (stored securely)"
   }
 }

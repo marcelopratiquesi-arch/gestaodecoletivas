@@ -46,6 +46,7 @@ export default function SolicitarAcesso() {
   const [telefone, setTelefone] = useState("");
   const [unidadeIds, setUnidadeIds] = useState([]);
   const [tambemProfessor, setTambemProfessor] = useState(false);
+  const [modalidades, setModalidades] = useState(""); // professor: opcional, texto livre
   const [docTipo, setDocTipo] = useState(() => tipoDocumentoPadrao(i18n.language));
   const [docNumero, setDocNumero] = useState("");
   const [docAnterior, setDocAnterior] = useState(null); // documento do pedido anterior (se refizer o pedido)
@@ -133,6 +134,7 @@ export default function SolicitarAcesso() {
     setTelefone((v) => v || pedido?.telefone || "");
     setUnidadeIds((v) => (v.length ? v : idsDoPedido(pedido)));
     setTambemProfessor((v) => v || !!pedido?.tambemProfessor);
+    setModalidades((v) => v || pedido?.modalidades || "");
     setPapel((v) => v || (FUNCOES_PEDIDO.includes(pedido?.papel) ? pedido.papel : pedido ? "lider" : lerPapelPedido()));
   }, [precisaFormulario, pedido, user]);
 
@@ -142,11 +144,12 @@ export default function SolicitarAcesso() {
     if (nome.trim().length < 3) return setErro(t("accessRequest.errors.name"));
     if (telefone.replace(/\D/g, "").length < 8) return setErro(t("accessRequest.errors.phone"));
     if (!unidadeIds.length) return setErro(t("accessRequest.errors.unit"));
+    if (modalidades.length > 120) return setErro(t("accessRequest.errors.modalities"));
     if (!documentoValido(docTipo, docNumero)) return setErro(t("document.errors.invalid"));
 
     setEnviando(true);
     try {
-      const ids = unidadeIds.slice(0, MAX_UNIDADES_PEDIDO);
+      const ids = unidadeIds.slice(0, papel === "professor" ? 1 : MAX_UNIDADES_PEDIDO); // professor escolhe UMA unidade
       const batch = writeBatch(db);
       batch.set(doc(db, "solicitacoes_acesso", uid), {
         nome: nome.trim(),
@@ -157,6 +160,7 @@ export default function SolicitarAcesso() {
         unidadeNome: porId.get(ids[0])?.nome || "",
         unidadeNomes: ids.map((id) => porId.get(id)?.nome || ""),
         tambemProfessor: papel === "lider" && tambemProfessor,
+        ...(papel === "professor" && modalidades.trim() ? { modalidades: modalidades.trim() } : {}),
         email: user.email,
         status: "pendente",
         documentoOk: true, // o número fica na gaveta privada do pedido, nunca aqui
@@ -238,6 +242,9 @@ export default function SolicitarAcesso() {
               <b>{t(`access.roles.${papelPedido}.name`)}{papelPedido === "lider" && pedido.tambemProfessor ? ` ${t("accessRequest.andTeacher")}` : ""}</b>
             </p>
             <p><span className="text-zinc-500">{t("accessRequest.fields.units")}:</span> <b>{nomes.join(", ")}</b></p>
+            {papelPedido === "professor" && pedido.modalidades && (
+              <p><span className="text-zinc-500">{t("accessRequest.fields.modalities")}:</span> <b>{pedido.modalidades}</b></p>
+            )}
           </div>
           <div className="text-left text-xs text-zinc-300 bg-blue-500/10 border border-blue-500/30 rounded-xl px-3 py-2.5">
             {t(`accessRequest.approver.${papelPedido}`)}
@@ -245,7 +252,7 @@ export default function SolicitarAcesso() {
           <BotaoLink onClick={() => setEditando(true)}><Pencil className="w-4 h-4" /> {t("accessRequest.waiting.edit")}</BotaoLink>
           {sair}
         </div>
-        <CaixaAjuda mentores={papelPedido === "lider" ? ids.map((id) => porId.get(id)?.mentorNome) : []} />
+        <CaixaAjuda mentores={papelPedido !== "mentor" ? ids.map((id) => porId.get(id)?.mentorNome) : []} />
       </FundoAcesso>
     );
   }
@@ -262,14 +269,10 @@ export default function SolicitarAcesso() {
           {FUNCOES_PEDIDO.map((p) => (
             <CartaoEscolha
               key={p} ativo={papel === p} icone={ICONE_FUNCAO[p]}
-              onClick={() => { setPapel(p); guardarPapelPedido(p); setEscolhendoPapel(false); }}
+              onClick={() => { setPapel(p); guardarPapelPedido(p); setEscolhendoPapel(false); if (p === "professor") setUnidadeIds((v) => v.slice(0, 1)); }}
               titulo={t(`access.roles.${p}.name`)} descricao={t(`access.roles.${p}.desc`)}
             />
           ))}
-          <CartaoEscolha
-            desabilitado icone={ICONE_FUNCAO.professor} selo={t("access.roles.soon")}
-            titulo={t("access.roles.professor.name")} descricao={t("access.roles.professor.soonDesc")}
-          />
         </div>
         <div className="mt-5">{sair}</div>
         <CaixaAjuda />
@@ -321,11 +324,21 @@ export default function SolicitarAcesso() {
 
         <SeletorUnidades
           unidades={unidades} selecionadas={unidadeIds} onChange={setUnidadeIds} desabilitado={enviando}
-          rotulo={t(papel === "mentor" ? "accessRequest.fields.unitsMentor" : "accessRequest.fields.unitsLeader")}
+          max={papel === "professor" ? 1 : MAX_UNIDADES_PEDIDO}
+          rotulo={t(papel === "mentor" ? "accessRequest.fields.unitsMentor" : papel === "professor" ? "accessRequest.fields.unitTeacher" : "accessRequest.fields.unitsLeader")}
         />
         <p className="text-[11px] text-zinc-500 -mt-2 ml-1">
-          {t(papel === "mentor" ? "accessRequest.hints.mentorUnits" : "accessRequest.hints.leaderUnits", { max: MAX_UNIDADES_PEDIDO })}
+          {t(papel === "mentor" ? "accessRequest.hints.mentorUnits" : papel === "professor" ? "accessRequest.hints.teacherUnit" : "accessRequest.hints.leaderUnits", { max: MAX_UNIDADES_PEDIDO })}
         </p>
+        {papel === "professor" && (
+          <div className="space-y-1">
+            <label htmlFor="pedido-modalidades" className={classeRotulo}>{t("accessRequest.fields.modalities")}</label>
+            <input id="pedido-modalidades" value={modalidades} onChange={(e) => setModalidades(e.target.value)} maxLength={120}
+              className="w-full bg-zinc-900/50 border border-zinc-700 text-white font-bold px-4 py-3 rounded-xl focus:border-red-600 outline-none placeholder:text-zinc-600 placeholder:font-normal"
+              placeholder={t("accessRequest.fields.modalitiesPlaceholder")} />
+            <p className="text-[11px] text-zinc-500 ml-1">{t("accessRequest.hints.modalities")}</p>
+          </div>
+        )}
 
         <div className="space-y-1">
           <CampoDocumento id="pedido-documento" tipo={docTipo} onTipo={setDocTipo} valor={docNumero} onValor={setDocNumero} desabilitado={enviando} />

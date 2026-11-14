@@ -51,5 +51,14 @@
     "ackError": "Não foi possível dar ciência.",
     "onlyAdmin": "Só o administrador trata a saída de mentor.",
     "mentorUnits": "Unidades dele (precisam de novo mentor):"
+  },
+  "teacher": {
+    "title": "Pedidos de professores",
+    "subtitle": "Aprovar libera o login do professor. As aulas dele você liga depois, pelo cadastro de professores.",
+    "approveConfirm": "Aprovar {{name}} como professor(a) da unidade {{unit}}?",
+    "approved": "{{name}} aprovado(a). Agora ligue as aulas dele(a) pelo cadastro de professores.",
+    "modalities": "Modalidades",
+    "noModalities": "não informadas",
+    "documentOk": "✓ Documento informado (guardado em local protegido)"
   }
 }

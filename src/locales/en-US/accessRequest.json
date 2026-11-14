@@ -16,7 +16,10 @@
     "units": "Units",
     "unitsLeader": "Units you lead",
     "unitsMentor": "Units you support",
-    "alsoTeacher": "Do you also teach at these units?"
+    "alsoTeacher": "Do you also teach at these units?",
+    "unitTeacher": "Your unit",
+    "modalities": "Class types you teach (optional)",
+    "modalitiesPlaceholder": "E.g.: Zumba, Pilates"
   },
   "form": {
     "title": "Your details",
@@ -38,7 +41,8 @@
     "name": "Enter your full name.",
     "phone": "Enter a valid WhatsApp number.",
     "unit": "Choose at least one unit.",
-    "send": "Could not send the request. Please try again."
+    "send": "Could not send the request. Please try again.",
+    "modalities": "Class types can have at most 120 characters."
   },
   "invite": {
     "title": "Hi, {{name}}!",
@@ -53,10 +57,13 @@
   "alsoTeacherNo": "No",
   "hints": {
     "leaderUnits": "You can choose up to {{max}} units.",
-    "mentorUnits": "You can choose up to {{max}} units. The administrator checks them on approval."
+    "mentorUnits": "You can choose up to {{max}} units. The administrator checks them on approval.",
+    "teacherUnit": "Pick your main unit. The leader can add other units later.",
+    "modalities": "You can leave this blank. The leader adjusts it later."
   },
   "approver": {
     "lider": "Who approves: the unit's mentor or the administrator.",
-    "mentor": "Who approves: the administrator."
+    "mentor": "Who approves: the administrator.",
+    "professor": "Approved by: your unit leader, the mentor or the administrator."
   }
 }

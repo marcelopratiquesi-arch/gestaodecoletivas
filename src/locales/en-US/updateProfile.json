@@ -55,7 +55,7 @@
       "segue": "I am this unit's leader",
       "segueDesc": "This login becomes your personal leader login.",
       "professor": "I teach at this unit",
-      "professorDesc": "Personal access for teachers is coming soon.",
+      "professorDesc": "You can now sign in as a teacher with your own Google account.",
       "saiu": "I'm no longer at this unit",
       "saiuDesc": "You do not continue with this login."
     },
@@ -76,7 +76,15 @@
       "saiuDesc": "You do not continue with this login."
     },
     "stop": {
-      "professor": "Do not continue with this login. Tell the unit leader or your mentor: they will adjust your access. Personal access for teachers is coming soon."
+      "professor": "Do not continue with this login. Sign out and choose \"First access\" → \"Group class teacher\" with your Google account. The unit leader approves.",
+      "saiuTeacher": "Do not continue with this login. Tell your unit leader: they will adjust your access."
+    },
+    "teacher": {
+      "question": "Are you still a teacher?",
+      "segue": "Yes, I am still a teacher",
+      "segueDesc": "Your details are updated and you carry on as usual.",
+      "saiu": "I no longer teach at the unit",
+      "saiuDesc": "You do not continue with this login."
     }
   },
   "data": {

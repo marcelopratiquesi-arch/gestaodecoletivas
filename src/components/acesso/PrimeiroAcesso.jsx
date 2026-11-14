@@ -1,5 +1,5 @@
 // Aba "Primeiro acesso" da tela de login: explica como funciona, a pessoa escolhe a função
-// (líder, mentor; professor em breve) e entra com o Google. Os dados são preenchidos depois,
+// (líder, mentor ou professor) e entra com o Google. Os dados são preenchidos depois,
 // na tela de pedido de acesso (pages/SolicitarAcesso), que já abre com a função escolhida.
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -45,16 +45,12 @@ export default function PrimeiroAcesso({ onGoogle, carregando, erro, onVoltar })
         <h2 className="text-xl font-black text-white text-center">{t("access.roles.title")}</h2>
         <p className="text-sm text-zinc-400 text-center mt-1.5 mb-5">{t("access.roles.desc")}</p>
         <div className="space-y-2.5">
-          {["lider", "mentor"].map((p) => (
+          {["lider", "mentor", "professor"].map((p) => (
             <CartaoEscolha
               key={p} ativo={papel === p} onClick={() => setPapel(p)} icone={ICONE_FUNCAO[p]}
               titulo={t(`access.roles.${p}.name`)} descricao={t(`access.roles.${p}.desc`)}
             />
           ))}
-          <CartaoEscolha
-            desabilitado icone={ICONE_FUNCAO.professor} selo={t("access.roles.soon")}
-            titulo={t("access.roles.professor.name")} descricao={t("access.roles.professor.soonDesc")}
-          />
         </div>
         <div className="mt-5 space-y-2">
           <BotaoVermelho type="button" onClick={() => { guardarPapelPedido(papel); setPasso("google"); }}>{t("access.continue")}</BotaoVermelho>

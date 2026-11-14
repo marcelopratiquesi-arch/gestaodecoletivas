@@ -34,7 +34,8 @@
     },
     "professor": {
       "name": "Group class teacher",
-      "soonDesc": "Personal access for teachers is coming soon. For now, talk to your unit leader."
+      "soonDesc": "Personal access for teachers is coming soon. For now, talk to your unit leader.",
+      "desc": "Teaches group classes. Your unit leader approves your access."
     }
   },
   "google": {

@@ -55,7 +55,7 @@
       "segue": "Sou o líder desta unidade",
       "segueDesc": "Este login passa a ser o seu login pessoal de líder.",
       "professor": "Sou professor desta unidade",
-      "professorDesc": "O acesso pessoal de professor chega em breve.",
+      "professorDesc": "Agora você pode entrar como professor com a sua conta Google.",
       "saiu": "Não sou mais da unidade",
       "saiuDesc": "Você não continua com este login."
     },
@@ -76,7 +76,15 @@
       "saiuDesc": "Você não continua com este login."
     },
     "stop": {
-      "professor": "Não continue com este login. Avise o líder da unidade ou o seu mentor: ele ajusta o seu acesso. O acesso pessoal de professor chega em breve."
+      "professor": "Não continue com este login. Saia e escolha \"Primeiro acesso\" → \"Professor de coletivas\" com a sua conta Google. O líder da unidade aprova.",
+      "saiuTeacher": "Não continue com este login. Avise o líder da unidade: ele ajusta o seu acesso."
+    },
+    "teacher": {
+      "question": "Você continua como professor?",
+      "segue": "Sim, continuo professor",
+      "segueDesc": "Seus dados são atualizados e você segue normalmente.",
+      "saiu": "Não dou mais aulas na unidade",
+      "saiuDesc": "Você não continua com este login."
     }
   },
   "data": {

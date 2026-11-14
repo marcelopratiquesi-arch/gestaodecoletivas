@@ -34,7 +34,8 @@
     },
     "professor": {
       "name": "Professor de coletivas",
-      "soonDesc": "O acesso pessoal do professor chega em breve. Por enquanto, fale com o líder da sua unidade."
+      "soonDesc": "O acesso pessoal do professor chega em breve. Por enquanto, fale com o líder da sua unidade.",
+      "desc": "Dá aulas de coletivas. O líder da unidade aprova o seu acesso."
     }
   },
   "google": {

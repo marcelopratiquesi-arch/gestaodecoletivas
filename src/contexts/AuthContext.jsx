@@ -13,10 +13,10 @@ const temProvedor = (firebaseUser, id) =>
 const entrouPeloGoogle = (firebaseUser) => temProvedor(firebaseUser, "google.com");
 
 // Perfis que já são obrigados a trocar o login antigo (e-mail e senha) pelo login pessoal do Google.
-// Professores e admin ficam para uma próxima etapa.
-const PAPEIS_QUE_MIGRAM = ["lider", "unidade", "mentor"];
+// Admin fica para uma próxima etapa.
+const PAPEIS_QUE_MIGRAM = ["lider", "unidade", "mentor", "professor"];
 // Quem precisa informar o documento de identificação (CPF/DNI/SSN). Professor entra numa etapa futura.
-const PAPEIS_COM_DOCUMENTO = ["lider", "unidade", "mentor", "admin", "administrador", "master"];
+const PAPEIS_COM_DOCUMENTO = ["lider", "unidade", "mentor", "professor", "admin", "administrador", "master"];
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);          // firebaseUser

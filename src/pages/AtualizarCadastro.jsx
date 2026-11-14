@@ -47,7 +47,8 @@ export default function AtualizarCadastro() {
   const role = String(userData?.role || "").trim().toLowerCase();
   const souLider = ehLider(role);
   const eraLoginDeUnidade = role === "unidade"; // o "nome" desse crachá é o nome da unidade, não o da pessoa
-  const perfil = eraLoginDeUnidade ? "unit" : souLider ? "leader" : "mentor";
+  const souProfessor = role === "professor"; // professor de login antigo: confirma os dados e passa para o Google
+  const perfil = eraLoginDeUnidade ? "unit" : souLider ? "leader" : souProfessor ? "teacher" : "mentor";
   const uid = user?.uid;
   const unidadeId = souLider ? userData?.unidadeId : null;
 
@@ -58,6 +59,7 @@ export default function AtualizarCadastro() {
   const [resposta, setResposta] = useState(""); // "segue" = continua na função; "professor" | "saiu" = não segue
   const [nome, setNome] = useState("");
   const [telefone, setTelefone] = useState("");
+  const [modalidades, setModalidades] = useState(""); // professor: opcional, texto livre
   const [docTipo, setDocTipo] = useState(() => tipoDocumentoPadrao(i18n.language));
   const [docNumero, setDocNumero] = useState("");
   const [docAnterior, setDocAnterior] = useState(null); // documento já guardado (ex.: informado pelo admin)
@@ -89,6 +91,7 @@ export default function AtualizarCadastro() {
     if (!userData) return;
     if (!eraLoginDeUnidade) setNome((v) => v || userData.nome || "");
     setTelefone((v) => v || userData.telefone || "");
+    setModalidades((v) => v || userData.modalidades || "");
   }, [userData, eraLoginDeUnidade]);
 
   // Se o documento já está guardado (informado antes), o campo já vem preenchido.
@@ -132,6 +135,7 @@ export default function AtualizarCadastro() {
     if (telefoneLimpo.replace(/\D/g, "").length < 8) { setPasso("dados"); return setErro(t("updateProfile.errors.phone")); }
 
     if (!documentoValido(docTipo, docNumero)) { setPasso("dados"); return setErro(t("document.errors.invalid")); }
+    if (modalidades.length > 120) { setPasso("dados"); return setErro(t("accessRequest.errors.modalities")); }
 
     setSalvando(true);
     try {
@@ -152,6 +156,7 @@ export default function AtualizarCadastro() {
       batch.update(doc(db, "usuarios", uid), {
         nome: nomeLimpo, telefone: telefoneLimpo, email, loginGoogle: true, cadastroAtualizadoEm: serverTimestamp(), documentoOk: true,
         ...(eraLoginDeUnidade ? { role: "lider" } : {}),
+        ...(souProfessor ? { modalidades: modalidades.trim() } : {}),
         ...(emailAntigo && emailAntigo !== email ? { emailAntigo } : {}),
       });
       if (souSegundoLider) {
@@ -183,6 +188,7 @@ export default function AtualizarCadastro() {
           tipoAcao: "ALTERADA", modulo: "CONFIGURACOES",
           descricao: souLider
             ? "Login antigo trocado pelo login pessoal do líder (Google)."
+            : souProfessor ? "Professor atualizou o cadastro e passou a entrar pelo Google."
             : "Mentor atualizou o cadastro e passou a entrar pelo Google.",
           diffExtras: `${emailAntigo || "-"} ➔ ${nomeLimpo} (${email}) | ${telefoneLimpo}`,
           unidadeNome: unidade?.nome || "-", usuarioAcaoNome: nomeLimpo, usuarioAcaoId: uid, dataAcao: serverTimestamp(),
@@ -220,13 +226,14 @@ export default function AtualizarCadastro() {
     ? unidadesDoLider(userData).map((id) => (catalogs?.unidades || []).find((u) => u.id === id)?.nome || (id === unidade?.id ? unidade.nome : id))
     : [];
   const mentorDaUnidade = unidade?.mentorId ? (catalogs?.mentores || []).find((m) => m.id === unidade.mentorId)?.nome : "";
-  const ajuda = <CaixaAjuda mentores={perfil === "mentor" ? [] : [mentorDaUnidade]} />;
+  const ajuda = <CaixaAjuda mentores={perfil === "mentor" || perfil === "teacher" ? [] : [mentorDaUnidade]} />;
   const etapas = [t("updateProfile.steps.role"), t("updateProfile.steps.data"), t("updateProfile.steps.google"), t("updateProfile.steps.done")];
   const sair = (
     <BotaoLink onClick={logout} disabled={salvando}><LogOut className="w-4 h-4" /> {t("updateProfile.logout", { email: user.email })}</BotaoLink>
   );
   const textoFuncao = perfil === "mentor"
     ? t("access.roles.mentor.name")
+    : perfil === "teacher" ? t("access.roles.professor.name")
     : `${t("access.roles.lider.name")} · ${unidade?.nome || ""}`;
   const erroBox = erro && (
     <div className="p-3 mb-4 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-xs font-medium flex items-center gap-2">
@@ -308,8 +315,9 @@ export default function AtualizarCadastro() {
 
   // ===== 2. CONFIRMAR A FUNÇÃO =====
   if (passo === "funcao") {
-    const opcoes = perfil === "mentor" ? ["segue", "saiu"] : ["segue", "professor", "saiu"];
-    const saindo = resposta === "saiu";
+    const opcoes = perfil === "mentor" || perfil === "teacher" ? ["segue", "saiu"] : ["segue", "professor", "saiu"];
+    // Líder e mentor se desligam na hora. Professor que não segue só é orientado a avisar o líder da unidade.
+    const saindo = resposta === "saiu" && perfil !== "teacher";
     const naoSegue = resposta && resposta !== "segue" && !saindo; // "professor": só orienta, não muda a conta
     return (
       <FundoAcesso>
@@ -354,7 +362,7 @@ export default function AtualizarCadastro() {
         {naoSegue && (
           <div className="mt-4 flex gap-2 text-xs leading-relaxed text-amber-200 bg-amber-500/10 border border-amber-500/30 rounded-xl px-3 py-2.5">
             <Info className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
-            <span>{t(`updateProfile.role.stop.${resposta}${perfil === "mentor" ? "Mentor" : ""}`)}</span>
+            <span>{t(`updateProfile.role.stop.${resposta}${perfil === "mentor" ? "Mentor" : perfil === "teacher" ? "Teacher" : ""}`)}</span>
           </div>
         )}
         <div className="mt-5 space-y-2">
@@ -405,6 +413,15 @@ export default function AtualizarCadastro() {
             <CampoDocumento id="atu-documento" tipo={docTipo} onTipo={setDocTipo} valor={docNumero} onValor={setDocNumero} />
             <p className="text-[11px] text-zinc-500 ml-1">{t("document.hint")}</p>
           </div>
+          {souProfessor && (
+            <div className="space-y-1">
+              <label htmlFor="atu-modalidades" className={classeRotulo}>{t("accessRequest.fields.modalities")}</label>
+              <input id="atu-modalidades" value={modalidades} onChange={(e) => setModalidades(e.target.value)} maxLength={120}
+                className="w-full bg-zinc-900/50 border border-zinc-700 text-white font-bold px-4 py-3 rounded-xl focus:border-red-600 outline-none placeholder:text-zinc-600 placeholder:font-normal"
+                placeholder={t("accessRequest.fields.modalitiesPlaceholder")} />
+              <p className="text-[11px] text-zinc-500 ml-1">{t("accessRequest.hints.modalities")}</p>
+            </div>
+          )}
           {souLider && (
             <div className="space-y-1.5">
               <span className={classeRotulo}>{t("updateProfile.fields.unitsLeader")}</span>
