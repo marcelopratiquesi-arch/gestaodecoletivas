@@ -347,6 +347,9 @@ service cloud.firestore {
         || (logado() && meuPapel() == 'mentor' && mentorMudaLideranca(uid))
         // Saída da função pela própria pessoa, e o mentor da unidade desfaz (ver saidaDaFuncao acima).
         || (logado() && saidaDaFuncao(uid))
+        // "Último acesso": a própria pessoa carimba só esse campo, com a hora do servidor (a aba Mentores mostra).
+        || (logado() && request.auth.uid == uid && camposAlterados().hasOnly(['ultimoAcesso'])
+            && request.resource.data.ultimoAcesso == request.time)
         || (logado() && meuPapel() == 'mentor' && mentorDesfazSaida())
         // Depois de gravar o documento na gaveta privada, a PRÓPRIA pessoa só marca "documentoOk" no crachá
         // (o banco confere que o documento existe de verdade, na mesma gravação ou antes).

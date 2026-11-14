@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { onAuthStateChanged, signOut, unlink } from "firebase/auth";
-import { doc, getDoc, collection, addDoc, serverTimestamp } from "firebase/firestore"; // 🟢 Importações do X-9
+import { doc, getDoc, updateDoc, collection, addDoc, serverTimestamp } from "firebase/firestore"; // 🟢 Importações do X-9
 import { auth, db } from "../services/firebase"; // ✅ caminho correto
 import { crachaSemAcesso, AVISO_SEM_ACESSO } from "../permissions";
 
@@ -76,6 +76,12 @@ export function AuthProvider({ children }) {
       // presa à conta (a remoção falhou na hora da troca), tira agora. Não trava o acesso se falhar.
       if (snap.data().loginGoogle === true && temProvedor(firebaseUser, "google.com") && temProvedor(firebaseUser, "password")) {
         unlink(firebaseUser, "password").catch((e) => console.error("Não foi possível remover a senha antiga:", e));
+      }
+
+      // Carimba o último acesso (no máximo 1 vez por hora, para não gravar a cada recarga). Não trava a entrada se falhar.
+      const ultimo = snap.data().ultimoAcesso?.toMillis?.() || 0;
+      if (Date.now() - ultimo > 60 * 60 * 1000) {
+        updateDoc(ref, { ultimoAcesso: serverTimestamp() }).catch((e) => console.warn("Último acesso não registrado:", e?.code));
       }
 
       setAguardandoAprovacao(false);
