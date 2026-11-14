@@ -3,7 +3,7 @@
   "subtitle": "People who signed in with Google and asked for access as leader or mentor. Only the administrator approves mentor requests.",
   "empty": "No requests waiting for approval.",
   "leaderOf": "Wants to lead: {{unit}}",
-  "hasLeader": "This location already has a leader: {{name}}. Approving replaces the current leader.",
+  "hasLeader": "This location already has a leader: {{name}}. How does this person join?",
   "approve": "Approve",
   "replace": "Replace leader",
   "refuse": "Decline",
@@ -60,5 +60,8 @@
     "modalities": "Class types",
     "noModalities": "not provided",
     "documentOk": "✓ ID document provided (stored securely)"
-  }
+  },
+  "optSecond": "2nd leader (aspirant): both stay",
+  "optReplace": "Replace the current leader (they lose access)",
+  "onlyReplace": "The location already has 2 leaders: approving replaces the 1st leader."
 }

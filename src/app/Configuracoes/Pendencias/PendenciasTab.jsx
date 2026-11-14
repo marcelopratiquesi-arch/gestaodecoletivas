@@ -30,6 +30,7 @@ export function PendenciasTab() {
   const { catalogs } = useCatalogs();
   const { pedidos, saidas, extras, carregando } = usePedidosPendentes();
   const [processando, setProcessando] = useState(null);
+  const [escolhas, setEscolhas] = useState({}); // { "idDoPedido:idDaUnidade": "segundo" | "substituir" }
 
   const role = String(userData?.role || "").trim().toLowerCase();
   const souAdmin = role === "admin";
@@ -48,13 +49,15 @@ export function PendenciasTab() {
     });
 
   // Pergunta a vaga numa unidade: { vaga: 1|2, substitui } ou null (pular esta unidade).
+  // Unidade que já tem líder: a escolha fica no cartão (2º líder ou substituir). Padrão = 2º líder (aspirante),
+  // para ninguém perder o acesso sem querer. Só substitui se o admin/mentor marcar isso.
+  const chaveEscolha = (p, unidade) => `${p.id}:${unidade.id}`;
+  const modoDaVaga = (p, unidade) => (unidade.lider2Uid ? "substituir" : escolhas[chaveEscolha(p, unidade)] || "segundo");
+
   function escolherVaga(unidade, p) {
     const jaTemLider = unidade.liderUid && unidade.liderUid !== p.id;
     if (unidade.lider2Uid === p.id) return null; // já é o 2º líder dela
-    if (jaTemLider && !unidade.lider2Uid
-      && window.confirm(t("pendingTab.secondConfirm", { unit: unidade.nome, current: unidade.liderNome || unidade.liderEmail, name: p.nome }))) {
-      return { vaga: 2, substitui: false };
-    }
+    if (jaTemLider && modoDaVaga(p, unidade) === "segundo") return { vaga: 2, substitui: false };
     const pergunta = jaTemLider
       ? t("pendingTab.replaceConfirm", { unit: unidade.nome, current: unidade.liderNome || unidade.liderEmail, name: p.nome })
       : t("pendingTab.approveConfirm", { name: p.nome, unit: unidade.nome });
@@ -390,7 +393,22 @@ export function PendenciasTab() {
                         </p>
                         {!unidade && <p className="text-xs text-red-500 font-bold ml-6">{t("pendingTab.unitNotFound")}</p>}
                         {!ehMentor && unidade && !minha && <p className="text-xs text-slate-400 font-bold ml-6">{t("pendingTab.otherMentorUnit")}</p>}
-                        {!ehMentor && unidade && minha && liderAtual && <p className="text-xs text-amber-600 dark:text-amber-400 font-bold ml-6">{t("pendingTab.hasLeader", { name: liderAtual })}</p>}
+                        {!ehMentor && unidade && minha && liderAtual && (
+                          <div className="ml-6 mt-1 space-y-1.5">
+                            <p className="text-xs text-amber-600 dark:text-amber-400 font-bold">{t("pendingTab.hasLeader", { name: liderAtual })}</p>
+                            {unidade.lider2Uid ? (
+                              <p className="text-xs font-bold text-slate-500">{t("pendingTab.onlyReplace")}</p>
+                            ) : (
+                              [["segundo", "pendingTab.optSecond"], ["substituir", "pendingTab.optReplace"]].map(([modo, chave]) => (
+                                <label key={modo} className="flex items-center gap-2 text-xs font-bold text-slate-600 dark:text-slate-300 cursor-pointer">
+                                  <input type="radio" name={chaveEscolha(p, unidade)} checked={modoDaVaga(p, unidade) === modo}
+                                    onChange={() => setEscolhas((e) => ({ ...e, [chaveEscolha(p, unidade)]: modo }))} className="accent-emerald-600" />
+                                  {t(chave)}
+                                </label>
+                              ))
+                            )}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
