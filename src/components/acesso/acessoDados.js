@@ -10,7 +10,7 @@ export const ICONE_FUNCAO = { lider: Building2, mentor: ShieldCheck, professor: 
 
 // Função escolhida antes do Google ("Primeiro acesso" no login); a tela de pedido de acesso lê daqui.
 export const CHAVE_PAPEL_PEDIDO = "pratique_papel_pedido";
-export const FUNCOES_PEDIDO = ["lider", "mentor"]; // professor entra numa 2ª etapa
+export const FUNCOES_PEDIDO = ["lider", "mentor", "professor"];
 
 export function lerPapelPedido() {
   try {

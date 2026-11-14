@@ -69,13 +69,19 @@ service cloud.firestore {
     // Mentor de alguma das unidades (até 5) de um pedido de líder.
     function mentorDoPedido(p) {
       let ids = idsDoPedido(p);
-      return logado() && meuPapel() == 'mentor' && p.get('papel', 'lider') == 'lider'
+      return logado() && meuPapel() == 'mentor' && p.get('papel', 'lider') in ['lider', 'professor']
         && ids is list && ids.size() >= 1
         && (mentorDaUnidadeId(ids[0])
           || (ids.size() > 1 && mentorDaUnidadeId(ids[1]))
           || (ids.size() > 2 && mentorDaUnidadeId(ids[2]))
           || (ids.size() > 3 && mentorDaUnidadeId(ids[3]))
           || (ids.size() > 4 && mentorDaUnidadeId(ids[4])));
+    }
+    // Pedido de PROFESSOR (1 unidade): o líder dessa unidade também aprova (além do mentor e do admin).
+    function liderDoPedidoProfessor(p) {
+      return logado() && meuPapel() in papeisLider() && p.get('papel', 'lider') == 'professor'
+        && p.get('unidadeId', '') is string && p.get('unidadeId', '') != ''
+        && p.get('unidadeId', '') in unidadesDoLiderUid(request.auth.uid);
     }
     // Documento de identificação (CPF no Brasil, DNI na Argentina, SSN nos EUA). Fica numa gaveta privada
     // (coleção documentos_privados/{uid}), nunca no crachá aberto. Quem mexe: a própria pessoa, o admin e o
@@ -351,7 +357,8 @@ service cloud.firestore {
         // exceto o login antigo "unidade", que vira "lider". Unidade, status e o resto ficam como estão.
         || (logado() && request.auth.uid == uid
             && 'google.com' in request.auth.token.firebase.identities
-            && camposAlterados().hasOnly(['nome', 'telefone', 'email', 'emailAntigo', 'role', 'loginGoogle', 'cadastroAtualizadoEm', 'documentoOk'])
+            && camposAlterados().hasOnly(['nome', 'telefone', 'email', 'emailAntigo', 'role', 'loginGoogle', 'cadastroAtualizadoEm', 'documentoOk', 'modalidades'])
+            && request.resource.data.get('modalidades', '') is string && request.resource.data.get('modalidades', '').size() <= 120
             && (!('documentoOk' in request.resource.data) || (request.resource.data.documentoOk == true && existsAfter(caminhoDocumentoUsuario(uid))))
             && request.resource.data.loginGoogle == true
             && request.resource.data.nome is string && request.resource.data.nome.size() >= 3 && request.resource.data.nome.size() <= 80
@@ -381,30 +388,33 @@ service cloud.firestore {
         let d = request.resource.data;
         let ids = idsDoPedido(d);
         return d.keys().hasOnly(['nome', 'telefone', 'unidadeId', 'unidadeNome', 'email', 'status', 'criadoEm',
-                                 'papel', 'unidadeIds', 'unidadeNomes', 'tambemProfessor', 'documentoOk'])
+                                 'papel', 'unidadeIds', 'unidadeNomes', 'tambemProfessor', 'documentoOk', 'modalidades'])
           && d.get('documentoOk', true) == true
           && d.status == 'pendente'
           && d.email == request.auth.token.email
           && d.nome is string && d.nome.size() >= 3 && d.nome.size() <= 80
           && d.telefone is string && d.telefone.size() >= 6 && d.telefone.size() <= 30
-          && d.get('papel', 'lider') in ['lider', 'mentor']
+          && d.get('papel', 'lider') in ['lider', 'mentor', 'professor']
+          && (d.get('papel', 'lider') != 'professor' || (ids is list && ids.size() == 1))
+          && d.get('modalidades', '') is string && d.get('modalidades', '').size() <= 120
           && d.get('tambemProfessor', false) is bool
           && d.get('unidadeNomes', []) is list && d.get('unidadeNomes', []).size() <= 5
           && ids is list && ids.size() >= 1 && ids.size() <= 5 && ids[0] == d.get('unidadeId', '')
           && d.unidadeId is string && exists(/databases/$(database)/documents/unidades/$(d.unidadeId));
       }
 
-      allow read: if souDono() || souAdmin() || (logado() && meuPapel() == 'mentor');
+      allow read: if souDono() || souAdmin() || (logado() && meuPapel() == 'mentor')
+        || (logado() && meuPapel() in papeisLider() && resource.data.papel == 'professor');
 
       // A própria pessoa faz (ou refaz, depois de recusado) o pedido, enquanto ainda não tem crachá.
       allow create, update: if souDono() && !temCracha() && pedidoValido();
 
       // Admin ou mentor de uma das unidades aprova/recusa (só os campos da análise).
-      allow update: if (souAdmin() || mentorDoPedido(resource.data))
+      allow update: if (souAdmin() || mentorDoPedido(resource.data) || liderDoPedidoProfessor(resource.data))
         && camposAlterados().hasOnly(['status', 'motivo', 'analisadoPor', 'analisadoPorNome', 'analisadoEm'])
         && request.resource.data.status in ['aprovado', 'recusado'];
 
-      allow delete: if souDono() || souAdmin() || mentorDoPedido(resource.data);
+      allow delete: if souDono() || souAdmin() || mentorDoPedido(resource.data) || liderDoPedidoProfessor(resource.data);
 
     }
 

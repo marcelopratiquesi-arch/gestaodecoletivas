@@ -55,7 +55,7 @@
       "segue": "Soy el líder de esta sede",
       "segueDesc": "Este acceso pasa a ser tu acceso personal de líder.",
       "professor": "Soy profesor de esta sede",
-      "professorDesc": "El acceso personal del profesor llega pronto.",
+      "professorDesc": "Ahora podés entrar como profesor con tu cuenta Google.",
       "saiu": "Ya no soy de esta sede",
       "saiuDesc": "No seguís con este acceso."
     },
@@ -76,7 +76,15 @@
       "saiuDesc": "No seguís con este acceso."
     },
     "stop": {
-      "professor": "No sigas con este acceso. Avisale al líder de la sede o a tu mentor: él ajusta tu acceso. El acceso personal del profesor llega pronto."
+      "professor": "No sigas con este login. Salí y elegí \"Primer acceso\" → \"Profesor de clases colectivas\" con tu cuenta Google. El líder de la unidad aprueba.",
+      "saiuTeacher": "No sigas con este login. Avisale al líder de la unidad: él ajusta tu acceso."
+    },
+    "teacher": {
+      "question": "¿Seguís como profesor?",
+      "segue": "Sí, sigo como profesor",
+      "segueDesc": "Tus datos se actualizan y seguís normalmente.",
+      "saiu": "Ya no doy clases en la unidad",
+      "saiuDesc": "No seguís con este login."
     }
   },
   "data": {

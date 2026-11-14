@@ -51,5 +51,14 @@
     "ackError": "No se pudo marcar como enterado.",
     "onlyAdmin": "Solo el administrador trata la salida de un mentor.",
     "mentorUnits": "Sus unidades (necesitan nuevo mentor):"
+  },
+  "teacher": {
+    "title": "Pedidos de profesores",
+    "subtitle": "Aprobar habilita el login del profesor. Sus clases las vinculás después, en el cadastro de profesores.",
+    "approveConfirm": "¿Aprobar a {{name}} como profesor(a) de la unidad {{unit}}?",
+    "approved": "{{name}} aprobado(a). Ahora vinculá sus clases en el cadastro de profesores.",
+    "modalities": "Modalidades",
+    "noModalities": "sin informar",
+    "documentOk": "✓ Documento informado (guardado en lugar protegido)"
   }
 }

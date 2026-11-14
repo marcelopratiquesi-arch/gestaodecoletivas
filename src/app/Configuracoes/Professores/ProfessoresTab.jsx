@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
 import { ehLider, unidadesDoLider } from '../../../permissions';
+import PedidosProfessor from "../Pendencias/PedidosProfessor";
 
 // 🌍 PADRÃO OURO INTERNACIONAL — mesma identidade visual usada em MentoresTab
 const PAIS_CONFIG = {
@@ -560,6 +561,8 @@ export function ProfessoresTab() {
 
   return (
     <div className="p-6 animate-fade-in max-w-7xl mx-auto space-y-6 uppercase">
+      {/* PEDIDOS DE ACESSO DE PROFESSORES (login pessoal pelo Google) */}
+      <PedidosProfessor />
       {/* HEADER E KPIS */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-slate-200 dark:border-slate-700 pb-6">
         <div>

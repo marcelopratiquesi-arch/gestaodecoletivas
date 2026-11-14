@@ -16,7 +16,10 @@
     "units": "Sedes",
     "unitsLeader": "Sedes que liderás",
     "unitsMentor": "Sedes que acompañás",
-    "alsoTeacher": "¿También das clases en estas sedes?"
+    "alsoTeacher": "¿También das clases en estas sedes?",
+    "unitTeacher": "Tu unidad",
+    "modalities": "Modalidades que das (opcional)",
+    "modalitiesPlaceholder": "Ej.: Zumba, Pilates"
   },
   "form": {
     "title": "Tus datos",
@@ -38,7 +41,8 @@
     "name": "Escribí tu nombre completo.",
     "phone": "Escribí un WhatsApp válido.",
     "unit": "Elegí al menos una sede.",
-    "send": "No se pudo enviar el pedido. Probá de nuevo."
+    "send": "No se pudo enviar el pedido. Probá de nuevo.",
+    "modalities": "Las modalidades pueden tener como máximo 120 caracteres."
   },
   "invite": {
     "title": "¡Hola, {{name}}!",
@@ -53,10 +57,13 @@
   "alsoTeacherNo": "No",
   "hints": {
     "leaderUnits": "Podés elegir hasta {{max}} sedes.",
-    "mentorUnits": "Podés elegir hasta {{max}} sedes. El administrador las revisa en la aprobación."
+    "mentorUnits": "Podés elegir hasta {{max}} sedes. El administrador las revisa en la aprobación.",
+    "teacherUnit": "Elegí tu unidad principal. El líder puede sumar otras unidades después.",
+    "modalities": "Podés dejarlo en blanco. El líder lo ajusta después."
   },
   "approver": {
     "lider": "Quién aprueba: el mentor de la sede o el administrador.",
-    "mentor": "Quién aprueba: el administrador."
+    "mentor": "Quién aprueba: el administrador.",
+    "professor": "Quién aprueba: el líder de tu unidad, el mentor o el administrador."
   }
 }
