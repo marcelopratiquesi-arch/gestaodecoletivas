@@ -32,6 +32,17 @@
     "delete": "Não foi possível apagar.",
     "load": "Não foi possível carregar os seus certificados."
   },
+  "manager": {
+    "button": "Workshops (certificados)",
+    "title": "Workshops de {{name}}",
+    "subtitle": "Certificados enviados pelo professor e os que você adicionar. O que você adiciona já entra como verificado.",
+    "add": "Adicionar certificado",
+    "addButton": "Adicionar",
+    "unit": "Unidade",
+    "empty": "Nenhum certificado deste professor ainda.",
+    "byManager": "adicionado pelo gestor",
+    "byTeacher": "enviado pelo professor"
+  },
   "review": {
     "title": "Certificados de workshop para conferir",
     "subtitle": "Professores enviaram a foto do certificado. Confira o nome, o workshop e a data na foto.",

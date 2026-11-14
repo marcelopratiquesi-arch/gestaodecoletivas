@@ -133,6 +133,56 @@ describe('verificar e recusar', () => {
   });
 });
 
+describe('gestor adiciona para um professor do cadastro', () => {
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'professores/p1'), { nome: 'Carla', uidLogin: 'profA' });
+      await setDoc(doc(ctx.firestore(), 'professores/p2'), { nome: 'Sem Login' });
+    });
+  });
+  const gestor = (uid, extra = {}, id = 'prof_p1_abcd1234') => setDoc(doc(como(uid), 'certificados_professor', id), {
+    uid: 'profA', professorId: 'p1', unidadeId: 'uniA', nome: 'Carla', workshop: 'Workshop X', dataFeito: '2025-05-10', foto: FOTO,
+    status: 'verificado', criadoEm: serverTimestamp(), analisadoPor: uid, analisadoPorNome: 'G', analisadoEm: serverTimestamp(), ...extra,
+  });
+
+  it('mentor da unidade, líder da unidade e admin adicionam (já verificado)', async () => {
+    await assertSucceeds(gestor('mentor1'));
+    await assertSucceeds(gestor('liderA', {}, 'prof_p1_efgh5678'));
+    await assertSucceeds(gestor('admin1', { unidadeId: '' }, 'prof_p1_ijkl9012'));
+  });
+  it('professor sem login pessoal também (uid vazio)', async () => {
+    await assertSucceeds(gestor('mentor1', { uid: '', professorId: 'p2', nome: 'Sem Login' }, 'prof_p2_abcd1234'));
+  });
+  it('mentor/líder de OUTRA unidade NÃO adicionam na unidade alheia', async () => {
+    await assertFails(gestor('mentor2'));
+    await assertFails(gestor('liderB'));
+  });
+  it('professor NÃO adiciona como gestor, nem o gestor cria pendente/recusado, id errado ou professor inexistente', async () => {
+    await assertFails(gestor('profA'));
+    await assertFails(gestor('mentor1', { status: 'pendente' }));
+    await assertFails(gestor('mentor1', {}, 'prof_p2_abcd1234'));
+    await assertFails(gestor('mentor1', { professorId: 'p9' }, 'prof_p9_abcd1234'));
+    await assertFails(gestor('mentor1', { analisadoPor: 'outro' }));
+  });
+  it('o professor dono lê o que o gestor adicionou, mas não edita nem apaga (verificado)', async () => {
+    await assertSucceeds(gestor('mentor1'));
+    await assertSucceeds(getDoc(ref('profA', 'prof_p1_abcd1234')));
+    await assertFails(updateDoc(ref('profA', 'prof_p1_abcd1234'), { workshop: 'Trocado' }));
+    await assertFails(deleteDoc(ref('profA', 'prof_p1_abcd1234')));
+  });
+  it('o gestor lista os do professor (consulta por professorId + unidade) e apaga os que adicionou', async () => {
+    await assertSucceeds(gestor('mentor1'));
+    const q = (uid, ids) => getDocs(query(collection(como(uid), 'certificados_professor'), where('professorId', '==', 'p1'), where('unidadeId', 'in', ids)));
+    await assertSucceeds(q('mentor1', ['uniA']));
+    await assertSucceeds(q('liderA', ['uniA']));
+    await assertFails(q('mentor2', ['uniA']));
+    await assertSucceeds(deleteDoc(ref('liderA', 'prof_p1_abcd1234')));
+  });
+  it('admin lista os do professor sem limite de unidade', async () => {
+    await assertSucceeds(getDocs(query(collection(como('admin1'), 'certificados_professor'), where('professorId', '==', 'p1'))));
+  });
+});
+
 describe('corrigir, reenviar e apagar', () => {
   it('recusado: o professor corrige e reenvia (volta a pendente)', async () => {
     await semear('profA_abcd1234', { status: 'recusado', motivo: 'ilegível' });

@@ -16,12 +16,13 @@ import { initializeApp, getApp, deleteApp } from "firebase/app";
 import { 
   UserPlus, Edit2, Trash2, Link as LinkIcon, Loader2, Search, CheckCircle2, 
   X, Mail, Phone, PlusCircle, User, AlertTriangle, ChevronDown, 
-  ChevronUp, ArrowDown, ArrowRight, DownloadCloud, Layers, Ban, ShieldCheck, MapPin
+  ChevronUp, ArrowDown, ArrowRight, DownloadCloud, Layers, Ban, ShieldCheck, MapPin, Award
 } from "lucide-react";
 import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
 import { ehLider, unidadesDoLider } from '../../../permissions';
 import PedidosProfessor from "../Pendencias/PedidosProfessor";
 import CertificadosAVerificar from "./CertificadosAVerificar";
+import CertificadosDoProfessor from "./CertificadosDoProfessor";
 
 // 🌍 PADRÃO OURO INTERNACIONAL — mesma identidade visual usada em MentoresTab
 const PAIS_CONFIG = {
@@ -155,6 +156,7 @@ export function ProfessoresTab() {
   // Modais
   const [modalVerificacaoAberto, setModalVerificacaoAberto] = useState(false);
   const [modalFormAberto, setModalFormAberto] = useState(false);
+  const [profWorkshops, setProfWorkshops] = useState(null); // professor cujos workshops (certificados) estão abertos
   
   // Fluxo de Cadastro
   const [emailVerificacao, setEmailVerificacao] = useState("");
@@ -296,7 +298,7 @@ export function ProfessoresTab() {
       return links.map(v => {
           const u = unidades.find(uni => String(uni.id) === String(v.unidadeId));
           const podeMexer = role === 'admin' || minhasUnidades.some(mu => String(mu.id) === String(u?.id));
-          return u ? { id: v.id, nome: u.nome, vinculoId: v.id, podeMexer } : null;
+          return u ? { id: v.id, nome: u.nome, vinculoId: v.id, podeMexer, unidadeId: String(u.id) } : null;
       }).filter(Boolean);
   };
 
@@ -736,6 +738,9 @@ export function ProfessoresTab() {
                                     <div className="flex gap-2 justify-end opacity-40 group-hover:opacity-100 transition-opacity">
                                         {podeEditar && (
                                             <>
+                                                <button type="button" onClick={() => setProfWorkshops(p)} className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-600 hover:text-white dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-600 dark:hover:text-white transition-colors" title={t('certificates.manager.button')}>
+                                                    <Award className="w-4 h-4"/>
+                                                </button>
                                                 <button type="button" onClick={() => abrirEdicao(p)} className={`p-2 rounded-lg transition-colors title={t('teachersTab.extra.editData')} ${!isTelefoneValido ? 'bg-red-50 text-red-600 animate-pulse' : 'bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400'}`}>
                                                     <Edit2 className="w-4 h-4"/>
                                                 </button>
@@ -986,6 +991,14 @@ export function ProfessoresTab() {
             </form>
           </div>
         </div>
+      )}
+
+      {profWorkshops && (
+        <CertificadosDoProfessor
+          professor={profWorkshops}
+          unidades={getUnidadesVinculadas(profWorkshops.id).filter(u => u.podeMexer).map(u => ({ id: u.unidadeId, nome: u.nome }))}
+          onClose={() => setProfWorkshops(null)}
+        />
       )}
     </div>
   );

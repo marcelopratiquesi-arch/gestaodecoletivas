@@ -40,6 +40,39 @@ export async function listarPendentes({ admin, unidadeIds }) {
   return snaps.flatMap((s) => s.docs.map((d) => ({ id: d.id, ...d.data() }))).sort(porDataDesc);
 }
 
+/**
+ * Todos os certificados de um professor do cadastro (qualquer status), para o gestor ver na aba Professores:
+ * os que o gestor adicionou (professorId) e os que o próprio professor enviou pelo login (uid).
+ * Mentor/líder: só das unidades dele (o banco exige a unidade na consulta). Admin: sem limite de unidade.
+ */
+export async function listarDoProfessor({ professorId, uidLogin, admin, unidadeIds }) {
+  const filtroUnidade = admin ? [] : [where("unidadeId", "in", unidadeIds.slice(0, 10))];
+  const consultas = [query(colecao(), where("professorId", "==", professorId), ...filtroUnidade)];
+  if (uidLogin) consultas.push(query(colecao(), where("uid", "==", uidLogin), ...filtroUnidade));
+  const snaps = await Promise.all(consultas.map((q) => getDocs(q)));
+  const porId = new Map();
+  snaps.forEach((s) => s.docs.forEach((d) => porId.set(d.id, { id: d.id, ...d.data() })));
+  return [...porId.values()].sort(porDataDesc);
+}
+
+/** Gestor (líder, mentor ou admin) adiciona um certificado para um professor do cadastro: já entra verificado. */
+export async function adicionarCertificadoDoProfessor({ professor, unidadeId, workshop, dataFeito, foto, quem }) {
+  const cid = `prof_${professor.id}_${codigoCurto()}`;
+  await setDoc(doc(db, "certificados_professor", cid), {
+    uid: String(professor.uidLogin || ""), professorId: String(professor.id), unidadeId: String(unidadeId || ""),
+    nome: String(professor.nome || "-").slice(0, 80), workshop: workshop.trim(), dataFeito, foto,
+    status: "verificado", criadoEm: serverTimestamp(),
+    analisadoPor: quem.id, analisadoPorNome: String(quem.nome || "-").slice(0, 80), analisadoEm: serverTimestamp(),
+  });
+  try {
+    await registrarAuditoriaAcesso({
+      tipoAcao: "NOVA", descricao: "Certificado de workshop adicionado pelo gestor.", unidadeNome: "-", quem: quem.cracha,
+      detalhes: `Workshop: ${workshop.trim()} (${dataFeito})`, alvo: { id: professor.id, nome: professor.nome },
+    });
+  } catch (e) { console.error("Falha ao gravar auditoria", e); }
+  return cid;
+}
+
 async function analisar(certificado, status, motivo, quem) {
   await updateDoc(doc(db, "certificados_professor", certificado.id), {
     status, motivo: String(motivo || "").trim(),

@@ -32,6 +32,17 @@
     "delete": "Could not delete.",
     "load": "Could not load your certificates."
   },
+  "manager": {
+    "button": "Workshops (certificates)",
+    "title": "{{name}}'s workshops",
+    "subtitle": "Certificates the teacher sent and the ones you add. What you add is already verified.",
+    "add": "Add certificate",
+    "addButton": "Add",
+    "unit": "Unit",
+    "empty": "No certificates for this teacher yet.",
+    "byManager": "added by a manager",
+    "byTeacher": "sent by the teacher"
+  },
   "review": {
     "title": "Workshop certificates to review",
     "subtitle": "Teachers uploaded a certificate photo. Check the name, workshop and date in the photo.",
