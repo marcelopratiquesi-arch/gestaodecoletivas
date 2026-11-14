@@ -3,7 +3,7 @@
   "subtitle": "Personas que entraron con Google y pidieron acceso como líder o mentor. Los pedidos de mentor solo los aprueba el administrador.",
   "empty": "No hay pedidos esperando aprobación.",
   "leaderOf": "Quiere ser líder de: {{unit}}",
-  "hasLeader": "Esta sede ya tiene líder: {{name}}. Aprobar reemplaza al líder actual.",
+  "hasLeader": "Esta sede ya tiene líder: {{name}}. ¿Cómo entra la persona?",
   "approve": "Aprobar",
   "replace": "Reemplazar líder",
   "refuse": "Rechazar",
@@ -60,5 +60,8 @@
     "modalities": "Modalidades",
     "noModalities": "sin informar",
     "documentOk": "✓ Documento informado (guardado en lugar protegido)"
-  }
+  },
+  "optSecond": "2º líder (aspirante): quedan los dos",
+  "optReplace": "Reemplazar al líder actual (pierde el acceso)",
+  "onlyReplace": "La sede ya tiene 2 líderes: aprobar reemplaza al 1º líder."
 }

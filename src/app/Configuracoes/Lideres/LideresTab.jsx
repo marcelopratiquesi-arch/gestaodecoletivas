@@ -13,7 +13,7 @@ import { createUserWithEmailAndPassword, getAuth, signOut } from "firebase/auth"
 import { initializeApp, getApp, deleteApp } from "firebase/app";
 import { useTranslation } from "react-i18next";
 import {
-  IdCard, UserCheck, UserPlus, UserX, Search, Loader2, Building2, Mail, Phone, Edit2, X, Check, KeyRound, AlertTriangle, BadgeCheck, UserCog,
+  IdCard, UserCheck, UserPlus, UserX, Search, Loader2, Building2, Mail, Phone, Edit2, X, Check, KeyRound, AlertTriangle, BadgeCheck, UserCog, ScanSearch,
 } from "lucide-react";
 import { db, auth } from "../../../services/firebase";
 import { useAuth } from "../../../contexts/AuthContext";
@@ -53,6 +53,7 @@ export function LideresTab() {
   const [paisFiltro, setPaisFiltro] = useState("");
   const [estadoFiltro, setEstadoFiltro] = useState("");
   const [mentorFiltro, setMentorFiltro] = useState("");
+  const [mostrarBuscaDoc, setMostrarBuscaDoc] = useState(false);
   const pedidosRef = useRef(null);
   const [processando, setProcessando] = useState(null);
 
@@ -76,9 +77,15 @@ export function LideresTab() {
   const estados = useMemo(() => [...new Set(minhasUnidades
     .filter((u) => !paisFiltro || siglaPais(u) === paisFiltro)
     .map((u) => String(u.estado || "").trim().toUpperCase()).filter(Boolean))].sort(), [minhasUnidades, paisFiltro]);
-  const mentoresDasUnidades = useMemo(() => mentores
-    .filter((m) => minhasUnidades.some((u) => u.mentorId === m.id))
-    .sort((a, b) => String(a.nome || "").localeCompare(String(b.nome || ""))), [mentores, minhasUnidades]);
+  // Mentores: só os que têm unidade no país/estado escolhido (o mentor é designado por região).
+  const mentoresDasUnidades = useMemo(() => {
+    const daRegiao = minhasUnidades
+      .filter((u) => !paisFiltro || siglaPais(u) === paisFiltro)
+      .filter((u) => !estadoFiltro || String(u.estado || "").trim().toUpperCase() === estadoFiltro);
+    return mentores
+      .filter((m) => daRegiao.some((u) => u.mentorId === m.id))
+      .sort((a, b) => String(a.nome || "").localeCompare(String(b.nome || "")));
+  }, [mentores, minhasUnidades, paisFiltro, estadoFiltro]);
 
   const lista = useMemo(() => {
     const termo = busca.trim().toLowerCase();
@@ -287,41 +294,13 @@ export function LideresTab() {
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 max-w-3xl">{t("leadersTab.subtitle")}</p>
         </div>
         <div className="flex flex-wrap gap-2 self-start md:self-auto">
-          <button onClick={() => setTornarLider({ vaga: 1, unidade: null })} className="px-5 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-black uppercase flex items-center gap-2 shadow-sm">
+          <button onClick={() => setTornarLider({ vaga: 1, unidade: null })} className="px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:border-amber-500 hover:text-amber-600 text-xs font-black uppercase flex items-center gap-2 transition-colors">
             <UserCog className="w-4 h-4" /> {t("leadersTab.promote.button")}
           </button>
-          <button onClick={() => abrirNovo(null)} className="px-5 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-black uppercase flex items-center gap-2 shadow-sm">
+          <button onClick={() => abrirNovo(null)} className="px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-black uppercase flex items-center gap-2 shadow-sm transition-colors">
             <UserPlus className="w-4 h-4" /> {t("leadersTab.new")}
           </button>
         </div>
-      </div>
-
-      {role === "admin" && <BuscaDocumento />}
-
-      {/* NÚMEROS */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        {[
-          { id: "todas", rotulo: t("leadersTab.kpi.units"), valor: kpis.total, cor: "text-slate-800 dark:text-white" },
-          { id: "com", rotulo: t("leadersTab.kpi.withLeader"), valor: kpis.comLider, cor: "text-emerald-600" },
-          { id: "sem", rotulo: t("leadersTab.kpi.withoutLeader"), valor: kpis.semLider, cor: "text-amber-600" },
-          { id: "conferir", rotulo: t("leadersTab.kpi.toCheck"), valor: kpis.aConferir, cor: "text-red-600" },
-          { id: "pedidos", rotulo: t("leadersTab.kpi.requests"), valor: totalPendencias, cor: "text-red-600" },
-        ].map((k) => {
-          const ativo = k.id === situacao;
-          const clicar = () => (k.id === "pedidos"
-            ? pedidosRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
-            : setSituacao(k.id));
-          return (
-            <button key={k.id} type="button" onClick={clicar} disabled={k.id === "pedidos" && totalPendencias === 0}
-              title={k.id === "pedidos" ? t("leadersTab.kpiGoToRequests") : t("leadersTab.kpiFilter")}
-              className={`p-4 rounded-2xl border text-left transition-all disabled:cursor-default ${ativo
-                ? "border-red-500 ring-2 ring-red-500/30 bg-white dark:bg-slate-800 shadow-sm"
-                : "border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 hover:border-slate-400 dark:hover:border-slate-500 hover:shadow-sm"}`}>
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{k.rotulo}</p>
-              <p className={`text-2xl font-black mt-1 ${k.cor}`}>{k.valor}</p>
-            </button>
-          );
-        })}
       </div>
 
       {/* PEDIDOS DE ACESSO (login pelo Google) */}
@@ -339,53 +318,82 @@ export function LideresTab() {
 
       {/* LISTA DE UNIDADES E SEUS LÍDERES */}
       <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder={t("leadersTab.search")}
-              className="w-full pl-9 pr-3 py-3 rounded-xl bg-slate-100 dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-red-500" />
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/40 p-4 space-y-4">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder={t("leadersTab.search")}
+                className="w-full pl-9 pr-3 py-3 rounded-xl bg-slate-100 dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-red-500" />
+            </div>
+            {role === "admin" && (
+              <button type="button" onClick={() => setMostrarBuscaDoc((v) => !v)} aria-expanded={mostrarBuscaDoc}
+                className={`px-4 py-3 rounded-xl border text-xs font-black uppercase flex items-center justify-center gap-2 transition-colors ${mostrarBuscaDoc
+                  ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300"
+                  : "border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-blue-500 hover:text-blue-600"}`}>
+                <ScanSearch className="w-4 h-4" /> {t("document.search.title")}
+              </button>
+            )}
+          </div>
+
+          {role === "admin" && mostrarBuscaDoc && <BuscaDocumento />}
+
+          {/* Situação: um seletor só, com a contagem de cada grupo */}
+          <div className="flex flex-wrap gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-900 w-fit max-w-full">
+            {[
+              { id: "todas", rotulo: t("leadersTab.filter.all"), n: kpis.total },
+              { id: "com", rotulo: t("leadersTab.filter.with"), n: kpis.comLider },
+              { id: "sem", rotulo: t("leadersTab.filter.without"), n: kpis.semLider },
+              { id: "conferir", rotulo: t("leadersTab.filter.toCheck"), n: kpis.aConferir },
+            ].map((f) => (
+              <button key={f.id} type="button" onClick={() => setSituacao(f.id)} aria-pressed={situacao === f.id}
+                className={`px-3.5 py-2 rounded-lg text-xs font-black uppercase flex items-center gap-2 transition-colors ${situacao === f.id
+                  ? "bg-white dark:bg-slate-700 text-red-600 shadow-sm"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"}`}>
+                {f.rotulo}
+                <span className={`min-w-[1.5rem] px-1.5 py-0.5 rounded-md text-[10px] text-center ${situacao === f.id
+                  ? "bg-red-600 text-white"
+                  : f.id === "conferir" && f.n > 0 ? "bg-amber-100 text-amber-700" : "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-300"}`}>{f.n}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Região: país → estado → mentor (cada um mostra só o que existe na escolha anterior) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+            <label className="space-y-1">
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t("leadersTab.filter.country")}</span>
+              <select value={paisFiltro} onChange={(e) => { setPaisFiltro(e.target.value); setEstadoFiltro(""); setMentorFiltro(""); }}
+                className="w-full px-3 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-900 text-xs font-black uppercase text-slate-600 dark:text-slate-300 outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                <option value="">{t("leadersTab.filter.allCountries")}</option>
+                {paises.map((p) => <option key={p} value={p}>{t(`common.countries.${p}`, { defaultValue: p })}</option>)}
+              </select>
+            </label>
+            <label className="space-y-1">
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t("leadersTab.filter.state")}</span>
+              <select value={estadoFiltro} onChange={(e) => { setEstadoFiltro(e.target.value); setMentorFiltro(""); }} disabled={!paisFiltro}
+                className="w-full px-3 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-900 text-xs font-black uppercase text-slate-600 dark:text-slate-300 outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                <option value="">{t("leadersTab.filter.allStates")}</option>
+                {estados.map((e) => <option key={e} value={e}>{e}</option>)}
+              </select>
+            </label>
+            {role === "admin" && (
+              <label className="space-y-1">
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t("leadersTab.filter.mentor")}</span>
+                <select value={mentorFiltro} onChange={(e) => setMentorFiltro(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-900 text-xs font-black uppercase text-slate-600 dark:text-slate-300 outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                  <option value="">{t("leadersTab.filter.allMentors")}</option>
+                  {mentoresDasUnidades.map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}
+                  <option value="-">{t("leadersTab.filter.noMentor")}</option>
+                </select>
+              </label>
+            )}
+            {filtrosAtivos && (
+              <button type="button" onClick={limparFiltros} className="px-3 py-2.5 rounded-xl text-xs font-black uppercase text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center justify-center gap-1 lg:justify-start">
+                <X className="w-3.5 h-3.5" /> {t("leadersTab.filter.clear")}
+              </button>
+            )}
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {[
-            { id: "todas", rotulo: t("leadersTab.filter.all") },
-            { id: "com", rotulo: t("leadersTab.filter.with") },
-            { id: "sem", rotulo: t("leadersTab.filter.without") },
-            { id: "conferir", rotulo: t("leadersTab.filter.toCheck") },
-          ].map((f) => (
-            <button key={f.id} type="button" onClick={() => setSituacao(f.id)}
-              className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase transition-colors ${situacao === f.id
-                ? "bg-red-600 text-white shadow-sm"
-                : "bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"}`}>
-              {f.rotulo}
-            </button>
-          ))}
-          <span className="hidden sm:block w-px h-6 bg-slate-200 dark:bg-slate-700 mx-1" />
-          <select value={paisFiltro} onChange={(e) => { setPaisFiltro(e.target.value); setEstadoFiltro(""); }} aria-label={t("leadersTab.filter.country")}
-            className="px-3 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-900 text-xs font-black uppercase text-slate-600 dark:text-slate-300 outline-none focus:ring-2 focus:ring-red-500">
-            <option value="">{t("leadersTab.filter.allCountries")}</option>
-            {paises.map((p) => <option key={p} value={p}>{t(`common.countries.${p}`, { defaultValue: p })}</option>)}
-          </select>
-          <select value={estadoFiltro} onChange={(e) => setEstadoFiltro(e.target.value)} aria-label={t("leadersTab.filter.state")}
-            className="px-3 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-900 text-xs font-black uppercase text-slate-600 dark:text-slate-300 outline-none focus:ring-2 focus:ring-red-500">
-            <option value="">{t("leadersTab.filter.allStates")}</option>
-            {estados.map((e) => <option key={e} value={e}>{e}</option>)}
-          </select>
-          {role === "admin" && (
-            <select value={mentorFiltro} onChange={(e) => setMentorFiltro(e.target.value)} aria-label={t("leadersTab.filter.mentor")}
-              className="px-3 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-900 text-xs font-black uppercase text-slate-600 dark:text-slate-300 outline-none focus:ring-2 focus:ring-red-500">
-              <option value="">{t("leadersTab.filter.allMentors")}</option>
-              {mentoresDasUnidades.map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}
-              <option value="-">{t("leadersTab.filter.noMentor")}</option>
-            </select>
-          )}
-          {filtrosAtivos && (
-            <button type="button" onClick={limparFiltros} className="px-3 py-2.5 rounded-xl text-xs font-black uppercase text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-1">
-              <X className="w-3.5 h-3.5" /> {t("leadersTab.filter.clear")}
-            </button>
-          )}
-          <span className="ml-auto text-[11px] font-bold text-slate-400">{t("leadersTab.filter.showing", { count: lista.length, total: minhasUnidades.length })}</span>
-        </div>
+        <p className="text-[11px] font-bold text-slate-400 text-right">{t("leadersTab.filter.showing", { count: lista.length, total: minhasUnidades.length })}</p>
 
         {loadingCatalogs ? (
           <div className="py-16 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-red-500" /></div>
