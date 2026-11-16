@@ -19,6 +19,7 @@ import {
   ChevronUp, ArrowDown, ArrowRight, DownloadCloud, Layers, Ban, ShieldCheck, MapPin
 } from "lucide-react";
 import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
+import LinkCentral from "../../../centrais/LinkCentral";
 import { ehLider, unidadesDoLider } from '../../../permissions';
 import PedidosProfessor from "../Pendencias/PedidosProfessor";
 
@@ -688,7 +689,7 @@ export function ProfessoresTab() {
                                     </span>
                                 </td>
                                 <td className="p-4 font-black text-slate-800 dark:text-white text-base">
-                                    {p.nome}
+                                    <LinkCentral tipo="professor" alvo={p}>{p.nome}</LinkCentral>
                                 </td>
                                 <td className="p-4">
                                     <div className="flex flex-col gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400">

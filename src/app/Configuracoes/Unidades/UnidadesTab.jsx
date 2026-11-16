@@ -7,6 +7,7 @@ import { db } from "../../../services/firebase";
 import { tirarLiderDaUnidade } from "../Lideres/saidaDoLider";
 import { publicarUnidade, publicarUnidades, removerUnidadeDaVitrine, ehCampoPublicoUnidade, reconstruirVitrine } from "../../../services/vitrinePublica";
 import { useTranslation } from "react-i18next";
+import LinkUnidade from "../../../centrais/LinkUnidade";
 
 import { 
     Building2, MapPin, Edit2, Trash2, AlertTriangle, CheckCircle2, 
@@ -934,7 +935,7 @@ export function UnidadesTab() {
                       </td>
 
                       <td className="px-3 py-2">
-                        <div className="font-black text-slate-800 dark:text-white text-sm uppercase">{u.nome}</div>
+                        <LinkUnidade unidade={u} className="font-black text-slate-800 dark:text-white text-sm uppercase">{u.nome}</LinkUnidade>
                         <div className="mt-0.5 mb-0.5">
                           {editandoTelefoneId === u.id ? (
                               <div className="flex items-center gap-1 animate-in fade-in">

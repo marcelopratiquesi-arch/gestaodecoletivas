@@ -14,6 +14,7 @@ import {
 } from 'firebase/firestore';
 import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
 import { DIAS_SEMANA_GRADE, formatWeekday, getCurrencySymbol } from '../../utils/formatters';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { ehLider, unidadesDoLider } from '../../permissions';
 
 // --- FUNÇÕES UTILITÁRIAS ---
@@ -219,6 +220,19 @@ export default function CronogramaPage() {
       }
       return [];
   }, [catalogs, role, userId, userData]);
+
+  // Abrir já filtrado numa unidade: /app/cronograma?unidade=ID (atalho da Central da Unidade e do Radar).
+  // Só vale para unidade que a pessoa pode ver; aplicado uma vez por chegada, depois o filtro é livre.
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const unidadePedida = searchParams.get('unidade');
+  const chavePedido = unidadePedida ? `${location.key}|${unidadePedida}` : null;
+  const [pedidoAplicado, setPedidoAplicado] = useState(null);
+  if (chavePedido && pedidoAplicado !== chavePedido && availableUnits.some(u => String(u.id) === unidadePedida)) {
+      setPedidoAplicado(chavePedido);
+      setSelectedState("");
+      setSelectedUnit(unidadePedida);
+  }
 
   // Quem só tem uma unidade já entra com ela selecionada.
   useEffect(() => {

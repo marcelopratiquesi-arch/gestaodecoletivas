@@ -20,6 +20,8 @@ import { useAuth } from "../../../contexts/AuthContext";
 import { useCatalogs } from "../../../contexts/CatalogContext";
 import { PendenciasTab } from "../Pendencias/PendenciasTab";
 import { usePedidosPendentes } from "../Pendencias/usePedidosPendentes";
+import LinkUnidade from "../../../centrais/LinkUnidade";
+import LinkCentral from "../../../centrais/LinkCentral";
 import { tirarLiderDaUnidade, camposAoLiberarVaga, textoDaSaida, dadosDaVaga } from "./saidaDoLider";
 import { TornarLiderModal } from "./TornarLiderModal";
 import { BotaoDocumento, DocumentoModal, BuscaDocumento } from "../Documento/DocumentoModal";
@@ -438,14 +440,14 @@ export function LideresTab() {
                   return (
                     <tr key={u.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/20">
                       <td className="p-4">
-                        <p className="font-black text-slate-800 dark:text-slate-200 uppercase text-xs">{u.nome}</p>
+                        <LinkUnidade unidade={u} className="font-black text-slate-800 dark:text-slate-200 uppercase text-xs">{u.nome}</LinkUnidade>
                         <p className="text-[11px] text-slate-400 font-bold">{u.estado || "-"}{u.status && u.status !== "ativa" ? ` · ${u.status}` : ""}</p>
                       </td>
                       <td className="p-4">
                         {u.liderUid ? (
                           <div className="space-y-0.5">
                             <p className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 flex-wrap">
-                              {u.liderNome || "-"}
+                              <LinkCentral tipo="lider" alvo={u}>{u.liderNome || "-"}</LinkCentral>
                               {u.liderAConferir === true && (
                                 <span className="px-1.5 py-0.5 rounded-md border text-[9px] font-black uppercase bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-700">{t("leadersTab.toCheck")}</span>
                               )}
@@ -455,7 +457,7 @@ export function LideresTab() {
                             {u.lider2Uid && (
                               <div className="mt-2 pt-2 border-t border-dashed border-slate-200 dark:border-slate-700 space-y-0.5">
                                 <p className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 flex-wrap">
-                                  {u.lider2Nome || "-"}
+                                  <LinkCentral tipo="lider2" alvo={u}>{u.lider2Nome || "-"}</LinkCentral>
                                   <span className="px-1.5 py-0.5 rounded-md border text-[9px] font-black uppercase bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-900/20 dark:text-violet-300 dark:border-violet-800">{t("leadersTab.second.badge")}</span>
                                   <button onClick={() => setDocAlvo({ id: u.lider2Uid, nome: u.lider2Nome, email: u.lider2Email })} title={t("document.modal.edit")}
                                     className="p-1 rounded-md text-slate-400 hover:bg-blue-50 hover:text-blue-600"><IdCard className="w-3.5 h-3.5" /></button>
