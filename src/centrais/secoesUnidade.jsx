@@ -189,6 +189,21 @@ export function SecaoEquipe({ d, comLink = false }) {
           )}
           <UltimoAcesso />
         </CartaoPessoa>
+
+        {unidade.lider2Uid && (
+          <CartaoPessoa
+            icone={UserCheck}
+            papel={t('leadersTab.second.badge')}
+            nome={unidade.lider2Nome || unidade.lider2Email}
+            link={{ tipo: 'lider2', alvo: unidade }}
+          >
+            {unidade.lider2Telefone
+              ? <Contato icone={Phone} texto={unidade.lider2Telefone} copiar whatsapp pais={unidade.pais} />
+              : <Contato icone={Phone} texto={t('centrais.unidade.info.liderSemTelefone')} falta />}
+            {unidade.lider2Email && <Contato icone={Mail} texto={unidade.lider2Email} copiar />}
+            <UltimoAcesso />
+          </CartaoPessoa>
+        )}
       </div>
     </Quadro>
   );

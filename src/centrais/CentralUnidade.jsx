@@ -87,6 +87,9 @@ export default function CentralUnidade({ id: unidadeId, z, textoVoltar, onFechar
     temLider
       ? <Contato icone={UserCheck} classeIcone="text-emerald-500" texto={t('centrais.unidade.info.lider', { nome: nomeLider })} />
       : <Contato icone={UserCheck} texto={t('centrais.unidade.info.semLider')} falta />,
+    unidade.lider2Uid && (
+      <Contato icone={UserCheck} classeIcone="text-violet-500" texto={t('leadersTab.second.badge') + ': ' + (unidade.lider2Nome || unidade.lider2Email)} />
+    ),
     unidade.telefone
       ? <Contato icone={Phone} classeIcone="text-emerald-500" texto={unidade.telefone} copiar whatsapp pais={unidade.pais} />
       : <Contato icone={Phone} texto={t('centrais.unidade.info.semTelefone')} falta />,

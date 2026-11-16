@@ -7,7 +7,8 @@
 //   abrirCentralUnidade(unidade)     -> aceita o cadastro da unidade, o id ou o nome
 //   abrirCentralProfessor(professor) -> aceita o cadastro do professor, o id ou o nome
 //   abrirCentralMentor(mentor)       -> aceita o cadastro do mentor, o id ou o nome
-//   abrirCentralLider(unidade)       -> o líder é o da unidade informada (cadastro, id ou nome da unidade)
+//   abrirCentralLider(unidade, vaga) -> o líder é o da unidade informada (cadastro, id ou nome da unidade);
+//                                       vaga 2 = o 2º líder da unidade
 //
 // Em tabelas e listas, o jeito mais simples é usar <LinkCentral tipo="..." alvo={...}> (src/centrais/LinkCentral.jsx).
 export const EVENTO_CENTRAL = 'centrais:abrir';
@@ -20,4 +21,4 @@ export const abrirCentral = (tipo, alvo) => {
 export const abrirCentralUnidade = (unidade) => abrirCentral('unidade', unidade);
 export const abrirCentralProfessor = (professor) => abrirCentral('professor', professor);
 export const abrirCentralMentor = (mentor) => abrirCentral('mentor', mentor);
-export const abrirCentralLider = (unidade) => abrirCentral('lider', unidade);
+export const abrirCentralLider = (unidade, vaga = 1) => abrirCentral(vaga === 2 ? 'lider2' : 'lider', unidade);

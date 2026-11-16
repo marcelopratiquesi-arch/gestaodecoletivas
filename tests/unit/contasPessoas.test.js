@@ -3,8 +3,8 @@
 // Rodar: npx vitest run tests/unit
 import './_semNavegador.js';
 import { describe, it, expect } from 'vitest';
-import { acessoCentral, resolverAlvo, unidadesVisiveis } from '../../src/centrais/acessos';
-import { horariosVagosNoDia, taxaDeVacancia, indicadoresDaUnidade } from '../../src/centrais/contasUnidade';
+import { acessoCentral, resolverAlvo, unidadesVisiveis, nomeDoRegistro } from '../../src/centrais/acessos';
+import { horariosVagosNoDia, taxaDeVacancia, indicadoresDaUnidade, liderDaVaga, unidadesLideradasPor } from '../../src/centrais/contasUnidade';
 import {
   linhasDoMentor, professoresDoMentor, aValidarPorUnidade, itensEmDiaMentor, itensEmDiaLider,
   unidadesDoProfessor, aulasDoProfessor, resumoDoProfessor, aValidarDoProfessor, itensEmDiaProfessor,
@@ -203,5 +203,41 @@ describe('Central do Professor', () => {
     expect(itensEmDiaProfessor({ professor: professores[0], unidades, aulas: [aulas[0]], aValidar: 0 }).filter((i) => !i.ok)).toEqual([]);
     const faltas = itensEmDiaProfessor({ professor: { id: 'p9', status: 'inativo', telefone: '9999' }, unidades: [], aulas: [], aValidar: null });
     expect(faltas.filter((i) => !i.ok).map((i) => i.id)).toEqual(['ativo', 'telefone', 'email', 'login', 'vinculo', 'grade']);
+  });
+});
+
+describe('2º líder e líder de várias unidades', () => {
+  const comDois = { ...u1, lider2Uid: 'l9', lider2Nome: 'Nara', lider2Email: 'nara@example.com', lider2Telefone: '31 98888-0000' };
+  const outra = { ...u2, liderUid: 'l9', liderNome: 'Nara' };
+  const cat = { ...catalogs, unidades: [comDois, outra, u3] };
+
+  it('líder de várias unidades abre a ficha de todas as que lidera (e só delas)', () => {
+    const lider = { id: 'l9', role: 'lider', unidadeId: 'u2', unidadeIds: ['u2', 'u1'] };
+    expect(unidadesVisiveis(lider, cat.unidades).map((u) => u.id)).toEqual(['u1', 'u2']);
+    expect(acessoCentral('unidade', comDois, lider, cat)).toBe('ver');
+    expect(acessoCentral('unidade', outra, lider, cat)).toBe('ver');
+    expect(acessoCentral('unidade', u3, lider, cat)).toBe(null);
+    // crachá antigo (só unidadeId) continua valendo
+    expect(acessoCentral('unidade', outra, lider1, cat)).toBe(null);
+    expect(acessoCentral('unidade', comDois, lider1, cat)).toBe('ver');
+  });
+
+  it('ficha do 2º líder: acha pela unidade e só abre se a vaga estiver ocupada', () => {
+    expect(resolverAlvo('lider2', comDois, cat)).toBe(comDois);
+    expect(resolverAlvo('lider2', 'l9', cat)).toBe(comDois);
+    expect(acessoCentral('lider2', comDois, admin, cat)).toBe('editar');
+    expect(acessoCentral('lider2', comDois, mentor1, cat)).toBe('editar');
+    expect(acessoCentral('lider2', u3, admin, cat)).toBe(null);
+    expect(nomeDoRegistro('lider2', comDois)).toBe('Nara');
+    expect(nomeDoRegistro('lider', comDois)).toBe('Lia');
+  });
+
+  it('dados de cada vaga e unidades lideradas pela pessoa', () => {
+    expect(liderDaVaga(comDois, 1)).toMatchObject({ vaga: 1, uid: 'l1', nome: 'Lia' });
+    expect(liderDaVaga(comDois, 2)).toMatchObject({ vaga: 2, uid: 'l9', nome: 'Nara', telefone: '31 98888-0000', aConferir: false });
+    expect(liderDaVaga(u2, 1)).toBe(null);
+    expect(liderDaVaga(u1, 2)).toBe(null);
+    expect(unidadesLideradasPor('l9', cat.unidades).map((x) => [x.unidade.id, x.vaga])).toEqual([['u1', 2], ['u2', 1]]);
+    expect(unidadesLideradasPor('', cat.unidades)).toEqual([]);
   });
 });

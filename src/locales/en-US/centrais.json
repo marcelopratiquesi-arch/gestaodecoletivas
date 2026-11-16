@@ -271,7 +271,11 @@
         "falta": "{{n}} class(es) from the last 7 days not validated.",
         "acao": "Validate now"
       }
-    }
+    },
+    "unidadesQueLidera": "Units they lead",
+    "estaFicha": "This record",
+    "verNumeros": "View numbers",
+    "lideraN": "Leads {{n}} units"
   },
   "mentor": {
     "rotulo": "Mentor Hub",

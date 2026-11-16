@@ -2,13 +2,18 @@
 //
 //   'editar' = vê tudo e tem os atalhos de edição;  'ver' = modo leitura;  null = não pode abrir.
 //
-//   Unidade   -> admin: todas · mentor: as dele · líder: só a própria (leitura)
-//   Líder     -> igual à unidade dele (o líder fica gravado dentro da unidade)
+//   Unidade   -> admin: todas · mentor: as dele · líder: só as que ele lidera (leitura)
+//   Líder     -> igual à unidade dele (o líder fica gravado dentro da unidade).
+//                tipo 'lider' = 1º líder da unidade; tipo 'lider2' = 2º líder da unidade.
 //   Mentor    -> admin: todos · o próprio mentor: a dele (leitura)
 //   Professor -> admin: todos · mentor e líder: os professores vinculados às unidades deles ·
 //                o próprio professor: a dele (leitura)
-import { ehLider } from '../permissions';
-import { acessoUnidade, acharUnidade, ehAdmin } from './contasUnidade';
+import { ehLider, unidadesDoLider } from '../permissions';
+import { acessoUnidade, acharUnidade, ehAdmin, liderDaVaga } from './contasUnidade';
+
+// Vaga de líder de cada tipo de ficha.
+export const VAGA_DO_TIPO = { lider: 1, lider2: 2 };
+export const tipoDaVaga = (vaga) => (vaga === 2 ? 'lider2' : 'lider');
 
 const texto = (v) => String(v ?? '').trim();
 const papelDe = (userData) => texto(userData?.role).toLowerCase();
@@ -28,7 +33,7 @@ export function unidadesVisiveis(userData, unidades = []) {
   const papel = papelDe(userData);
   if (ehAdmin(papel)) return unidades;
   if (papel === 'mentor') return unidades.filter((u) => u.mentorId && u.mentorId === idDe(userData));
-  if (ehLider(papel)) return unidades.filter((u) => String(u.id) === String(userData?.unidadeId || ''));
+  if (ehLider(papel)) { const minhas = unidadesDoLider(userData); return unidades.filter((u) => minhas.includes(String(u.id))); }
   return [];
 }
 
@@ -41,9 +46,10 @@ export function ehOProprioProfessor(userData, professor) {
 export function resolverAlvo(tipo, alvo, catalogs) {
   if (!alvo || !catalogs) return null;
   if (tipo === 'unidade') return acharUnidade(catalogs.unidades, alvo);
-  if (tipo === 'lider') {
-    const uid = typeof alvo === 'object' ? alvo.liderUid : alvo;
-    return acharUnidade(catalogs.unidades, alvo) || (catalogs.unidades || []).find((u) => u.liderUid && u.liderUid === uid) || null;
+  if (VAGA_DO_TIPO[tipo]) {
+    const campo = tipo === 'lider2' ? 'lider2Uid' : 'liderUid';
+    const uid = typeof alvo === 'object' ? alvo[campo] : alvo;
+    return acharUnidade(catalogs.unidades, alvo) || (catalogs.unidades || []).find((u) => u[campo] && u[campo] === uid) || null;
   }
   if (tipo === 'mentor') return acharPorIdOuNome(catalogs.mentores, alvo);
   if (tipo === 'professor') return acharPorIdOuNome(catalogs.professores, alvo);
@@ -54,7 +60,7 @@ export function acessoCentral(tipo, registro, userData, catalogs) {
   if (!registro || !userData) return null;
   const papel = papelDe(userData);
   if (tipo === 'unidade') return acessoUnidade(userData, registro);
-  if (tipo === 'lider') return registro.liderUid ? acessoUnidade(userData, registro) : null;
+  if (VAGA_DO_TIPO[tipo]) return liderDaVaga(registro, VAGA_DO_TIPO[tipo]) ? acessoUnidade(userData, registro) : null;
   if (tipo === 'mentor') {
     if (ehAdmin(papel)) return 'editar';
     return papel === 'mentor' && registro.id === idDe(userData) ? 'ver' : null;
@@ -74,5 +80,5 @@ export function acessoCentral(tipo, registro, userData, catalogs) {
 // Nome mostrado no botão "Voltar para ..." da ficha de cima.
 export function nomeDoRegistro(tipo, registro) {
   if (!registro) return '';
-  return tipo === 'lider' ? (registro.liderNome || registro.liderEmail || registro.nome) : registro.nome;
+  return VAGA_DO_TIPO[tipo] ? (liderDaVaga(registro, VAGA_DO_TIPO[tipo])?.nome || registro.nome) : registro.nome;
 }

@@ -13,7 +13,8 @@ import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
 import { useCatalogs } from '../contexts/CatalogContext';
 import { EVENTO_CENTRAL } from './abrirCentral';
-import { acessoCentral, resolverAlvo, nomeDoRegistro } from './acessos';
+import { acessoCentral, resolverAlvo, nomeDoRegistro, VAGA_DO_TIPO } from './acessos';
+import { liderDaVaga } from './contasUnidade';
 import CentralUnidade from './CentralUnidade';
 import CentralMentor from './CentralMentor';
 import CentralLider from './CentralLider';
@@ -22,7 +23,9 @@ import CentralProfessor from './CentralProfessor';
 const CAMADA_BASE = 200;
 const PASSO_CAMADA = 10;
 
-const FICHAS = { unidade: CentralUnidade, mentor: CentralMentor, lider: CentralLider, professor: CentralProfessor };
+// 'lider2' = a mesma ficha do líder, mostrando o 2º líder da unidade.
+const CentralSegundoLider = (props) => <CentralLider {...props} vaga={2} />;
+const FICHAS = { unidade: CentralUnidade, mentor: CentralMentor, lider: CentralLider, lider2: CentralSegundoLider, professor: CentralProfessor };
 
 // Nome da tela de onde a ficha foi aberta (para o botão "Voltar para ..."). Chaves de sidebar.items.
 const TELAS = {
@@ -59,12 +62,12 @@ export default function CentraisHost() {
         toast.error(t('centrais.avisos.naoEncontrado'));
         return;
       }
-      if (tipo === 'lider' && !registro.liderUid) {
+      if (VAGA_DO_TIPO[tipo] && !liderDaVaga(registro, VAGA_DO_TIPO[tipo])) {
         toast.error(t('centrais.avisos.unidadeSemLider'));
         return;
       }
       if (!acessoCentral(tipo, registro, userData, catalogs)) {
-        toast.error(t(tipo === 'unidade' || tipo === 'lider' ? 'centrais.avisos.unidadeForaDoEscopo' : 'centrais.avisos.semAcesso'));
+        toast.error(t(tipo === 'unidade' || VAGA_DO_TIPO[tipo] ? 'centrais.avisos.unidadeForaDoEscopo' : 'centrais.avisos.semAcesso'));
         return;
       }
       setPilha((atual) => {

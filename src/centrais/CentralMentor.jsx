@@ -30,9 +30,9 @@ import { QuadroEmDia, TabelaProfessores } from './secoes';
 import LinkCentral from './LinkCentral';
 import { iniciais } from './contato';
 import { atalhoTelaCompleta, telasPermitidas, caminhos } from './atalhos';
-import { acessoCentral } from './acessos';
+import { acessoCentral, tipoDaVaga } from './acessos';
 import { useValidacoesDasUnidades, useFechamentosMensais } from './useValidacoesDaUnidade';
-import { DIAS_JANELA_PENDENCIAS, periodoDoMes } from './contasUnidade';
+import { DIAS_JANELA_PENDENCIAS, periodoDoMes, liderDaVaga } from './contasUnidade';
 import { mesesDoTrimestre, limitesDoMes, gastoPorUnidade, gastoPorUnidadeDoResumo, totaisPorMoeda } from './contasValores';
 import { linhasDoMentor, professoresDoMentor, aValidarPorUnidade, itensEmDiaMentor } from './contasPessoas';
 
@@ -124,7 +124,8 @@ export default function CentralMentor({ id: mentorId, z, textoVoltar, onFechar, 
   const pode = telasPermitidas(userData);
   const ativo = mentor.status === 'ativo';
   const faltam = itens.filter((i) => !i.ok).length;
-  const comLider = linhas.filter((l) => l.unidade.liderUid);
+  // Uma linha por líder: o 1º e, se houver, o 2º líder de cada unidade.
+  const comLider = linhas.flatMap(({ unidade }) => [1, 2].map((vaga) => ({ unidade, lider: liderDaVaga(unidade, vaga) })).filter((x) => x.lider));
   const professoresAtivos = professores.filter((p) => p.ativo).length;
   const unidadesComPendencia = aValidarMapa ? unidades.filter((u) => (aValidarMapa.get(String(u.id)) || 0) > 0).map((u) => u.id) : [];
 
@@ -289,6 +290,14 @@ export default function CentralMentor({ id: mentorId, z, textoVoltar, onFechar, 
                       ) : (
                         <span className="font-bold text-rose-600 dark:text-rose-400">{t('centrais.unidade.info.semLider')}</span>
                       )}
+                      {unidade.lider2Uid && (
+                        <p className="text-[11px]">
+                          <LinkCentral tipo="lider2" alvo={unidade} className="font-semibold text-slate-600 dark:text-slate-300">
+                            {unidade.lider2Nome || unidade.lider2Email}
+                          </LinkCentral>
+                          <span className="ml-1 text-[10px] font-bold text-violet-600 dark:text-violet-400">{t('leadersTab.second.badge')}</span>
+                        </p>
+                      )}
                       {unidade.liderUid && unidade.liderAConferir === true && (
                         <p className="text-[10px] font-bold text-amber-600 dark:text-amber-400">{t('centrais.aguardandoConferencia')}</p>
                       )}
@@ -335,23 +344,24 @@ export default function CentralMentor({ id: mentorId, z, textoVoltar, onFechar, 
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {comLider.map(({ unidade }) => (
-                  <tr key={unidade.id}>
+                {comLider.map(({ unidade, lider }) => (
+                  <tr key={unidade.id + ':' + lider.vaga}>
                     <td className={`${TD} font-bold text-slate-800 dark:text-white`}>
-                      <LinkCentral tipo="lider" alvo={unidade}>{unidade.liderNome || unidade.liderEmail}</LinkCentral>
+                      <LinkCentral tipo={tipoDaVaga(lider.vaga)} alvo={unidade}>{lider.nome}</LinkCentral>
+                      {lider.vaga === 2 && <p className="text-[10px] font-bold text-violet-600 dark:text-violet-400">{t('leadersTab.second.badge')}</p>}
                     </td>
                     <td className={`${TD} font-semibold text-slate-600 dark:text-slate-300`}>{unidade.nome}</td>
                     <td className={TD}>
                       <div className="flex flex-col gap-0.5">
-                        {unidade.liderTelefone
-                          ? <Contato icone={Phone} texto={unidade.liderTelefone} copiar whatsapp pais={unidade.pais} />
+                        {lider.telefone
+                          ? <Contato icone={Phone} texto={lider.telefone} copiar whatsapp pais={unidade.pais} />
                           : <Contato icone={Phone} texto={t('centrais.unidade.info.liderSemTelefone')} falta />}
-                        {unidade.liderEmail && <Contato icone={Mail} texto={unidade.liderEmail} copiar />}
+                        {lider.email && <Contato icone={Mail} texto={lider.email} copiar />}
                       </div>
                     </td>
                     <td className={TD}>
-                      <span className={unidade.liderAConferir === true ? SELO_INATIVO : SELO_ATIVO}>
-                        {unidade.liderAConferir === true ? t('centrais.aguardandoConferencia') : t('centrais.lider.conferido')}
+                      <span className={lider.aConferir ? SELO_INATIVO : SELO_ATIVO}>
+                        {lider.aConferir ? t('centrais.aguardandoConferencia') : t('centrais.lider.conferido')}
                       </span>
                     </td>
                   </tr>

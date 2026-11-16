@@ -271,7 +271,11 @@
         "falta": "{{n}} aula(s) dos últimos 7 dias sem validar.",
         "acao": "Validar agora"
       }
-    }
+    },
+    "unidadesQueLidera": "Unidades que lidera",
+    "estaFicha": "Nesta ficha",
+    "verNumeros": "Ver números",
+    "lideraN": "Lidera {{n}} unidades"
   },
   "mentor": {
     "rotulo": "Central do Mentor",

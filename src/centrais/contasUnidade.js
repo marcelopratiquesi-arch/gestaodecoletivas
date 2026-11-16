@@ -8,7 +8,7 @@
 import { aulaNaGradeDoDia, situacaoDaAula, SITUACAO, somarDias, datasEntre } from '../utils/agendaAulas';
 import { deduplicarValidacoes } from '../utils/validacoes';
 import { getDiaSemana, DIAS_SEMANA_GRADE } from '../utils/formatters';
-import { ehLider } from '../permissions';
+import { ehLider, unidadesDoLider } from '../permissions';
 import { valorDaValidacao } from '../utils/valores';
 
 // Pendências: hoje e os 6 dias anteriores (mesma janela da Página de Início).
@@ -20,7 +20,7 @@ export const ehAdmin = (role) => ['admin', 'administrador', 'master'].includes(t
 
 // Quem pode abrir a Central de uma unidade:
 //   'editar' = admin (todas) e mentor (só as dele): vê tudo e tem os atalhos de edição;
-//   'ver'    = líder (só a própria): modo leitura;
+//   'ver'    = líder (só as unidades que ele lidera — pode ser mais de uma): modo leitura;
 //   null     = não pode abrir.
 export function acessoUnidade(userData, unidade) {
   if (!userData || !unidade) return null;
@@ -28,8 +28,38 @@ export function acessoUnidade(userData, unidade) {
   const meuId = userData.id || userData.uid;
   if (ehAdmin(papel)) return 'editar';
   if (papel === 'mentor') return unidade.mentorId && unidade.mentorId === meuId ? 'editar' : null;
-  if (ehLider(papel)) return String(userData.unidadeId || '') === String(unidade.id) ? 'ver' : null;
+  if (ehLider(papel)) return unidadesDoLider(userData).includes(String(unidade.id)) ? 'ver' : null;
   return null;
+}
+
+// A unidade tem até 2 líderes, gravados nela mesma: o 1º em lider* e o 2º em lider2*.
+// Devolve os dados do líder daquela vaga (ou null se a vaga está vazia).
+// O 2º líder é sempre alguém que já tinha acesso: não tem "desde" nem conferência pendente.
+export function liderDaVaga(unidade, vaga = 1) {
+  if (!unidade) return null;
+  if (vaga === 2) {
+    if (!unidade.lider2Uid) return null;
+    return {
+      vaga: 2, uid: unidade.lider2Uid, nome: unidade.lider2Nome || unidade.lider2Email || '', email: unidade.lider2Email || '',
+      telefone: unidade.lider2Telefone || '', tipo: unidade.lider2Tipo || '', desde: null, aConferir: false,
+    };
+  }
+  if (!unidade.liderUid) return null;
+  return {
+    vaga: 1, uid: unidade.liderUid, nome: unidade.liderNome || unidade.liderEmail || '', email: unidade.liderEmail || '',
+    telefone: unidade.liderTelefone || '', tipo: unidade.liderTipo || '', desde: unidade.liderDesde || null,
+    aConferir: unidade.liderAConferir === true,
+  };
+}
+
+// Todas as unidades que uma pessoa lidera (como 1º ou 2º líder): [{ unidade, vaga }].
+export function unidadesLideradasPor(uid, unidades = []) {
+  if (!uid) return [];
+  return unidades.flatMap((unidade) => {
+    if (unidade.liderUid === uid) return [{ unidade, vaga: 1 }];
+    if (unidade.lider2Uid === uid) return [{ unidade, vaga: 2 }];
+    return [];
+  });
 }
 
 // Aceita o cadastro da unidade, o id ou o nome.

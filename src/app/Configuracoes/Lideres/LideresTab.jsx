@@ -457,7 +457,7 @@ export function LideresTab() {
                             {u.lider2Uid && (
                               <div className="mt-2 pt-2 border-t border-dashed border-slate-200 dark:border-slate-700 space-y-0.5">
                                 <p className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 flex-wrap">
-                                  {u.lider2Nome || "-"}
+                                  <LinkCentral tipo="lider2" alvo={u}>{u.lider2Nome || "-"}</LinkCentral>
                                   <span className="px-1.5 py-0.5 rounded-md border text-[9px] font-black uppercase bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-900/20 dark:text-violet-300 dark:border-violet-800">{t("leadersTab.second.badge")}</span>
                                   <button onClick={() => setDocAlvo({ id: u.lider2Uid, nome: u.lider2Nome, email: u.lider2Email })} title={t("document.modal.edit")}
                                     className="p-1 rounded-md text-slate-400 hover:bg-blue-50 hover:text-blue-600"><IdCard className="w-3.5 h-3.5" /></button>

@@ -3,6 +3,8 @@
 // O líder fica gravado dentro da unidade (nome, e-mail, telefone, tipo de acesso), então esta ficha é
 // identificada pela unidade dele e mostra os MESMOS números da Central da Unidade (useNumerosDaUnidade):
 // valor investido, evolução do trimestre, quanto cada professor recebeu e o que está pendente.
+// A unidade pode ter 2 líderes: vaga 1 (lider*) e vaga 2 (lider2*). Quem lidera mais de uma unidade
+// ganha o quadro "Unidades que lidera", para trocar de unidade sem sair da ficha.
 // Só leitura.
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -28,15 +30,16 @@ import { QuadroEmDia, CartaoPessoa } from './secoes';
 import { SecaoResumo, SecaoValores, SecaoProfessores, SecaoGrade } from './secoesUnidade';
 import LinkCentral from './LinkCentral';
 import { iniciais } from './contato';
-import { abrirCentralUnidade } from './abrirCentral';
+import { abrirCentral, abrirCentralUnidade } from './abrirCentral';
+import { tipoDaVaga } from './acessos';
 import { telasPermitidas, caminhos } from './atalhos';
 import { useNumerosDaUnidade } from './useNumerosDaUnidade';
-import { acessoUnidade, aulasNaSemana } from './contasUnidade';
+import { acessoUnidade, aulasNaSemana, liderDaVaga, unidadesLideradasPor } from './contasUnidade';
 import { itensEmDiaLider } from './contasPessoas';
 
 const doisDigitos = (n) => String(n).padStart(2, '0');
 
-export default function CentralLider({ id: unidadeId, z, textoVoltar, onFechar, irPara }) {
+export default function CentralLider({ id: unidadeId, vaga = 1, z, textoVoltar, onFechar, irPara }) {
   const { t } = useTranslation();
   const { userData } = useAuth();
   const { catalogs } = useCatalogs();
@@ -49,29 +52,37 @@ export default function CentralLider({ id: unidadeId, z, textoVoltar, onFechar, 
   const [mes, setMes] = useState(mesDeHoje);
 
   const cadastroDaUnidade = catalogs.unidades.find((u) => String(u.id) === String(unidadeId)) || null;
-  const acesso = cadastroDaUnidade?.liderUid ? acessoUnidade(userData, cadastroDaUnidade) : null;
+  const acesso = liderDaVaga(cadastroDaUnidade, vaga) ? acessoUnidade(userData, cadastroDaUnidade) : null;
   const n = useNumerosDaUnidade({ unidadeId, ativo: !!acesso, mes, hoje, agoraHHMM });
   const { unidade, mentor, aulas, professores, resumo, anterior, pendencias } = n;
 
-  const itens = useMemo(
-    () => (unidade ? itensEmDiaLider({ unidade, aulas, professores: catalogs.professores, pendencias }) : []),
-    [unidade, aulas, catalogs.professores, pendencias],
-  );
+  // Os itens "em dia" olham os dados DESTE líder (o 2º líder usa os campos lider2*).
+  const itens = useMemo(() => {
+    const l = liderDaVaga(unidade, vaga);
+    if (!unidade || !l) return [];
+    const unidadeDesteLider = { ...unidade, liderTelefone: l.telefone, liderAConferir: l.aConferir };
+    return itensEmDiaLider({ unidade: unidadeDesteLider, aulas, professores: catalogs.professores, pendencias });
+  }, [unidade, vaga, aulas, catalogs.professores, pendencias]);
 
-  if (!unidade || !acesso) return null;
+  const lider = liderDaVaga(unidade, vaga);
+  if (!unidade || !acesso || !lider) return null;
+
+  // Todas as unidades que esta pessoa lidera (só as que quem está olhando pode abrir).
+  const lideradas = unidadesLideradasPor(lider.uid, catalogs.unidades).filter((x) => acessoUnidade(userData, x.unidade));
 
   const pode = telasPermitidas(userData);
   const d = { ...n, itens, pode, irPara, mesDeHoje };
-  const nome = unidade.liderNome || unidade.liderEmail;
-  const aConferir = unidade.liderAConferir === true;
+  const nome = lider.nome;
+  const aConferir = lider.aConferir;
   const faltam = itens.filter((i) => !i.ok).length;
   const professoresAtivos = professores.filter((p) => p.ativo).length;
   const totalNaSemana = aulasNaSemana(aulas);
-  const tipoDeAcesso = unidade.liderTipo === 'senha' ? t('centrais.acessoSenha') : t('centrais.acessoGoogle');
+  const tipoDeAcesso = lider.tipo === 'senha' ? t('centrais.acessoSenha') : t('centrais.acessoGoogle');
   const carregandoTexto = n.erro ? t('centrais.naoCarregou') : t('centrais.carregando');
 
   const selos = [
-    { texto: t('centrais.papel.lider'), cor: 'blue' },
+    { texto: vaga === 2 ? t('leadersTab.second.badge') : t('centrais.papel.lider'), cor: vaga === 2 ? 'violet' : 'blue' },
+    lideradas.length > 1 && { texto: t('centrais.lider.lideraN', { n: lideradas.length }), cor: 'violet' },
     aConferir && { texto: t('centrais.aguardandoConferencia'), cor: 'amber' },
     faltam > 0
       ? { texto: t('centrais.selos.faltam', { n: faltam }), cor: 'amber' }
@@ -84,10 +95,10 @@ export default function CentralLider({ id: unidadeId, z, textoVoltar, onFechar, 
     mentor
       ? <Contato icone={ShieldCheck} classeIcone="text-blue-500" texto={t('centrais.unidade.info.mentor', { nome: mentor.nome })} />
       : <Contato icone={ShieldCheck} texto={t('centrais.unidade.info.semMentor')} falta />,
-    unidade.liderTelefone
-      ? <Contato icone={Phone} classeIcone="text-emerald-500" texto={unidade.liderTelefone} copiar whatsapp pais={unidade.pais} />
+    lider.telefone
+      ? <Contato icone={Phone} classeIcone="text-emerald-500" texto={lider.telefone} copiar whatsapp pais={unidade.pais} />
       : <Contato icone={Phone} texto={t('centrais.unidade.info.liderSemTelefone')} falta />,
-    unidade.liderEmail && <Contato icone={Mail} classeIcone="text-amber-500" texto={unidade.liderEmail} copiar />,
+    lider.email && <Contato icone={Mail} classeIcone="text-amber-500" texto={lider.email} copiar />,
   ].filter(Boolean);
 
   const acoes = (
@@ -129,7 +140,36 @@ export default function CentralLider({ id: unidadeId, z, textoVoltar, onFechar, 
           {mentor ? <LinkCentral tipo="mentor" alvo={mentor}>{mentor.nome}</LinkCentral> : t('centrais.unidade.info.semMentor')}
         </Campo>
         <Campo rotulo={t('centrais.cadastro.acesso')}>{tipoDeAcesso}</Campo>
-        <Campo rotulo={t('centrais.lider.liderDesde')}>{unidade.liderDesde ? formatDate(unidade.liderDesde) : t('centrais.naoInformado')}</Campo>
+        <Campo rotulo={t('centrais.lider.liderDesde')}>{lider.desde ? formatDate(lider.desde) : t('centrais.naoInformado')}</Campo>
+      </div>
+    </Quadro>
+  );
+
+  // Quem lidera mais de uma unidade: a lista delas. Clicar em outra abre a ficha do líder naquela unidade.
+  const quadroUnidades = lideradas.length > 1 && (
+    <Quadro titulo={t('centrais.lider.unidadesQueLidera')} icone={Building2}>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+        {lideradas.map(({ unidade: u, vaga: v }) => {
+          const esta = String(u.id) === String(unidade.id);
+          const moldura = esta ? 'border-blue-300 bg-blue-50/60 dark:border-blue-800 dark:bg-blue-900/20' : 'border-slate-200/80 dark:border-slate-800';
+          return (
+            <div key={u.id} className={'rounded-xl border p-3 flex items-center justify-between gap-3 ' + moldura}>
+              <div className="min-w-0">
+                <LinkCentral tipo="unidade" alvo={u} className="text-[13px] font-extrabold uppercase text-slate-800 dark:text-white">{u.nome}</LinkCentral>
+                <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                  {[u.estado, v === 2 ? t('leadersTab.second.badge') : null].filter(Boolean).join(' · ')}
+                </p>
+              </div>
+              {esta
+                ? <span className="shrink-0 text-[10px] font-black uppercase text-blue-700 dark:text-blue-300">{t('centrais.lider.estaFicha')}</span>
+                : (
+                  <button type="button" className={BOTAO_BRANCO} onClick={() => abrirCentral(tipoDaVaga(v), u)}>
+                    <Eye className="w-3.5 h-3.5" /> {t('centrais.lider.verNumeros')}
+                  </button>
+                )}
+            </div>
+          );
+        })}
       </div>
     </Quadro>
   );
@@ -151,17 +191,17 @@ export default function CentralLider({ id: unidadeId, z, textoVoltar, onFechar, 
     <Quadro titulo={t('centrais.lider.cadastroTitulo')} icone={IdCard}>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Campo rotulo={t('centrais.cadastro.nome')}><Contato texto={nome} copiar /></Campo>
-        <Campo rotulo={t('centrais.cadastro.email')} falta={!unidade.liderEmail}>
-          {unidade.liderEmail ? <Contato icone={Mail} texto={unidade.liderEmail} copiar /> : t('centrais.naoInformado')}
+        <Campo rotulo={t('centrais.cadastro.email')} falta={!lider.email}>
+          {lider.email ? <Contato icone={Mail} texto={lider.email} copiar /> : t('centrais.naoInformado')}
         </Campo>
-        <Campo rotulo={t('centrais.cadastro.telefone')} falta={!unidade.liderTelefone}>
-          {unidade.liderTelefone ? <Contato icone={Phone} texto={unidade.liderTelefone} copiar whatsapp pais={unidade.pais} /> : t('centrais.naoInformado')}
+        <Campo rotulo={t('centrais.cadastro.telefone')} falta={!lider.telefone}>
+          {lider.telefone ? <Contato icone={Phone} texto={lider.telefone} copiar whatsapp pais={unidade.pais} /> : t('centrais.naoInformado')}
         </Campo>
         <Campo rotulo={t('centrais.papel.unidade')}>
           <LinkCentral tipo="unidade" alvo={unidade}>{unidade.nome}</LinkCentral>
         </Campo>
         <Campo rotulo={t('centrais.cadastro.acesso')}>{tipoDeAcesso}</Campo>
-        <Campo rotulo={t('centrais.lider.liderDesde')}>{unidade.liderDesde ? formatDate(unidade.liderDesde) : t('centrais.naoInformado')}</Campo>
+        <Campo rotulo={t('centrais.lider.liderDesde')}>{lider.desde ? formatDate(lider.desde) : t('centrais.naoInformado')}</Campo>
         <Campo rotulo={t('centrais.lider.conferencia')} falta={aConferir}>
           {aConferir ? t('centrais.aguardandoConferencia') : t('centrais.lider.conferido')}
         </Campo>
@@ -242,7 +282,7 @@ export default function CentralLider({ id: unidadeId, z, textoVoltar, onFechar, 
       </div>
 
       <div className="mt-4 space-y-4">
-        {aba === 'geral' && <>{principal}<SecaoResumo d={d} />{emDia}</>}
+        {aba === 'geral' && <>{principal}{quadroUnidades}<SecaoResumo d={d} />{emDia}</>}
         {aba === 'panorama' && (
           <>
             <SecaoResumo d={d} comLink />
@@ -251,13 +291,14 @@ export default function CentralLider({ id: unidadeId, z, textoVoltar, onFechar, 
             <SecaoProfessores d={d} comLink />
             <SecaoGrade d={d} comLink />
             {quadroMentor}
+            {quadroUnidades}
             {cadastro}
           </>
         )}
         {aba === 'valores' && <><SecaoResumo d={d} comLink /><SecaoValores d={d} comLink /></>}
         {aba === 'equipe' && <><SecaoProfessores d={d} comLink />{quadroMentor}</>}
         {aba === 'grade' && <SecaoGrade d={d} comLink />}
-        {aba === 'cadastro' && cadastro}
+        {aba === 'cadastro' && <>{quadroUnidades}{cadastro}</>}
       </div>
     </JanelaFicha>
   );

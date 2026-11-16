@@ -7,7 +7,7 @@ import { acessoCentral, resolverAlvo } from './acessos';
 
 // Nome clicável que abre uma Central por cima da tela (ou da ficha) atual.
 //   <LinkCentral tipo="professor" alvo={professor}>{professor.nome}</LinkCentral>
-//   tipo: 'unidade' | 'professor' | 'mentor' | 'lider' (o alvo do líder é a unidade dele)
+//   tipo: 'unidade' | 'professor' | 'mentor' | 'lider' | 'lider2' (o alvo do líder é a unidade dele; 'lider2' = 2º líder)
 // Quem não pode abrir aquela ficha vê só o texto, sem clique (ninguém clica para tomar um "não pode").
 export default function LinkCentral({ tipo, alvo, className = '', children }) {
   const { t } = useTranslation();
@@ -23,7 +23,7 @@ export default function LinkCentral({ tipo, alvo, className = '', children }) {
     <button
       type="button"
       onClick={(e) => { e.stopPropagation(); abrirCentral(tipo, registro); }}
-      title={t(`centrais.abrirFicha.${tipo}`)}
+      title={t(`centrais.abrirFicha.${tipo === 'lider2' ? 'lider' : tipo}`)}
       className={`group/central inline-flex items-center gap-1.5 text-left hover:text-blue-600 dark:hover:text-blue-400 transition-colors max-w-full ${className}`}
     >
       <span className="group-hover/central:underline min-w-0 break-words">{children}</span>
