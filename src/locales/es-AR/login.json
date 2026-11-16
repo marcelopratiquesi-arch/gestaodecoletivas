@@ -15,5 +15,14 @@
     "or": "o con usuario y contraseña",
     "popupBlocked": "El navegador bloqueó la ventana de Google. Permití las ventanas emergentes para este sitio y probá de nuevo.",
     "notEnabled": "El ingreso con Google todavía no está activado. Contactá al soporte."
+  },
+  "tabs": {
+    "enter": "Ingresar",
+    "first": "Primer acceso"
+  },
+  "firstCall": {
+    "title": "¿Es tu primera vez acá?",
+    "desc": "Registrate como líder o mentor.",
+    "button": "Registrarme"
   }
 }

@@ -38,7 +38,7 @@ export default function ConfiguracoesPage() {
   const { t } = useTranslation(); // 🟢 CÉREBRO CONECTADO NO COMPONENTE PRINCIPAL
   
   const role = useMemo(() => String(userData?.role || "").trim().toLowerCase(), [userData?.role]);
-  const { pedidos: pedidosPendentes } = usePedidosPendentes();
+  const { total: totalPendencias } = usePedidosPendentes();
   // Líderes que assumiram sozinhos (trocaram o login antigo pelo Google) e ainda não foram conferidos.
   const { catalogs } = useCatalogs();
   const meuId = userData?.id || userData?.uid;
@@ -51,14 +51,14 @@ export default function ConfiguracoesPage() {
     // Ordem: Mentores, Líderes, Professores, Unidades, Modalidades, Feriados, Pratique Play, Backup.
     // Os pedidos de acesso pelo Google ficam dentro da aba Líderes (o número vermelho mostra quantos aguardam).
     { id: "mentores", label: t('settingsPage.tabs.mentores', 'Mentores'), icon: ShieldCheck, roles: ["admin"] },
-    { id: "lideres", label: t('settingsPage.tabs.lideres'), icon: UserCheck, roles: ["admin", "mentor"], contador: pedidosPendentes.length + lideresAConferir },
+    { id: "lideres", label: t('settingsPage.tabs.lideres'), icon: UserCheck, roles: ["admin", "mentor"], contador: totalPendencias + lideresAConferir },
     { id: "professores", label: t('settingsPage.tabs.professores', 'Professores'), icon: Users, roles: ["admin", "mentor", "lider", "unidade"] },
     { id: "unidades", label: t('settingsPage.tabs.unidades', 'Unidades'), icon: Building2, roles: ["admin", "mentor"] },
     { id: "modalidades", label: t('settingsPage.tabs.modalidades', 'Modalidades'), icon: Dumbbell, roles: ["admin", "mentor"] },
     { id: "feriados", label: t('settingsPage.tabs.feriados', 'Feriados'), icon: CalendarDays, roles: ["admin", "mentor"] },
     { id: "pratique-play", label: t('settingsPage.tabs.pratiquePlay', 'Pratique Play'), icon: Headphones, roles: ["admin"] },
     { id: "backup", label: t('settingsPage.tabs.backup', 'Backup'), icon: Database, roles: ["admin"] },
-  ], [t, pedidosPendentes.length, lideresAConferir]);
+  ], [t, totalPendencias, lideresAConferir]);
 
   const allowedTabs = useMemo(() => tabs.filter(t => t.roles.includes(role)), [role, tabs]);
 

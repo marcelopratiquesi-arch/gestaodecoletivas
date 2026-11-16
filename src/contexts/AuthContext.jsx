@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { onAuthStateChanged, signOut, unlink } from "firebase/auth";
-import { doc, getDoc, collection, addDoc, serverTimestamp } from "firebase/firestore"; // 🟢 Importações do X-9
+import { doc, getDoc, updateDoc, collection, addDoc, serverTimestamp } from "firebase/firestore"; // 🟢 Importações do X-9
 import { auth, db } from "../services/firebase"; // ✅ caminho correto
 import { crachaSemAcesso, AVISO_SEM_ACESSO } from "../permissions";
 
@@ -13,8 +13,10 @@ const temProvedor = (firebaseUser, id) =>
 const entrouPeloGoogle = (firebaseUser) => temProvedor(firebaseUser, "google.com");
 
 // Perfis que já são obrigados a trocar o login antigo (e-mail e senha) pelo login pessoal do Google.
-// Professores e admin ficam para uma próxima etapa.
-const PAPEIS_QUE_MIGRAM = ["lider", "unidade", "mentor"];
+// Admin fica para uma próxima etapa.
+const PAPEIS_QUE_MIGRAM = ["lider", "unidade", "mentor", "professor"];
+// Quem precisa informar o documento de identificação (CPF/DNI/SSN). Professor entra numa etapa futura.
+const PAPEIS_COM_DOCUMENTO = ["lider", "unidade", "mentor", "professor", "admin", "administrador", "master"];
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);          // firebaseUser
@@ -74,6 +76,12 @@ export function AuthProvider({ children }) {
       // presa à conta (a remoção falhou na hora da troca), tira agora. Não trava o acesso se falhar.
       if (snap.data().loginGoogle === true && temProvedor(firebaseUser, "google.com") && temProvedor(firebaseUser, "password")) {
         unlink(firebaseUser, "password").catch((e) => console.error("Não foi possível remover a senha antiga:", e));
+      }
+
+      // Carimba o último acesso (no máximo 1 vez por hora, para não gravar a cada recarga). Não trava a entrada se falhar.
+      const ultimo = snap.data().ultimoAcesso?.toMillis?.() || 0;
+      if (Date.now() - ultimo > 60 * 60 * 1000) {
+        updateDoc(ref, { ultimoAcesso: serverTimestamp() }).catch((e) => console.warn("Último acesso não registrado:", e?.code));
       }
 
       setAguardandoAprovacao(false);
@@ -142,6 +150,11 @@ export function AuthProvider({ children }) {
       precisaAtualizarCadastro: !!userData
         && PAPEIS_QUE_MIGRAM.includes(String(userData.role || "").trim().toLowerCase())
         && userData.loginGoogle !== true,
+      // Já atualizou o cadastro mas ainda não informou o documento: tela obrigatória (ver PrivateRoute e pages/InformarDocumento).
+      precisaDocumento: !!userData
+        && PAPEIS_COM_DOCUMENTO.includes(String(userData.role || "").trim().toLowerCase())
+        && userData.documentoOk !== true
+        && !(PAPEIS_QUE_MIGRAM.includes(String(userData.role || "").trim().toLowerCase()) && userData.loginGoogle !== true),
       role: userData?.role || null,
       isAdmin: userData?.role === "admin",
       isMentor: userData?.role === "mentor",

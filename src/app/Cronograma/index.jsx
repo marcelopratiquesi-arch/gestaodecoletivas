@@ -14,8 +14,8 @@ import {
 } from 'firebase/firestore';
 import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
 import { DIAS_SEMANA_GRADE, formatWeekday, getCurrencySymbol } from '../../utils/formatters';
-import { ehLider } from '../../permissions';
 import { useLocation, useSearchParams } from 'react-router-dom';
+import { ehLider, unidadesDoLider } from '../../permissions';
 
 // --- FUNÇÕES UTILITÁRIAS ---
 const getTodayStr = () => new Date().toLocaleDateString('en-CA');
@@ -211,7 +211,7 @@ export default function CronogramaPage() {
   const availableUnits = useMemo(() => {
       if (role === 'admin') return catalogs.unidades;
       if (role === 'mentor') return catalogs.unidades.filter(u => u.mentorId === userId);
-      if (ehLider(role)) return catalogs.unidades.filter(u => u.id === userData?.unidadeId);
+      if (ehLider(role)) { const minhas = unidadesDoLider(userData); return catalogs.unidades.filter(u => minhas.includes(String(u.id))); }
       if (role === 'professor') {
           const meuPerfil = catalogs.professores.find(p => p.uidLogin === userId);
           if (!meuPerfil) return [];
@@ -219,7 +219,7 @@ export default function CronogramaPage() {
           return catalogs.unidades.filter(u => minhasUnidadesIds.includes(String(u.id)));
       }
       return [];
-  }, [catalogs, role, userId, userData?.unidadeId]);
+  }, [catalogs, role, userId, userData]);
 
   // Abrir já filtrado numa unidade: /app/cronograma?unidade=ID (atalho da Central da Unidade e do Radar).
   // Só vale para unidade que a pessoa pode ver; aplicado uma vez por chegada, depois o filtro é livre.

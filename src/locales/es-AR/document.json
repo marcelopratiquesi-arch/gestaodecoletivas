@@ -1,0 +1,57 @@
+{
+  "label": "Documento de identidad",
+  "typeLabel": "Tipo de documento",
+  "types": {
+    "cpf": "CPF (Brasil)",
+    "dni": "DNI (Argentina)",
+    "ssn": "SSN (Estados Unidos)"
+  },
+  "short": {
+    "cpf": "CPF",
+    "dni": "DNI",
+    "ssn": "SSN"
+  },
+  "placeholder": {
+    "cpf": "000.000.000-00",
+    "dni": "00.000.000",
+    "ssn": "000-00-0000"
+  },
+  "hint": "Obligatorio. Queda guardado en un área protegida: solo vos, el administrador y el mentor de tu unidad pueden verlo.",
+  "errors": {
+    "invalid": "Documento inválido. Revisá los números.",
+    "inUse": "Este documento ya está registrado para otra persona. Si es un error, hablá con tu mentor.",
+    "save": "No se pudo guardar el documento. Probá de nuevo."
+  },
+  "gate": {
+    "title": "Solo falta tu documento",
+    "desc": "Para mantener los registros correctos necesitamos tu documento de identidad (CPF en Brasil, DNI en Argentina, SSN en Estados Unidos). Después de guardar, el sistema se abre normalmente.",
+    "save": "Guardar y entrar",
+    "checking": "Revisando tu registro...",
+    "logout": "Salir ({{email}})"
+  },
+  "modal": {
+    "title": "Documento de {{name}}",
+    "current": "Documento actual",
+    "none": "Todavía no informado",
+    "noAccess": "No tenés permiso para ver este documento.",
+    "save": "Guardar documento",
+    "saved": "Documento guardado.",
+    "edit": "Documento",
+    "cancel": "Cerrar",
+    "auditNew": "Documento de identidad informado.",
+    "auditChange": "Documento de identidad corregido.",
+    "auditType": "Tipo: {{type}}"
+  },
+  "search": {
+    "title": "Buscar registro por documento",
+    "placeholder": "Escribí el documento",
+    "button": "Buscar",
+    "notFound": "Ningún registro con este documento.",
+    "found": "Registro: {{name}}",
+    "unknownName": "Persona sin nombre en el sistema"
+  },
+  "invite": {
+    "label": "Documento (opcional)",
+    "hint": "Si lo sabés, completalo ahora. Si no, la persona lo completa en el primer acceso."
+  }
+}

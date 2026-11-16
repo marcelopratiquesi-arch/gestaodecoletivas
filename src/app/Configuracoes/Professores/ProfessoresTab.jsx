@@ -20,7 +20,8 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
 import LinkCentral from "../../../centrais/LinkCentral";
-import { ehLider } from '../../../permissions';
+import { ehLider, unidadesDoLider } from '../../../permissions';
+import PedidosProfessor from "../Pendencias/PedidosProfessor";
 
 // 🌍 PADRÃO OURO INTERNACIONAL — mesma identidade visual usada em MentoresTab
 const PAIS_CONFIG = {
@@ -128,7 +129,6 @@ export function ProfessoresTab() {
   // ===== PERMISSÕES E ESCOPO =====
   const role = useMemo(() => String(userData?.role || "").trim().toLowerCase(), [userData?.role]);
   const userId = useMemo(() => userData?.id || userData?.uid, [userData]);
-  const userUnidadeId = useMemo(() => userData?.unidadeId, [userData]);
 
   const podeVer = ["admin", "mentor", "lider", "unidade"].includes(role);
   const podeEditar = ["admin", "mentor", "lider", "unidade"].includes(role);
@@ -215,9 +215,9 @@ export function ProfessoresTab() {
   const minhasUnidades = useMemo(() => {
       if (role === 'admin') return unidades;
       if (role === 'mentor') return unidades.filter(u => u.mentorId === userId);
-      if (ehLider(role)) return unidades.filter(u => u.id === userUnidadeId);
+      if (ehLider(role)) { const minhas = unidadesDoLider(userData); return unidades.filter(u => minhas.includes(String(u.id))); }
       return [];
-  }, [unidades, role, userId, userUnidadeId]);
+  }, [unidades, role, userId, userData]);
 
   const meusVinculos = useMemo(() => {
       const idsUnidades = minhasUnidades.map(u => u.id);
@@ -562,6 +562,8 @@ export function ProfessoresTab() {
 
   return (
     <div className="p-6 animate-fade-in max-w-7xl mx-auto space-y-6 uppercase">
+      {/* PEDIDOS DE ACESSO DE PROFESSORES (login pessoal pelo Google) */}
+      <PedidosProfessor />
       {/* HEADER E KPIS */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-slate-200 dark:border-slate-700 pb-6">
         <div>

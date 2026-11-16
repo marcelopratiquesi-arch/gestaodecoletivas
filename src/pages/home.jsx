@@ -13,7 +13,7 @@ import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
 import { getDiaSemana, formatCurrency, formatDate, formatTime, formatWeekday, getCurrencyCode } from "../utils/formatters";
 import { deduplicarValidacoes } from "../utils/validacoes";
 import { valorDaValidacao } from "../utils/valores";
-import { ehLider } from "../permissions";
+import { ehLider, unidadesDoLider } from "../permissions";
 import { feriadoNoDia } from "../utils/feriados";
 import { aulaNaGradeDoDia, situacaoDaAula, SITUACAO, dataLocalStr, somarDias, datasEntre } from "../utils/agendaAulas";
 import { lerCacheInicio, gravarCacheInicio, invalidarCacheInicio } from "../services/cacheInicio";
@@ -200,6 +200,8 @@ export default function Home() {
   const isGestor = role === 'admin' || role === 'mentor';
   const userId = userData?.id || userData?.uid;
   const minhaUnidadeId = userData?.unidadeId;
+  // Líder pode comandar mais de uma unidade (ver unidadesDoLider em permissions.js).
+  const unidadesLiderKey = unidadesDoLider(userData).join(",");
 
   const permissions = useMemo(() => ({
       relatorio: ['admin', 'mentor', 'lider', 'unidade', 'professor'].includes(role),
@@ -222,7 +224,7 @@ export default function Home() {
     let unidades = [];
     if (role === 'admin' || role === 'professor') unidades = todas; // professor: recorta pelas aulas dele, logo abaixo
     else if (role === 'mentor') unidades = todas.filter(u => u.mentorId === userId);
-    else if (ehLider(role)) unidades = todas.filter(u => String(u.id) === String(minhaUnidadeId));
+    else if (ehLider(role)) { const minhas = new Set(unidadesLiderKey.split(",")); unidades = todas.filter(u => minhas.has(String(u.id))); }
 
     const unidadesPorId = new Map(unidades.map(u => [String(u.id), u]));
     const meuProf = role === 'professor'
@@ -236,7 +238,7 @@ export default function Home() {
     );
 
     return { unidades, unidadesPorId, aulas, meuProfId };
-  }, [catalogs.unidades, catalogs.professores, catalogs.aulas, role, userId, minhaUnidadeId]);
+  }, [catalogs.unidades, catalogs.professores, catalogs.aulas, role, userId, unidadesLiderKey]);
 
   // 2. DIA DE REFERÊNCIA ("ontem"): o último dia antes de hoje que teve aula de verdade.
   //    Na segunda-feira, se domingo não teve aula, é o sábado; feriado é pulado. O card mostra qual dia é.
@@ -263,7 +265,7 @@ export default function Home() {
   const idsUnidadesMentor = role === 'mentor' ? escopo.unidades.map(u => u.id) : [];
   const chaveBusca = [
     userId, role, inicioJanela, hoje,
-    ehLider(role) ? minhaUnidadeId : '',
+    ehLider(role) ? unidadesLiderKey : '',
     role === 'professor' ? escopo.meuProfId : '',
     idsUnidadesMentor.join(','),
   ].join('|');
@@ -297,7 +299,10 @@ export default function Home() {
       if (escopo.aulas.length === 0) {
         consultas = []; // sem aulas visíveis não há o que contar: não gasta leitura
       } else if (ehLider(role)) {
-        consultas = [query(ref, where("unidadeId", "==", minhaUnidadeId), ...periodo)];
+        const ids = unidadesLiderKey.split(",").filter(Boolean);
+        for (let i = 0; i < ids.length; i += LIMITE_IN) {
+          consultas.push(query(ref, where("unidadeId", "in", ids.slice(i, i + LIMITE_IN)), ...periodo));
+        }
       } else if (role === 'professor') {
         consultas = [
           query(ref, where("professorId", "==", escopo.meuProfId), ...periodo),

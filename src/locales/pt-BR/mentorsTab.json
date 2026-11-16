@@ -13,6 +13,8 @@
   "emptyState": "Nenhum mentor encontrado.",
   "restricted": "Acesso Restrito: Apenas Administradores.",
   "table": {
+    "access": "Acesso",
+    "neverSeen": "Sem registro",
     "name": "Mentor",
     "email": "Email",
     "phone": "WhatsApp",

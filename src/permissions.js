@@ -22,6 +22,14 @@ export function ehLider(role) {
   return PAPEIS_LIDER.includes(String(role || "").trim().toLowerCase());
 }
 
+// Unidades que o líder comanda (pode ser mais de uma). O crachá guarda a principal em "unidadeId"
+// e todas em "unidadeIds"; crachás antigos só têm "unidadeId". Sempre devolve ids em texto, sem repetir.
+export function unidadesDoLider(cracha) {
+  const lista = Array.isArray(cracha?.unidadeIds) ? cracha.unidadeIds : [];
+  const todas = [cracha?.unidadeId, ...lista].filter(Boolean).map(String);
+  return [...new Set(todas)];
+}
+
 // Admin ou mentor que também é líder de uma unidade: ao ser trocado ou removido como líder,
 // sai só da unidade. O crachá (acesso de admin/mentor) NUNCA é apagado por esse caminho.
 export function liderMantemAcesso(role) {

@@ -4,6 +4,7 @@ import {
   collection, addDoc, updateDoc, doc, query, where, serverTimestamp, writeBatch, onSnapshot, getDocs, deleteField
 } from "firebase/firestore";
 import { db } from "../../../services/firebase";
+import { tirarLiderDaUnidade } from "../Lideres/saidaDoLider";
 import { publicarUnidade, publicarUnidades, removerUnidadeDaVitrine, ehCampoPublicoUnidade, reconstruirVitrine } from "../../../services/vitrinePublica";
 import { useTranslation } from "react-i18next";
 import LinkUnidade from "../../../centrais/LinkUnidade";
@@ -259,6 +260,11 @@ export function UnidadesTab() {
 
   const [unidadesBase, setUnidadesBase] = useState([]);
   const [mentores, setMentores] = useState([]);
+  // Dados da unidade para a vitrine pública, com o nome do mentor responsável (caixa de dúvidas do primeiro acesso).
+  const comMentor = (dados) => ({
+    ...dados,
+    mentorNome: mentores.find(m => m.id === dados?.mentorId)?.nome || (dados?.mentorId && dados.mentorId === userId ? userData?.nome || "" : ""),
+  });
   const [loading, setLoading] = useState(true);
   
   const [busca, setBusca] = useState("");
@@ -463,7 +469,7 @@ export function UnidadesTab() {
       try {
           const valorAntigo = unidade[campo] || "Vazio";
           await updateDoc(doc(db, "unidades", unidade.id), { [campo]: valorNovo });
-          if (ehCampoPublicoUnidade(campo)) await publicarUnidade(unidade.id, { ...unidade, [campo]: valorNovo });
+          if (ehCampoPublicoUnidade(campo)) await publicarUnidade(unidade.id, comMentor({ ...unidade, [campo]: valorNovo }));
           if (campo === 'telefone' && unidade.uidLogin) {
               await updateDoc(doc(db, "usuarios", unidade.uidLogin), { telefone: valorNovo }).catch(()=>{});
           }
@@ -569,7 +575,7 @@ export function UnidadesTab() {
           if (item.novoLinkMaps) updateData.linkGoogleMaps = item.novoLinkMaps;
 
           await updateDoc(ref, updateData);
-          await publicarUnidade(item.dbId, { ...unidadesBase.find(u => u.id === item.dbId), ...updateData });
+          await publicarUnidade(item.dbId, comMentor({ ...unidadesBase.find(u => u.id === item.dbId), ...updateData }));
           await registrarLogAuditoria('IMPORTAÇÃO', 'Endereço/Mapa injetado via CSV.', item.dbNome, `Endereço Injetado: ${item.novoEndereco}`);
 
           const newMatches = [...importData.matches];
@@ -605,7 +611,7 @@ export function UnidadesTab() {
           });
 
           await batch.commit();
-          await publicarUnidades([...paraVitrine].map(([id, dados]) => ({ id, dados })));
+          await publicarUnidades([...paraVitrine].map(([id, dados]) => ({ id, dados: comMentor(dados) })));
           await registrarLogAuditoria('IMPORTAÇÃO', 'Injeção em Lote via CSV aprovada.', 'Várias', `${count} unidades atualizadas.`);
           
           const newMatches = importData.matches.map(m => (m.status === 'pendente' && m.dbId) ? {...m, status: 'aprovado'} : m);
@@ -681,7 +687,7 @@ export function UnidadesTab() {
             enderecoCompleto: endereco.trim(),
             atualizadoEm: serverTimestamp()
         });
-        await publicarUnidade(editando.id, { ...editando, estado, nome: nome.trim(), linkGoogleMaps: linkMaps.trim(), enderecoCompleto: endereco.trim() });
+        await publicarUnidade(editando.id, comMentor({ ...editando, mentorId, estado, nome: nome.trim(), linkGoogleMaps: linkMaps.trim(), enderecoCompleto: endereco.trim() }));
 
         // Login antigo da unidade (enquanto não for desligado): mantém o WhatsApp em dia.
         if(editando.uidLogin && !editando.loginAntigoDesligado) {
@@ -703,7 +709,7 @@ export function UnidadesTab() {
           enderecoCompleto: endereco.trim(),
           criadoPor: userId, criadoEm: serverTimestamp()
         });
-        await publicarUnidade(unidadeRef.id, { estado, nome: nome.trim(), linkGoogleMaps: linkMaps.trim(), enderecoCompleto: endereco.trim() });
+        await publicarUnidade(unidadeRef.id, comMentor({ mentorId, estado, nome: nome.trim(), linkGoogleMaps: linkMaps.trim(), enderecoCompleto: endereco.trim() }));
 
         const mNome = mentores.find(m => m.id === mentorId)?.nome || userName;
         await registrarLogAuditoria('NOVA', 'Nova unidade criada.', nome.trim(), `Local: ${estado} | Mentor: ${mNome}`);
@@ -728,13 +734,26 @@ export function UnidadesTab() {
         setSalvando(true);
         const qVinculos = query(collection(db, "vinculos"), where("unidadeId", "==", u.id));
         const snapVinculos = await getDocs(qVinculos);
-        const qUsers = query(collection(db, "usuarios"), where("unidadeId", "==", u.id));
-        const snapUsers = await getDocs(qUsers);
+        // Líderes desta unidade (principal ou não, 1º ou 2º líder) e o login antigo dela.
+        const [snapUsers, snapUsersLista] = await Promise.all([
+          getDocs(query(collection(db, "usuarios"), where("unidadeId", "==", u.id))),
+          getDocs(query(collection(db, "usuarios"), where("unidadeIds", "array-contains", u.id))),
+        ]);
+        const lideres = new Set([...snapUsers.docs, ...snapUsersLista.docs].map((d) => d.id));
+        if (u.liderUid) lideres.add(String(u.liderUid));
+        if (u.lider2Uid) lideres.add(String(u.lider2Uid));
         
         const batch = writeBatch(db);
         batch.delete(doc(db, "unidades", u.id));
         snapVinculos.forEach((v) => batch.delete(v.ref));
-        snapUsers.forEach((userDoc) => batch.delete(userDoc.ref));
+        // Quem lidera outras unidades continua nelas; líder que também é professor volta a ser professor;
+        // admin/mentor não perde o acesso; os demais perdem (como antes).
+        for (const uid of lideres) {
+          await tirarLiderDaUnidade(batch, {
+            liderUid: uid, unidadeId: u.id, professores: [], motivo: "Unidade excluída.",
+            quemId: userId, quemNome: userData?.nome || userData?.email || "",
+          });
+        }
         
         await batch.commit();
         await removerUnidadeDaVitrine(u.id);

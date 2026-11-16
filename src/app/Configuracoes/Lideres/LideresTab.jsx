@@ -1,5 +1,6 @@
 // Aba "Líderes": quem responde por cada unidade. A unidade é só um cadastro (nome, endereço...);
-// quem entra no sistema é o LÍDER, com login pessoal. Regra: 1 líder por unidade.
+// quem entra no sistema é o LÍDER, com login pessoal. Cada unidade tem até 2 líderes, e uma pessoa pode ser
+// líder de várias unidades (ver saidaDoLider.js).
 // O líder ganha acesso de dois jeitos:
 //   1) entra com o Google, pede acesso e é aprovado aqui (bloco "Pedidos de acesso", no topo);
 //   2) o admin/mentor cadastra na mão (nome, e-mail, telefone e senha inicial);
@@ -7,21 +8,27 @@
 //      (pages/AtualizarCadastro): assume como líder na hora e fica "a conferir" até o admin/mentor confirmar.
 // Admin vê todas as unidades; mentor só as dele (as regras do banco também garantem isso).
 import { useMemo, useRef, useState } from "react";
-import { doc, getDoc, writeBatch, serverTimestamp, addDoc, collection, deleteField, updateDoc } from "firebase/firestore";
+import { doc, writeBatch, serverTimestamp, addDoc, collection, deleteField, updateDoc } from "firebase/firestore";
 import { createUserWithEmailAndPassword, getAuth, signOut } from "firebase/auth";
 import { initializeApp, getApp, deleteApp } from "firebase/app";
 import { useTranslation } from "react-i18next";
 import {
-  UserCheck, UserPlus, UserX, Search, Loader2, Building2, Mail, Phone, Edit2, X, Check, KeyRound, AlertTriangle, BadgeCheck, UserCog,
+  IdCard, UserCheck, UserPlus, UserX, Search, Loader2, Building2, Mail, Phone, Edit2, X, Check, KeyRound, AlertTriangle, BadgeCheck, UserCog, ScanSearch,
 } from "lucide-react";
 import { db, auth } from "../../../services/firebase";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useCatalogs } from "../../../contexts/CatalogContext";
-import { liderMantemAcesso } from "../../../permissions";
 import { PendenciasTab } from "../Pendencias/PendenciasTab";
 import { usePedidosPendentes } from "../Pendencias/usePedidosPendentes";
 import LinkUnidade from "../../../centrais/LinkUnidade";
 import LinkCentral from "../../../centrais/LinkCentral";
+import { tirarLiderDaUnidade, camposAoLiberarVaga, textoDaSaida, dadosDaVaga } from "./saidaDoLider";
+import { TornarLiderModal } from "./TornarLiderModal";
+import { BotaoDocumento, DocumentoModal, BuscaDocumento } from "../Documento/DocumentoModal";
+import i18n from "../../../i18n";
+import CampoDocumento from "../../../components/acesso/CampoDocumento";
+import { documentoNoLote, gravarComAviso, ERRO_DOCUMENTO_EM_USO } from "../../../services/documentoService";
+import { documentoValido, tipoDocumentoPadrao } from "../../../utils/documento";
 
 const SENHA_MINIMA = 6;
 // País da unidade em sigla (cadastros antigos guardam o nome por extenso; sem país = Brasil).
@@ -40,7 +47,7 @@ export function LideresTab() {
   const { t } = useTranslation();
   const { userData } = useAuth();
   const { catalogs, loadingCatalogs } = useCatalogs();
-  const { pedidos } = usePedidosPendentes();
+  const { total: totalPendencias } = usePedidosPendentes();
 
   const role = String(userData?.role || "").trim().toLowerCase();
   const userId = userData?.id || userData?.uid;
@@ -52,16 +59,20 @@ export function LideresTab() {
   const [paisFiltro, setPaisFiltro] = useState("");
   const [estadoFiltro, setEstadoFiltro] = useState("");
   const [mentorFiltro, setMentorFiltro] = useState("");
+  const [mostrarBuscaDoc, setMostrarBuscaDoc] = useState(false);
   const pedidosRef = useRef(null);
   const [processando, setProcessando] = useState(null);
 
   // Modal de cadastro manual / edição de contato
   const [modal, setModal] = useState(null); // { modo: 'novo' | 'editar', unidade }
-  const [form, setForm] = useState({ unidadeId: "", nome: "", email: "", telefone: "", senha: "" });
+  const [form, setForm] = useState({ unidadeId: "", nome: "", email: "", telefone: "", senha: "", tipoDoc: tipoDocumentoPadrao(i18n.language), documento: "" });
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
 
   const mentores = useMemo(() => catalogs?.mentores || [], [catalogs?.mentores]);
+  const professores = useMemo(() => catalogs?.professores || [], [catalogs?.professores]);
+  const [tornarLider, setTornarLider] = useState(null); // { vaga: 1 | 2, unidade }
+  const [docAlvo, setDocAlvo] = useState(null); // { id, nome, email }: documento (CPF/DNI/SSN) em edição
 
   const minhasUnidades = useMemo(() => {
     const todas = catalogs?.unidades || [];
@@ -72,9 +83,15 @@ export function LideresTab() {
   const estados = useMemo(() => [...new Set(minhasUnidades
     .filter((u) => !paisFiltro || siglaPais(u) === paisFiltro)
     .map((u) => String(u.estado || "").trim().toUpperCase()).filter(Boolean))].sort(), [minhasUnidades, paisFiltro]);
-  const mentoresDasUnidades = useMemo(() => mentores
-    .filter((m) => minhasUnidades.some((u) => u.mentorId === m.id))
-    .sort((a, b) => String(a.nome || "").localeCompare(String(b.nome || ""))), [mentores, minhasUnidades]);
+  // Mentores: só os que têm unidade no país/estado escolhido (o mentor é designado por região).
+  const mentoresDasUnidades = useMemo(() => {
+    const daRegiao = minhasUnidades
+      .filter((u) => !paisFiltro || siglaPais(u) === paisFiltro)
+      .filter((u) => !estadoFiltro || String(u.estado || "").trim().toUpperCase() === estadoFiltro);
+    return mentores
+      .filter((m) => daRegiao.some((u) => u.mentorId === m.id))
+      .sort((a, b) => String(a.nome || "").localeCompare(String(b.nome || "")));
+  }, [mentores, minhasUnidades, paisFiltro, estadoFiltro]);
 
   const lista = useMemo(() => {
     const termo = busca.trim().toLowerCase();
@@ -86,7 +103,7 @@ export function LideresTab() {
       .filter((u) => !paisFiltro || siglaPais(u) === paisFiltro)
       .filter((u) => !estadoFiltro || String(u.estado || "").trim().toUpperCase() === estadoFiltro)
       .filter((u) => !mentorFiltro || (mentorFiltro === "-" ? !u.mentorId : u.mentorId === mentorFiltro))
-      .filter((u) => !termo || [u.nome, u.estado, u.liderNome, u.liderEmail, u.liderTelefone]
+      .filter((u) => !termo || [u.nome, u.estado, u.liderNome, u.liderEmail, u.liderTelefone, u.lider2Nome, u.lider2Email, u.lider2Telefone]
         .some((v) => String(v || "").toLowerCase().includes(termo)))
       // Líder novo "a conferir" aparece primeiro.
       .sort((a, b) => Number(b.liderAConferir === true) - Number(a.liderAConferir === true));
@@ -110,24 +127,18 @@ export function LideresTab() {
     } catch (e) { console.error("Falha ao gravar auditoria", e); }
   };
 
-  // Tira o acesso do líder atual da unidade (apaga o crachá) dentro de um batch já aberto.
-  // Se o líder também é admin ou mentor, ele só deixa de ser o líder da unidade: o acesso dele fica.
-  async function tirarLiderAtual(batch, unidade, motivo) {
-    const cracha = await getDoc(doc(db, "usuarios", unidade.liderUid));
-    if (cracha.exists() && liderMantemAcesso(cracha.data().role)) return;
-    if (cracha.exists()) batch.delete(cracha.ref);
-    const pedido = await getDoc(doc(db, "solicitacoes_acesso", unidade.liderUid));
-    if (pedido.exists() && pedido.data().status !== "recusado") {
-      batch.update(pedido.ref, {
-        status: "recusado", motivo, analisadoPor: userId, analisadoPorNome: meuNome, analisadoEm: serverTimestamp(),
-      });
-    }
+  // Tira o líder atual da unidade dentro de um batch já aberto (ver saidaDoLider.js):
+  // admin/mentor só sai da unidade; líder que também é professor volta a ser professor; os demais perdem o acesso.
+  function tirarLiderAtual(batch, unidade, motivo, vaga = 1) {
+    return tirarLiderDaUnidade(batch, {
+      liderUid: vaga === 2 ? unidade.lider2Uid : unidade.liderUid, unidadeId: unidade.id, professores, motivo, quemId: userId, quemNome: meuNome,
+    });
   }
 
-  function abrirNovo(unidade) {
+  function abrirNovo(unidade, vaga = 1) {
     setErro("");
-    setForm({ unidadeId: unidade?.id || "", nome: "", email: "", telefone: "", senha: "" });
-    setModal({ modo: "novo", unidade: unidade || null });
+    setForm({ unidadeId: unidade?.id || "", nome: "", email: "", telefone: "", senha: "", tipoDoc: tipoDocumentoPadrao(i18n.language), documento: "" });
+    setModal({ modo: "novo", unidade: unidade || null, vaga });
   }
 
   function abrirEditar(unidade) {
@@ -166,10 +177,13 @@ export function LideresTab() {
     }
 
     if (!emailValido(email)) return setErro(t("leadersTab.errors.email"));
+    if (!documentoValido(form.tipoDoc, form.documento)) return setErro(t("document.errors.invalid"));
     if (form.senha.length < SENHA_MINIMA) return setErro(t("leadersTab.errors.password", { min: SENHA_MINIMA }));
 
-    const temOutroLider = !!unidade.liderUid;
-    if (temOutroLider && !window.confirm(t("leadersTab.replaceConfirm", { unit: unidade.nome, current: unidade.liderNome || unidade.liderEmail, name: nome }))) return;
+    const vaga = modal.vaga === 2 ? 2 : 1;
+    const uidDaVaga = vaga === 2 ? unidade.lider2Uid : unidade.liderUid;
+    const temOutroLider = !!uidDaVaga;
+    if (temOutroLider && !window.confirm(t("leadersTab.replaceConfirm", { unit: unidade.nome, current: (vaga === 2 ? unidade.lider2Nome || unidade.lider2Email : unidade.liderNome || unidade.liderEmail), name: nome }))) return;
 
     setSalvando(true);
     let appSecundario = null;
@@ -179,19 +193,29 @@ export function LideresTab() {
       const authSecundario = getAuth(appSecundario);
       const cred = await createUserWithEmailAndPassword(authSecundario, email, form.senha);
       const novoUid = cred.user.uid;
-      await signOut(authSecundario);
 
       const batch = writeBatch(db);
-      if (temOutroLider) await tirarLiderAtual(batch, unidade, t("leadersTab.replacedReason", { name: nome }));
+      if (temOutroLider) await tirarLiderAtual(batch, unidade, t("leadersTab.replacedReason", { name: nome }), vaga);
       batch.set(doc(db, "usuarios", novoUid), {
-        nome, email, telefone, role: "lider", unidadeId: unidade.id, status: "ativo",
+        nome, email, telefone, role: "lider", unidadeId: unidade.id, unidadeIds: [unidade.id], status: "ativo",
         criadoPor: userId, criadoEm: serverTimestamp(),
       });
-      batch.update(doc(db, "unidades", unidade.id), {
-        liderUid: novoUid, liderNome: nome, liderEmail: email, liderTelefone: telefone,
-        liderTipo: "senha", liderDesde: serverTimestamp(), liderAConferir: deleteField(),
-      });
-      await batch.commit();
+      batch.update(doc(db, "unidades", unidade.id), vaga === 2
+        ? dadosDaVaga(2, { uid: novoUid, nome, email, telefone, tipo: "senha" })
+        : {
+          liderUid: novoUid, liderNome: nome, liderEmail: email, liderTelefone: telefone,
+          liderTipo: "senha", liderDesde: serverTimestamp(), liderAConferir: deleteField(),
+        });
+      // O CPF/documento vai para a gaveta privada (nunca para auditoria nem lista). Só o admin pode marcar o crachá.
+      documentoNoLote(batch, { uid: novoUid, tipo: form.tipoDoc, numero: form.documento, marcarCracha: role === "admin" });
+      try {
+        await gravarComAviso(batch);
+      } catch (errBatch) {
+        // Não deixa conta de login "órfã" (senão o e-mail ficaria preso numa nova tentativa).
+        await cred.user.delete().catch(() => {});
+        throw errBatch;
+      }
+      await signOut(authSecundario);
 
       await registrarAuditoria("NOVA", "Líder cadastrado manualmente (e-mail e senha).", unidade.nome,
         `${nome} (${email})${temOutroLider ? ` substituiu ${unidade.liderNome || unidade.liderEmail}` : ""}`);
@@ -201,6 +225,7 @@ export function LideresTab() {
       console.error(err);
       if (err.code === "auth/email-already-in-use") setErro(t("leadersTab.errors.emailInUse"));
       else if (err.code === "auth/invalid-email") setErro(t("leadersTab.errors.email"));
+      else if (err.message === ERRO_DOCUMENTO_EM_USO) setErro(t("document.errors.inUse"));
       else if (err.code === "auth/weak-password") setErro(t("leadersTab.errors.password", { min: SENHA_MINIMA }));
       else setErro(t("leadersTab.errors.save") + " " + (err.message || ""));
     } finally {
@@ -209,19 +234,20 @@ export function LideresTab() {
     }
   }
 
-  async function remover(unidade) {
-    if (!window.confirm(t("leadersTab.removeConfirm", { name: unidade.liderNome || unidade.liderEmail, unit: unidade.nome }))) return;
+  // Tira o 1º (vaga 1) ou o 2º líder (vaga 2). Se sair o 1º e houver 2º, o 2º passa a ser o 1º.
+  async function remover(unidade, vaga = 1) {
+    const nome = vaga === 2 ? (unidade.lider2Nome || unidade.lider2Email) : (unidade.liderNome || unidade.liderEmail);
+    const email = vaga === 2 ? unidade.lider2Email : unidade.liderEmail;
+    if (!window.confirm(t("leadersTab.removeConfirm", { name: nome, unit: unidade.nome }))) return;
     setProcessando(unidade.id);
     try {
       const batch = writeBatch(db);
-      await tirarLiderAtual(batch, unidade, t("leadersTab.removedReason"));
-      batch.update(doc(db, "unidades", unidade.id), {
-        liderUid: deleteField(), liderNome: deleteField(), liderEmail: deleteField(),
-        liderTelefone: deleteField(), liderTipo: deleteField(), liderDesde: deleteField(), liderAConferir: deleteField(),
-      });
+      const saida = await tirarLiderAtual(batch, unidade, t("leadersTab.removedReason"), vaga);
+      batch.update(doc(db, "unidades", unidade.id), camposAoLiberarVaga(unidade, vaga));
       await batch.commit();
-      await registrarAuditoria("EXCLUIDA", "Líder removido da unidade (perdeu o acesso).", unidade.nome,
-        `${unidade.liderNome || "-"} (${unidade.liderEmail || "-"})`);
+      await registrarAuditoria("EXCLUIDA",
+        `${vaga === 2 ? "2º líder" : "Líder"} removido da unidade (${textoDaSaida(saida) || "saiu"}).`, unidade.nome,
+        `${nome || "-"} (${email || "-"})${vaga === 1 && unidade.lider2Uid ? ` | ${unidade.lider2Nome || unidade.lider2Email} passou a ser o 1º líder` : ""}`);
     } catch (err) {
       console.error(err);
       alert(t("leadersTab.errors.remove") + " " + (err.message || ""));
@@ -287,39 +313,18 @@ export function LideresTab() {
           </h2>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 max-w-3xl">{t("leadersTab.subtitle")}</p>
         </div>
-        <button onClick={() => abrirNovo(null)} className="px-5 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-black uppercase flex items-center gap-2 shadow-sm self-start md:self-auto">
-          <UserPlus className="w-4 h-4" /> {t("leadersTab.new")}
-        </button>
-      </div>
-
-      {/* NÚMEROS */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        {[
-          { id: "todas", rotulo: t("leadersTab.kpi.units"), valor: kpis.total, cor: "text-slate-800 dark:text-white" },
-          { id: "com", rotulo: t("leadersTab.kpi.withLeader"), valor: kpis.comLider, cor: "text-emerald-600" },
-          { id: "sem", rotulo: t("leadersTab.kpi.withoutLeader"), valor: kpis.semLider, cor: "text-amber-600" },
-          { id: "conferir", rotulo: t("leadersTab.kpi.toCheck"), valor: kpis.aConferir, cor: "text-red-600" },
-          { id: "pedidos", rotulo: t("leadersTab.kpi.requests"), valor: pedidos.length, cor: "text-red-600" },
-        ].map((k) => {
-          const ativo = k.id === situacao;
-          const clicar = () => (k.id === "pedidos"
-            ? pedidosRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
-            : setSituacao(k.id));
-          return (
-            <button key={k.id} type="button" onClick={clicar} disabled={k.id === "pedidos" && pedidos.length === 0}
-              title={k.id === "pedidos" ? t("leadersTab.kpiGoToRequests") : t("leadersTab.kpiFilter")}
-              className={`p-4 rounded-2xl border text-left transition-all disabled:cursor-default ${ativo
-                ? "border-red-500 ring-2 ring-red-500/30 bg-white dark:bg-slate-800 shadow-sm"
-                : "border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 hover:border-slate-400 dark:hover:border-slate-500 hover:shadow-sm"}`}>
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{k.rotulo}</p>
-              <p className={`text-2xl font-black mt-1 ${k.cor}`}>{k.valor}</p>
-            </button>
-          );
-        })}
+        <div className="flex flex-wrap gap-2 self-start md:self-auto">
+          <button onClick={() => setTornarLider({ vaga: 1, unidade: null })} className="px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:border-amber-500 hover:text-amber-600 text-xs font-black uppercase flex items-center gap-2 transition-colors">
+            <UserCog className="w-4 h-4" /> {t("leadersTab.promote.button")}
+          </button>
+          <button onClick={() => abrirNovo(null)} className="px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-black uppercase flex items-center gap-2 shadow-sm transition-colors">
+            <UserPlus className="w-4 h-4" /> {t("leadersTab.new")}
+          </button>
+        </div>
       </div>
 
       {/* PEDIDOS DE ACESSO (login pelo Google) */}
-      {pedidos.length > 0 && (
+      {totalPendencias > 0 && (
         <div ref={pedidosRef} className="scroll-mt-4 rounded-2xl border border-amber-200 dark:border-amber-800 bg-amber-50/40 dark:bg-amber-900/10 -mx-2">
           <PendenciasTab />
         </div>
@@ -333,53 +338,82 @@ export function LideresTab() {
 
       {/* LISTA DE UNIDADES E SEUS LÍDERES */}
       <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder={t("leadersTab.search")}
-              className="w-full pl-9 pr-3 py-3 rounded-xl bg-slate-100 dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-red-500" />
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/40 p-4 space-y-4">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder={t("leadersTab.search")}
+                className="w-full pl-9 pr-3 py-3 rounded-xl bg-slate-100 dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-red-500" />
+            </div>
+            {role === "admin" && (
+              <button type="button" onClick={() => setMostrarBuscaDoc((v) => !v)} aria-expanded={mostrarBuscaDoc}
+                className={`px-4 py-3 rounded-xl border text-xs font-black uppercase flex items-center justify-center gap-2 transition-colors ${mostrarBuscaDoc
+                  ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300"
+                  : "border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-blue-500 hover:text-blue-600"}`}>
+                <ScanSearch className="w-4 h-4" /> {t("document.search.title")}
+              </button>
+            )}
+          </div>
+
+          {role === "admin" && mostrarBuscaDoc && <BuscaDocumento />}
+
+          {/* Situação: um seletor só, com a contagem de cada grupo */}
+          <div className="flex flex-wrap gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-900 w-fit max-w-full">
+            {[
+              { id: "todas", rotulo: t("leadersTab.filter.all"), n: kpis.total },
+              { id: "com", rotulo: t("leadersTab.filter.with"), n: kpis.comLider },
+              { id: "sem", rotulo: t("leadersTab.filter.without"), n: kpis.semLider },
+              { id: "conferir", rotulo: t("leadersTab.filter.toCheck"), n: kpis.aConferir },
+            ].map((f) => (
+              <button key={f.id} type="button" onClick={() => setSituacao(f.id)} aria-pressed={situacao === f.id}
+                className={`px-3.5 py-2 rounded-lg text-xs font-black uppercase flex items-center gap-2 transition-colors ${situacao === f.id
+                  ? "bg-white dark:bg-slate-700 text-red-600 shadow-sm"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"}`}>
+                {f.rotulo}
+                <span className={`min-w-[1.5rem] px-1.5 py-0.5 rounded-md text-[10px] text-center ${situacao === f.id
+                  ? "bg-red-600 text-white"
+                  : f.id === "conferir" && f.n > 0 ? "bg-amber-100 text-amber-700" : "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-300"}`}>{f.n}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Região: país → estado → mentor (cada um mostra só o que existe na escolha anterior) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+            <label className="space-y-1">
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t("leadersTab.filter.country")}</span>
+              <select value={paisFiltro} onChange={(e) => { setPaisFiltro(e.target.value); setEstadoFiltro(""); setMentorFiltro(""); }}
+                className="w-full px-3 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-900 text-xs font-black uppercase text-slate-600 dark:text-slate-300 outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                <option value="">{t("leadersTab.filter.allCountries")}</option>
+                {paises.map((p) => <option key={p} value={p}>{t(`common.countries.${p}`, { defaultValue: p })}</option>)}
+              </select>
+            </label>
+            <label className="space-y-1">
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t("leadersTab.filter.state")}</span>
+              <select value={estadoFiltro} onChange={(e) => { setEstadoFiltro(e.target.value); setMentorFiltro(""); }} disabled={!paisFiltro}
+                className="w-full px-3 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-900 text-xs font-black uppercase text-slate-600 dark:text-slate-300 outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                <option value="">{t("leadersTab.filter.allStates")}</option>
+                {estados.map((e) => <option key={e} value={e}>{e}</option>)}
+              </select>
+            </label>
+            {role === "admin" && (
+              <label className="space-y-1">
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t("leadersTab.filter.mentor")}</span>
+                <select value={mentorFiltro} onChange={(e) => setMentorFiltro(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-900 text-xs font-black uppercase text-slate-600 dark:text-slate-300 outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                  <option value="">{t("leadersTab.filter.allMentors")}</option>
+                  {mentoresDasUnidades.map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}
+                  <option value="-">{t("leadersTab.filter.noMentor")}</option>
+                </select>
+              </label>
+            )}
+            {filtrosAtivos && (
+              <button type="button" onClick={limparFiltros} className="px-3 py-2.5 rounded-xl text-xs font-black uppercase text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center justify-center gap-1 lg:justify-start">
+                <X className="w-3.5 h-3.5" /> {t("leadersTab.filter.clear")}
+              </button>
+            )}
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {[
-            { id: "todas", rotulo: t("leadersTab.filter.all") },
-            { id: "com", rotulo: t("leadersTab.filter.with") },
-            { id: "sem", rotulo: t("leadersTab.filter.without") },
-            { id: "conferir", rotulo: t("leadersTab.filter.toCheck") },
-          ].map((f) => (
-            <button key={f.id} type="button" onClick={() => setSituacao(f.id)}
-              className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase transition-colors ${situacao === f.id
-                ? "bg-red-600 text-white shadow-sm"
-                : "bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"}`}>
-              {f.rotulo}
-            </button>
-          ))}
-          <span className="hidden sm:block w-px h-6 bg-slate-200 dark:bg-slate-700 mx-1" />
-          <select value={paisFiltro} onChange={(e) => { setPaisFiltro(e.target.value); setEstadoFiltro(""); }} aria-label={t("leadersTab.filter.country")}
-            className="px-3 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-900 text-xs font-black uppercase text-slate-600 dark:text-slate-300 outline-none focus:ring-2 focus:ring-red-500">
-            <option value="">{t("leadersTab.filter.allCountries")}</option>
-            {paises.map((p) => <option key={p} value={p}>{t(`common.countries.${p}`, { defaultValue: p })}</option>)}
-          </select>
-          <select value={estadoFiltro} onChange={(e) => setEstadoFiltro(e.target.value)} aria-label={t("leadersTab.filter.state")}
-            className="px-3 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-900 text-xs font-black uppercase text-slate-600 dark:text-slate-300 outline-none focus:ring-2 focus:ring-red-500">
-            <option value="">{t("leadersTab.filter.allStates")}</option>
-            {estados.map((e) => <option key={e} value={e}>{e}</option>)}
-          </select>
-          {role === "admin" && (
-            <select value={mentorFiltro} onChange={(e) => setMentorFiltro(e.target.value)} aria-label={t("leadersTab.filter.mentor")}
-              className="px-3 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-900 text-xs font-black uppercase text-slate-600 dark:text-slate-300 outline-none focus:ring-2 focus:ring-red-500">
-              <option value="">{t("leadersTab.filter.allMentors")}</option>
-              {mentoresDasUnidades.map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}
-              <option value="-">{t("leadersTab.filter.noMentor")}</option>
-            </select>
-          )}
-          {filtrosAtivos && (
-            <button type="button" onClick={limparFiltros} className="px-3 py-2.5 rounded-xl text-xs font-black uppercase text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-1">
-              <X className="w-3.5 h-3.5" /> {t("leadersTab.filter.clear")}
-            </button>
-          )}
-          <span className="ml-auto text-[11px] font-bold text-slate-400">{t("leadersTab.filter.showing", { count: lista.length, total: minhasUnidades.length })}</span>
-        </div>
+        <p className="text-[11px] font-bold text-slate-400 text-right">{t("leadersTab.filter.showing", { count: lista.length, total: minhasUnidades.length })}</p>
 
         {loadingCatalogs ? (
           <div className="py-16 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-red-500" /></div>
@@ -420,6 +454,20 @@ export function LideresTab() {
                             </p>
                             <p className="text-[11px] text-slate-500 flex items-center gap-1"><Mail className="w-3 h-3" /> {u.liderEmail || "-"}</p>
                             {u.liderTelefone && <p className="text-[11px] text-slate-500 flex items-center gap-1"><Phone className="w-3 h-3" /> {u.liderTelefone}</p>}
+                            {u.lider2Uid && (
+                              <div className="mt-2 pt-2 border-t border-dashed border-slate-200 dark:border-slate-700 space-y-0.5">
+                                <p className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 flex-wrap">
+                                  {u.lider2Nome || "-"}
+                                  <span className="px-1.5 py-0.5 rounded-md border text-[9px] font-black uppercase bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-900/20 dark:text-violet-300 dark:border-violet-800">{t("leadersTab.second.badge")}</span>
+                                  <button onClick={() => setDocAlvo({ id: u.lider2Uid, nome: u.lider2Nome, email: u.lider2Email })} title={t("document.modal.edit")}
+                                    className="p-1 rounded-md text-slate-400 hover:bg-blue-50 hover:text-blue-600"><IdCard className="w-3.5 h-3.5" /></button>
+                                  <button onClick={() => remover(u, 2)} disabled={ocupado} title={t("leadersTab.second.remove")}
+                                    className="p-1 rounded-md text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"><UserX className="w-3.5 h-3.5" /></button>
+                                </p>
+                                <p className="text-[11px] text-slate-500 flex items-center gap-1"><Mail className="w-3 h-3" /> {u.lider2Email || "-"}</p>
+                                {u.lider2Telefone && <p className="text-[11px] text-slate-500 flex items-center gap-1"><Phone className="w-3 h-3" /> {u.lider2Telefone}</p>}
+                              </div>
+                            )}
                           </div>
                         ) : (
                           <span className="text-xs font-bold text-amber-600 flex items-center gap-1"><AlertTriangle className="w-3.5 h-3.5" /> {t("leadersTab.noLeader")}</span>
@@ -447,6 +495,13 @@ export function LideresTab() {
                                   <BadgeCheck className="w-3.5 h-3.5" /> {t("leadersTab.confirm")}
                                 </button>
                               )}
+                              {!u.lider2Uid && (
+                                <button onClick={() => setTornarLider({ vaga: 2, unidade: u })} disabled={ocupado} title={t("leadersTab.second.addHint")}
+                                  className="px-3 py-2 rounded-lg bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300 hover:bg-violet-100 text-[10px] font-black uppercase flex items-center gap-1.5 disabled:opacity-50 whitespace-nowrap">
+                                  <UserPlus className="w-3.5 h-3.5" /> {t("leadersTab.second.add")}
+                                </button>
+                              )}
+                              <BotaoDocumento onClick={() => setDocAlvo({ id: u.liderUid, nome: u.liderNome, email: u.liderEmail })} disabled={ocupado} />
                               <button onClick={() => abrirEditar(u)} disabled={ocupado} title={t("leadersTab.edit")}
                                 className="p-2 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200 hover:bg-blue-50 hover:text-blue-600 disabled:opacity-50"><Edit2 className="w-4 h-4" /></button>
                               <button onClick={() => abrirNovo(u)} disabled={ocupado} title={t("leadersTab.replace")}
@@ -457,9 +512,15 @@ export function LideresTab() {
                               </button>
                             </>
                           ) : (
-                            <button onClick={() => abrirNovo(u)} className="px-3 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-[10px] font-black uppercase flex items-center gap-1.5">
-                              <UserPlus className="w-3.5 h-3.5" /> {t("leadersTab.register")}
-                            </button>
+                            <>
+                              <button onClick={() => setTornarLider({ vaga: 1, unidade: u })} title={t("leadersTab.promote.title")}
+                                className="px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 hover:bg-amber-100 text-[10px] font-black uppercase flex items-center gap-1.5 whitespace-nowrap">
+                                <UserCog className="w-3.5 h-3.5" /> {t("leadersTab.promote.pick")}
+                              </button>
+                              <button onClick={() => abrirNovo(u)} className="px-3 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-[10px] font-black uppercase flex items-center gap-1.5">
+                                <UserPlus className="w-3.5 h-3.5" /> {t("leadersTab.register")}
+                              </button>
+                            </>
                           )}
                         </div>
                       </td>
@@ -472,6 +533,19 @@ export function LideresTab() {
         )}
         <p className="text-[11px] text-slate-400 font-bold">{t("leadersTab.howTo")}</p>
       </div>
+
+      {docAlvo && <DocumentoModal alvo={docAlvo} onClose={() => setDocAlvo(null)} />}
+
+      {/* MODAL: ESCOLHER LÍDER JÁ CADASTRADO (1º ou 2º líder) */}
+      {tornarLider && (
+        <TornarLiderModal
+          unidades={minhasUnidades} todasUnidades={catalogs?.unidades || []} professores={professores} mentores={mentores}
+          vaga={tornarLider.vaga} unidadeInicial={tornarLider.unidade}
+          onCadastrar={(u, v) => { setTornarLider(null); abrirNovo(u, v); }}
+          quemId={userId} quemNome={meuNome} registrarAuditoria={registrarAuditoria}
+          onClose={() => setTornarLider(null)}
+        />
+      )}
 
       {/* MODAL: CADASTRAR / EDITAR LÍDER */}
       {modal && (
@@ -498,8 +572,8 @@ export function LideresTab() {
 
             {(() => {
               const alvo = minhasUnidades.find((u) => u.id === form.unidadeId);
-              return modal.modo === "novo" && alvo?.liderUid ? (
-                <p className="text-xs font-bold text-amber-600 bg-amber-50 dark:bg-amber-900/20 p-3 rounded-xl">{t("leadersTab.modal.replaceWarning", { name: alvo.liderNome || alvo.liderEmail })}</p>
+              return modal.modo === "novo" && (modal.vaga === 2 ? alvo?.lider2Uid : alvo?.liderUid) ? (
+                <p className="text-xs font-bold text-amber-600 bg-amber-50 dark:bg-amber-900/20 p-3 rounded-xl">{t("leadersTab.modal.replaceWarning", { name: modal.vaga === 2 ? (alvo.lider2Nome || alvo.lider2Email) : (alvo.liderNome || alvo.liderEmail) })}</p>
               ) : null;
             })()}
 
@@ -521,6 +595,11 @@ export function LideresTab() {
               <input value={form.telefone} onChange={(e) => setForm({ ...form, telefone: e.target.value })} disabled={salvando} maxLength={30} placeholder="+55 31 99999-9999"
                 className="w-full p-3 rounded-xl bg-slate-100 dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-red-500" />
             </label>
+
+            {modal.modo === "novo" && (
+              <CampoDocumento claro id="novo-lider-documento" tipo={form.tipoDoc} onTipo={(v) => setForm((f) => ({ ...f, tipoDoc: v }))}
+                valor={form.documento} onValor={(v) => setForm((f) => ({ ...f, documento: v }))} desabilitado={salvando} />
+            )}
 
             {modal.modo === "novo" && (
               <label className="block space-y-1">
