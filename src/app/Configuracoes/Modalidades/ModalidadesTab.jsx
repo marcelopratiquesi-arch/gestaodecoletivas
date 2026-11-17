@@ -378,7 +378,7 @@ export function ModalidadesTab() {
       {/* 🟢 O MODAL REDIMENSIONÁVEL */}
       <ResizableModal 
           isOpen={modalAberto} onClose={() => setModalAberto(false)} 
-          title={editando ? t('modalitiesTab.editTitle') : t('modalitiesTab.newTitle')} icon={Dumbbell} headerColor="bg-red-50 dark:bg-slate-900 text-red-600 dark:text-red-500 border-red-100 dark:border-slate-800"
+          title={editando ? t('modalitiesTab.editTitle') : t('modalitiesTab.newTitle')} icon={Dumbbell} headerColor="bg-orange-50 dark:bg-slate-900 text-orange-600 dark:text-orange-500 border-orange-100 dark:border-slate-800"
           pos={modalPos} setPos={setModalPos} size={modalSize} setSize={setModalSize} minW={320} minH={450}
       >
         <form onSubmit={salvar} className="p-6 space-y-6 overflow-y-auto custom-scrollbar flex-1 bg-white dark:bg-slate-800">
@@ -386,7 +386,7 @@ export function ModalidadesTab() {
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">{t('modalitiesTab.name')}</label>
             <input
               type="text" value={nome} onChange={(e) => setNome(e.target.value)}
-              className="w-full px-4 py-3.5 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-red-500 outline-none transition-all text-sm font-bold uppercase"
+              className="w-full px-4 py-3.5 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none transition-all text-sm font-bold uppercase"
               placeholder={t('modalitiesTab.namePlaceholder')} autoFocus
             />
           </div>
@@ -399,7 +399,7 @@ export function ModalidadesTab() {
                 <input 
                     type="number" step="0.5" min="1" 
                     value={indiceOcupacao} onChange={(e) => setIndiceOcupacao(e.target.value)} 
-                    className="w-full px-4 py-3.5 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-red-500 outline-none transition-all text-sm font-black" 
+                    className="w-full px-4 py-3.5 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none transition-all text-sm font-black" 
                 />
               </div>
 
@@ -421,7 +421,7 @@ export function ModalidadesTab() {
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">{t('modalitiesTab.initialStatus')}</label>
             <select
               value={status} onChange={(e) => setStatus(e.target.value)}
-              className="w-full px-4 py-3.5 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-red-500 outline-none text-sm font-bold uppercase appearance-none"
+              className="w-full px-4 py-3.5 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none text-sm font-bold uppercase appearance-none"
             >
               <option value="ativa">{t('modalitiesTab.activeVisible')}</option>
               <option value="inativa">{t('modalitiesTab.inactiveHidden')}</option>
@@ -432,7 +432,7 @@ export function ModalidadesTab() {
             <button type="button" onClick={() => setModalAberto(false)} className="flex-1 py-3.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-xs uppercase tracking-widest">
               {t('common.actions.cancel')}
             </button>
-            <button type="submit" disabled={salvando} className="flex-[1.5] py-3.5 rounded-xl bg-red-600 text-white font-black uppercase tracking-widest shadow-lg shadow-red-500/30 hover:bg-red-700 transition-transform active:scale-95 flex items-center justify-center gap-2 text-xs">
+            <button type="submit" disabled={salvando} className="flex-[1.5] py-3.5 rounded-xl bg-orange-600 text-white font-black uppercase tracking-widest shadow-lg shadow-orange-500/30 hover:bg-orange-700 transition-transform active:scale-95 flex items-center justify-center gap-2 text-xs">
               {salvando ? <Loader2 className="w-4 h-4 animate-spin"/> : t('modalitiesTab.save')}
             </button>
           </div>

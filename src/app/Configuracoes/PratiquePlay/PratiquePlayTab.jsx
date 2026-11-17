@@ -112,17 +112,17 @@ export function PratiquePlayTab() {
           <div className="lg:col-span-4 space-y-6">
               <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-6">
                   <h3 className="font-black text-slate-800 dark:text-white uppercase flex items-center gap-2 mb-5 pb-3 border-b border-slate-100 dark:border-slate-700">
-                      <LinkIcon className="w-5 h-5 text-blue-500"/> {t('playTab.linkNew')}
+                      <LinkIcon className="w-5 h-5 text-purple-500"/> {t('playTab.linkNew')}
                   </h3>
 
                   <form onSubmit={salvarFaixa} className="space-y-4">
                       {erro && <div className="text-red-600 text-xs font-bold bg-red-50 border border-red-100 p-3 rounded-xl flex items-center gap-2"><AlertTriangle className="w-4 h-4"/> {erro}</div>}
-                      {sucesso && <div className="text-blue-600 text-xs font-bold bg-blue-50 border border-blue-100 p-3 rounded-xl flex items-center gap-2"><CheckCircle2 className="w-4 h-4"/> {sucesso}</div>}
+                      {sucesso && <div className="text-purple-600 text-xs font-bold bg-purple-50 border border-purple-100 p-3 rounded-xl flex items-center gap-2"><CheckCircle2 className="w-4 h-4"/> {sucesso}</div>}
 
                       <div>
                           <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">{t('playTab.album')}</label>
                           <select 
-                              className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-white outline-none focus:border-blue-500 transition-colors"
+                              className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-white outline-none focus:border-purple-500 transition-colors"
                               value={modalidadeSelecionada}
                               onChange={e => setModalidadeSelecionada(e.target.value)}
                               disabled={salvando}
@@ -139,7 +139,7 @@ export function PratiquePlayTab() {
                               onChange={e => setVimeoUrl(e.target.value)}
                               disabled={salvando}
                               placeholder="https://vimeo.com/123456789"
-                              className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-white outline-none focus:border-blue-500 transition-colors"
+                              className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-white outline-none focus:border-purple-500 transition-colors"
                           />
                       </div>
 
@@ -151,7 +151,7 @@ export function PratiquePlayTab() {
                               onChange={e => setTitulo(e.target.value)}
                               disabled={salvando}
                               placeholder={t('playTab.trackPlaceholder')}
-                              className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-white outline-none focus:border-blue-500 transition-colors"
+                              className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-white outline-none focus:border-purple-500 transition-colors"
                           />
                       </div>
 
@@ -163,14 +163,14 @@ export function PratiquePlayTab() {
                               onChange={e => setBpm(e.target.value)}
                               disabled={salvando}
                               placeholder={t('playTab.bpmPlaceholder')}
-                              className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-white outline-none focus:border-blue-500 transition-colors"
+                              className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-white outline-none focus:border-purple-500 transition-colors"
                           />
                       </div>
 
                       <button 
                           type="submit"
                           disabled={salvando}
-                          className="w-full mt-2 bg-blue-600 hover:bg-blue-700 text-white font-black uppercase text-xs tracking-wider py-4 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-blue-500/30 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                          className="w-full mt-2 bg-purple-600 hover:bg-purple-700 text-white font-black uppercase text-xs tracking-wider py-4 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-purple-500/30 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                       >
                           {salvando ? (
                               <Loader2 className="w-5 h-5 animate-spin"/>
@@ -188,9 +188,9 @@ export function PratiquePlayTab() {
                   
                   <div className="p-5 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 flex justify-between items-center">
                       <h3 className="font-black text-slate-800 dark:text-white uppercase flex items-center gap-2 text-lg">
-                          <FolderSync className="w-5 h-5 text-indigo-500"/> {t('playTab.library')}
+                          <FolderSync className="w-5 h-5 text-purple-500"/> {t('playTab.library')}
                       </h3>
-                      <span className="px-3 py-1 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 font-bold text-xs rounded-lg border border-indigo-100 dark:border-indigo-800/30">
+                      <span className="px-3 py-1 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 font-bold text-xs rounded-lg border border-purple-100 dark:border-purple-800/30">
                           {t('playTab.tracksCount', { count: faixasVisiveis.length })}
                       </span>
                   </div>
@@ -207,10 +207,10 @@ export function PratiquePlayTab() {
                       ) : (
                           <div className="space-y-3">
                               {faixasVisiveis.map((faixa) => (
-                                  <div key={faixa.id} className="flex items-center justify-between p-3 sm:p-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 rounded-xl hover:border-blue-300 dark:hover:border-blue-700 transition-colors group">
+                                  <div key={faixa.id} className="flex items-center justify-between p-3 sm:p-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 rounded-xl hover:border-purple-300 dark:hover:border-purple-700 transition-colors group">
                                       
                                       <div className="flex items-center gap-4 w-full overflow-hidden">
-                                          <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-500 flex-shrink-0">
+                                          <div className="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-purple-500 flex-shrink-0">
                                               <PlayCircle className="w-6 h-6"/>
                                           </div>
                                           <div className="flex-1 min-w-0 pr-4">
@@ -218,7 +218,7 @@ export function PratiquePlayTab() {
                                               <div className="flex items-center gap-3 mt-1">
                                                   <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1"><Video className="w-3 h-3"/> VIMEO</span>
                                                   <span className="text-[10px] font-bold text-slate-400">ID: {faixa.vimeoId}</span>
-                                                  {faixa.bpm !== "N/A" && <span className="text-[10px] font-bold text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded-md border border-blue-100 dark:border-blue-800/30">{faixa.bpm} BPM</span>}
+                                                  {faixa.bpm !== "N/A" && <span className="text-[10px] font-bold text-purple-600 bg-purple-50 dark:bg-purple-900/20 px-2 py-0.5 rounded-md border border-purple-100 dark:border-purple-800/30">{faixa.bpm} BPM</span>}
                                               </div>
                                           </div>
                                       </div>
@@ -228,7 +228,7 @@ export function PratiquePlayTab() {
                                               href={faixa.vimeoUrl} 
                                               target="_blank" 
                                               rel="noreferrer"
-                                              className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                              className="p-2.5 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
                                               title={t('playTab.testLink')}
                                           >
                                               <LinkIcon className="w-4 h-4"/>
