@@ -78,7 +78,9 @@
     "useAsLeader": "Usar esta pessoa como líder",
     "free": "Documento livre: pode cadastrar.",
     "alreadyUsed": "Este documento já está cadastrado:",
-    "orphanMentorHint": "Este documento está preso sem cadastro. Peça ao administrador para liberar."
+    "orphanMentorHint": "Este documento está preso sem cadastro. Peça ao administrador para liberar.",
+    "registerLeader": "Cadastrar como líder",
+    "goToRequest": "Ir para o pedido"
   },
   "invite": {
     "label": "Documento (opcional)",

@@ -30,7 +30,7 @@ import { useFiltroCascata } from "../ui/useFiltroCascata";
 import { BotaoDocumento, DocumentoModal, BuscaDocumento, AvisoDocumento } from "../Documento/DocumentoModal";
 import i18n from "../../../i18n";
 import CampoDocumento from "../../../components/acesso/CampoDocumento";
-import { documentoNoLote, gravarComAviso, ERRO_DOCUMENTO_EM_USO } from "../../../services/documentoService";
+import { documentoNoLote, gravarComAviso, ERRO_DOCUMENTO_EM_USO, excluirPedidoELiberar, liberarReserva } from "../../../services/documentoService";
 import { documentoValido, tipoDocumentoPadrao } from "../../../utils/documento";
 
 const SENHA_MINIMA = 6;
@@ -71,6 +71,7 @@ export function LideresTab() {
   const mentores = useMemo(() => catalogs?.mentores || [], [catalogs?.mentores]);
   const professores = useMemo(() => catalogs?.professores || [], [catalogs?.professores]);
   const [tornarLider, setTornarLider] = useState(null); // { vaga: 1 | 2, unidade }
+  const [donoDoc, setDonoDoc] = useState(null); // quem está com o CPF digitado no cadastro (vindo do aviso)
   const [docAlvo, setDocAlvo] = useState(null); // { id, nome, email }: documento (CPF/DNI/SSN) em edição
 
   const minhasUnidades = useMemo(() => {
@@ -122,8 +123,15 @@ export function LideresTab() {
     });
   }
 
+  // Veio da busca por CPF: abre o cadastro com o documento (e o que o pedido já tinha) preenchido; a unidade se escolhe ali.
+  function cadastrarPeloDocumento({ tipo, numero, nome, email, telefone }) {
+    setErro(""); setDonoDoc(null);
+    setForm({ unidadeId: "", nome, email, telefone, senha: "", tipoDoc: tipo, documento: numero });
+    setModal({ modo: "novo", unidade: null, vaga: 1 });
+  }
+
   function abrirNovo(unidade, vaga = 1) {
-    setErro("");
+    setErro(""); setDonoDoc(null);
     setForm({ unidadeId: unidade?.id || "", nome: "", email: "", telefone: "", senha: "", tipoDoc: tipoDocumentoPadrao(i18n.language), documento: "" });
     setModal({ modo: "novo", unidade: unidade || null, vaga });
   }
@@ -174,6 +182,18 @@ export function LideresTab() {
 
     setSalvando(true);
     let appSecundario = null;
+    try {
+      // CPF preso num pedido antigo ou sem cadastro (sem crachá): libera antes de gravar o novo líder.
+      if (donoDoc && !donoDoc.cracha) {
+        if (donoDoc.pedido) await excluirPedidoELiberar(donoDoc.uid, { tipo: donoDoc.tipo, numero: donoDoc.numero });
+        else await liberarReserva(donoDoc.tipo, donoDoc.numero);
+        setDonoDoc(null);
+      }
+    } catch (errLiberar) {
+      console.error(errLiberar);
+      setSalvando(false);
+      return setErro(t("document.search.deleteError"));
+    }
     try {
       // Cria a conta de login num "app secundário", para o admin/mentor não ser deslogado.
       appSecundario = initializeApp(getApp().options, `CadastroLider_${Date.now()}`);
@@ -331,7 +351,11 @@ export function LideresTab() {
                 </button>
               )}
           </>}>
-          {mostrarBuscaDoc && <BuscaDocumento />}
+          {mostrarBuscaDoc && (
+            <BuscaDocumento aoCadastrar={cadastrarPeloDocumento}
+              aoEscolherPessoa={() => setTornarLider({ vaga: 1, unidade: null })}
+              aoIrParaPedido={() => pedidosRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })} />
+          )}
 
           {/* Situação: um seletor só, com a contagem de cada grupo */}
           <div className="flex flex-wrap gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-900 w-fit max-w-full">
@@ -540,7 +564,7 @@ export function LideresTab() {
                 valor={form.documento} onValor={(v) => setForm((f) => ({ ...f, documento: v }))} desabilitado={salvando} />
             )}
             {modal.modo === "novo" && (
-              <AvisoDocumento tipo={form.tipoDoc} numero={form.documento}
+              <AvisoDocumento tipo={form.tipoDoc} numero={form.documento} aoMudarDono={setDonoDoc}
                 aoEscolherPessoa={() => { const { unidade, vaga } = modal; setModal(null); setTornarLider({ vaga: vaga === 2 ? 2 : 1, unidade }); }} />
             )}
 
