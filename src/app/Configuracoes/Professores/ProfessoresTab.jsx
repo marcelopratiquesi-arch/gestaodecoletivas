@@ -5,14 +5,20 @@ import { useCatalogs } from "../../../contexts/CatalogContext";
 import { db } from "../../../services/firebase";
 import { publicarProfessor, removerProfessorDaVitrine } from "../../../services/vitrinePublica";
 import {
-  addDoc, collection, deleteDoc, doc, onSnapshot, serverTimestamp, updateDoc, query, where
+  addDoc, collection, deleteDoc, doc, onSnapshot, serverTimestamp, updateDoc, query, where, writeBatch
 } from "firebase/firestore";
+import NovoVinculoModal from "./NovoVinculoModal";
+import CampoDocumento from "../../../components/acesso/CampoDocumento";
+import { documentoValido, formatarDocumento, limparDocumento, tipoDocumentoPadrao } from "../../../utils/documento";
+import { apagarDocumentoDaFichaNoLote, documentoDaFichaNoLote, lerDocumentoDaFicha } from "../../../services/documentoFichaService";
+import { ERRO_DOCUMENTO_EM_USO, gravarComAviso } from "../../../services/documentoService";
+import { chaveTelefone, emailDeMentira, emailFormatoValido, fichasParecidas, limparNome, normalizarEmail } from "../../../utils/repetidos";
 
 // TODOS OS ÍCONES IMPORTADOS CORRETAMENTE
 import { 
   UserPlus, Edit2, Trash2, Link as LinkIcon, Loader2, Search, ScanSearch, CheckCircle2, 
   X, Mail, Phone, PlusCircle, User, AlertTriangle, ChevronDown, 
-  ChevronUp, ArrowDown, ArrowRight, DownloadCloud, Layers, Ban, ShieldCheck, MapPin
+  ChevronUp, ArrowDown, ArrowRight, DownloadCloud, Layers, Ban, ShieldCheck, MapPin, IdCard
 } from "lucide-react";
 import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
 import LinkCentral from "../../../centrais/LinkCentral";
@@ -125,7 +131,7 @@ const getPhonePlaceholder = (pais = PAIS_DEFAULT) => {
 
 export function ProfessoresTab() {
   const { userData } = useAuth();
-  const { t } = useTranslation(); // 🟢 TRADUTOR CONECTADO
+  const { t, i18n } = useTranslation(); // 🟢 TRADUTOR CONECTADO
   
   // ===== PERMISSÕES E ESCOPO =====
   const role = useMemo(() => String(userData?.role || "").trim().toLowerCase(), [userData?.role]);
@@ -134,6 +140,7 @@ export function ProfessoresTab() {
   const podeVer = ["admin", "mentor", "lider", "unidade"].includes(role);
   const podeEditar = ["admin", "mentor", "lider", "unidade"].includes(role);
   const podeExcluir = role === "admin"; // Apenas admin exclui do banco geral
+  const veDocumento = role === "admin" || role === "mentor"; // número do documento da ficha: só admin e mentor
 
   // ===== STATES DE DADOS EM TEMPO REAL =====
   // ECONOMIA DE COTA: unidades, professores e vínculos vêm da memória ao vivo (CatalogContext), que já está
@@ -153,13 +160,15 @@ export function ProfessoresTab() {
   const [ordenacao, setOrdenacao] = useState({ campo: 'nome', direcao: 'asc' });
 
   // Modais
-  const [modalVerificacaoAberto, setModalVerificacaoAberto] = useState(false);
+  const [novoVinculo, setNovoVinculo] = useState(null); // { profInicial } = janela "Adicionar professor" (pelo documento)
   const [modalFormAberto, setModalFormAberto] = useState(false);
-  
+
   // Fluxo de Cadastro
-  const [emailVerificacao, setEmailVerificacao] = useState("");
-  const [professorEncontrado, setProfessorEncontrado] = useState(null);
   const [profEditando, setProfEditando] = useState(null);
+  // Documento (CPF/DNI/SSN) no formulário: o número nunca vai para a ficha, só para a gaveta privada.
+  const [docForm, setDocForm] = useState({ tipo: "cpf", numero: "" });
+  const [docAnterior, setDocAnterior] = useState(null); // documento já gravado (admin/mentor veem e corrigem)
+  const [avisoTelefoneNovo, setAvisoTelefoneNovo] = useState("");
   
   // Forms
   const [nome, setNome] = useState("");
@@ -250,7 +259,12 @@ export function ProfessoresTab() {
   }, [minhasUnidades]);
   // Os números do topo são botões: a aba SEMPRE abre só com os ativos ("ativo"); "" = todos; "inativo" = só inativos.
   const [statusFiltro, setStatusFiltro] = useState("ativo");
-  const soDoStatus = useCallback((p) => !statusFiltro || (statusFiltro === "ativo") === (p.status === "ativo"), [statusFiltro]);
+  // "semDocumento" = fichas ativas ainda sem CPF/DNI/SSN (para irem sendo completadas).
+  const soDoStatus = useCallback((p) => {
+      if (!statusFiltro) return true;
+      if (statusFiltro === "semDocumento") return p.status === "ativo" && !p.documentoOk;
+      return (statusFiltro === "ativo") === (p.status === "ativo");
+  }, [statusFiltro]);
   const filtro = useFiltroCascata(meusProfessores, {
       extra: soDoStatus,
       getPais: (p) => p.pais || PAIS_DEFAULT,
@@ -305,7 +319,8 @@ export function ProfessoresTab() {
   const kpis = useMemo(() => {
       const ativos = meusProfessores.filter(p => p.status === 'ativo').length;
       const inativos = meusProfessores.filter(p => p.status !== 'ativo').length;
-      return { total: meusProfessores.length, ativos, inativos };
+      const semDocumento = meusProfessores.filter(p => p.status === 'ativo' && !p.documentoOk).length;
+      return { total: meusProfessores.length, ativos, inativos, semDocumento };
   }, [meusProfessores]);
 
   const getUnidadesVinculadas = (profId) => {
@@ -320,77 +335,21 @@ export function ProfessoresTab() {
   // ==========================================
   // 4. AÇÕES E FLUXOS (COM AUDITORIA INJETADA)
   // ==========================================
-  function abrirFluxoNovo() {
-      setEmailVerificacao("");
-      setProfessorEncontrado(null);
-      setErro("");
-      setUnidadeSelecionadaId(minhasUnidades.length === 1 ? minhasUnidades[0].id : "");
-      setModalVerificacaoAberto(true);
-  }
+  // "Adicionar professor": a janela procura pelo documento, depois por e-mail/telefone (NovoVinculoModal).
+  function abrirFluxoNovo() { setNovoVinculo({ profInicial: null }); }
 
-  function verificarEmail(e) {
-      e.preventDefault(); 
-      if (!emailVerificacao.includes("@")) return setErro(t('teachersTab.messages.invalidEmail', 'E-mail inválido.'));
-      
-      setErro("");
-      const emailBusca = emailVerificacao.trim().toLowerCase(); 
-
-      const prof = professoresTotais.find(p => p.email.toLowerCase() === emailBusca);
-
-      if (prof) {
-          setProfessorEncontrado(prof);
-      } else {
-          abrirCadastroCompleto(emailBusca);
-      }
-  }
-
-  async function vincularExistente(e) {
-      e.preventDefault(); 
-      if (!unidadeSelecionadaId) return setErro(t('teachersTab.messages.selectUnit', 'Selecione uma unidade.'));
-      setSalvando(true);
-
-      try {
-          const jaVinculado = vinculos.some(v => 
-              String(v.professorId) === String(professorEncontrado.id) && 
-              String(v.unidadeId) === String(unidadeSelecionadaId)
-          );
-
-          if (jaVinculado) {
-              setSalvando(false);
-              return setErro(t('teachersTab.messages.alreadyLinked', 'Este professor já está vinculado a esta unidade.'));
-          }
-
-          await addDoc(collection(db, "vinculos"), {
-              professorId: professorEncontrado.id,
-              unidadeId: String(unidadeSelecionadaId),
-              status: "ativo",
-              createdAt: serverTimestamp()
-          });
-
-          // 🟢 AUDITORIA: Novo Vínculo
-          const uniNome = unidades.find(u => String(u.id) === String(unidadeSelecionadaId))?.nome || 'Unidade';
-          await registrarLogAuditoria('ALTERADA', 'Professor vinculado a nova unidade.', professorEncontrado.nome, `Vinculado à: ${uniNome}`, uniNome);
-
-          setSucesso(t('teachersTab.messages.linkedSuccess', 'Vinculado com sucesso!'));
-          setTimeout(() => {
-              setModalVerificacaoAberto(false);
-              setSucesso("");
-              setSalvando(false);
-          }, 1000);
-
-      } catch (err) {
-          setErro(t('teachersTab.messages.linkError', 'Erro ao vincular.'));
-          setSalvando(false);
-      } 
-  }
-
-  function abrirCadastroCompleto(emailPreenchido) {
-      setModalVerificacaoAberto(false);
+  // Documento, e-mail e telefone já conferidos na janela "Adicionar professor".
+  function abrirCadastroCompleto(dados) {
+      setNovoVinculo(null);
       setProfEditando(null);
       setNome("");
-      setEmail(emailPreenchido || "");
-      setPais(PAIS_DEFAULT); // 🟢 PADRÃO OURO INICIAL
-      setTelefone("");
+      setEmail(dados.email || "");
+      setPais(dados.pais || PAIS_DEFAULT);
+      setTelefone(formatarTelefone(dados.telefone || "", dados.pais || PAIS_DEFAULT));
+      setDocForm({ tipo: dados.tipo, numero: formatarDocumento(dados.tipo, dados.numero) });
+      setDocAnterior(null);
+      setAvisoTelefoneNovo(dados.avisoTelefone || "");
+      setUnidadeSelecionadaId(minhasUnidades.length === 1 ? minhasUnidades[0].id : "");
       setStatus("ativo");
       setErro("");
       setModalFormAberto(true);
@@ -403,9 +362,25 @@ export function ProfessoresTab() {
       setPais(p.pais || PAIS_DEFAULT); // 🟢 CARREGA O PAÍS
       setTelefone(formatarTelefone(p.telefone || "", p.pais || PAIS_DEFAULT));
       setStatus(p.status || "ativo");
+      setDocForm({ tipo: tipoDocumentoPadrao(i18n.language), numero: "" });
+      setDocAnterior(null);
+      setAvisoTelefoneNovo("");
+      // Admin e mentor veem (e corrigem) o número já gravado: 1 leitura, só ao abrir a edição.
+      if (p.documentoOk && veDocumento) {
+          lerDocumentoDaFicha(p.id).then(d => {
+              if (!d) return;
+              setDocAnterior(d);
+              setDocForm({ tipo: d.tipo, numero: formatarDocumento(d.tipo, d.numero) });
+          }).catch(err => console.error("Ler documento da ficha:", err));
+      }
       setErro("");
       setModalFormAberto(true);
   }
+
+  // Avisos na hora (o mesmo é conferido de novo ao salvar): quem mais tem este e-mail, telefone ou nome.
+  const parecidasNoForm = useMemo(() => (modalFormAberto
+      ? fichasParecidas(professoresTotais, { email: profEditando ? "" : email, telefone, pais, nome }, profEditando?.id)
+      : []), [modalFormAberto, professoresTotais, email, telefone, pais, nome, profEditando]);
 
   async function salvarProfessor(e) {
     e.preventDefault(); 
@@ -413,35 +388,32 @@ export function ProfessoresTab() {
     setErro("");
     setSucesso("");
     
-    const nomeLimpo = nome.trim();
-    const emailLimpo = email.trim().toLowerCase(); 
-    const telLimpo = telefone.replace(/\D/g, ''); 
+    // Modelo de cadastro: nome sem espaços sobrando e em MAIÚSCULAS; e-mail minúsculo e sem espaço.
+    const nomeLimpo = limparNome(nome);
+    const emailLimpo = normalizarEmail(email);
+    const parar = (msg) => { setSalvando(false); setErro(msg); };
 
-    if (!nomeLimpo) { 
-        setSalvando(false); 
-        return setErro(t('teachersTab.messages.nameRequired', 'Nome obrigatório')); 
+    if (!nomeLimpo) return parar(t('teachersTab.messages.nameRequired', 'Nome obrigatório'));
+    if (!profEditando) {
+        if (!emailFormatoValido(emailLimpo)) return parar(t('teachersTab.cpf.emailInvalid'));
+        if (emailDeMentira(emailLimpo)) return parar(t('teachersTab.cpf.emailFake'));
     }
+    // Telefone: obrigatório no cadastro novo; se preenchido, com DDD válido e sem números todos iguais.
+    if ((!profEditando || telefone) && !chaveTelefone(telefone, pais)) return parar(t('teachersTab.cpf.phoneInvalid'));
 
-    if (telefone && telLimpo.length < 10 && pais === 'BR') {
-        setSalvando(false);
-        return setErro("WhatsApp inválido. Digite o número completo com DDD (Ex: 31 99999-8888).");
-    }
+    // Documento: obrigatório no cadastro novo; ao editar, opcional (fichas antigas vão sendo completadas).
+    const docNumero = limparDocumento(docForm.numero);
+    if ((!profEditando || docNumero) && !documentoValido(docForm.tipo, docNumero)) return parar(t('document.errors.invalid'));
+    const docMudou = !!docNumero && (!docAnterior || docAnterior.tipo !== docForm.tipo || docAnterior.numero !== docNumero);
+    // O líder só informa o documento de ficha que ainda não tem; corrigir é com admin e mentor.
+    const gravarDoc = docMudou && (!profEditando?.documentoOk || (veDocumento && !!docAnterior));
+
+    // De novo ao salvar: e-mail de outra ficha barra (é a mesma pessoa ou o e-mail está errado).
+    const mesmoEmail = !profEditando && fichasParecidas(professoresTotais, { email: emailLimpo }).find(a => a.campos.includes('email'));
+    if (mesmoEmail) return parar(t('teachersTab.cpf.emailTaken', { name: mesmoEmail.ficha.nome }));
 
     try {
-      const duplicados = professoresTotais.filter(p => 
-          p.nome.toLowerCase() === nomeLimpo.toLowerCase() && p.id !== (profEditando?.id || 'new')
-      );
-
-      if (duplicados.length > 0) {
-          const listaEmails = duplicados.map(d => d.email).join(", ");
-          const msg = t('teachersTab.messages.duplicateWarning', { name: nomeLimpo, emails: listaEmails });
-          if (!window.confirm(msg)) {
-              setSalvando(false);
-              return; 
-          }
-      }
-
-      if (profEditando) { 
+      if (profEditando) {
           // 🟢 AUDITORIA: Descobrir o que mudou na edição
           let mudancas = [];
           if (profEditando.nome !== nomeLimpo) mudancas.push(`Nome: ${profEditando.nome} ➔ ${nomeLimpo}`);
@@ -449,9 +421,14 @@ export function ProfessoresTab() {
           if (profEditando.pais !== pais) mudancas.push(`País: ${profEditando.pais || PAIS_DEFAULT} ➔ ${pais}`);
           if (profEditando.status !== status) mudancas.push(`Status: ${profEditando.status} ➔ ${status}`);
           
-          await updateDoc(doc(db, "professores", profEditando.id), { 
-            nome: nomeLimpo, pais, telefone, status, updatedAt: serverTimestamp()
+          if (gravarDoc) mudancas.push(docAnterior ? 'Documento de identificação corrigido' : 'Documento de identificação informado');
+          const lote = writeBatch(db);
+          lote.update(doc(db, "professores", profEditando.id), {
+            nome: nomeLimpo, pais, telefone, status, updatedAt: serverTimestamp(),
+            ...(gravarDoc ? { documentoOk: true } : {}),
           });
+          if (gravarDoc) documentoDaFichaNoLote(lote, { professorId: profEditando.id, tipo: docForm.tipo, numero: docNumero, anterior: docAnterior, marcarFicha: false });
+          await (gravarDoc ? gravarComAviso(lote) : lote.commit());
           if (profEditando.nome !== nomeLimpo) await publicarProfessor(profEditando.id, nomeLimpo);
           
           if (profEditando.uidLogin) {
@@ -467,22 +444,29 @@ export function ProfessoresTab() {
           // 🟢 AUDITORIA: Criação de novo professor
           // Só o cadastro da grade: NÃO cria login nem senha. O professor entra pelo Google e pede acesso;
           // líder, mentor ou admin aprovam em Pendências.
-          const docRef = await addDoc(collection(db, "professores"), {
-              nome: nomeLimpo, email: emailLimpo, pais, telefone, status,
+          // Ficha + documento (gaveta e reserva) + vínculo num lote só: o banco recusa documento repetido.
+          const docRef = doc(collection(db, "professores"));
+          const lote = writeBatch(db);
+          lote.set(docRef, {
+              nome: nomeLimpo, email: emailLimpo, pais, telefone, status, documentoOk: true,
               createdAt: serverTimestamp(), createdBy: userId, roleCreator: role
           });
-          await publicarProfessor(docRef.id, nomeLimpo);
-
-          let logDetalhe = `Email: ${emailLimpo}`;
-          let nomeUnidadeAudit = "";
-
+          documentoDaFichaNoLote(lote, { professorId: docRef.id, tipo: docForm.tipo, numero: docNumero, marcarFicha: false });
           if (unidadeSelecionadaId) {
-              await addDoc(collection(db, "vinculos"), {
+              lote.set(doc(collection(db, "vinculos")), {
                   professorId: docRef.id,
                   unidadeId: String(unidadeSelecionadaId),
                   status: "ativo",
                   createdAt: serverTimestamp()
               });
+          }
+          await gravarComAviso(lote);
+          await publicarProfessor(docRef.id, nomeLimpo);
+
+          let logDetalhe = `Email: ${emailLimpo} | Documento de identificação informado`;
+          let nomeUnidadeAudit = "";
+
+          if (unidadeSelecionadaId) {
               const uniNome = unidades.find(u => String(u.id) === String(unidadeSelecionadaId))?.nome;
               if(uniNome) {
                   logDetalhe += ` | Vinculado à: ${uniNome}`;
@@ -501,8 +485,8 @@ export function ProfessoresTab() {
           setSalvando(false);
       }, 1000);
 
-    } catch (e) { 
-        setErro(t('teachersTab.messages.saveError', 'Erro: ') + e.message);
+    } catch (e) {
+        setErro(e?.message === ERRO_DOCUMENTO_EM_USO ? t('teachersTab.cpf.inUse') : t('teachersTab.messages.saveError', 'Erro: ') + e.message);
         setSalvando(false);
     }
   }
@@ -528,7 +512,12 @@ export function ProfessoresTab() {
   async function excluirProfessorTotal(p) {
       if (!window.confirm(t('teachersTab.messages.deleteConfirm', { name: p.nome }))) return;
       try {
-          await deleteDoc(doc(db, "professores", p.id));
+          // Documento da ficha sai junto (gaveta e reserva), para poder ser usado de novo.
+          const docDaFicha = p.documentoOk ? await lerDocumentoDaFicha(p.id) : null;
+          const lote = writeBatch(db);
+          if (docDaFicha) apagarDocumentoDaFichaNoLote(lote, p.id, docDaFicha);
+          lote.delete(doc(db, "professores", p.id));
+          await lote.commit();
           await removerProfessorDaVitrine(p.id);
           const vinculadosDoProf = vinculos.filter(v => v.professorId === p.id);
           vinculadosDoProf.forEach(v => deleteDoc(doc(db, "vinculos", v.id)));
@@ -572,6 +561,7 @@ export function ProfessoresTab() {
           { id: "total", rotulo: t('teachersTab.stats.total', 'Total'), valor: kpis.total, onClick: () => setStatusFiltro(""), ativo: statusFiltro === "" },
           { id: "ativo", rotulo: t('teachersTab.stats.active', 'Ativos'), valor: kpis.ativos, cor: "text-green-600", onClick: () => setStatusFiltro("ativo"), ativo: statusFiltro === "ativo" },
           { id: "inativo", rotulo: t('teachersTab.stats.inactive', 'Inativos'), valor: kpis.inativos, cor: "text-red-500", onClick: () => setStatusFiltro("inativo"), ativo: statusFiltro === "inativo" },
+          { id: "semDocumento", rotulo: t('teachersTab.stats.noDocument'), valor: kpis.semDocumento, cor: "text-amber-600", onClick: () => setStatusFiltro("semDocumento"), ativo: statusFiltro === "semDocumento" },
         ]} />}>
         {role === "admin" && (
           <BotaoSecundario icone={corrigindoBase ? Loader2 : Layers} onClick={corrigirEmailsAntigos} disabled={corrigindoBase} girar={corrigindoBase}>
@@ -637,6 +627,11 @@ export function ProfessoresTab() {
                                 </td>
                                 <td className="p-4 font-black text-slate-800 dark:text-white text-base">
                                     <LinkCentral tipo="professor" alvo={p}>{p.nome}</LinkCentral>
+                                    {p.documentoOk && (
+                                        <span className="ml-2 inline-flex items-center gap-1 align-middle text-[9px] font-black px-1.5 py-0.5 rounded border border-green-200 bg-green-50 text-green-700 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400" title={t('teachersTab.cpf.hasDocument')}>
+                                            <IdCard className="w-3 h-3" /> {t('teachersTab.cpf.badge')}
+                                        </span>
+                                    )}
                                 </td>
                                 <td className="p-4">
                                     <div className="flex flex-col gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400">
@@ -672,7 +667,7 @@ export function ProfessoresTab() {
                                         )) : <span className="text-slate-400 text-xs italic font-medium">{t('teachersTab.table.noLinks', 'Nenhum vínculo.')}</span>}
                                         
                                         {podeEditar && (
-                                            <button type="button" onClick={() => { setEmailVerificacao(p.email); setProfessorEncontrado(p); setUnidadeSelecionadaId(""); setModalVerificacaoAberto(true); }} className="p-2 bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors" title={t('teachersTab.extra.linkOtherUnit')}>
+                                            <button type="button" onClick={() => setNovoVinculo({ profInicial: p })} className="p-2 bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors" title={t('teachersTab.extra.linkOtherUnit')}>
                                                 <PlusCircle className="w-4 h-4"/>
                                             </button>
                                         )}
@@ -724,88 +719,19 @@ export function ProfessoresTab() {
       )}
 
       {/* MODAL 1: FLUXO DE VERIFICAÇÃO */}
-      {modalVerificacaoAberto && (
-          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in zoom-in duration-200">
-              <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200 dark:border-slate-700 flex flex-col">
-                  <div className="p-6 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 flex justify-between items-center shrink-0">
-                      <div>
-                          <h3 className="font-black text-slate-800 dark:text-white text-xl">{t('teachersTab.verifyModal.title', 'Novo Vínculo')}</h3>
-                          <p className="text-xs font-medium text-slate-500 mt-1">{t('teachersTab.verifyModal.desc', 'Digite o e-mail para verificar a base.')}</p>
-                      </div>
-                      <button type="button" onClick={() => setModalVerificacaoAberto(false)} className="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-slate-400 hover:text-red-500"><X className="w-5 h-5"/></button>
-                  </div>
-                  
-                  <div className="p-6 space-y-5">
-                      {!professorEncontrado ? (
-                          <form onSubmit={verificarEmail} className="space-y-4">
-                              <div>
-                                  <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 block pl-1">{t('teachersTab.verifyModal.emailLabel', 'E-mail do Professor')}</label>
-                                  <div className="flex gap-2">
-                                      <input 
-                                          type="email" 
-                                          className="w-full pl-4 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-green-500 rounded-xl text-sm font-semibold outline-none transition-all dark:text-white" 
-                                          placeholder={t('teachersTab.verifyModal.emailPlaceholder', 'exemplo@email.com')}
-                                          value={emailVerificacao}
-                                          onChange={e => setEmailVerificacao(e.target.value)}
-                                          autoFocus
-                                      />
-                                      <button type="submit" className="bg-green-600 text-white px-5 rounded-xl font-bold hover:bg-green-700 shadow-md shadow-green-500/20 transition-all active:scale-95 flex items-center justify-center">
-                                          <Search className="w-5 h-5"/>
-                                      </button>
-                                  </div>
-                              </div>
-                              {erro && <p className="text-red-600 text-xs font-bold bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 p-3 rounded-lg flex items-center gap-2"><AlertTriangle className="w-4 h-4"/> {erro}</p>}
-                          </form>
-                      ) : (
-                          <form onSubmit={vincularExistente} className="space-y-5">
-                              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4 rounded-xl flex items-start gap-4">
-                                  <CheckCircle2 className="w-8 h-8 text-green-600 dark:text-green-400 flex-shrink-0" />
-                                  <div>
-                                      <h4 className="font-black text-green-800 dark:text-green-300 text-lg">{t('teachersTab.verifyModal.foundTitle', 'Localizado!')}</h4>
-                                      <p className="text-sm font-bold text-green-700 dark:text-green-400 mt-1">{professorEncontrado.nome}</p>
-                                      <p className="text-xs text-green-600 dark:text-green-500">{professorEncontrado.email}</p>
-                                  </div>
-                              </div>
-                              
-                              <div>
-                                  <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 block pl-1">{t('teachersTab.verifyModal.linkToUnit', 'Vincular a qual unidade?')}</label>
-                                  <div className="relative">
-                                      <select 
-                                          className="w-full pl-4 pr-10 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-green-500 rounded-xl text-sm font-bold outline-none appearance-none transition-all dark:text-white"
-                                          value={unidadeSelecionadaId}
-                                          onChange={e => setUnidadeSelecionadaId(e.target.value)}
-                                      >
-                                          {minhasUnidades.length > 1 && <option value="">{t('teachersTab.verifyModal.select', 'Selecione...')}</option>}
-                                          {minhasUnidades.map(u => <option key={u.id} value={u.id}>{u.nome}</option>)}
-                                      </select>
-                                      <ChevronDown className="absolute right-4 top-3.5 w-4 h-4 text-slate-400 pointer-events-none"/>
-                                  </div>
-                              </div>
-
-                              {erro && <p className="text-red-600 text-xs font-bold bg-red-50 dark:bg-red-900/20 p-3 rounded-lg border border-red-100 dark:border-red-800">{erro}</p>}
-                              {sucesso && <p className="text-green-600 text-xs font-bold bg-green-50 dark:bg-green-900/20 p-3 rounded-lg border border-green-100 dark:border-green-800">{sucesso}</p>}
-
-                              <button 
-                                  type="submit"
-                                  disabled={salvando || !unidadeSelecionadaId}
-                                  className="w-full bg-green-600 text-white py-3.5 rounded-xl font-bold hover:bg-green-700 shadow-lg shadow-green-500/20 transition-transform active:scale-95 disabled:opacity-50 disabled:transform-none flex justify-center items-center gap-2"
-                              >
-                                  {salvando ? <Loader2 className="w-5 h-5 animate-spin"/> : <> <LinkIcon className="w-5 h-5"/> {t('teachersTab.verifyModal.confirmLink', 'Confirmar Vínculo')} </>}
-                              </button>
-                          </form>
-                      )}
-                  </div>
-
-                  <div className="p-4 bg-slate-50 dark:bg-slate-800 flex justify-between items-center border-t border-slate-100 dark:border-slate-700">
-                      <button onClick={() => setModalVerificacaoAberto(false)} className="text-slate-500 dark:text-slate-400 font-bold text-[10px] uppercase tracking-wider hover:text-slate-800 dark:hover:text-slate-200">{t('teachersTab.verifyModal.cancel', 'Cancelar')}</button>
-                      {!professorEncontrado && emailVerificacao && (
-                          <button onClick={() => abrirCadastroCompleto(emailVerificacao)} className="text-blue-600 dark:text-blue-400 font-black text-[10px] uppercase tracking-wider hover:text-blue-800 dark:hover:text-blue-300 flex items-center gap-1">
-                              {t('teachersTab.verifyModal.registerNew', 'Cadastrar Novo')} <ArrowRight className="w-3 h-3"/>
-                          </button>
-                      )}
-                  </div>
-              </div>
-          </div>
+      {novoVinculo && (
+          <NovoVinculoModal
+              professores={professoresTotais}
+              vinculos={vinculos}
+              unidades={unidades}
+              minhasUnidades={minhasUnidades}
+              profInicial={novoVinculo.profInicial}
+              formatarTelefone={formatarTelefone}
+              placeholderTelefone={getPhonePlaceholder}
+              aoNovoCadastro={abrirCadastroCompleto}
+              aoFechar={() => setNovoVinculo(null)}
+              registrarLog={registrarLogAuditoria}
+          />
       )}
 
       {/* MODAL 2: FORMULÁRIO COMPLETO COM BANDEIRA, MÁSCARA E AUDITORIA */}
@@ -844,6 +770,42 @@ export function ProfessoresTab() {
                         <input className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-green-500 rounded-xl text-sm font-bold outline-none transition-all dark:text-white" value={nome} onChange={e => setNome(e.target.value)} autoFocus placeholder={t('teachersTab.formModal.namePlaceholder', 'Nome do Professor')} />
                     </div>
                 </div>
+
+                {/* DOCUMENTO (CPF/DNI/SSN): chave única do professor. O número fica em área protegida, nunca na ficha. */}
+                {!profEditando ? (
+                    <div className="p-3 rounded-xl border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 text-xs font-bold text-green-700 dark:text-green-300 flex items-center gap-2 normal-case">
+                        <IdCard className="w-4 h-4 shrink-0" /> {t(`document.short.${docForm.tipo}`)} {docForm.numero} · {t('teachersTab.cpf.checked')}
+                    </div>
+                ) : profEditando.documentoOk && !docAnterior ? (
+                    <div className="p-3 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-300 flex items-center gap-2 normal-case">
+                        <IdCard className="w-4 h-4 shrink-0 text-green-600" /> {veDocumento ? t('teachersTab.cpf.loading') : t('teachersTab.cpf.onlyStaffSees')}
+                    </div>
+                ) : (
+                    <div className="space-y-1 normal-case">
+                        <CampoDocumento claro tipo={docForm.tipo} onTipo={(tp) => setDocForm(d => ({ ...d, tipo: tp }))}
+                            valor={docForm.numero} onValor={(v) => setDocForm(d => ({ ...d, numero: v }))} id="docFicha" />
+                        <p className="text-[11px] text-slate-500 pl-1">{docAnterior ? t('teachersTab.cpf.fixHint') : t('teachersTab.cpf.optionalHint')}</p>
+                    </div>
+                )}
+
+                {/* Avisos na hora: quem mais tem este e-mail, telefone ou nome */}
+                {(parecidasNoForm.length > 0 || avisoTelefoneNovo) && (
+                    <div className="space-y-1.5 normal-case">
+                        {parecidasNoForm.map(({ ficha, campos }) => (
+                            <p key={ficha.id} className={`text-xs font-bold border p-2.5 rounded-lg flex items-start gap-2 ${campos.includes('email')
+                                ? 'text-red-600 bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-800'
+                                : 'text-amber-700 bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'}`}>
+                                <AlertTriangle className="w-4 h-4 shrink-0" />
+                                <span>{t('teachersTab.cpf.alsoIn', { fields: campos.map(c => t(`teachersTab.cpf.fields.${c}`)).join(', '), name: ficha.nome })}</span>
+                            </p>
+                        ))}
+                        {avisoTelefoneNovo && !parecidasNoForm.some(a => a.campos.includes('telefone')) && (
+                            <p className="text-xs font-bold border p-2.5 rounded-lg text-amber-700 bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 flex items-start gap-2">
+                                <AlertTriangle className="w-4 h-4 shrink-0" /> {t('teachersTab.cpf.alsoIn', { fields: t('teachersTab.cpf.fields.telefone'), name: avisoTelefoneNovo })}
+                            </p>
+                        )}
+                    </div>
+                )}
 
                 {/* 🟢 PAÍS COM NOME COMPLETO + BANDEIRA E DDI */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

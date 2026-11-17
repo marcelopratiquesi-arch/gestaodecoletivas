@@ -4,7 +4,46 @@
   "stats": {
     "total": "TOTAL",
     "active": "ACTIVOS",
-    "inactive": "INACTIVOS"
+    "inactive": "INACTIVOS",
+    "noDocument": "SIN DOCUMENTO"
+  },
+  "cpf": {
+    "step": {
+      "documento": "Escribí el documento del profesor (CPF, DNI o SSN). Así el sistema reconoce a la persona.",
+      "contato": "Documento nuevo. Ahora el correo y el WhatsApp, para ver si ya está en la grilla.",
+      "parecidas": "Encontramos fichas parecidas. Revisá si es la misma persona.",
+      "achado": "Profesor encontrado. Elegí la unidad para vincular."
+    },
+    "search": "Buscar",
+    "continue": "Continuar",
+    "back": "Volver al documento",
+    "notFoundByDocument": "Ninguna ficha con este documento.",
+    "similarIntro": "Estas fichas antiguas todavía no tienen documento y coinciden con lo que escribiste. Si es la misma persona, el documento se guarda en ella y nadie queda duplicado.",
+    "matched": "Coincide: {{fields}}",
+    "isThis": "Sí, es esta persona",
+    "noneOfThem": "No es ninguna: registrar nuevo",
+    "willSaveDocument": "El documento se guardará en esta ficha.",
+    "orphan": "Este documento está reservado para una ficha que ya no existe. Pedí al administrador que lo libere.",
+    "searchError": "No se pudo buscar ahora (sin conexión o cuota agotada). Intentá de nuevo.",
+    "emailInvalid": "Correo inválido. Revisá que esté completo (ej.: nombre@gmail.com).",
+    "emailFake": "Este correo parece falso (ej.: naoinformou@, teste@). Pedí el correo real del profesor.",
+    "phoneInvalid": "WhatsApp inválido: escribilo con código de área y sin dígitos todos iguales.",
+    "emailOfOther": "Este correo ya es de la ficha de {{name}}, que tiene otro documento. Revisá el correo.",
+    "emailTaken": "Este correo ya está en la ficha de {{name}}. Si no es la misma persona, corregí primero el correo de esa ficha.",
+    "inUse": "Este documento ya está registrado para otra persona. Revisá los números; si es un error, hablá con el mentor.",
+    "alsoIn": "{{fields}} igual al de la ficha de {{name}}.",
+    "fields": {
+      "email": "Correo",
+      "telefone": "WhatsApp",
+      "nome": "Nombre"
+    },
+    "badge": "DOC",
+    "hasDocument": "Documento informado",
+    "checked": "documento verificado",
+    "loading": "Documento informado (cargando…)",
+    "onlyStaffSees": "Documento informado. Solo el administrador y el mentor ven y corrigen el número.",
+    "optionalHint": "Opcional por ahora: completalo para terminar la ficha. Queda en un área protegida (solo admin y mentor lo ven).",
+    "fixHint": "Corregí solo si el número está mal."
   },
   "newLinkBtn": "+ NUEVO VÍNCULO",
   "fixEmailsBtn": "CORREGIR CORREOS",

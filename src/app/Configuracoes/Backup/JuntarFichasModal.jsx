@@ -124,10 +124,17 @@ export default function JuntarFichasModal({ fichas, aoJuntar, aoFechar }) {
               <li>{t('backupTab.merge.sumBadges', { count: p.crachas.length })}</li>
               {p.mesesResumo.length > 0 && <li>{t('backupTab.merge.sumSummaries', { list: p.mesesResumo.join(', ') })}</li>}
               {Object.keys(p.completar).length > 0 && <li>{t('backupTab.merge.sumFill', { list: Object.keys(p.completar).join(', ') })}</li>}
+              {p.documento && <li>{t('backupTab.merge.sumDocument')}</li>}
               <li className="font-bold text-red-700 dark:text-red-400">{t('backupTab.merge.sumDelete', { count: p.idsApagar.length })}</li>
             </ul>
             <p className="text-[11px] text-slate-500">{t('backupTab.merge.cost', { reads: preparo.leituras, writes: gravacoesDoPlano(p) })}</p>
           </div>
+        )}
+
+        {p?.conflitoDocumento && etapa !== 'feito' && (
+          <p className="p-3 rounded-lg bg-red-100 text-red-700 text-sm font-bold flex items-center gap-2">
+            <TriangleAlert className="w-4 h-4 shrink-0" /> {t('backupTab.merge.documentConflict')}
+          </p>
         )}
 
         {etapa === 'feito' && (
@@ -149,7 +156,7 @@ export default function JuntarFichasModal({ fichas, aoJuntar, aoFechar }) {
                   {etapa === 'conferindo' && <Loader2 className="w-4 h-4 animate-spin" />} {t('backupTab.merge.check')}
                 </button>
               ) : (
-                <button onClick={juntar} disabled={etapa === 'gravando'} className="py-2 px-4 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-bold flex items-center gap-2 disabled:opacity-50">
+                <button onClick={juntar} disabled={etapa === 'gravando' || p?.conflitoDocumento}className="py-2 px-4 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-bold flex items-center gap-2 disabled:opacity-50">
                   {etapa === 'gravando' && <Loader2 className="w-4 h-4 animate-spin" />}
                   {etapa === 'gravando' ? `${progresso}%` : t('backupTab.merge.confirm')}
                 </button>

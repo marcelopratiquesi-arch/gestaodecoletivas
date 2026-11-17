@@ -101,6 +101,8 @@
     "sumSummaries": "Cierre del mes rehecho al abrir los informes: {{list}}",
     "sumFill": "Datos faltantes que se completarán: {{list}}",
     "sumDelete": "Fichas borradas después de mover todo: {{count}}",
+    "sumDocument": "El documento (CPF/DNI/SSN) pasa a la ficha que queda",
+    "documentConflict": "Estas fichas tienen documentos DISTINTOS: son personas distintas y no se pueden unir.",
     "cost": "Lecturas hechas ahora: {{reads}} · escrituras al unir: {{writes}}",
     "done": "¡Listo! Las fichas se unieron en la de {{name}}.",
     "readError": "No se pudo revisar (cuota agotada o sin conexión). Intentá de nuevo más tarde.",

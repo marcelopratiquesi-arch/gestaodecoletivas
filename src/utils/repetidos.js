@@ -74,6 +74,29 @@ export function chaveTelefone(telefone, pais = 'BR') {
 export const normalizarNome = (nome) =>
   String(nome ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim().toUpperCase();
 
+// ---------------- Cadastro: fichas com o mesmo e-mail/telefone/nome ----------------
+// Devolve [{ ficha, campos: ['email'|'telefone'|'nome'] }] das fichas (menos `ignorarId`, a própria ao editar)
+// que batem com os dados digitados. E-mail de mentira e telefone inválido não contam.
+export function fichasParecidas(fichas, { email, telefone, pais = 'BR', nome } = {}, ignorarId = null) {
+  const e = normalizarEmail(email);
+  const emailOk = e && emailFormatoValido(e) && !emailDeMentira(e);
+  const tel = telefone ? chaveTelefone(telefone, pais) : null;
+  const n = nome ? normalizarNome(nome) : '';
+  const achados = [];
+  for (const f of fichas || []) {
+    if (ignorarId && String(f.id) === String(ignorarId)) continue;
+    const campos = [];
+    if (emailOk && normalizarEmail(f.email) === e) campos.push('email');
+    if (tel && chaveTelefone(f.telefone, f.pais || 'BR') === tel) campos.push('telefone');
+    if (n && normalizarNome(f.nome) === n) campos.push('nome');
+    if (campos.length) achados.push({ ficha: f, campos });
+  }
+  return achados;
+}
+
+// Nome como o cadastro guarda: sem espaços sobrando e em MAIÚSCULAS (acentos mantidos).
+export const limparNome = (nome) => String(nome ?? '').replace(/\s+/g, ' ').trim().toUpperCase();
+
 // ---------------- Relatório ----------------
 // registros: [{ origem: 'professor'|'cracha'|'pedido', id, nome, email, telefone, pais, uidLogin?, professorId? , ...extras }]
 // A mesma pessoa (professor ligado ao crachá; pedido e crachá do mesmo login) não conta como repetida.

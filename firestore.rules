@@ -147,9 +147,13 @@ service cloud.firestore {
       allow read: if logado();
       allow write: if logado() && !souProfessor();
     }
-    match /professores/{document=**} {
+    match /professores/{professorId} {
       allow read: if logado();
-      allow write: if logado() && !souProfessor();
+      // "documentoOk" só vale com o documento guardado na gaveta privada da ficha (documentos_ficha).
+      allow create, update: if logado() && !souProfessor()
+        && (request.resource.data.get('documentoOk', false) != true
+            || existsAfter(/databases/$(database)/documents/documentos_ficha/$(professorId)));
+      allow delete: if logado() && !souProfessor();
     }
 
     // ===================== VALIDAÇÕES (presença e pagamento) =====================
@@ -490,6 +494,50 @@ service cloud.firestore {
       allow delete: if podeMexerNoDe(resource.data.uid) || mentorDoPedidoDe(resource.data.uid);
     }
 
+    // ===================== DOCUMENTO DA FICHA DA GRADE (professores/{id}) =====================
+    // A ficha (professores) é lida por todo logado: o número NÃO vai nela, só "documentoOk".
+    // Gaveta documentos_ficha/{professorId}: o número. Leem: admin e mentor. O líder só grava ficha que ainda não tem
+    // documento (cadastro novo ou ficha antiga sendo completada); corrigir e apagar: admin e mentor.
+    function gestorDeCadastro() { return logado() && meuPapel() in ['admin', 'administrador', 'master', 'mentor', 'lider', 'unidade']; }
+    function adminOuMentor() { return souAdmin() || (logado() && meuPapel() == 'mentor'); }
+
+    match /documentos_ficha/{professorId} {
+      // A reserva do mesmo número, apontando para esta ficha, tem que existir ao final da mesma gravação.
+      function reservadoParaEsta() {
+        let d = request.resource.data;
+        let reserva = /databases/$(database)/documents/documentos_professor/$(d.tipo + '_' + d.numero);
+        return existsAfter(reserva) && getAfter(reserva).data.professorId == professorId;
+      }
+      allow read: if adminOuMentor();
+      allow create: if documentoValido() && gestorDeCadastro() && reservadoParaEsta()
+        && existsAfter(/databases/$(database)/documents/professores/$(professorId));
+      allow update: if documentoValido() && adminOuMentor() && reservadoParaEsta();
+      allow delete: if adminOuMentor();
+    }
+
+    // Reserva documentos_professor/{tipo_numero} = { professorId }: um documento = uma ficha (repetido é recusado).
+    // Líder, mentor e admin CONFEREM um documento que digitaram (get); listar, só o admin.
+    // Se o documento já é de alguém com login (documentos_unicos), só vale para a ficha ligada a esse mesmo login.
+    match /documentos_professor/{id} {
+      function reservaValida() {
+        let d = request.resource.data;
+        let ficha = /databases/$(database)/documents/documentos_ficha/$(d.professorId);
+        let unico = /databases/$(database)/documents/documentos_unicos/$(id);
+        return d.keys().hasOnly(['professorId', 'tipo', 'numero'])
+          && d.professorId is string && documentoFormatoOk(d)
+          && id == d.tipo + '_' + d.numero
+          && existsAfter(ficha) && getAfter(ficha).data.numero == d.numero && getAfter(ficha).data.tipo == d.tipo
+          && (!exists(unico)
+              || get(unico).data.uid == getAfter(/databases/$(database)/documents/professores/$(d.professorId)).data.get('uidLogin', ''));
+      }
+      allow get: if gestorDeCadastro();
+      allow list: if souAdmin();
+      allow create: if gestorDeCadastro() && reservaValida();
+      // Trocar de ficha só ao juntar fichas: só o admin (o mentor corrige apagando a reserva antiga e criando a nova).
+      allow update: if souAdmin() && reservaValida();
+      allow delete: if adminOuMentor();
+    }
+
     // ===================== AVISOS DE SAÍDA (saidas_acesso) =====================
     // Quando alguém diz "não sou mais da unidade" / "não sou mais mentor", o acesso dele é desligado na hora
     // (ver saidaDaFuncao em usuarios) e este aviso aparece em Pendências: o mentor da unidade (ou o admin) pode
@@ -604,8 +652,8 @@ service cloud.firestore {
     // Professor não grava nada aqui, só cria registros de auditoria (log da validação e do "Sair").
     // (No Firestore, se QUALQUER regra libera, a ação passa; por isso as exceções precisam estar aqui.)
     match /{colecao}/{resto=**} {
-      allow read: if logado() && !(colecao in ['solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos']);
-      allow write: if logado() && !(colecao in ['usuarios', 'publico', 'validacoes', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'resumos_mensais', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos']) && !souProfessor();
+      allow read: if logado() && !(colecao in ['solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos', 'documentos_ficha', 'documentos_professor']);
+      allow write: if logado() && !(colecao in ['usuarios', 'publico', 'validacoes', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'resumos_mensais', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos', 'professores', 'documentos_ficha', 'documentos_professor']) && !souProfessor();
       allow create: if logado() && colecao in ['auditoria_cronograma', 'auditoria_configuracoes'];
     }
   }

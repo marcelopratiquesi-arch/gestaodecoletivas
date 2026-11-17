@@ -101,6 +101,8 @@
     "sumSummaries": "Fechamento do mês refeito na próxima abertura dos relatórios: {{list}}",
     "sumFill": "Dados que faltavam e serão completados: {{list}}",
     "sumDelete": "Fichas apagadas depois de mover tudo: {{count}}",
+    "sumDocument": "O documento (CPF/DNI/SSN) passa para a ficha que fica",
+    "documentConflict": "Estas fichas têm documentos DIFERENTES: são pessoas diferentes e não podem ser juntadas.",
     "cost": "Leituras feitas agora: {{reads}} · gravações ao juntar: {{writes}}",
     "done": "Pronto! As fichas foram juntadas na de {{name}}.",
     "readError": "Não foi possível conferir (cota esgotada ou sem conexão). Tente de novo mais tarde.",

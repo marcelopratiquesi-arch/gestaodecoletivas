@@ -101,6 +101,8 @@
     "sumSummaries": "Monthly closing rebuilt next time reports open: {{list}}",
     "sumFill": "Missing data that will be filled in: {{list}}",
     "sumDelete": "Records deleted after moving everything: {{count}}",
+    "sumDocument": "The ID (CPF/DNI/SSN) moves to the record that stays",
+    "documentConflict": "These records have DIFFERENT IDs: they are different people and cannot be merged.",
     "cost": "Reads done now: {{reads}} · writes when merging: {{writes}}",
     "done": "Done! The records were merged into {{name}}'s.",
     "readError": "Could not check (quota exhausted or offline). Try again later.",

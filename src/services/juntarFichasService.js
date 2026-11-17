@@ -7,6 +7,7 @@ import {
 import { db } from './firebase';
 import { montarPlanoJuncao } from '../utils/juntarFichas';
 import { removerProfessorDaVitrine } from './vitrinePublica';
+import { lerDocumentoDaFicha, passarDocumentoNoLote } from './documentoFichaService';
 
 const TAMANHO_LOTE = 450; // limite do Firestore: 500 operações por lote
 const docsDe = (snap) => snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -17,25 +18,28 @@ export async function prepararJuncao(principal, outras) {
   const todos = [String(principal.id), ...idsOutras];
   const logins = [...new Set([principal.uidLogin, ...outras.map(o => o.uidLogin)].filter(Boolean).map(String))];
 
-  const [aulas, vinculos, validacoesTitular, validacoesSubstituido, crachas, crachasDosLogins] = await Promise.all([
+  const [aulas, vinculos, validacoesTitular, validacoesSubstituido, crachas, crachasDosLogins, docs] = await Promise.all([
     getDocs(query(collection(db, 'aulas'), where('professorId', 'in', idsOutras))),
     getDocs(query(collection(db, 'vinculos'), where('professorId', 'in', todos))),
     getDocs(query(collection(db, 'validacoes'), where('professorId', 'in', idsOutras))),
     getDocs(query(collection(db, 'validacoes'), where('professorOriginalId', 'in', idsOutras))),
     getDocs(query(collection(db, 'usuarios'), where('professorId', 'in', idsOutras))),
     Promise.all(logins.map(uid => getDoc(doc(db, 'usuarios', uid)))),
+    // Documento só das fichas marcadas com "documentoOk" (as outras não têm: economiza leitura).
+    Promise.all([principal, ...outras].filter(f => f.documentoOk).map(async f => [String(f.id), await lerDocumentoDaFicha(f.id)])),
   ]);
+  const documentos = Object.fromEntries(docs.filter(([, d]) => d));
 
   const validacoes = new Map();
   [...docsDe(validacoesTitular), ...docsDe(validacoesSubstituido)].forEach(v => validacoes.set(v.id, v));
   const crachaDoLogin = Object.fromEntries(crachasDosLogins.map(s => [s.id, s.exists() ? s.data() : null]));
 
-  const leituras = aulas.size + vinculos.size + validacoesTitular.size + validacoesSubstituido.size + crachas.size + logins.length;
+  const leituras = aulas.size + vinculos.size + validacoesTitular.size + validacoesSubstituido.size + crachas.size + logins.length + docs.length;
   return {
     plano: montarPlanoJuncao({
       principal, outras,
       aulas: docsDe(aulas), vinculos: docsDe(vinculos), validacoes: [...validacoes.values()],
-      crachas: docsDe(crachas), crachaDoLogin,
+      crachas: docsDe(crachas), crachaDoLogin, documentos,
     }),
     leituras,
   };
@@ -86,7 +90,10 @@ export async function executarJuncao({ plano, principal, outras, quem, aoAvancar
     aoAvancar?.(feitas, ops.length);
   }
 
+  if (plano.conflitoDocumento) throw new Error('DOCUMENTOS_DIFERENTES');
   const final = writeBatch(db);
+  // Documento vai junto com a atualização da principal (o banco confere a gaveta e o login no mesmo lote).
+  if (plano.documento) passarDocumentoNoLote(final, { ...plano.documento, paraId: plano.idPrincipal });
   final.update(doc(db, 'professores', plano.idPrincipal), {
     ...plano.completar,
     fichasJuntadas: [...new Set([...(principal.fichasJuntadas || []), ...plano.idsApagar])],

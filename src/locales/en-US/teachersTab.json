@@ -4,7 +4,46 @@
   "stats": {
     "total": "TOTAL",
     "active": "ACTIVE",
-    "inactive": "INACTIVE"
+    "inactive": "INACTIVE",
+    "noDocument": "NO ID"
+  },
+  "cpf": {
+    "step": {
+      "documento": "Enter the teacher's ID (CPF, DNI or SSN). This is how the system recognizes the person.",
+      "contato": "New ID. Now the email and WhatsApp, to check whether they are already in the schedule.",
+      "parecidas": "We found similar records. Check whether it is the same person.",
+      "achado": "Teacher found. Choose the unit to link."
+    },
+    "search": "Search",
+    "continue": "Continue",
+    "back": "Back to ID",
+    "notFoundByDocument": "No record with this ID.",
+    "similarIntro": "These old records have no ID yet and match what you typed. If it is the same person, the ID is saved on it and nobody is duplicated.",
+    "matched": "Matched: {{fields}}",
+    "isThis": "Yes, this is the person",
+    "noneOfThem": "None of them: register new",
+    "willSaveDocument": "The ID will be saved on this record.",
+    "orphan": "This ID is reserved for a record that no longer exists. Ask the administrator to release it.",
+    "searchError": "Could not search now (offline or quota exhausted). Try again.",
+    "emailInvalid": "Invalid email. Check that it is complete (e.g. name@gmail.com).",
+    "emailFake": "This email looks fake (e.g. naoinformou@, teste@). Ask for the teacher's real email.",
+    "phoneInvalid": "Invalid WhatsApp: include the area code and avoid repeated digits.",
+    "emailOfOther": "This email already belongs to {{name}}'s record, which has another ID. Check the email.",
+    "emailTaken": "This email is already on {{name}}'s record. If it is not the same person, fix that record's email first.",
+    "inUse": "This ID is already registered to another person. Check the numbers; if it is a mistake, talk to the mentor.",
+    "alsoIn": "{{fields}} same as {{name}}'s record.",
+    "fields": {
+      "email": "Email",
+      "telefone": "WhatsApp",
+      "nome": "Name"
+    },
+    "badge": "ID",
+    "hasDocument": "ID provided",
+    "checked": "ID checked",
+    "loading": "ID provided (loading…)",
+    "onlyStaffSees": "ID provided. Only the admin and the mentor see and fix the number.",
+    "optionalHint": "Optional for now: fill it in to complete the record. Kept in a protected area (only admin and mentor see it).",
+    "fixHint": "Change only if the number is wrong."
   },
   "newLinkBtn": "+ NEW LINK",
   "fixEmailsBtn": "FIX EMAILS",
