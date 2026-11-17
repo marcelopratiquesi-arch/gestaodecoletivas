@@ -20,9 +20,10 @@ import {
   classeRotulo, MAX_UNIDADES_PEDIDO,
 } from "../components/acesso/AcessoUI";
 import CampoDocumento from "../components/acesso/CampoDocumento";
+import SeletorModalidades from "../components/acesso/SeletorModalidades";
 import { documentoValido, formatarDocumento, tipoDocumentoPadrao } from "../utils/documento";
 import { documentoNoLote, gravarComAviso, lerDocumentoDoPedido, ERRO_DOCUMENTO_EM_USO } from "../services/documentoService";
-import { ICONE_FUNCAO, useUnidadesPublicas, lerPapelPedido, guardarPapelPedido, FUNCOES_PEDIDO } from "../components/acesso/acessoDados";
+import { ICONE_FUNCAO, useUnidadesPublicas, lerPapelPedido, guardarPapelPedido, FUNCOES_PEDIDO, LIMITE_MODALIDADES } from "../components/acesso/acessoDados";
 
 const Carregando = () => (
   <FundoAcesso><Marca compacta /><div className="flex justify-center py-10"><Loader2 className="w-8 h-8 animate-spin text-red-600" /></div></FundoAcesso>
@@ -46,7 +47,7 @@ export default function SolicitarAcesso() {
   const [telefone, setTelefone] = useState("");
   const [unidadeIds, setUnidadeIds] = useState([]);
   const [tambemProfessor, setTambemProfessor] = useState(false);
-  const [modalidades, setModalidades] = useState(""); // professor: opcional, texto livre
+  const [modalidades, setModalidades] = useState(""); // professor: modalidades escolhidas (texto "Zumba, Pilates")
   const [docTipo, setDocTipo] = useState(() => tipoDocumentoPadrao(i18n.language));
   const [docNumero, setDocNumero] = useState("");
   const [docAnterior, setDocAnterior] = useState(null); // documento do pedido anterior (se refizer o pedido)
@@ -144,7 +145,8 @@ export default function SolicitarAcesso() {
     if (nome.trim().length < 3) return setErro(t("accessRequest.errors.name"));
     if (telefone.replace(/\D/g, "").length < 8) return setErro(t("accessRequest.errors.phone"));
     if (!unidadeIds.length) return setErro(t("accessRequest.errors.unit"));
-    if (modalidades.length > 120) return setErro(t("accessRequest.errors.modalities"));
+    if (modalidades.length > LIMITE_MODALIDADES) return setErro(t("accessRequest.errors.modalities"));
+    if (papel === "professor" && !modalidades.trim()) return setErro(t("accessRequest.errors.modalitiesRequired"));
     if (!documentoValido(docTipo, docNumero)) return setErro(t("document.errors.invalid"));
 
     setEnviando(true);
@@ -331,13 +333,7 @@ export default function SolicitarAcesso() {
           {t(papel === "mentor" ? "accessRequest.hints.mentorUnits" : papel === "professor" ? "accessRequest.hints.teacherUnit" : "accessRequest.hints.leaderUnits", { max: MAX_UNIDADES_PEDIDO })}
         </p>
         {papel === "professor" && (
-          <div className="space-y-1">
-            <label htmlFor="pedido-modalidades" className={classeRotulo}>{t("accessRequest.fields.modalities")}</label>
-            <input id="pedido-modalidades" value={modalidades} onChange={(e) => setModalidades(e.target.value)} maxLength={120}
-              className="w-full bg-zinc-900/50 border border-zinc-700 text-white font-bold px-4 py-3 rounded-xl focus:border-red-600 outline-none placeholder:text-zinc-600 placeholder:font-normal"
-              placeholder={t("accessRequest.fields.modalitiesPlaceholder")} />
-            <p className="text-[11px] text-zinc-500 ml-1">{t("accessRequest.hints.modalities")}</p>
-          </div>
+          <SeletorModalidades id="pedido-modalidades" valor={modalidades} onChange={setModalidades} desabilitado={enviando} />
         )}
 
         <div className="space-y-1">

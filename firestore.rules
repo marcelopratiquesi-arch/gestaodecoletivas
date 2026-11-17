@@ -361,7 +361,7 @@ service cloud.firestore {
         || (logado() && request.auth.uid == uid
             && 'google.com' in request.auth.token.firebase.identities
             && camposAlterados().hasOnly(['nome', 'telefone', 'email', 'emailAntigo', 'role', 'loginGoogle', 'cadastroAtualizadoEm', 'documentoOk', 'modalidades'])
-            && request.resource.data.get('modalidades', '') is string && request.resource.data.get('modalidades', '').size() <= 120
+            && request.resource.data.get('modalidades', '') is string && request.resource.data.get('modalidades', '').size() <= 300
             && (!('documentoOk' in request.resource.data) || (request.resource.data.documentoOk == true && existsAfter(caminhoDocumentoUsuario(uid))))
             && request.resource.data.loginGoogle == true
             && request.resource.data.nome is string && request.resource.data.nome.size() >= 3 && request.resource.data.nome.size() <= 80
@@ -399,7 +399,7 @@ service cloud.firestore {
           && d.telefone is string && d.telefone.size() >= 6 && d.telefone.size() <= 30
           && d.get('papel', 'lider') in ['lider', 'mentor', 'professor']
           && (d.get('papel', 'lider') != 'professor' || (ids is list && ids.size() == 1))
-          && d.get('modalidades', '') is string && d.get('modalidades', '').size() <= 120
+          && d.get('modalidades', '') is string && d.get('modalidades', '').size() <= 300
           && d.get('tambemProfessor', false) is bool
           && d.get('unidadeNomes', []) is list && d.get('unidadeNomes', []).size() <= 5
           && ids is list && ids.size() >= 1 && ids.size() <= 5 && ids[0] == d.get('unidadeId', '')

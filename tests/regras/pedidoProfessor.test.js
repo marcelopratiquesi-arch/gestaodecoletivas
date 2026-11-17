@@ -49,7 +49,7 @@ describe('pedido de professor', () => {
   it('NÃO aceita mais de uma unidade, modalidades enormes nem papel inventado', async () => {
     const db = google('nova', 'novata@gmail.com');
     await assertFails(setDoc(doc(db, 'solicitacoes_acesso/nova'), pedidoProf({ unidadeIds: ['uniA', 'uniB'] })));
-    await assertFails(setDoc(doc(db, 'solicitacoes_acesso/nova'), pedidoProf({ modalidades: 'x'.repeat(121) })));
+    await assertFails(setDoc(doc(db, 'solicitacoes_acesso/nova'), pedidoProf({ modalidades: 'x'.repeat(301) })));
     await assertFails(setDoc(doc(db, 'solicitacoes_acesso/nova'), pedidoProf({ papel: 'admin' })));
   });
 });
@@ -106,7 +106,7 @@ describe('professor de login antigo atualiza o cadastro', () => {
   });
   it('NÃO aceita modalidades gigantes nem mudar de função', async () => {
     const base = { nome: 'Prof Antigo', telefone: '(31) 98888-0000', email: 'prof@gmail.com', loginGoogle: true, cadastroAtualizadoEm: serverTimestamp() };
-    await assertFails(updateDoc(doc(google('profAntigo'), 'usuarios/profAntigo'), { ...base, modalidades: 'x'.repeat(121) }));
+    await assertFails(updateDoc(doc(google('profAntigo'), 'usuarios/profAntigo'), { ...base, modalidades: 'x'.repeat(301) }));
     await assertFails(updateDoc(doc(google('profAntigo'), 'usuarios/profAntigo'), { ...base, role: 'lider' }));
   });
 });

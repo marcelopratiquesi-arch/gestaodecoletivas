@@ -1,6 +1,6 @@
 // Dados e funções das telas de entrada (separados dos componentes por causa do recarregamento rápido do Vite).
 import { useEffect, useState } from "react";
-import { doc, getDoc } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, query, where } from "firebase/firestore";
 import { Building2, ShieldCheck, Dumbbell } from "lucide-react";
 import { db } from "../../services/firebase";
 import { VITRINE_CAMINHO } from "../../services/vitrinePublica";
@@ -41,3 +41,27 @@ export function useUnidadesPublicas(ativo = true) {
   }, [ativo, unidades]);
   return unidades;
 }
+
+// Modalidades cadastradas em Configurações (só as ativas), para o professor escolher ao pedir acesso.
+// A coleção é de leitura aberta (quem ainda não tem crachá também lê). Guarda na memória para ler uma vez só.
+let cacheModalidades = null;
+export function useModalidadesAtivas(ativo = true) {
+  const [lista, setLista] = useState(cacheModalidades);
+  useEffect(() => {
+    if (!ativo || cacheModalidades) return;
+    getDocs(query(collection(db, "modalidades"), where("status", "==", "ativa")))
+      .then((snap) => {
+        cacheModalidades = snap.docs
+          .map((d) => ({ id: d.id, nome: String(d.data().nome || "").trim(), cor: d.data().cor || "" }))
+          .filter((m) => m.nome)
+          .sort((a, b) => a.nome.localeCompare(b.nome));
+        setLista(cacheModalidades);
+      })
+      .catch((e) => { console.error(e); setLista([]); });
+  }, [ativo]);
+  return lista; // null = carregando
+}
+
+// As modalidades escolhidas ficam guardadas como texto "Zumba, Pilates" (mesmo formato de sempre).
+export const LIMITE_MODALIDADES = 300;
+export const modalidadesDoTexto = (texto) => String(texto || "").split(",").map((s) => s.trim()).filter(Boolean);
