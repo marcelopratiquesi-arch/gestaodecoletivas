@@ -18,13 +18,18 @@ export function RankingTab({ isMentor, rankingMentores, rankingUnidades }) {
                 const score = item.mediaGeral !== undefined ? item.mediaGeral : item.percentual;
                 const faltas = item.totalPendencias !== undefined ? item.totalPendencias : (item.pendencias?.length || 0);
                 
+                // Sem aula esperada no período (sem cronograma, só feriado...): não ganha pódio nem "100%".
+                const semAulas = isMentor ? item.totalEsperado === 0 : item.unidadesComAulas === 0;
+
                 let podiumClass = "bg-slate-100 text-slate-500 border border-slate-200";
-                if (index === 0) podiumClass = "bg-yellow-400 text-yellow-950 border border-yellow-500 shadow-md shadow-yellow-400/30";
+                if (semAulas) podiumClass = "bg-slate-100 text-slate-400 border border-slate-200";
+                else if (index === 0)podiumClass = "bg-yellow-400 text-yellow-950 border border-yellow-500 shadow-md shadow-yellow-400/30";
                 else if (index === 1) podiumClass = "bg-slate-300 text-slate-800 border border-slate-400 shadow-md shadow-slate-300/30";
                 else if (index === 2) podiumClass = "bg-orange-300 text-orange-950 border border-orange-400 shadow-md shadow-orange-300/30";
 
                 let scoreColor = "text-rose-600";
-                if (score === 100) scoreColor = "text-emerald-600";
+                if (semAulas) scoreColor = "text-slate-400";
+                else if (score === 100)scoreColor = "text-emerald-600";
                 else if (score >= 80) scoreColor = "text-blue-600";
                 else if (score >= 50) scoreColor = "text-amber-600";
 
@@ -48,12 +53,17 @@ export function RankingTab({ isMentor, rankingMentores, rankingUnidades }) {
                             <div className="flex flex-col">
                                 <span className="text-[9px] font-black text-slate-400 tracking-widest uppercase">{t('groupValidation.ranking.score')}</span>
                                 <span className={`text-2xl font-black tracking-tighter leading-none mt-1 ${scoreColor}`}>
-                                    {score}%
+                                    {semAulas ? '—' : `${score}%`}
                                 </span>
                             </div>
                             
                             <div className="text-right">
-                                {faltas > 0 ? (
+                                {semAulas ? (
+                                    <div className="flex flex-col items-end">
+                                        <span className="text-[9px] font-black text-slate-400 tracking-widest uppercase">{t('groupValidation.ranking.status')}</span>
+                                        <span className="text-xs font-black text-slate-500 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-md mt-1 shadow-sm">{t('groupValidation.badges.awaiting')}</span>
+                                    </div>
+                                ) : faltas > 0 ? (
                                     <div className="flex flex-col items-end">
                                         <span className="text-[9px] font-black text-rose-400 tracking-widest uppercase">{t('groupValidation.ranking.pendencies')}</span>
                                         <span className="text-xs font-black text-white bg-rose-500 px-2 py-0.5 rounded-md mt-1 shadow-sm">
