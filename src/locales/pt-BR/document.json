@@ -80,7 +80,19 @@
     "alreadyUsed": "Este documento já está cadastrado:",
     "orphanMentorHint": "Este documento está preso sem cadastro. Peça ao administrador para liberar.",
     "registerLeader": "Cadastrar como líder",
-    "goToRequest": "Ir para o pedido"
+    "goToRequest": "Ir para o pedido",
+    "deleteLeader": "Excluir cadastro e liberar documento",
+    "deleteLeaderHint": "Tira a pessoa das unidades, remove o acesso e libera o documento. Ela pode pedir acesso de novo na hora. As aulas e validações antigas continuam no histórico.",
+    "confirmDeleteLeader": "Excluir o cadastro de {{name}}? Ela sai das unidades, perde o acesso e o documento fica livre.",
+    "auditDeleteLeader": "Cadastro de líder excluído e documento liberado.",
+    "deleteLeaderError": "Não foi possível excluir tudo. Confira a lista de unidades da pessoa e tente de novo; se continuar, peça ao administrador.",
+    "cannot": {
+      "staff": "Esta pessoa é admin ou mentor: o acesso dela só se remove na aba Mentores. Aqui você pode corrigir o documento.",
+      "professor": "Esta pessoa é professora: o cadastro dela se remove na aba Professores. Aqui você pode corrigir o documento.",
+      "liderEProfessor": "Esta pessoa também é professora; para ela não perder o acesso de professora, tire só a função de líder na unidade (aba Líderes). Aqui você pode corrigir o documento.",
+      "outro": "Esta pessoa tem outro tipo de acesso. Aqui você pode corrigir o documento.",
+      "outroMentor": "Esta pessoa também lidera unidades de outro mentor. Aqui você pode corrigir o documento; para excluir o cadastro, peça ao administrador."
+    }
   },
   "invite": {
     "label": "Documento (opcional)",

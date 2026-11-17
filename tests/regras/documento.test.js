@@ -3,7 +3,7 @@
 import { readFileSync } from 'fs';
 import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest';
 import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing';
-import { doc, setDoc, updateDoc, writeBatch, getDoc, getDocs, collection, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, writeBatch, getDoc, getDocs, collection, deleteDoc, deleteField, serverTimestamp } from 'firebase/firestore';
 
 let env;
 beforeAll(async () => {
@@ -270,5 +270,81 @@ describe('achar e liberar o documento de um pedido de acesso (entrou com o e-mai
   });
   it('mentor NÃO apaga a reserva de um líder que já tem crachá de outra unidade', async () => {
     await assertFails(deleteDoc(doc(como('mentor2'), 'documentos_unicos', `cpf_${CPF}`)));
+  });
+});
+
+describe('excluir o cadastro de líder já aprovado e liberar o documento', () => {
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      await setDoc(doc(db, 'unidades/uniA'), { nome: 'A', mentorId: 'mentor1', liderUid: 'liderA', liderNome: 'Líder A' });
+      await setDoc(doc(db, 'documentos_privados/liderA'), { tipo: 'cpf', numero: CPF, atualizadoPor: 'liderA' });
+      await setDoc(doc(db, 'documentos_unicos', `cpf_${CPF}`), { uid: 'liderA', tipo: 'cpf', numero: CPF });
+    });
+  });
+  const excluir = (quem, alvo = 'liderA', numero = CPF) => {
+    const db = como(quem);
+    const b = writeBatch(db);
+    b.update(doc(db, 'unidades/uniA'), { liderUid: deleteField(), liderNome: deleteField() });
+    b.delete(doc(db, 'usuarios', alvo));
+    b.delete(doc(db, 'documentos_privados', alvo));
+    b.delete(doc(db, 'documentos_do_pedido', alvo));
+    b.delete(doc(db, 'documentos_unicos', `cpf_${numero}`));
+    return b.commit();
+  };
+  it('o mentor da unidade exclui o líder e libera o documento', async () => {
+    await assertSucceeds(excluir('mentor1'));
+  });
+  it('o admin também', async () => {
+    await assertSucceeds(excluir('admin1'));
+  });
+  it('NÃO exclui: mentor de outra unidade, outro líder, quem não tem crachá', async () => {
+    await assertFails(excluir('mentor2'));
+    await assertFails(excluir('outroLider'));
+    await assertFails(excluir('forasteiro'));
+  });
+  it('mentor NÃO apaga a gaveta de documento de líder de outra unidade', async () => {
+    await assertFails(deleteDoc(doc(como('mentor2'), 'documentos_privados/liderA')));
+    await assertSucceeds(deleteDoc(doc(como('mentor1'), 'documentos_privados/liderA')));
+  });
+});
+
+describe('mentor exclui líder que tem várias unidades dele (uma por vez)', () => {
+  const ids = ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7'];
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      for (const id of ids) await setDoc(doc(db, `unidades/${id}`), { nome: id, mentorId: 'mentor1', liderUid: 'liderMulti' });
+      await setDoc(doc(db, 'usuarios/liderMulti'), { role: 'lider', unidadeId: 'm1', unidadeIds: ids, nome: 'Multi', loginGoogle: true });
+      await setDoc(doc(db, 'documentos_privados/liderMulti'), { tipo: 'cpf', numero: CPF, atualizadoPor: 'liderMulti' });
+      await setDoc(doc(db, 'documentos_unicos', `cpf_${CPF}`), { uid: 'liderMulti', tipo: 'cpf', numero: CPF });
+    });
+  });
+  it('o mentor acha o documento mesmo com mais de 5 unidades', async () => {
+    await assertSucceeds(getDoc(doc(como('mentor1'), 'documentos_unicos', `cpf_${CPF}`)));
+    await assertFails(getDoc(doc(como('mentor2'), 'documentos_unicos', `cpf_${CPF}`)));
+  });
+  it('tira de 6 unidades, uma por vez, e na última apaga o cadastro e libera o documento', async () => {
+    const db = como('mentor1');
+    let restante = [...ids];
+    for (const id of ids.slice(0, -1)) {
+      restante = restante.filter((x) => x !== id);
+      const b = writeBatch(db);
+      b.update(doc(db, 'usuarios/liderMulti'), { unidadeId: restante[0], unidadeIds: restante, unidadeAlterada: id });
+      b.update(doc(db, `unidades/${id}`), { liderUid: deleteField() });
+      await assertSucceeds(b.commit());
+    }
+    const fim = writeBatch(db);
+    fim.update(doc(db, 'unidades/m7'), { liderUid: deleteField() });
+    fim.delete(doc(db, 'usuarios/liderMulti'));
+    fim.delete(doc(db, 'documentos_privados/liderMulti'));
+    fim.delete(doc(db, 'documentos_unicos', `cpf_${CPF}`));
+    await assertSucceeds(fim.commit());
+  });
+  it('NÃO apaga o cadastro de uma vez enquanto ainda tem várias unidades', async () => {
+    const db = como('mentor1');
+    const b = writeBatch(db);
+    b.delete(doc(db, 'usuarios/liderMulti'));
+    await assertFails(b.commit());
   });
 });
