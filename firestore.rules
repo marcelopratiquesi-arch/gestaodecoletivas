@@ -47,7 +47,7 @@ service cloud.firestore {
 
     // Mentor de alguma das unidades (até 5) de uma lista.
     function mentorDeAlguma(ids) {
-      return ids is list && ids.size() >= 1 && ids.size() <= 5
+      return ids is list && ids.size() >= 1
         && (mentorDaUnidadeId(ids[0])
           || (ids.size() > 1 && mentorDaUnidadeId(ids[1]))
           || (ids.size() > 2 && mentorDaUnidadeId(ids[2]))
@@ -428,7 +428,8 @@ service cloud.firestore {
       allow read: if (logado() && request.auth.uid == uid) || souAdmin() || mentorDoLider(uid);
       allow create, update: if documentoValido()
         && ((logado() && request.auth.uid == uid) || souAdmin() || mentorDoLider(uid));
-      allow delete: if souAdmin();
+      // Apagar: o admin, e o mentor do líder (ao excluir o cadastro do líder e liberar o documento).
+      allow delete: if souAdmin() || mentorDoLider(uid);
     }
 
     // Documento informado no pedido de acesso (ainda sem crachá). Id = login da pessoa: ela grava; ela, o admin
@@ -439,7 +440,7 @@ service cloud.firestore {
             && mentorDoPedido(get(/databases/$(database)/documents/solicitacoes_acesso/$(uid)).data));
       allow create, update: if autenticado() && request.auth.uid == uid && documentoValido();
       // O admin e o mentor do pedido também apagam (libera o documento quando o pedido é recusado ou excluído).
-      allow delete: if (autenticado() && request.auth.uid == uid) || souAdmin()
+      allow delete: if (autenticado() && request.auth.uid == uid) || souAdmin() || mentorDoLider(uid)
         || (exists(/databases/$(database)/documents/solicitacoes_acesso/$(uid))
             && mentorDoPedido(get(/databases/$(database)/documents/solicitacoes_acesso/$(uid)).data));
     }

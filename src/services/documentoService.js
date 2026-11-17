@@ -111,3 +111,10 @@ export async function liberarReserva(tipo, numero) {
   batch.delete(refReserva(tipo, numero));
   await batch.commit();
 }
+
+/** Coloca num batch a limpeza de TODO rastro do documento de `uid` (gaveta do crachá, gaveta do pedido e a reserva). */
+export function apagarDocumentoNoLote(batch, uid, { tipo, numero }) {
+  batch.delete(refGaveta(uid));
+  batch.delete(refGavetaPedido(uid));
+  batch.delete(refReserva(tipo, numero));
+}
