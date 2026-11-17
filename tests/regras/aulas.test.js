@@ -98,9 +98,15 @@ describe('aulas: editar e excluir', () => {
   });
 });
 
-describe('aulas: leitura (por enquanto continua pública, como a página de horários precisa)', () => {
-  it('visitante lê', async () => {
-    await assertSucceeds(getDoc(doc(env.unauthenticatedContext().firestore(), 'aulas/aulaA')));
+describe('aulas: leitura só para quem está logado (tem o valor da aula)', () => {
+  it('visitante não lê', async () => {
+    await assertFails(getDoc(doc(env.unauthenticatedContext().firestore(), 'aulas/aulaA')));
+  });
+  it('conta sem crachá não lê', async () => {
+    await assertFails(getDoc(doc(como('semCracha'), 'aulas/aulaA')));
+  });
+  it('professor, líder, mentor e admin leem', async () => {
+    for (const uid of ['prof1', 'liderA', 'mentor1', 'admin1']) await assertSucceeds(getDoc(doc(como(uid), 'aulas/aulaA')));
   });
 });
 

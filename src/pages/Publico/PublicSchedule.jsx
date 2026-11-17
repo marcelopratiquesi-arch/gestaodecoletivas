@@ -400,7 +400,7 @@ export default function PublicSchedule() {
 
   const buscarOndeTemModalidade = async (modIds, estadoFilter) => {
       try {
-          const q = query(collection(db, 'aulas'), where('modalidadeId', 'in', modIds.slice(0, 10)));
+          const q = query(collection(db, 'aulas_publicas'), where('modalidadeId', 'in', modIds.slice(0, 10)));
           const snap = await getDocs(q);
           const agrupado = {};
 
@@ -427,7 +427,7 @@ export default function PublicSchedule() {
       if (!unidadeSelecionadaId) return;
       setLoadingGrade(true);
 
-      const q = query(collection(db, 'aulas'), where('unidadeId', '==', unidadeSelecionadaId));
+      const q = query(collection(db, 'aulas_publicas'), where('unidadeId', '==', unidadeSelecionadaId));
 
       const unsubscribe = onSnapshot(q, (snap) => {
           const defaultTeacherName = t('publicSchedule.defaultTeacher', 'Instrutor');
