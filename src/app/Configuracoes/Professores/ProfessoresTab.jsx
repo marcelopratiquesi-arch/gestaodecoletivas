@@ -20,11 +20,11 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
 import LinkCentral from "../../../centrais/LinkCentral";
-import { BotaoDeLinha } from "../ui/BotaoDeLinha";
 import { ehLider, unidadesDoLider } from '../../../permissions';
 import PedidosProfessor from "../Pendencias/PedidosProfessor";
 import { BuscaDocumento } from "../Documento/DocumentoModal";
 import { FiltroPadrao } from "../ui/FiltroPadrao";
+import { BotaoDeLinha } from "../ui/BotaoDeLinha";
 import { CabecalhoDaAba, CaixaDeNumeros, BotaoPrincipal, BotaoSecundario } from "../ui/CabecalhoDaAba";
 import { useFiltroCascata } from "../ui/useFiltroCascata";
 
@@ -248,16 +248,16 @@ export function ProfessoresTab() {
   }, [meusVinculos, minhasUnidades]);
   const nomeMentor = useCallback((id) => (catalogosGlobais.mentores || []).find(m => m.id === id)?.nome, [catalogosGlobais.mentores]);
   const nomeLider = useCallback((id) => {
-  // Os números do topo são botões: a aba SEMPRE abre só com os ativos ("ativo"); "" = todos; "inativo" = só inativos.
-  const [statusFiltro, setStatusFiltro] = useState("ativo");
-  const soDoStatus = useCallback((p) => !statusFiltro || (statusFiltro === "ativo") === (p.status === "ativo"), [statusFiltro]);
       for (const u of minhasUnidades) {
-      extra: soDoStatus,
           if (u.liderUid === id) return u.liderNome;
           if (u.lider2Uid === id) return u.lider2Nome;
       }
   }, [minhasUnidades]);
+  // Os números do topo são botões: a aba SEMPRE abre só com os ativos ("ativo"); "" = todos; "inativo" = só inativos.
+  const [statusFiltro, setStatusFiltro] = useState("ativo");
+  const soDoStatus = useCallback((p) => !statusFiltro || (statusFiltro === "ativo") === (p.status === "ativo"), [statusFiltro]);
   const filtro = useFiltroCascata(meusProfessores, {
+      extra: soDoStatus,
       getPais: (p) => p.pais || PAIS_DEFAULT,
       getEstados: (p) => (unidadesDoProf[p.id] || []).map(u => u.estado),
       getMentorIds: (p) => (unidadesDoProf[p.id] || []).map(u => u.mentorId),
@@ -585,7 +585,6 @@ export function ProfessoresTab() {
   return (
     <div className="p-6 animate-fade-in max-w-7xl mx-auto space-y-6 uppercase">
       {/* PEDIDOS DE ACESSO DE PROFESSORES (login pessoal pelo Google) */}
-          ativoExtra={statusFiltro !== "ativo"} aoLimpar={() => setStatusFiltro("ativo")}
       <PedidosProfessor />
       {/* HEADER E KPIS */}
       <CabecalhoDaAba abaId="professores" icone={UserPlus} titulo={t('teachersTab.title', 'Gestão de Professores')} subtitulo={t('teachersTab.subtitle', 'Controle de base e vínculos com as unidades.')}
@@ -606,6 +605,7 @@ export function ProfessoresTab() {
       <FiltroPadrao abaId="professores" filtro={filtro}
           mostrar={["pais", "estado", ...(role === "admin" ? ["mentor"] : []), ...(role === "admin" || role === "mentor" ? ["lider"] : [])]}
           placeholder={t('teachersTab.searchPlaceholder', 'Buscar por nome, telefone ou e-mail...')}
+          ativoExtra={statusFiltro !== "ativo"} aoLimpar={() => setStatusFiltro("ativo")}
           acoes={role === "admin" && (
               <button type="button" onClick={() => setMostrarBuscaDoc(v => !v)} aria-expanded={mostrarBuscaDoc}
                   className={`px-4 py-3 rounded-xl border text-xs font-black uppercase flex items-center justify-center gap-2 transition-colors ${mostrarBuscaDoc
