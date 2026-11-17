@@ -176,6 +176,15 @@ service cloud.firestore {
       allow write: if logado() && !souProfessor();
     }
 
+    // ===================== FERIADOS =====================
+    // Feriado cancela aula (sem pagamento e sem pendência) em todas as unidades do alcance dele, então só o admin
+    // cria, edita ou apaga. Todo mundo que está logado lê (as telas calculam o feriado na hora). O mentor usa
+    // feriados_propostas (logo abaixo). Esta coleção está na lista de exceções da regra-curinga.
+    match /feriados/{feriadoId} {
+      allow read: if logado();
+      allow write: if souAdmin();
+    }
+
     // ===================== PROPOSTAS DE FERIADO (mentor propõe, admin decide) =====================
     // Só o admin cria feriado de verdade (coleção feriados). O mentor PROPÕE aqui: a proposta não afeta aula nenhuma
     // (nenhuma tela de aulas lê esta coleção); o admin aprova (vira feriado) ou recusa. Cada mentor só enxerga as próprias.
@@ -645,7 +654,7 @@ service cloud.firestore {
     // (No Firestore, se QUALQUER regra libera, a ação passa; por isso as exceções precisam estar aqui.)
     match /{colecao}/{resto=**} {
       allow read: if logado() && !(colecao in ['feriados_propostas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos']);
-      allow write: if logado() && !(colecao in ['feriados_propostas', 'usuarios', 'publico', 'validacoes', 'aulas', 'aulas_publicas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'resumos_mensais', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos']) && !souProfessor();
+      allow write: if logado() && !(colecao in ['feriados', 'feriados_propostas', 'usuarios', 'publico', 'validacoes', 'aulas', 'aulas_publicas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'resumos_mensais', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos']) && !souProfessor();
       allow create: if logado() && colecao in ['auditoria_cronograma', 'auditoria_configuracoes'];
     }
   }
