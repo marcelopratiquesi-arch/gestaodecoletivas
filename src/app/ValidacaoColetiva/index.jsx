@@ -3,7 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useCatalogs } from '../../contexts/CatalogContext'; 
 import { db } from '../../services/firebase';
 // 🟢 Importamos o addDoc e serverTimestamp para o X-9 da LGPD
-import { collection, query, where, onSnapshot, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, getDoc, doc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { ShieldCheck, LayoutDashboard, Download, MapPin, UserCog, Building2, Lock, Calendar, CheckCircle2, AlertCircle, Trophy, List, MessageSquare } from 'lucide-react';
 
 import { KPICard, MultiSelectDropdown, getTodayStr, normalizeDate, getDatesInRange, formatHeaderPeriodo, formatDateShort, filterPendingDates, getFirstLast, getEmojiByPercent } from './components';
@@ -14,8 +14,10 @@ import { feriadoNoDia, ehCancelamentoAutomaticoDeFeriado } from '../../utils/fer
 import { useTranslation } from 'react-i18next';
 import { emBlocos } from '../../services/resumosMensais';
 
-// Usuários guardados entre aberturas da tela (ver efeito abaixo).
-let cacheUsuarios = { uid: null, quando: 0, lista: [] };
+// Nomes de quem validou (e que não são mentor nem professor do catálogo), buscados um a um e guardados
+// entre aberturas da tela. Antes a tela baixava a coleção "usuarios" inteira (~700 leituras) a cada abertura.
+const cacheNomes = new Map();
+const ESPERA_FILTRO_MS = 600;
 
 export default function ValidacaoColetiva() {
   const { userData } = useAuth();
@@ -28,7 +30,7 @@ export default function ValidacaoColetiva() {
   const [loadingRealtime, setLoadingRealtime] = useState(true);
   // Erro ao buscar as validações (ex.: cota do banco esgotada): sem isso tudo apareceria como ATRASADO.
   const [erroEscuta, setErroEscuta] = useState(false);
-  const [usuariosBase, setUsuariosBase] = useState([]);
+  const [nomesExtras, setNomesExtras] = useState(() => [...cacheNomes.values()].filter(Boolean));
   const [validacoesBase, setValidacoesBase] = useState([]);
   
   const [modoFiltro, setModoFiltro] = useState('dia'); 
@@ -48,27 +50,23 @@ export default function ValidacaoColetiva() {
   const isCofreGlobalFechado = role === 'admin' ? (estadoFiltro.length === 0 && mentorFiltro.length === 0 && unidadeFiltro.length === 0) : role === 'mentor' ? (estadoFiltro.length === 0 && unidadeFiltro.length === 0) : false;
 
   const [now, setNow] = useState(new Date());
+  // O relógio só precisa andar quando o período inclui hoje (aula de hoje que acabou de começar).
+  // Mês/dia que já passou não muda com o tempo: não refaz a conta toda a cada minuto.
   useEffect(() => {
+    if (dataFim < getTodayStr()) return;
     const interval = setInterval(() => setNow(new Date()), 60000);
     return () => clearInterval(interval);
-  }, []);
+  }, [dataFim]);
 
   useEffect(() => { if (dataInicio > dataFim) setDataFim(dataInicio); }, [dataInicio, dataFim]);
 
-  // Lista de usuários (nomes de quem validou e dos mentores): ~700 leituras, então fica guardada por 30 min
-  // em vez de ser baixada a cada abertura da tela.
-  useEffect(() => {
-      if (!userId) return;
-      if (cacheUsuarios.uid === userId && Date.now() - cacheUsuarios.quando < 30 * 60 * 1000) {
-          setUsuariosBase(cacheUsuarios.lista);
-          return;
-      }
-      getDocs(collection(db, 'usuarios')).then(snap => {
-          const lista = snap.docs.map(d => ({id: d.id, ...d.data()}));
-          cacheUsuarios = { uid: userId, quando: Date.now(), lista };
-          setUsuariosBase(lista);
-      }).catch(e => console.error(e));
-  }, [userId]);
+  // Quem aparece com nome: mentores e professores já vêm no catálogo (0 leituras extras);
+  // os demais validadores (admin, líder) são buscados só quando aparecem numa validação (ver efeito mais abaixo).
+  const usuariosBase = useMemo(() => {
+      const lista = [...(catalogs?.mentores || [])];
+      (catalogs?.professores || []).forEach(p => { if (p.uidLogin) lista.push({ id: p.uidLogin, nome: p.nome, role: 'professor', telefone: p.telefone }); });
+      return lista.concat(nomesExtras);
+  }, [catalogs?.mentores, catalogs?.professores, nomesExtras]);
 
   const unidadesBase = useMemo(() => {
       if (!catalogs?.unidades) return [];
@@ -103,10 +101,23 @@ export default function ValidacaoColetiva() {
       return JSON.stringify(u.map(x => x.id).sort());
   }, [unidadesFiltradasEstado, mentorFiltro, unidadeFiltro]);
 
+  // ECONOMIA DE COTA: quem marca 5 unidades uma por uma não paga 5 leituras do período. A busca só sai
+  // depois que a pessoa para de mexer no filtro por um instante.
+  const chaveBusca = JSON.stringify([dataInicio, dataFim, JSON.parse(escopoUnidades)]);
+  const [chaveAplicada, setChaveAplicada] = useState(chaveBusca);
+  useEffect(() => {
+    if (chaveBusca === chaveAplicada) return;
+    // Primeira busca (ainda sem unidades escolhidas/carregadas) sai na hora; só as trocas seguintes esperam.
+    const semBuscaAnterior = JSON.parse(chaveAplicada)[2].length === 0;
+    const espera = setTimeout(() => setChaveAplicada(chaveBusca), semBuscaAnterior ? 0 : ESPERA_FILTRO_MS);
+    return () => clearTimeout(espera);
+  }, [chaveBusca, chaveAplicada]);
+  const aguardandoFiltro = chaveBusca !== chaveAplicada;
+
   useEffect(() => {
     if (!userId || loadingCatalogs) return;
     if (isCofreGlobalFechado) { setValidacoesBase([]); setLoadingRealtime(false); return; }
-    const ids = JSON.parse(escopoUnidades);
+    const [dataInicio, dataFim, ids] = JSON.parse(chaveAplicada);
     if (ids.length === 0) { setValidacoesBase([]); setLoadingRealtime(false); return; }
     setLoadingRealtime(true);
     setErroEscuta(false);
@@ -121,7 +132,21 @@ export default function ValidacaoColetiva() {
         e => { console.error(e); setErroEscuta(true); setLoadingRealtime(false); }
     ));
     return () => cancelar.forEach(unsub => unsub());
-  }, [dataInicio, dataFim, userId, isCofreGlobalFechado, loadingCatalogs, escopoUnidades]); 
+  }, [chaveAplicada, userId, isCofreGlobalFechado, loadingCatalogs]);
+
+  // Nomes de quem validou e não está no catálogo (admin, líder...): 1 leitura por pessoa, guardada na memória.
+  useEffect(() => {
+    const conhecidos = new Set(usuariosBase.flatMap(u => [u.id, u.uid, u.uidLogin]).filter(Boolean));
+    const faltam = [...new Set(validacoesBase.map(v => v.userId || v.validadoPor || v.user_id || v.uid).filter(Boolean))]
+        .filter(id => !conhecidos.has(id) && !cacheNomes.has(id));
+    if (faltam.length === 0) return;
+    let cancelado = false;
+    Promise.all(faltam.slice(0, 60).map(id => getDoc(doc(db, 'usuarios', id))
+        .then(s => cacheNomes.set(id, s.exists() ? { id, ...s.data() } : null))
+        .catch(() => {})))
+      .then(() => { if (!cancelado) setNomesExtras([...cacheNomes.values()].filter(Boolean)); });
+    return () => { cancelado = true; };
+  }, [validacoesBase, usuariosBase]);
 
   const dadosProcessados = useMemo(() => {
     if (unidadesBase.length === 0 || isCofreGlobalFechado) return { mentores: [], unidades: [], kpis: { totalAulas: 0, unidadesValidadas: 0, unidadesPendentes: 0 } };
@@ -513,7 +538,7 @@ export default function ValidacaoColetiva() {
               <h3 className="text-xl font-black text-rose-700 dark:text-rose-300 mb-2">{t('groupValidation.error.title')}</h3>
               <p className="text-rose-600 dark:text-rose-300 text-sm font-medium max-w-lg mx-auto leading-relaxed">{t('groupValidation.error.desc')}</p>
           </div>
-      ) : loadingRealtime ? (
+      ) : (loadingRealtime || aguardandoFiltro) ? (
           <div className="py-24 text-center text-slate-400 font-black tracking-widest animate-pulse">{t('groupValidation.syncing')}</div>
       ) : (
           <>
