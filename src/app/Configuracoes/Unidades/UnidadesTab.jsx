@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useAuth } from "../../../contexts/AuthContext";
 import {
   collection, addDoc, updateDoc, doc, query, where, serverTimestamp, writeBatch, onSnapshot, getDocs, deleteField
@@ -8,10 +8,14 @@ import { tirarLiderDaUnidade } from "../Lideres/saidaDoLider";
 import { publicarUnidade, publicarUnidades, removerUnidadeDaVitrine, ehCampoPublicoUnidade, reconstruirVitrine } from "../../../services/vitrinePublica";
 import { useTranslation } from "react-i18next";
 import LinkUnidade from "../../../centrais/LinkUnidade";
+import { FiltroPadrao } from "../ui/FiltroPadrao";
+import { BotaoDeLinha } from "../ui/BotaoDeLinha";
+import { CabecalhoDaAba, CaixaDeNumeros, BotaoPrincipal, BotaoSecundario } from "../ui/CabecalhoDaAba";
+import { useFiltroCascata } from "../ui/useFiltroCascata";
 
 import { 
     Building2, MapPin, Edit2, Trash2, AlertTriangle, CheckCircle2, 
-    Loader2, User, Search, Mail, Lock, Globe, Key, ChevronDown, ChevronUp, Ban, PowerOff, Plus, X, Phone, Check,
+    Loader2, User, Mail, Lock, Globe, Key, ChevronDown, ChevronUp, Ban, PowerOff, Plus, X, Phone, Check,
     Map, Maximize, GripHorizontal, Upload, FileSpreadsheet, ShieldAlert, UserCheck
 } from "lucide-react";
 
@@ -267,10 +271,6 @@ export function UnidadesTab() {
   });
   const [loading, setLoading] = useState(true);
   
-  const [busca, setBusca] = useState("");
-  const [estadoFiltro, setEstadoFiltro] = useState("");
-  const [mentorFiltro, setMentorFiltro] = useState("");
-  const [paisFiltro, setPaisFiltro] = useState("");
   const [sortConfig, setSortConfig] = useState({ field: 'nome', direction: 'asc' });
   
   const [modalUnidadeAberto, setModalUnidadeAberto] = useState(false);
@@ -350,35 +350,37 @@ export function UnidadesTab() {
     return () => { unsubUnidades(); unsubMentores(); };
   }, [role, userId, podeAcessar]);
 
-  const unidadesProcessadas = useMemo(() => {
-      let resultado = unidadesBase;
-      if (estadoFiltro) resultado = resultado.filter(u => u.estado === estadoFiltro);
-      if (mentorFiltro) resultado = resultado.filter(u => u.mentorId === mentorFiltro);
-      
-      if (paisFiltro) {
-          resultado = resultado.filter(u => {
-              const uPais = u.pais || PAIS_DEFAULT;
-              if (uPais === "Brasil" && paisFiltro === "BR") return true;
-              if (uPais === "Argentina" && paisFiltro === "AR") return true;
-              if (uPais === "Estados Unidos" && paisFiltro === "US") return true;
-              return uPais === paisFiltro;
-          });
+  // Filtro padrão (busca + país → estado → mentor → líder), no navegador sobre as unidades já carregadas.
+  // Unidades antigas podem ter o país escrito por extenso ("Brasil"); aqui tudo vira a sigla (BR/AR/US).
+  const SIGLA_PAIS = { Brasil: "BR", Argentina: "AR", "Estados Unidos": "US" };
+  const nomeMentor = useCallback((id) => mentores.find(m => m.id === id)?.nome, [mentores]);
+  const nomeLider = useCallback((id) => {
+      for (const u of unidadesBase) {
+          if (u.liderUid === id) return u.liderNome;
+          if (u.lider2Uid === id) return u.lider2Nome;
       }
+  }, [unidadesBase]);
+  // Os números do topo são botões: a aba SEMPRE abre só com as ativas ("ativa"); "" = todas; "inativa" = só inativas.
+  const [statusFiltro, setStatusFiltro] = useState("ativa");
+  const soDoStatus = useCallback((u) => !statusFiltro || (statusFiltro === "ativa") === (u.status === "ativa"), [statusFiltro]);
+  const filtro = useFiltroCascata(unidadesBase, {
+      extra: soDoStatus,
+      getPais: (u) => SIGLA_PAIS[u.pais] || u.pais || PAIS_DEFAULT,
+      getEstados: (u) => [u.estado],
+      getMentorIds: (u) => [u.mentorId],
+      getLiderIds: (u) => [u.liderUid, u.lider2Uid],
+      textoBusca: (u) => [u.nome, u.email, u.estado, u.telefone, u.liderNome, u.lider2Nome],
+      nomeMentor, nomeLider,
+  });
 
-      if (busca.trim()) {
-          const termo = busca.toLowerCase();
-          resultado = resultado.filter(u => 
-              (u.nome || "").toLowerCase().includes(termo) || (u.email || "").toLowerCase().includes(termo) ||
-              (u.estado || "").toLowerCase().includes(termo) || (u.telefone || "").toLowerCase().includes(termo)
-          );
-      }
-      return resultado.sort((a, b) => {
+  const unidadesProcessadas = useMemo(() => {
+      return [...filtro.resultado].sort((a, b) => {
           let valA = (a[sortConfig.field] || "").toLowerCase(); let valB = (b[sortConfig.field] || "").toLowerCase();
           if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
           if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
           return 0;
       });
-  }, [unidadesBase, busca, estadoFiltro, mentorFiltro, paisFiltro, sortConfig]);
+  }, [filtro.resultado, sortConfig]);
 
   const handleSort = (field) => { setSortConfig(prev => ({ field, direction: prev.field === field && prev.direction === 'asc' ? 'desc' : 'asc' })); };
   const SortIcon = ({ field }) => {
@@ -767,50 +769,23 @@ export function UnidadesTab() {
     <>
       <div className="p-6 animate-fade-in max-w-[1600px] mx-auto space-y-6 uppercase">
         
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-slate-200 dark:border-slate-700 pb-6">
-          <div>
-            <h2 className="text-2xl font-black text-slate-800 dark:text-white flex items-center gap-3">
-              <span className="p-2 bg-red-600 text-white rounded-lg shadow-md shadow-red-500/20"><Building2 className="w-6 h-6"/></span>
-              {t('unitsTab.title', 'Gestão de Unidades')}
-            </h2>
-            <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-2">{t('unitsTab.subtitle', { count: kpis.total })}</p>
-          </div>
-
-          <div className="flex gap-3 w-full md:w-auto h-[48px]">
-              <div className="flex items-center gap-4 bg-white dark:bg-slate-800 px-4 h-full rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
-                  <div className="text-center">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('unitsTab.extra.total')}</p>
-                      <p className="text-lg font-black text-slate-700 dark:text-white leading-none">{kpis.total}</p>
-                  </div>
-                  <div className="w-px h-8 bg-slate-200 dark:bg-slate-700"></div>
-                  <div className="text-center">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('unitsTab.extra.active')}</p>
-                      <p className="text-lg font-black text-green-600 leading-none">{kpis.ativas}</p>
-                  </div>
-                  <div className="w-px h-8 bg-slate-200 dark:bg-slate-700"></div>
-                  <div className="text-center">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('unitsTab.extra.inactive')}</p>
-                      <p className="text-lg font-black text-red-500 leading-none">{kpis.inativas}</p>
-                  </div>
-              </div>
-              
-              {role === 'admin' && (
-                  <>
-                      <input type="file" accept=".csv" ref={fileInputRef} className="hidden" onChange={handleFileUpload} />
-                      <button onClick={() => fileInputRef.current.click()} className="px-5 h-full bg-slate-800 dark:bg-slate-900 text-white rounded-xl font-bold text-xs uppercase tracking-wide hover:bg-slate-700 shadow-lg flex items-center justify-center gap-2 transition-transform active:scale-95 border dark:border-slate-700 whitespace-nowrap">
-                          <Upload className="w-4 h-4"/> Importar Infra (CSV)
-                      </button>
-                      <button onClick={atualizarPaginaPublica} disabled={atualizandoVitrine} title={t('unitsTab.publicPage.hint')} className="px-5 h-full bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl font-bold text-xs uppercase tracking-wide hover:bg-slate-50 dark:hover:bg-slate-700 shadow-lg flex items-center justify-center gap-2 transition-transform active:scale-95 border border-slate-200 dark:border-slate-700 whitespace-nowrap disabled:opacity-50">
-                          {atualizandoVitrine ? <Loader2 className="w-4 h-4 animate-spin"/> : <Globe className="w-4 h-4"/>} {t('unitsTab.publicPage.button')}
-                      </button>
-                  </>
-              )}
-
-              <button onClick={abrirNovaUnidade} className="px-5 h-full bg-red-600 text-white rounded-xl font-bold text-xs uppercase tracking-wide hover:bg-red-700 shadow-lg shadow-red-500/20 flex items-center justify-center gap-2 transition-transform active:scale-95 whitespace-nowrap">
-                  <Plus className="w-4 h-4"/> {t('unitsTab.newUnit', 'Nova Unidade')}
-              </button>
-          </div>
-        </div>
+        <CabecalhoDaAba abaId="unidades" icone={Building2} titulo={t('unitsTab.title', 'Gestão de Unidades')} subtitulo={t('unitsTab.subtitle', { count: kpis.total })}
+          numeros={<CaixaDeNumeros abaId="unidades" itens={[
+            { id: "total", rotulo: t('unitsTab.extra.total'), valor: kpis.total, onClick: () => setStatusFiltro(""), ativo: statusFiltro === "" },
+            { id: "ativa", rotulo: t('unitsTab.extra.active'), valor: kpis.ativas, cor: "text-green-600", onClick: () => setStatusFiltro("ativa"), ativo: statusFiltro === "ativa" },
+            { id: "inativa", rotulo: t('unitsTab.extra.inactive'), valor: kpis.inativas, cor: "text-red-500", onClick: () => setStatusFiltro("inativa"), ativo: statusFiltro === "inativa" },
+          ]} />}>
+          {role === 'admin' && (
+            <>
+              <input type="file" accept=".csv" ref={fileInputRef} className="hidden" onChange={handleFileUpload} />
+              <BotaoSecundario icone={Upload} onClick={() => fileInputRef.current.click()}>Importar Infra (CSV)</BotaoSecundario>
+              <BotaoSecundario icone={atualizandoVitrine ? Loader2 : Globe} onClick={atualizarPaginaPublica} disabled={atualizandoVitrine} girar={atualizandoVitrine} title={t('unitsTab.publicPage.hint')}>
+                {t('unitsTab.publicPage.button')}
+              </BotaoSecundario>
+            </>
+          )}
+          <BotaoPrincipal abaId="unidades" icone={Plus} onClick={abrirNovaUnidade}>{t('unitsTab.newUnit', 'Nova Unidade')}</BotaoPrincipal>
+        </CabecalhoDaAba>
 
         {role === 'admin' && unidadesComSenhaGravada.length > 0 && (
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-2xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 normal-case">
@@ -842,48 +817,10 @@ export function UnidadesTab() {
             </div>
         )}
 
-        <div className="flex flex-col lg:flex-row gap-4 items-center">
-            <div className="relative w-full lg:w-96 group">
-                <Search className="absolute left-4 top-3.5 w-5 h-5 text-slate-400 group-focus-within:text-red-500 transition-colors"/>
-                <input 
-                    type="text" placeholder={t('unitsTab.searchPlaceholder', "Buscar unidade, estado...")} 
-                    className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-red-500/50 shadow-sm transition-all dark:text-white"
-                    value={busca} onChange={(e) => setBusca(e.target.value)}
-                />
-            </div>
-            
-            {role === 'admin' && (
-                <div className="flex w-full lg:w-auto gap-4 flex-col sm:flex-row">
-                    <div className="relative w-full sm:w-56">
-                        <select value={estadoFiltro} onChange={e => setEstadoFiltro(e.target.value)} className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold uppercase outline-none appearance-none shadow-sm dark:text-white">
-                            <option value="">{t('unitsTab.extra.allStates').toUpperCase()}</option>
-                            {[...new Set(unidadesBase.map(u => u.estado).filter(Boolean))].sort().map(e => <option key={e} value={e}>{e}</option>)}
-                        </select>
-                        <ChevronDown className="absolute right-4 top-3.5 w-4 h-4 text-slate-400 pointer-events-none"/>
-                    </div>
-                    
-                    <div className="relative w-full sm:w-56">
-                        <select 
-                            value={paisFiltro} 
-                            onChange={e => setPaisFiltro(e.target.value)} 
-                            className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold uppercase outline-none appearance-none shadow-sm dark:text-white"
-                        >
-                            <option value="">{t('unitsTab.extra.allCountries').toUpperCase()}</option>
-                            {PAISES.map(p => <option key={p.id} value={p.id}>{t(`common.countries.${p.id}`, p.nome)}</option>)}
-                        </select>
-                        <ChevronDown className="absolute right-4 top-3.5 w-4 h-4 text-slate-400 pointer-events-none"/>
-                    </div>
-
-                    <div className="relative w-full sm:w-64">
-                        <select value={mentorFiltro} onChange={e => setMentorFiltro(e.target.value)} className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold uppercase outline-none appearance-none shadow-sm dark:text-white">
-                            <option value="">{t('unitsTab.extra.allMentors').toUpperCase()}</option>
-                            {mentores.map(m => <option key={m.id} value={m.id}>{m.nome}</option>)}
-                        </select>
-                        <ChevronDown className="absolute right-4 top-3.5 w-4 h-4 text-slate-400 pointer-events-none"/>
-                    </div>
-                </div>
-            )}
-        </div>
+        <FiltroPadrao abaId="unidades" filtro={filtro}
+            mostrar={["pais", "estado", ...(role === 'admin' ? ["mentor"] : []), "lider"]}
+            placeholder={t('unitsTab.searchPlaceholder', "Buscar unidade, estado...")}
+            ativoExtra={statusFiltro !== "ativa"} aoLimpar={() => setStatusFiltro("ativa")} />
 
         {/* === TABELA DE ALTA DENSIDADE === */}
         <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden shadow-sm">
@@ -1056,15 +993,10 @@ export function UnidadesTab() {
 
                       <td className="px-3 py-2 text-right">
                           <div className="flex gap-1 justify-end opacity-50 group-hover:opacity-100 transition-opacity">
-                              <button onClick={() => abrirEditarUnidade(u)} className="p-1.5 rounded-md bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-600 transition-colors" title={t('unitsTab.table.edit', "Editar Unidade")}>
-                                  <Edit2 className="w-3.5 h-3.5"/>
-                              </button>
-                              <button onClick={() => alternarStatus(u)} className={`p-1.5 rounded-md transition-colors ${u.status === "ativa" ? "bg-orange-50 text-orange-600 hover:bg-orange-500 hover:text-white dark:bg-orange-900/30 dark:text-orange-400" : "bg-green-50 text-green-600 hover:bg-green-500 hover:text-white dark:bg-green-900/30 dark:text-green-400"}`} title={u.status === "ativa" ? "Suspender" : "Reativar"}>
-                                  {u.status === "ativa" ? <PowerOff className="w-3.5 h-3.5"/> : <CheckCircle2 className="w-3.5 h-3.5"/>}
-                              </button>
-                              <button onClick={() => excluir(u)} className="p-1.5 rounded-md bg-red-50 text-red-600 hover:bg-red-600 hover:text-white dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-600 transition-colors" title={t('unitsTab.table.delete', "Excluir")}>
-                                  <Trash2 className="w-3.5 h-3.5"/>
-                              </button>
+                              <BotaoDeLinha abaId="unidades" compacto icone={Edit2} onClick={() => abrirEditarUnidade(u)} title={t('unitsTab.table.edit', "Editar Unidade")} />
+                              <BotaoDeLinha abaId="unidades" compacto tipo={u.status === "ativa" ? "desativar" : "ativar"} icone={u.status === "ativa" ? PowerOff : CheckCircle2} onClick={() => alternarStatus(u)}
+                                  title={u.status === "ativa" ? "Suspender" : "Reativar"} />
+                              <BotaoDeLinha abaId="unidades" compacto tipo="perigo" icone={Trash2} onClick={() => excluir(u)} title={t('unitsTab.table.delete', "Excluir")} />
                           </div>
                       </td>
                     </tr>

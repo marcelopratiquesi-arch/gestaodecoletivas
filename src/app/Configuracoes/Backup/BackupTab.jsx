@@ -3,6 +3,7 @@ import { db } from '../../../services/firebase';
 import { collection, getDocs, getCountFromServer, writeBatch, doc } from 'firebase/firestore';
 import * as XLSX from 'xlsx';
 import { useTranslation, Trans } from 'react-i18next';
+import { CabecalhoDaAba } from '../ui/CabecalhoDaAba';
 import {
   Database, Download, Upload, FileJson, FileSpreadsheet,
   TriangleAlert, CircleCheck, Loader2, ShieldAlert, Archive, X
@@ -238,28 +239,18 @@ export default function BackupTab() {
   return (
     <div className="p-6 space-y-8 animate-fade-in">
 
-      {/* STATUS HEADER */}
-      <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-6 rounded-xl flex items-center gap-4">
-        <div className="bg-blue-100 dark:bg-blue-900 p-3 rounded-full">
-            <Database className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-        </div>
-        <div className="flex-1">
-            <h2 className="text-xl font-bold text-slate-800 dark:text-white">{t('backupTab.title')}</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-                {t('backupTab.subtitle')}
-            </p>
-        </div>
+      <CabecalhoDaAba abaId="backup" icone={Database} titulo={t('backupTab.title')} subtitulo={t('backupTab.subtitle')}>
         {loading && (
-            <div className="text-right">
-                <div className="flex items-center gap-2 text-blue-600 font-bold text-sm mb-1">
-                    <Loader2 className="w-4 h-4 animate-spin" /> {progress}%
-                </div>
-                <div className="w-32 h-2 bg-slate-200 rounded-full overflow-hidden">
-                    <div className="h-full bg-blue-600 transition-all duration-300" style={{width: `${progress}%`}}></div>
-                </div>
+          <div className="text-right self-center">
+            <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300 font-bold text-sm mb-1">
+              <Loader2 className="w-4 h-4 animate-spin" /> {progress}%
             </div>
+            <div className="w-32 h-2 bg-slate-200 rounded-full overflow-hidden">
+              <div className="h-full bg-slate-600 transition-all duration-300" style={{width: `${progress}%`}}></div>
+            </div>
+          </div>
         )}
-      </div>
+      </CabecalhoDaAba>
 
       {statusMsg && (
           <div className={`p-4 rounded-lg font-bold text-sm flex items-center gap-2 ${statusErro ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"}`}>

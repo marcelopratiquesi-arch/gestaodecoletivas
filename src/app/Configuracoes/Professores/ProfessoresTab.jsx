@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 // Importações de contexto e serviços
 import { useAuth } from "../../../contexts/AuthContext";
 import { useCatalogs } from "../../../contexts/CatalogContext";
@@ -14,7 +14,7 @@ import { initializeApp, getApp, deleteApp } from "firebase/app";
 
 // TODOS OS ÍCONES IMPORTADOS CORRETAMENTE
 import { 
-  UserPlus, Edit2, Trash2, Link as LinkIcon, Loader2, Search, CheckCircle2, 
+  UserPlus, Edit2, Trash2, Link as LinkIcon, Loader2, Search, ScanSearch, CheckCircle2, 
   X, Mail, Phone, PlusCircle, User, AlertTriangle, ChevronDown, 
   ChevronUp, ArrowDown, ArrowRight, DownloadCloud, Layers, Ban, ShieldCheck, MapPin
 } from "lucide-react";
@@ -22,6 +22,11 @@ import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
 import LinkCentral from "../../../centrais/LinkCentral";
 import { ehLider, unidadesDoLider } from '../../../permissions';
 import PedidosProfessor from "../Pendencias/PedidosProfessor";
+import { BuscaDocumento } from "../Documento/DocumentoModal";
+import { FiltroPadrao } from "../ui/FiltroPadrao";
+import { BotaoDeLinha } from "../ui/BotaoDeLinha";
+import { CabecalhoDaAba, CaixaDeNumeros, BotaoPrincipal, BotaoSecundario } from "../ui/CabecalhoDaAba";
+import { useFiltroCascata } from "../ui/useFiltroCascata";
 
 // 🌍 PADRÃO OURO INTERNACIONAL — mesma identidade visual usada em MentoresTab
 const PAIS_CONFIG = {
@@ -148,8 +153,7 @@ export function ProfessoresTab() {
   
   // UX: Paginação e Ordenação
   const [itensVisiveis, setItensVisiveis] = useState(20);
-  const [busca, setBusca] = useState("");
-  const [paisFiltro, setPaisFiltro] = useState(""); // 🟢 FILTRO DE PAÍS
+  const [mostrarBuscaDoc, setMostrarBuscaDoc] = useState(false); // busca por CPF/DNI/SSN (o banco só deixa o admin consultar)
   const [ordenacao, setOrdenacao] = useState({ campo: 'nome', direcao: 'asc' });
 
   // Modais
@@ -232,23 +236,41 @@ export function ProfessoresTab() {
   }, [professoresTotais, meusVinculos, role]);
 
   // ==========================================
+  // 2b. FILTRO PADRÃO (busca + país → estado → mentor → líder), no navegador
+  // ==========================================
+  // Estado, mentor e líder do professor vêm das unidades onde ele dá aula — só as que a pessoa logada enxerga
+  // (o mentor não descobre unidades nem mentores de outros). Nenhuma leitura nova.
+  const unidadesDoProf = useMemo(() => {
+      const porId = new Map(minhasUnidades.map(u => [String(u.id), u]));
+      const mapa = {};
+      meusVinculos.forEach(v => { const u = porId.get(String(v.unidadeId)); if (u) (mapa[v.professorId] ||= []).push(u); });
+      return mapa;
+  }, [meusVinculos, minhasUnidades]);
+  const nomeMentor = useCallback((id) => (catalogosGlobais.mentores || []).find(m => m.id === id)?.nome, [catalogosGlobais.mentores]);
+  const nomeLider = useCallback((id) => {
+      for (const u of minhasUnidades) {
+          if (u.liderUid === id) return u.liderNome;
+          if (u.lider2Uid === id) return u.lider2Nome;
+      }
+  }, [minhasUnidades]);
+  // Os números do topo são botões: a aba SEMPRE abre só com os ativos ("ativo"); "" = todos; "inativo" = só inativos.
+  const [statusFiltro, setStatusFiltro] = useState("ativo");
+  const soDoStatus = useCallback((p) => !statusFiltro || (statusFiltro === "ativo") === (p.status === "ativo"), [statusFiltro]);
+  const filtro = useFiltroCascata(meusProfessores, {
+      extra: soDoStatus,
+      getPais: (p) => p.pais || PAIS_DEFAULT,
+      getEstados: (p) => (unidadesDoProf[p.id] || []).map(u => u.estado),
+      getMentorIds: (p) => (unidadesDoProf[p.id] || []).map(u => u.mentorId),
+      getLiderIds: (p) => (unidadesDoProf[p.id] || []).flatMap(u => [u.liderUid, u.lider2Uid]),
+      textoBusca: (p) => [p.nome, p.email, p.telefone],
+      nomeMentor, nomeLider,
+  });
+
+  // ==========================================
   // 3. PROCESSADOR VISUAL (BUSCA, PAÍS E ORDENAÇÃO)
   // ==========================================
   const professoresProcessados = useMemo(() => {
-    const termo = busca.toLowerCase();
-    
-    let lista = meusProfessores.filter(p => 
-        (p.nome || "").toLowerCase().includes(termo) || 
-        (p.email || "").toLowerCase().includes(termo) ||
-        (p.telefone || "").includes(termo)
-    );
-
-    // 🟢 FILTRO POR PAÍS: Brasil só mostra Brasil, Argentina só Argentina, Estados Unidos só Estados Unidos
-    if (paisFiltro) {
-        lista = lista.filter(p => (p.pais || PAIS_DEFAULT) === paisFiltro);
-    }
-
-    return lista.sort((a, b) => {
+    return [...filtro.resultado].sort((a, b) => {
         let valA, valB;
         if (ordenacao.campo === 'unidades') {
             valA = vinculos.filter(v => v.professorId === a.id).length;
@@ -262,7 +284,7 @@ export function ProfessoresTab() {
         if (valA > valB) return ordenacao.direcao === 'asc' ? 1 : -1;
         return 0;
     });
-  }, [meusProfessores, vinculos, busca, paisFiltro, ordenacao]);
+  }, [filtro.resultado, vinculos, ordenacao]);
 
   const professoresVisiveis = useMemo(() => {
       return professoresProcessados.slice(0, itensVisiveis);
@@ -565,90 +587,35 @@ export function ProfessoresTab() {
       {/* PEDIDOS DE ACESSO DE PROFESSORES (login pessoal pelo Google) */}
       <PedidosProfessor />
       {/* HEADER E KPIS */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-slate-200 dark:border-slate-700 pb-6">
-        <div>
-          <h2 className="text-2xl font-black text-slate-800 dark:text-white flex items-center gap-3">
-            <span className="p-2 bg-green-600 text-white rounded-lg shadow-md shadow-green-500/20">
-                <UserPlus className="w-6 h-6"/>
-            </span>
-            {t('teachersTab.title', 'Gestão de Professores')}
-          </h2>
-          <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-2">
-              {t('teachersTab.subtitle', 'Controle de base e vínculos com as unidades.')}
-          </p>
-        </div>
+      <CabecalhoDaAba abaId="professores" icone={UserPlus} titulo={t('teachersTab.title', 'Gestão de Professores')} subtitulo={t('teachersTab.subtitle', 'Controle de base e vínculos com as unidades.')}
+        numeros={<CaixaDeNumeros abaId="professores" itens={[
+          { id: "total", rotulo: t('teachersTab.stats.total', 'Total'), valor: kpis.total, onClick: () => setStatusFiltro(""), ativo: statusFiltro === "" },
+          { id: "ativo", rotulo: t('teachersTab.stats.active', 'Ativos'), valor: kpis.ativos, cor: "text-green-600", onClick: () => setStatusFiltro("ativo"), ativo: statusFiltro === "ativo" },
+          { id: "inativo", rotulo: t('teachersTab.stats.inactive', 'Inativos'), valor: kpis.inativos, cor: "text-red-500", onClick: () => setStatusFiltro("inativo"), ativo: statusFiltro === "inativo" },
+        ]} />}>
+        {role === "admin" && (
+          <BotaoSecundario icone={corrigindoBase ? Loader2 : Layers} onClick={corrigirEmailsAntigos} disabled={corrigindoBase} girar={corrigindoBase}>
+            {t('teachersTab.fixEmailsBtn', 'Corrigir E-mails')}
+          </BotaoSecundario>
+        )}
+        {podeEditar && <BotaoPrincipal abaId="professores" icone={PlusCircle} onClick={abrirFluxoNovo}>{t('teachersTab.newLinkBtn', 'Novo Vínculo')}</BotaoPrincipal>}
+      </CabecalhoDaAba>
 
-        <div className="flex gap-3 w-full md:w-auto">
-            <div className="flex items-center gap-4 bg-white dark:bg-slate-800 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
-                <div className="text-center">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('teachersTab.stats.total', 'Total')}</p>
-                    <p className="text-lg font-black text-slate-700 dark:text-white leading-none">{kpis.total}</p>
-                </div>
-                <div className="w-px h-8 bg-slate-200 dark:bg-slate-700"></div>
-                <div className="text-center">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('teachersTab.stats.active', 'Ativos')}</p>
-                    <p className="text-lg font-black text-green-600 leading-none">{kpis.ativos}</p>
-                </div>
-                <div className="w-px h-8 bg-slate-200 dark:bg-slate-700"></div>
-                <div className="text-center">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('teachersTab.stats.inactive', 'Inativos')}</p>
-                    <p className="text-lg font-black text-red-500 leading-none">{kpis.inativos}</p>
-                </div>
-            </div>
-            
-            {podeEditar && (
-                <button 
-                    type="button"
-                    onClick={abrirFluxoNovo} 
-                    className="px-5 py-2 h-full bg-green-600 text-white rounded-xl font-bold text-xs uppercase tracking-wide hover:bg-green-700 shadow-lg shadow-green-500/20 flex items-center justify-center gap-2 transition-transform active:scale-95 whitespace-nowrap"
-                >
-                    <PlusCircle className="w-4 h-4"/> {t('teachersTab.newLinkBtn', 'Novo Vínculo')}
-                </button>
-            )}
-        </div>
-      </div>
-
-      {/* BARRA DE FERRAMENTAS, BUSCA E FILTRO DE PAÍS */}
-      <div className="flex flex-col lg:flex-row justify-between items-center gap-4">
-          <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
-              <div className="relative w-full sm:w-96 group">
-                  <Search className="absolute left-4 top-3.5 w-5 h-5 text-slate-400 group-focus-within:text-green-500 transition-colors"/>
-                  <input 
-                      type="text" 
-                      placeholder={t('teachersTab.searchPlaceholder', 'Buscar por nome, telefone ou e-mail...')} 
-                      className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-green-500 shadow-sm transition-all text-slate-700 dark:text-white"
-                      value={busca}
-                      onChange={(e) => setBusca(e.target.value)}
-                  />
-              </div>
-
-              {/* 🟢 FILTRO DE PAÍS — mesmo comportamento de UnidadesTab/MentoresTab */}
-              <div className="relative w-full sm:w-56">
-                  <select 
-                      value={paisFiltro} 
-                      onChange={e => setPaisFiltro(e.target.value)} 
-                      className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold uppercase outline-none appearance-none shadow-sm dark:text-white"
-                  >
-                      <option value="">{t('teachersTab.filterCountry.all', 'Todos os Países')}</option>
-                      {PAISES.map(p => <option key={p.id} value={p.id}>{t(`common.countries.${p.id}`, p.nome)}</option>)}
-                  </select>
-                  <ChevronDown className="absolute right-4 top-3.5 w-4 h-4 text-slate-400 pointer-events-none"/>
-              </div>
-          </div>
-
-          {role === "admin" && (
-              <button 
-                  type="button"
-                  onClick={corrigirEmailsAntigos} 
-                  disabled={corrigindoBase}
-                  className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl font-bold text-xs uppercase shadow-sm transition-colors flex items-center gap-2 whitespace-nowrap"
-              >
-                  {corrigindoBase ? <Loader2 className="w-4 h-4 animate-spin"/> : <Layers className="w-4 h-4" />} 
-                  {t('teachersTab.fixEmailsBtn', 'Corrigir E-mails')}
+      {/* BUSCA + FILTROS (filtro padrão das Configurações) */}
+      <FiltroPadrao abaId="professores" filtro={filtro}
+          mostrar={["pais", "estado", ...(role === "admin" ? ["mentor"] : []), ...(role === "admin" || role === "mentor" ? ["lider"] : [])]}
+          placeholder={t('teachersTab.searchPlaceholder', 'Buscar por nome, telefone ou e-mail...')}
+          ativoExtra={statusFiltro !== "ativo"} aoLimpar={() => setStatusFiltro("ativo")}
+          acoes={role === "admin" && (
+              <button type="button" onClick={() => setMostrarBuscaDoc(v => !v)} aria-expanded={mostrarBuscaDoc}
+                  className={`px-4 py-3 rounded-xl border text-xs font-black uppercase flex items-center justify-center gap-2 transition-colors ${mostrarBuscaDoc
+                      ? "border-green-500 bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300"
+                      : "border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-green-500 hover:text-green-600"}`}>
+                  <ScanSearch className="w-4 h-4"/> {t("document.search.title")}
               </button>
-          )}
-      </div>
-
+          )}>
+          {role === "admin" && mostrarBuscaDoc && <BuscaDocumento />}
+      </FiltroPadrao>
       {/* TABELA DE DADOS */}
       <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden shadow-sm relative">
         {loading && <div className="absolute inset-0 bg-white/80 dark:bg-slate-900/80 z-10 flex items-center justify-center backdrop-blur-sm"><Loader2 className="w-8 h-8 animate-spin text-green-600"/></div>}
@@ -735,18 +702,13 @@ export function ProfessoresTab() {
                                     <div className="flex gap-2 justify-end opacity-40 group-hover:opacity-100 transition-opacity">
                                         {podeEditar && (
                                             <>
-                                                <button type="button" onClick={() => abrirEdicao(p)} className={`p-2 rounded-lg transition-colors title={t('teachersTab.extra.editData')} ${!isTelefoneValido ? 'bg-red-50 text-red-600 animate-pulse' : 'bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400'}`}>
-                                                    <Edit2 className="w-4 h-4"/>
-                                                </button>
-                                                <button type="button" onClick={() => alternarStatusProf(p)} className={`p-2 rounded-lg transition-colors ${p.status === "ativo" ? "bg-orange-50 text-orange-600 hover:bg-orange-500 hover:text-white dark:bg-orange-900/30 dark:text-orange-400" : "bg-green-50 text-green-600 hover:bg-green-500 hover:text-white dark:bg-green-900/30 dark:text-green-400"}`} title={p.status === "ativo" ? t('teachersTab.extra.deactivateProfile') : t('teachersTab.extra.activateProfile')}>
-                                                    {p.status === "ativo" ? <Ban className="w-4 h-4"/> : <CheckCircle2 className="w-4 h-4"/>}
-                                                </button>
+                                                <BotaoDeLinha abaId="professores" tipo={!isTelefoneValido ? "perigo" : "editar"} className={!isTelefoneValido ? "animate-pulse" : ""} icone={Edit2} onClick={() => abrirEdicao(p)} title={t('teachersTab.extra.editData')} />
+                                                <BotaoDeLinha abaId="professores" tipo={p.status === "ativo" ? "desativar" : "ativar"} icone={p.status === "ativo" ? Ban : CheckCircle2} onClick={() => alternarStatusProf(p)}
+                                                    title={p.status === "ativo" ? t('teachersTab.extra.deactivateProfile') : t('teachersTab.extra.activateProfile')} />
                                             </>
                                         )}
                                         {podeExcluir && (
-                                            <button type="button" onClick={() => excluirProfessorTotal(p)} className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-600 hover:text-white dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-600 dark:hover:text-white transition-colors" title={t('teachersTab.extra.deleteNetwork')}>
-                                                <Trash2 className="w-4 h-4"/>
-                                            </button>
+                                            <BotaoDeLinha abaId="professores" tipo="perigo" icone={Trash2} onClick={() => excluirProfessorTotal(p)} title={t('teachersTab.extra.deleteNetwork')} />
                                         )}
                                     </div>
                                 </td>

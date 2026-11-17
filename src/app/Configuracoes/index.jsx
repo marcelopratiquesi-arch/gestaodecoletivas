@@ -9,6 +9,7 @@ import { useCatalogs } from "../../contexts/CatalogContext";
 import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
 import { ehLider } from '../../permissions';
 import { useLocation } from "react-router-dom";
+import { temaDaAba } from "./ui/temas";
 
 // --- LAZY LOADING ---
 const UnidadesTab = lazy(() => import('./Unidades/UnidadesTab').then(module => ({ default: module.UnidadesTab })));
@@ -81,6 +82,9 @@ export default function ConfiguracoesPage() {
     if (abaPedida && tabs.some(t => t.id === abaPedida && t.roles.includes(role))) setActiveTab(abaPedida);
   }
 
+  // Cor da aba aberta (pinta o ícone do título e a faixa do conteúdo)
+  const temaAtivo = temaDaAba(activeTab);
+
   if (role === 'professor') {
     return (
       <div className="flex h-[80vh] items-center justify-center flex-col gap-4 text-slate-400 animate-fade-in">
@@ -104,7 +108,7 @@ export default function ConfiguracoesPage() {
       {/* HEADER */}
       <div className="mb-8">
         <h1 className="text-3xl font-black text-slate-800 dark:text-white flex items-center gap-3">
-          <span className="bg-red-50 dark:bg-red-900/20 p-2 rounded-xl text-red-600">
+          <span className={`p-2 rounded-xl transition-colors duration-300 ${temaAtivo.iconeTitulo}`}>
             <LayoutDashboard className="w-6 h-6" />
           </span>
           {t('settingsPage.title', 'Painel de Configurações')}
@@ -121,18 +125,20 @@ export default function ConfiguracoesPage() {
         {allowedTabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
+          const tema = temaDaAba(tab.id); // cada aba tem a sua cor (ui/temas.js)
           return (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
+              aria-current={isActive ? "page" : undefined}
               className={`
-                group flex items-center gap-3 px-6 py-5 text-sm font-bold border-b-2 transition-all duration-300 whitespace-nowrap min-w-fit
-                ${isActive 
-                  ? "border-red-600 text-red-600 bg-red-50/30 dark:bg-red-900/10" 
+                group flex items-center gap-3 px-6 py-5 text-sm font-bold border-b-4 transition-all duration-300 whitespace-nowrap min-w-fit
+                ${isActive
+                  ? tema.menuAtivo
                   : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50"}
               `}
             >
-              <Icon className={`w-5 h-5 transition-transform duration-300 ${isActive ? "text-red-600 scale-110" : "text-slate-400 group-hover:text-slate-600"}`} />
+              <Icon className={`w-5 h-5 transition-transform duration-300 ${isActive ? `${tema.menuIconeAtivo} scale-110` : "text-slate-400 group-hover:text-slate-600"}`} />
               {tab.label}
               {tab.contador > 0 && (
                 <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-red-600 text-white text-[10px] font-black flex items-center justify-center">{tab.contador}</span>
@@ -143,7 +149,7 @@ export default function ConfiguracoesPage() {
       </div>
 
       {/* ÁREA DE CONTEÚDO */}
-      <div className="bg-white dark:bg-slate-800 rounded-b-2xl rounded-tr-2xl shadow-sm border-x border-b border-slate-200 dark:border-slate-700 min-h-[600px] relative">
+      <div className={`bg-white dark:bg-slate-800 rounded-b-2xl shadow-sm border-x border-b border-slate-200 dark:border-slate-700 min-h-[600px] relative transition-colors duration-300 ${temaAtivo.faixa}`}>
         <Suspense fallback={<TabLoading />}>
             <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                 {activeTab === "unidades" && allowedTabs.some(t => t.id === 'unidades') && <UnidadesTab />}

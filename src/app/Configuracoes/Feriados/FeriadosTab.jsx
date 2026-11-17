@@ -10,6 +10,8 @@ import { Calendar, Plus, Trash2, Loader2, CalendarDays, MapPin, Search, CheckSqu
 import { formatDate as formatarData } from '../../../utils/formatters';
 import { ESCOPOS_FERIADO, escopoDoFeriado, normalizarPais, normalizarTexto, ehCancelamentoAutomaticoDeFeriado } from '../../../utils/feriados';
 import { useTranslation } from 'react-i18next';
+import { CabecalhoDaAba } from '../ui/CabecalhoDaAba';
+import { BotaoDeLinha } from '../ui/BotaoDeLinha';
 
 // Tipo gravado no banco (português) -> chave de tradução.
 const TIPOS_FERIADO = { 'Recesso': 'recess', 'Feriado Nacional': 'national', 'Feriado Municipal': 'municipal' };
@@ -191,21 +193,20 @@ export function FeriadosTab() {
     }
   }
 
-  const inputClass = "w-full p-3 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500";
+  const inputClass = "w-full p-3 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pink-500";
   const labelClass = "text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1 block";
 
   return (
     <div className="p-6 animate-fade-in space-y-8">
 
+      <CabecalhoDaAba abaId="feriados" icone={CalendarDays} titulo={t('settingsPage.tabs.feriados', 'Feriados')} subtitulo={t('holidaysTab.desc')} />
+
       {/* CARD DE CADASTRO */}
       <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-6 shadow-sm relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-1.5 h-full bg-red-600"></div>
+        <div className="absolute top-0 left-0 w-1.5 h-full bg-pink-600"></div>
         <div className="flex items-center gap-2 mb-6">
-          <CalendarDays className="w-6 h-6 text-red-600" />
-          <div>
-            <h3 className="font-bold text-slate-700 dark:text-white uppercase text-sm">{t('holidaysTab.title')}</h3>
-            <p className="text-xs text-slate-400">{t('holidaysTab.desc')}</p>
-          </div>
+          <CalendarDays className="w-6 h-6 text-pink-600" />
+          <h3 className="font-bold text-slate-700 dark:text-white uppercase text-sm">{t('holidaysTab.title')}</h3>
         </div>
 
         <form onSubmit={handleSave} className="space-y-5">
@@ -245,7 +246,7 @@ export function FeriadosTab() {
                     key={escopo}
                     type="button"
                     onClick={() => alterarEscopo(escopo)}
-                    className={`px-4 py-2 rounded-lg text-xs font-bold uppercase border transition-colors ${form.escopo === escopo ? 'bg-red-600 text-white border-red-600' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:border-red-300'}`}
+                    className={`px-4 py-2 rounded-lg text-xs font-bold uppercase border transition-colors ${form.escopo === escopo ? 'bg-pink-600 text-white border-pink-600' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:border-pink-300'}`}
                   >
                     {t(`holidaysTab.scopes.${escopo}`)}
                   </button>
@@ -284,7 +285,7 @@ export function FeriadosTab() {
               <div>
                 <div className="flex items-center justify-between gap-3 mb-2">
                   <label className={`${labelClass} mb-0`}>{t('holidaysTab.units')}</label>
-                  <span className="text-xs font-bold text-red-600">{t('holidaysTab.selectedUnits', { count: form.unidadeIds.length })}</span>
+                  <span className="text-xs font-bold text-pink-600">{t('holidaysTab.selectedUnits', { count: form.unidadeIds.length })}</span>
                 </div>
                 <div className="relative mb-2">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"/>
@@ -294,8 +295,8 @@ export function FeriadosTab() {
                   {unidadesFiltradas.map(u => {
                     const marcada = form.unidadeIds.includes(String(u.id));
                     return (
-                      <button key={u.id} type="button" onClick={() => alternarUnidade(String(u.id))} className={`w-full flex items-start gap-3 px-3 py-2.5 text-left transition-colors ${marcada ? 'bg-red-50 dark:bg-red-900/20' : 'hover:bg-slate-50 dark:hover:bg-slate-700/40'}`}>
-                        {marcada ? <CheckSquare className="w-4 h-4 text-red-600 shrink-0 mt-0.5"/> : <Square className="w-4 h-4 text-slate-300 shrink-0 mt-0.5"/>}
+                      <button key={u.id} type="button" onClick={() => alternarUnidade(String(u.id))} className={`w-full flex items-start gap-3 px-3 py-2.5 text-left transition-colors ${marcada ? 'bg-pink-50 dark:bg-pink-900/20' : 'hover:bg-slate-50 dark:hover:bg-slate-700/40'}`}>
+                        {marcada ? <CheckSquare className="w-4 h-4 text-pink-600 shrink-0 mt-0.5"/> : <Square className="w-4 h-4 text-slate-300 shrink-0 mt-0.5"/>}
                         <span className="min-w-0">
                           <span className="block text-sm font-bold text-slate-700 dark:text-slate-200 truncate">{u.nome}</span>
                           <span className="block text-[11px] text-slate-400 truncate">{[u.estado, u.enderecoCompleto].filter(Boolean).join(' · ')}</span>
@@ -309,7 +310,7 @@ export function FeriadosTab() {
           </div>
 
           <div className="flex justify-end">
-            <button disabled={processando} className="w-full xl:w-auto px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg text-sm shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50">
+            <button disabled={processando} className="w-full xl:w-auto px-6 py-3 bg-pink-600 hover:bg-pink-700 text-white font-bold rounded-lg text-sm shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50">
               {processando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
               {processando ? t('holidaysTab.processing') : t('holidaysTab.create')}
             </button>
@@ -345,9 +346,7 @@ export function FeriadosTab() {
                         {t('holidaysTab.range', { start: formatDate(f.dataInicio), end: formatDate(f.dataFim) })}
                     </div>
                     </div>
-                    <button onClick={() => handleDelete(f)} className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
-                    <Trash2 className="w-4 h-4" />
-                    </button>
+                    <BotaoDeLinha abaId="feriados" tipo="perigo" icone={Trash2} onClick={() => handleDelete(f)} />
                 </div>
                 </div>
             ))}

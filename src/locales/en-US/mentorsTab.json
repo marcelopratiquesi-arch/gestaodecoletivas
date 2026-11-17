@@ -86,5 +86,24 @@
     "pendingHelp": "Mentors you already registered. As soon as each one signs in with Google using the e-mail below, they show up in the mentors list.",
     "googleEmail": "Mentor's Google e-mail",
     "googleEmailHelp": "No password: the mentor signs in with the \"Sign in with Google\" button using exactly this e-mail. Your registration is the approval."
+  },
+  "linked": {
+    "column": "Units",
+    "manage": "Manage this mentor's units",
+    "title": "{{name}}'s units",
+    "help": "Adding or removing here applies in the Units tab too: it is the same link.",
+    "current": "Linked ({{count}})",
+    "none": "No units linked.",
+    "remove": "Remove",
+    "chooseNew": "Move to which mentor?",
+    "confirmMove": "Confirm",
+    "add": "Add unit",
+    "search": "Search unit or state...",
+    "addButton": "Link",
+    "ofMentor": "currently {{name}}'s",
+    "noMentor": "no mentor",
+    "noResults": "No units found.",
+    "confirmTake": "Unit {{unit}} currently belongs to {{from}}. Move to {{to}}?",
+    "saveError": "Could not save."
   }
 }

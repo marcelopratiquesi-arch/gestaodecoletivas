@@ -7,7 +7,7 @@
 //   3) entra com o login antigo da unidade e é obrigado a atualizar o cadastro e conectar o Google
 //      (pages/AtualizarCadastro): assume como líder na hora e fica "a conferir" até o admin/mentor confirmar.
 // Admin vê todas as unidades; mentor só as dele (as regras do banco também garantem isso).
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { doc, writeBatch, serverTimestamp, addDoc, collection, deleteField, updateDoc } from "firebase/firestore";
 import { createUserWithEmailAndPassword, getAuth, signOut } from "firebase/auth";
 import { initializeApp, getApp, deleteApp } from "firebase/app";
@@ -24,6 +24,10 @@ import LinkUnidade from "../../../centrais/LinkUnidade";
 import LinkCentral from "../../../centrais/LinkCentral";
 import { tirarLiderDaUnidade, camposAoLiberarVaga, textoDaSaida, dadosDaVaga } from "./saidaDoLider";
 import { TornarLiderModal } from "./TornarLiderModal";
+import { FiltroPadrao } from "../ui/FiltroPadrao";
+import { BotaoDeLinha } from "../ui/BotaoDeLinha";
+import { CabecalhoDaAba, CaixaDeNumeros, BotaoPrincipal, BotaoSecundario } from "../ui/CabecalhoDaAba";
+import { useFiltroCascata } from "../ui/useFiltroCascata";
 import { BotaoDocumento, DocumentoModal, BuscaDocumento, AvisoDocumento } from "../Documento/DocumentoModal";
 import i18n from "../../../i18n";
 import CampoDocumento from "../../../components/acesso/CampoDocumento";
@@ -54,11 +58,7 @@ export function LideresTab() {
   const meuNome = userData?.nome || userData?.email || "Admin";
   const podeAcessar = role === "admin" || role === "mentor";
 
-  const [busca, setBusca] = useState("");
   const [situacao, setSituacao] = useState("todas"); // todas | com | sem | conferir
-  const [paisFiltro, setPaisFiltro] = useState("");
-  const [estadoFiltro, setEstadoFiltro] = useState("");
-  const [mentorFiltro, setMentorFiltro] = useState("");
   const [mostrarBuscaDoc, setMostrarBuscaDoc] = useState(false);
   const pedidosRef = useRef(null);
   const [processando, setProcessando] = useState(null);
@@ -80,38 +80,26 @@ export function LideresTab() {
     return role === "admin" ? todas : todas.filter((u) => u.mentorId === userId);
   }, [catalogs?.unidades, role, userId]);
 
-  const paises = useMemo(() => [...new Set(minhasUnidades.map(siglaPais))].sort(), [minhasUnidades]);
-  const estados = useMemo(() => [...new Set(minhasUnidades
-    .filter((u) => !paisFiltro || siglaPais(u) === paisFiltro)
-    .map((u) => String(u.estado || "").trim().toUpperCase()).filter(Boolean))].sort(), [minhasUnidades, paisFiltro]);
-  // Mentores: só os que têm unidade no país/estado escolhido (o mentor é designado por região).
-  const mentoresDasUnidades = useMemo(() => {
-    const daRegiao = minhasUnidades
-      .filter((u) => !paisFiltro || siglaPais(u) === paisFiltro)
-      .filter((u) => !estadoFiltro || String(u.estado || "").trim().toUpperCase() === estadoFiltro);
-    return mentores
-      .filter((m) => daRegiao.some((u) => u.mentorId === m.id))
-      .sort((a, b) => String(a.nome || "").localeCompare(String(b.nome || "")));
-  }, [mentores, minhasUnidades, paisFiltro, estadoFiltro]);
+  // Filtro padrão (busca + país → estado → mentor), no navegador sobre as unidades já carregadas.
+  // A situação (com/sem líder/a conferir) continua sendo o seletor próprio desta aba.
+  const nomeMentor = useCallback((id) => mentores.find((m) => m.id === id)?.nome, [mentores]);
+  const soDaSituacao = useCallback((u) => situacao === "todas"
+    || (situacao === "com" && u.liderUid)
+    || (situacao === "sem" && !u.liderUid)
+    || (situacao === "conferir" && u.liderUid && u.liderAConferir === true), [situacao]);
+  const filtro = useFiltroCascata(minhasUnidades, {
+    getPais: siglaPais,
+    getEstados: (u) => [u.estado],
+    getMentorIds: (u) => [u.mentorId],
+    textoBusca: (u) => [u.nome, u.estado, u.liderNome, u.liderEmail, u.liderTelefone, u.lider2Nome, u.lider2Email, u.lider2Telefone],
+    nomeMentor,
+    extra: soDaSituacao,
+  });
+  // Líder novo "a conferir" aparece primeiro.
+  const lista = useMemo(
+    () => [...filtro.resultado].sort((a, b) => Number(b.liderAConferir === true) - Number(a.liderAConferir === true)),
+    [filtro.resultado]);
 
-  const lista = useMemo(() => {
-    const termo = busca.trim().toLowerCase();
-    return minhasUnidades
-      .filter((u) => situacao === "todas"
-        || (situacao === "com" && u.liderUid)
-        || (situacao === "sem" && !u.liderUid)
-        || (situacao === "conferir" && u.liderUid && u.liderAConferir === true))
-      .filter((u) => !paisFiltro || siglaPais(u) === paisFiltro)
-      .filter((u) => !estadoFiltro || String(u.estado || "").trim().toUpperCase() === estadoFiltro)
-      .filter((u) => !mentorFiltro || (mentorFiltro === "-" ? !u.mentorId : u.mentorId === mentorFiltro))
-      .filter((u) => !termo || [u.nome, u.estado, u.liderNome, u.liderEmail, u.liderTelefone, u.lider2Nome, u.lider2Email, u.lider2Telefone]
-        .some((v) => String(v || "").toLowerCase().includes(termo)))
-      // Líder novo "a conferir" aparece primeiro.
-      .sort((a, b) => Number(b.liderAConferir === true) - Number(a.liderAConferir === true));
-  }, [minhasUnidades, busca, situacao, paisFiltro, estadoFiltro, mentorFiltro]);
-
-  const filtrosAtivos = situacao !== "todas" || paisFiltro || estadoFiltro || mentorFiltro || busca;
-  const limparFiltros = () => { setSituacao("todas"); setPaisFiltro(""); setEstadoFiltro(""); setMentorFiltro(""); setBusca(""); };
 
   const kpis = useMemo(() => {
     const comLider = minhasUnidades.filter((u) => u.liderUid).length;
@@ -325,23 +313,16 @@ export function LideresTab() {
   return (
     <div className="p-6 space-y-8">
       {/* CABEÇALHO */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-black text-slate-800 dark:text-white flex items-center gap-3">
-            <span className="p-2 bg-emerald-600 text-white rounded-lg"><UserCheck className="w-6 h-6" /></span>
-            {t("leadersTab.title")}
-          </h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 max-w-3xl">{t("leadersTab.subtitle")}</p>
-        </div>
-        <div className="flex flex-wrap gap-2 self-start md:self-auto">
-          <button onClick={() => setTornarLider({ vaga: 1, unidade: null })} className="px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:border-amber-500 hover:text-amber-600 text-xs font-black uppercase flex items-center gap-2 transition-colors">
-            <UserCog className="w-4 h-4" /> {t("leadersTab.promote.button")}
-          </button>
-          <button onClick={() => abrirNovo(null)} className="px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-black uppercase flex items-center gap-2 shadow-sm transition-colors">
-            <UserPlus className="w-4 h-4" /> {t("leadersTab.new")}
-          </button>
-        </div>
-      </div>
+      <CabecalhoDaAba abaId="lideres" icone={UserCheck} titulo={t("leadersTab.title")} subtitulo={t("leadersTab.subtitle")}
+        numeros={<CaixaDeNumeros abaId="lideres" itens={[
+          { id: "total", rotulo: t("leadersTab.filter.all"), valor: kpis.total, onClick: () => setSituacao("todas"), ativo: situacao === "todas" },
+          { id: "com", rotulo: t("leadersTab.filter.with"), valor: kpis.comLider, cor: "text-green-600", onClick: () => setSituacao("com"), ativo: situacao === "com" },
+          { id: "sem", rotulo: t("leadersTab.filter.without"), valor: kpis.semLider, cor: "text-red-500", onClick: () => setSituacao("sem"), ativo: situacao === "sem" },
+          { id: "conferir", rotulo: t("leadersTab.filter.toCheck"), valor: kpis.aConferir, cor: "text-amber-600", onClick: () => setSituacao("conferir"), ativo: situacao === "conferir" },
+        ]} />}>
+        <BotaoSecundario icone={UserCog} onClick={() => setTornarLider({ vaga: 1, unidade: null })}>{t("leadersTab.promote.button")}</BotaoSecundario>
+        <BotaoPrincipal abaId="lideres" icone={UserPlus} onClick={() => abrirNovo(null)}>{t("leadersTab.new")}</BotaoPrincipal>
+      </CabecalhoDaAba>
 
       {/* PEDIDOS DE ACESSO (login pelo Google) */}
       {totalPendencias > 0 && (
@@ -358,23 +339,19 @@ export function LideresTab() {
 
       {/* LISTA DE UNIDADES E SEUS LÍDERES */}
       <div className="space-y-4">
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/40 p-4 space-y-4">
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder={t("leadersTab.search")}
-                className="w-full pl-9 pr-3 py-3 rounded-xl bg-slate-100 dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-red-500" />
-            </div>
-            {podeAcessar && (
-              <button type="button" onClick={() => setMostrarBuscaDoc((v) => !v)} aria-expanded={mostrarBuscaDoc}
-                className={`px-4 py-3 rounded-xl border text-xs font-black uppercase flex items-center justify-center gap-2 transition-colors ${mostrarBuscaDoc
-                  ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300"
-                  : "border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-blue-500 hover:text-blue-600"}`}>
-                <ScanSearch className="w-4 h-4" /> {t("document.search.title")}
-              </button>
-            )}
-          </div>
-
+        <FiltroPadrao abaId="lideres" filtro={filtro}
+          mostrar={["pais", "estado", ...(role === "admin" ? ["mentor"] : [])]}
+          placeholder={t("leadersTab.search")} ativoExtra={situacao !== "todas"} aoLimpar={() => setSituacao("todas")}
+          acoes={<>
+              {podeAcessar && (
+                <button type="button" onClick={() => setMostrarBuscaDoc((v) => !v)} aria-expanded={mostrarBuscaDoc}
+                  className={`px-4 py-3 rounded-xl border text-xs font-black uppercase flex items-center justify-center gap-2 transition-colors ${mostrarBuscaDoc
+                    ? "border-teal-500 bg-teal-50 text-teal-700 dark:bg-teal-900/20 dark:text-teal-300"
+                    : "border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-teal-500 hover:text-teal-600"}`}>
+                  <ScanSearch className="w-4 h-4" /> {t("document.search.title")}
+                </button>
+              )}
+          </>}>
           {mostrarBuscaDoc && (
             <BuscaDocumento aoCadastrar={cadastrarPeloDocumento}
               aoEscolherPessoa={() => setTornarLider({ vaga: 1, unidade: null })}
@@ -391,56 +368,19 @@ export function LideresTab() {
             ].map((f) => (
               <button key={f.id} type="button" onClick={() => setSituacao(f.id)} aria-pressed={situacao === f.id}
                 className={`px-3.5 py-2 rounded-lg text-xs font-black uppercase flex items-center gap-2 transition-colors ${situacao === f.id
-                  ? "bg-white dark:bg-slate-700 text-red-600 shadow-sm"
+                  ? "bg-white dark:bg-slate-700 text-teal-600 shadow-sm"
                   : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"}`}>
                 {f.rotulo}
                 <span className={`min-w-[1.5rem] px-1.5 py-0.5 rounded-md text-[10px] text-center ${situacao === f.id
-                  ? "bg-red-600 text-white"
+                  ? "bg-teal-600 text-white"
                   : f.id === "conferir" && f.n > 0 ? "bg-amber-100 text-amber-700" : "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-300"}`}>{f.n}</span>
               </button>
             ))}
           </div>
-
-          {/* Região: país → estado → mentor (cada um mostra só o que existe na escolha anterior) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
-            <label className="space-y-1">
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t("leadersTab.filter.country")}</span>
-              <select value={paisFiltro} onChange={(e) => { setPaisFiltro(e.target.value); setEstadoFiltro(""); setMentorFiltro(""); }}
-                className="w-full px-3 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-900 text-xs font-black uppercase text-slate-600 dark:text-slate-300 outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed">
-                <option value="">{t("leadersTab.filter.allCountries")}</option>
-                {paises.map((p) => <option key={p} value={p}>{t(`common.countries.${p}`, { defaultValue: p })}</option>)}
-              </select>
-            </label>
-            <label className="space-y-1">
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t("leadersTab.filter.state")}</span>
-              <select value={estadoFiltro} onChange={(e) => { setEstadoFiltro(e.target.value); setMentorFiltro(""); }} disabled={!paisFiltro}
-                className="w-full px-3 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-900 text-xs font-black uppercase text-slate-600 dark:text-slate-300 outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed">
-                <option value="">{t("leadersTab.filter.allStates")}</option>
-                {estados.map((e) => <option key={e} value={e}>{e}</option>)}
-              </select>
-            </label>
-            {role === "admin" && (
-              <label className="space-y-1">
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t("leadersTab.filter.mentor")}</span>
-                <select value={mentorFiltro} onChange={(e) => setMentorFiltro(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-900 text-xs font-black uppercase text-slate-600 dark:text-slate-300 outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed">
-                  <option value="">{t("leadersTab.filter.allMentors")}</option>
-                  {mentoresDasUnidades.map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}
-                  <option value="-">{t("leadersTab.filter.noMentor")}</option>
-                </select>
-              </label>
-            )}
-            {filtrosAtivos && (
-              <button type="button" onClick={limparFiltros} className="px-3 py-2.5 rounded-xl text-xs font-black uppercase text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center justify-center gap-1 lg:justify-start">
-                <X className="w-3.5 h-3.5" /> {t("leadersTab.filter.clear")}
-              </button>
-            )}
-          </div>
-        </div>
-        <p className="text-[11px] font-bold text-slate-400 text-right">{t("leadersTab.filter.showing", { count: lista.length, total: minhasUnidades.length })}</p>
+        </FiltroPadrao>
 
         {loadingCatalogs ? (
-          <div className="py-16 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-red-500" /></div>
+          <div className="py-16 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-teal-500" /></div>
         ) : lista.length === 0 ? (
           <div className="py-16 text-center text-slate-400 font-bold text-sm">
             <Building2 className="w-10 h-10 mx-auto mb-3 opacity-30" /> {t("leadersTab.empty")}
@@ -515,7 +455,7 @@ export function LideresTab() {
                             <>
                               {u.liderAConferir === true && (
                                 <button onClick={() => confirmar(u)} disabled={ocupado} title={t("leadersTab.confirm")}
-                                  className="px-3 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-[10px] font-black uppercase flex items-center gap-1.5 disabled:opacity-50">
+                                  className="px-3 py-2 rounded-lg bg-teal-500 hover:bg-teal-600 text-white text-[10px] font-black uppercase flex items-center gap-1.5 disabled:opacity-50">
                                   <BadgeCheck className="w-3.5 h-3.5" /> {t("leadersTab.confirm")}
                                 </button>
                               )}
@@ -526,14 +466,9 @@ export function LideresTab() {
                                 </button>
                               )}
                               <BotaoDocumento onClick={() => setDocAlvo({ id: u.liderUid, nome: u.liderNome, email: u.liderEmail })} disabled={ocupado} />
-                              <button onClick={() => abrirEditar(u)} disabled={ocupado} title={t("leadersTab.edit")}
-                                className="p-2 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200 hover:bg-blue-50 hover:text-blue-600 disabled:opacity-50"><Edit2 className="w-4 h-4" /></button>
-                              <button onClick={() => abrirNovo(u)} disabled={ocupado} title={t("leadersTab.replace")}
-                                className="p-2 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200 hover:bg-emerald-50 hover:text-emerald-600 disabled:opacity-50"><UserPlus className="w-4 h-4" /></button>
-                              <button onClick={() => remover(u)} disabled={ocupado} title={t("leadersTab.remove")}
-                                className="p-2 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200 hover:bg-red-50 hover:text-red-600 disabled:opacity-50">
-                                {ocupado ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserX className="w-4 h-4" />}
-                              </button>
+                              <BotaoDeLinha abaId="lideres" icone={Edit2} onClick={() => abrirEditar(u)} disabled={ocupado} title={t("leadersTab.edit")} />
+                              <BotaoDeLinha abaId="lideres" icone={UserPlus} onClick={() => abrirNovo(u)} disabled={ocupado} title={t("leadersTab.replace")} />
+                              <BotaoDeLinha abaId="lideres" tipo="perigo" icone={ocupado ? Loader2 : UserX} girar={ocupado} onClick={() => remover(u)} disabled={ocupado} title={t("leadersTab.remove")} />
                             </>
                           ) : (
                             <>
@@ -541,7 +476,7 @@ export function LideresTab() {
                                 className="px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 hover:bg-amber-100 text-[10px] font-black uppercase flex items-center gap-1.5 whitespace-nowrap">
                                 <UserCog className="w-3.5 h-3.5" /> {t("leadersTab.promote.pick")}
                               </button>
-                              <button onClick={() => abrirNovo(u)} className="px-3 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-[10px] font-black uppercase flex items-center gap-1.5">
+                              <button onClick={() => abrirNovo(u)} className="px-3 py-2 rounded-lg bg-teal-500 hover:bg-teal-600 text-white text-[10px] font-black uppercase flex items-center gap-1.5">
                                 <UserPlus className="w-3.5 h-3.5" /> {t("leadersTab.register")}
                               </button>
                             </>
@@ -577,7 +512,7 @@ export function LideresTab() {
           <form onSubmit={salvar} onClick={(e) => e.stopPropagation()} className={`w-full ${modal.modo === "novo" ? "max-w-4xl" : "max-w-lg"} max-h-[92vh] overflow-y-auto bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-5 sm:p-7 space-y-5`}>
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-black text-slate-800 dark:text-white flex items-center gap-2">
-                {modal.modo === "editar" ? <Edit2 className="w-5 h-5 text-blue-600" /> : <UserPlus className="w-5 h-5 text-emerald-600" />}
+                {modal.modo === "editar" ? <Edit2 className="w-5 h-5 text-teal-600" /> : <UserPlus className="w-5 h-5 text-teal-600" />}
                 {modal.modo === "editar" ? t("leadersTab.modal.editTitle") : t("leadersTab.modal.newTitle")}
               </h3>
               <button type="button" onClick={() => setModal(null)} disabled={salvando} className="p-1 text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
@@ -607,20 +542,20 @@ export function LideresTab() {
             <label className="block space-y-1">
               <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t("leadersTab.modal.name")}</span>
               <input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} disabled={salvando} maxLength={80}
-                className="w-full p-3 rounded-xl bg-slate-100 dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-red-500" />
+                className="w-full p-3 rounded-xl bg-slate-100 dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-teal-500" />
             </label>
 
             <label className="block space-y-1">
               <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t("leadersTab.modal.email")}</span>
               <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} disabled={salvando || modal.modo === "editar"}
-                className="w-full p-3 rounded-xl bg-slate-100 dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-70" />
+                className="w-full p-3 rounded-xl bg-slate-100 dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-teal-500 disabled:opacity-70" />
               {modal.modo === "editar" && <span className="text-[11px] text-slate-400">{t("leadersTab.modal.emailLocked")}</span>}
             </label>
 
             <label className="block space-y-1">
               <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t("leadersTab.modal.phone")}</span>
               <input value={form.telefone} onChange={(e) => setForm({ ...form, telefone: e.target.value })} disabled={salvando} maxLength={30} placeholder="+55 31 99999-9999"
-                className="w-full p-3 rounded-xl bg-slate-100 dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-red-500" />
+                className="w-full p-3 rounded-xl bg-slate-100 dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-teal-500" />
             </label>
             </div>
 
@@ -640,7 +575,7 @@ export function LideresTab() {
               <label className="block space-y-1">
                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 flex items-center gap-1"><KeyRound className="w-3 h-3" /> {t("leadersTab.modal.password")}</span>
                 <input type="text" value={form.senha} onChange={(e) => setForm({ ...form, senha: e.target.value })} disabled={salvando} autoComplete="new-password"
-                  className="w-full p-3 rounded-xl bg-slate-100 dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-red-500" />
+                  className="w-full p-3 rounded-xl bg-slate-100 dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-teal-500" />
                 <span className="text-[11px] text-slate-400">{t("leadersTab.modal.passwordHint", { min: SENHA_MINIMA })}</span>
               </label>
             )}
@@ -652,7 +587,7 @@ export function LideresTab() {
 
             <div className="flex justify-end gap-2 pt-2">
               <button type="button" onClick={() => setModal(null)} disabled={salvando} className="px-4 py-2.5 rounded-xl text-xs font-black uppercase bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200">{t("leadersTab.modal.cancel")}</button>
-              <button type="submit" disabled={salvando} className="px-5 py-2.5 rounded-xl text-xs font-black uppercase bg-emerald-500 hover:bg-emerald-600 text-white flex items-center gap-1.5 disabled:opacity-50">
+              <button type="submit" disabled={salvando} className="px-5 py-2.5 rounded-xl text-xs font-black uppercase bg-teal-500 hover:bg-teal-600 text-white flex items-center gap-1.5 disabled:opacity-50">
                 {salvando ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />} {t("leadersTab.modal.save")}
               </button>
             </div>
