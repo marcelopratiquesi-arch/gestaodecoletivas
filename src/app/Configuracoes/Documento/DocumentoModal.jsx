@@ -3,6 +3,7 @@
 // O banco é quem decide (firestore.rules: usuarios/{uid}/privado/documento). A auditoria registra QUE o documento
 // foi informado ou corrigido, nunca o número. Também tem a busca por documento (só admin).
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { doc, getDoc, writeBatch } from "firebase/firestore";
 import { useTranslation } from "react-i18next";
 import { CabecalhoDoModal } from "../ui/CabecalhoDoModal";
@@ -62,6 +63,7 @@ export function DocumentoModal({ alvo, onClose, abaId = "mentores" }) {
 
   async function salvar(e) {
     e.preventDefault();
+    e.stopPropagation(); // o pop-up pode ser aberto de dentro de outro formulário (busca por documento)
     setErro(""); setOk("");
     if (!documentoValido(tipo, numero)) return setErro(t("document.errors.invalid"));
     setSalvando(true);
@@ -87,8 +89,9 @@ export function DocumentoModal({ alvo, onClose, abaId = "mentores" }) {
     }
   }
 
-  return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
+  // Desenhado direto no corpo da página (portal): assim nenhum bloco da tela corta, esconde ou fica por cima dele.
+  return createPortal(
+    <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
       <form onSubmit={salvar} onClick={(e) => e.stopPropagation()} className="w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden bg-white dark:bg-slate-800 rounded-2xl shadow-2xl">
         <CabecalhoDoModal abaId={abaId} icone={IdCard} titulo={t("document.modal.title", { name: alvo.nome || alvo.email || "-" })} onFechar={onClose} />
         <div className="p-5 space-y-4 overflow-y-auto">
@@ -110,7 +113,8 @@ export function DocumentoModal({ alvo, onClose, abaId = "mentores" }) {
         )}
         </div>
       </form>
-    </div>
+    </div>,
+    document.body
   );
 }
 
