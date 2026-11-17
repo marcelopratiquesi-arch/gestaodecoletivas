@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useAuth } from "../../../contexts/AuthContext";
 import {
   collection, updateDoc, deleteDoc, doc, query, where, serverTimestamp, setDoc, onSnapshot, getDocs, limit
@@ -8,18 +8,22 @@ import {
 // No 1º acesso pelo Google com esse e-mail, a pessoa entra direto como mentor (pages/SolicitarAcesso).
 import { db } from "../../../services/firebase";
 import { registrarAuditoriaAcesso } from "../../../services/auditoriaAcessos";
-import { BotaoDocumento, DocumentoModal } from "../Documento/DocumentoModal";
+import { BotaoDocumento, DocumentoModal, BuscaDocumento } from "../Documento/DocumentoModal";
 import CampoDocumento from "../../../components/acesso/CampoDocumento";
 import { documentoValido, limparDocumento, tipoDocumentoPadrao } from "../../../utils/documento";
 
 import { 
     ShieldCheck, Edit2, Trash2, AlertTriangle, CheckCircle2, 
-    Loader2, User, Search, Mail, ChevronDown, ChevronUp, Ban, PowerOff, Plus, X, Phone, Check, Clock
+    Loader2, User, Mail, ChevronDown, ChevronUp, Ban, PowerOff, Plus, X, Phone, Check, Clock, Link2, ScanSearch
 } from "lucide-react";
 
 const EMAIL_VALIDO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
 import LinkCentral from "../../../centrais/LinkCentral";
+import { useCatalogs } from "../../../contexts/CatalogContext";
+import { UnidadesVinculadasModal } from "./UnidadesVinculadasModal";
+import { FiltroPadrao } from "../ui/FiltroPadrao";
+import { useFiltroCascata } from "../ui/useFiltroCascata";
 
 // 🌍 PADRÃO OURO INTERNACIONAL — cada país com sua cor de identidade
 const PAIS_CONFIG = {
@@ -126,6 +130,9 @@ const getPhonePlaceholder = (pais = PAIS_DEFAULT) => {
 
 export function MentoresTab() {
   const { userData } = useAuth();
+  const { catalogs } = useCatalogs(); // admin recebe a rede inteira, sem leitura extra
+  const todasUnidades = useMemo(() => catalogs?.unidades || [], [catalogs?.unidades]);
+  const [vinculoAlvo, setVinculoAlvo] = useState(null);
   const { t, i18n } = useTranslation(); // 🟢 TRADUTOR CONECTADO
   
   const role = useMemo(() => String(userData?.role || "").trim().toLowerCase(), [userData?.role]);
@@ -140,9 +147,8 @@ export function MentoresTab() {
   const [loading, setLoading] = useState(true);
   
   // UX
-  const [busca, setBusca] = useState("");
   const [statusFiltro, setStatusFiltro] = useState(""); // "" | ativo | inativo (clique nos números do topo)
-  const [paisFiltro, setPaisFiltro] = useState(""); // 🟢 FILTRO DE PAÍS
+  const [mostrarBuscaDoc, setMostrarBuscaDoc] = useState(false); // busca por CPF/DNI/SSN (esta aba já é só admin)
   const [sortConfig, setSortConfig] = useState({ field: 'nome', direction: 'asc' });
   const [modalAberto, setModalAberto] = useState(false);
   
@@ -212,27 +218,23 @@ export function MentoresTab() {
   // ==========================================
   // 2. PROCESSADOR DE BUSCA E ORDENAÇÃO
   // ==========================================
+  // Filtro padrão (busca + país → estado), no navegador sobre o que já está carregado.
+  // O mentor não tem estado no cadastro: vale o estado das unidades dele (catálogo já carregado).
+  const estadosDoMentor = useMemo(() => {
+      const mapa = {};
+      todasUnidades.forEach(u => { if (u.mentorId && u.estado) (mapa[u.mentorId] ||= []).push(u.estado); });
+      return mapa;
+  }, [todasUnidades]);
+  const soDoStatus = useCallback((m) => !statusFiltro || (statusFiltro === 'ativo') === (m.status === 'ativo'), [statusFiltro]);
+  const filtro = useFiltroCascata(mentores, {
+      getPais: (m) => m.pais || PAIS_DEFAULT,
+      getEstados: (m) => estadosDoMentor[m.id] || [],
+      textoBusca: (m) => [m.nome, m.email, m.telefone],
+      extra: soDoStatus,
+  });
+
   const mentoresProcessados = useMemo(() => {
-      let resultado = mentores;
-
-      if (paisFiltro) {
-          resultado = resultado.filter(m => (m.pais || PAIS_DEFAULT) === paisFiltro);
-      }
-
-      if (statusFiltro) {
-          resultado = resultado.filter(m => (statusFiltro === 'ativo') === (m.status === 'ativo'));
-      }
-
-      if (busca.trim()) {
-          const termo = busca.toLowerCase();
-          resultado = resultado.filter(m => 
-              (m.nome || "").toLowerCase().includes(termo) ||
-              (m.email || "").toLowerCase().includes(termo) ||
-              (m.telefone || "").toLowerCase().includes(termo)
-          );
-      }
-
-      return resultado.sort((a, b) => {
+      return [...filtro.resultado].sort((a, b) => {
           if (sortConfig.field === 'ultimoAcesso') {
               // sem registro = 0 → aparece primeiro na ordem crescente (quem está há mais tempo sem entrar)
               const diff = (a.ultimoAcesso?.toMillis?.() || 0) - (b.ultimoAcesso?.toMillis?.() || 0);
@@ -240,12 +242,12 @@ export function MentoresTab() {
           }
           let valA = (a[sortConfig.field] || "").toLowerCase();
           let valB = (b[sortConfig.field] || "").toLowerCase();
-          
+
           if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
           if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
           return 0;
       });
-  }, [mentores, busca, paisFiltro, statusFiltro, sortConfig]);
+  }, [filtro.resultado, sortConfig]);
 
   const handleSort = (field) => {
       setSortConfig(prev => ({ 
@@ -467,32 +469,18 @@ export function MentoresTab() {
         </div>
       </div>
 
-      {/* BUSCA + FILTROS */}
-      <div className="flex flex-col lg:flex-row gap-4 items-center">
-          <div className="relative w-full lg:w-96 group">
-              <Search className="absolute left-4 top-3.5 w-5 h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors"/>
-              <input 
-                  type="text" 
-                  placeholder={t('mentorsTab.searchPlaceholder', 'Buscar mentor, e-mail ou telefone...')} 
-                  className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/50 shadow-sm transition-all dark:text-white" 
-                  value={busca} 
-                  onChange={(e) => setBusca(e.target.value)} 
-              />
-          </div>
-
-          {/* 🟢 FILTRO DE PAÍS (sem título/label, padrão dos filtros do Unidades) */}
-          <div className="relative w-full lg:w-56">
-              <select 
-                  value={paisFiltro} 
-                  onChange={e => setPaisFiltro(e.target.value)} 
-                  className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold uppercase outline-none appearance-none shadow-sm dark:text-white"
-              >
-                  <option value="">{t('mentorsTab.extra.allCountries').toUpperCase()}</option>
-                  {PAISES.map(p => <option key={p.id} value={p.id}>{t(`common.countries.${p.id}`, p.nome)}</option>)}
-              </select>
-              <ChevronDown className="absolute right-4 top-3.5 w-4 h-4 text-slate-400 pointer-events-none"/>
-          </div>
-      </div>
+      {/* BUSCA + FILTROS (filtro padrão das Configurações; o status são os números do topo) */}
+      <FiltroPadrao abaId="mentores" filtro={filtro} mostrar={["pais", "estado"]} placeholder={t('mentorsTab.searchPlaceholder', 'Buscar mentor, e-mail ou telefone...')}
+          acoes={role === "admin" && (
+              <button type="button" onClick={() => setMostrarBuscaDoc(v => !v)} aria-expanded={mostrarBuscaDoc}
+                  className={`px-4 py-3 rounded-xl border text-xs font-black uppercase flex items-center justify-center gap-2 transition-colors ${mostrarBuscaDoc
+                      ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300"
+                      : "border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-blue-500 hover:text-blue-600"}`}>
+                  <ScanSearch className="w-4 h-4"/> {t("document.search.title")}
+              </button>
+          )}>
+          {role === "admin" && mostrarBuscaDoc && <BuscaDocumento />}
+      </FiltroPadrao>
 
       {/* CADASTRADOS PELO E-MAIL DO GOOGLE, AINDA SEM O 1º ACESSO */}
       {convites.length > 0 && (
@@ -532,6 +520,7 @@ export function MentoresTab() {
                 <th className="p-4 text-xs font-bold text-slate-500 uppercase cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('telefone')}>
                     <div className="flex items-center gap-2">{t('mentorsTab.table.phone', 'WhatsApp')} <SortIcon field="telefone"/></div>
                 </th>
+                <th className="p-4 text-xs font-bold text-slate-500 uppercase">{t('mentorsTab.linked.column', 'Unidades')}</th>
                 <th className="p-4 text-xs font-bold text-slate-500 uppercase cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('ultimoAcesso')}>
                     <div className="flex items-center gap-2">{t('mentorsTab.table.access', 'Acesso')} <SortIcon field="ultimoAcesso"/></div>
                 </th>
@@ -541,14 +530,14 @@ export function MentoresTab() {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
               {loading ? (
                   <tr>
-                      <td colSpan="5" className="p-10 text-center">
+                      <td colSpan="6" className="p-10 text-center">
                           <Loader2 className="w-8 h-8 animate-spin text-blue-500 mx-auto mb-2"/>
                           <p className="text-slate-400 font-bold">{t('mentorsTab.loading', 'Sincronizando...')}</p>
                       </td>
                   </tr>
               ) : mentoresProcessados.length === 0 ? (
                   <tr>
-                      <td colSpan="5" className="p-10 text-center text-slate-400 font-bold text-xs">
+                      <td colSpan="6" className="p-10 text-center text-slate-400 font-bold text-xs">
                           <User className="w-6 h-6 mx-auto mb-2 opacity-20"/> {t('mentorsTab.emptyState', 'Nenhum mentor encontrado.')}
                       </td>
                   </tr>
@@ -620,6 +609,13 @@ export function MentoresTab() {
                         )}
                     </td>
                     
+                    {/* UNIDADES VINCULADAS: abre o modal de vínculo */}
+                    <td className="p-4">
+                      <button onClick={() => setVinculoAlvo(m)} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-black bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white dark:bg-blue-900/30 dark:text-blue-400 transition-colors" title={t('mentorsTab.linked.manage')}>
+                        <Link2 className="w-3.5 h-3.5"/> {todasUnidades.filter(u => u.mentorId === m.id).length}
+                      </button>
+                    </td>
+
                     {/* ACESSO: último login registrado */}
                     <td className="p-4 text-xs whitespace-nowrap">
                       {m.ultimoAcesso?.toDate ? (() => {
@@ -659,6 +655,7 @@ export function MentoresTab() {
       </div>
 
       {/* MODAL */}
+      {vinculoAlvo && <UnidadesVinculadasModal mentor={vinculoAlvo} mentores={mentores} unidades={todasUnidades} quem={userData} onClose={() => setVinculoAlvo(null)} />}
       {docAlvo && <DocumentoModal alvo={docAlvo} onClose={() => setDocAlvo(null)} />}
 
       {modalAberto && (

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 // Importações de contexto e serviços
 import { useAuth } from "../../../contexts/AuthContext";
 import { useCatalogs } from "../../../contexts/CatalogContext";
@@ -14,7 +14,7 @@ import { initializeApp, getApp, deleteApp } from "firebase/app";
 
 // TODOS OS ÍCONES IMPORTADOS CORRETAMENTE
 import { 
-  UserPlus, Edit2, Trash2, Link as LinkIcon, Loader2, Search, CheckCircle2, 
+  UserPlus, Edit2, Trash2, Link as LinkIcon, Loader2, Search, ScanSearch, CheckCircle2, 
   X, Mail, Phone, PlusCircle, User, AlertTriangle, ChevronDown, 
   ChevronUp, ArrowDown, ArrowRight, DownloadCloud, Layers, Ban, ShieldCheck, MapPin
 } from "lucide-react";
@@ -22,6 +22,9 @@ import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
 import LinkCentral from "../../../centrais/LinkCentral";
 import { ehLider, unidadesDoLider } from '../../../permissions';
 import PedidosProfessor from "../Pendencias/PedidosProfessor";
+import { BuscaDocumento } from "../Documento/DocumentoModal";
+import { FiltroPadrao } from "../ui/FiltroPadrao";
+import { useFiltroCascata } from "../ui/useFiltroCascata";
 
 // 🌍 PADRÃO OURO INTERNACIONAL — mesma identidade visual usada em MentoresTab
 const PAIS_CONFIG = {
@@ -148,8 +151,7 @@ export function ProfessoresTab() {
   
   // UX: Paginação e Ordenação
   const [itensVisiveis, setItensVisiveis] = useState(20);
-  const [busca, setBusca] = useState("");
-  const [paisFiltro, setPaisFiltro] = useState(""); // 🟢 FILTRO DE PAÍS
+  const [mostrarBuscaDoc, setMostrarBuscaDoc] = useState(false); // busca por CPF/DNI/SSN (o banco só deixa o admin consultar)
   const [ordenacao, setOrdenacao] = useState({ campo: 'nome', direcao: 'asc' });
 
   // Modais
@@ -232,23 +234,37 @@ export function ProfessoresTab() {
   }, [professoresTotais, meusVinculos, role]);
 
   // ==========================================
+  // 2b. FILTRO PADRÃO (busca + país → estado → mentor → líder), no navegador
+  // ==========================================
+  // Estado, mentor e líder do professor vêm das unidades onde ele dá aula — só as que a pessoa logada enxerga
+  // (o mentor não descobre unidades nem mentores de outros). Nenhuma leitura nova.
+  const unidadesDoProf = useMemo(() => {
+      const porId = new Map(minhasUnidades.map(u => [String(u.id), u]));
+      const mapa = {};
+      meusVinculos.forEach(v => { const u = porId.get(String(v.unidadeId)); if (u) (mapa[v.professorId] ||= []).push(u); });
+      return mapa;
+  }, [meusVinculos, minhasUnidades]);
+  const nomeMentor = useCallback((id) => (catalogosGlobais.mentores || []).find(m => m.id === id)?.nome, [catalogosGlobais.mentores]);
+  const nomeLider = useCallback((id) => {
+      for (const u of minhasUnidades) {
+          if (u.liderUid === id) return u.liderNome;
+          if (u.lider2Uid === id) return u.lider2Nome;
+      }
+  }, [minhasUnidades]);
+  const filtro = useFiltroCascata(meusProfessores, {
+      getPais: (p) => p.pais || PAIS_DEFAULT,
+      getEstados: (p) => (unidadesDoProf[p.id] || []).map(u => u.estado),
+      getMentorIds: (p) => (unidadesDoProf[p.id] || []).map(u => u.mentorId),
+      getLiderIds: (p) => (unidadesDoProf[p.id] || []).flatMap(u => [u.liderUid, u.lider2Uid]),
+      textoBusca: (p) => [p.nome, p.email, p.telefone],
+      nomeMentor, nomeLider,
+  });
+
+  // ==========================================
   // 3. PROCESSADOR VISUAL (BUSCA, PAÍS E ORDENAÇÃO)
   // ==========================================
   const professoresProcessados = useMemo(() => {
-    const termo = busca.toLowerCase();
-    
-    let lista = meusProfessores.filter(p => 
-        (p.nome || "").toLowerCase().includes(termo) || 
-        (p.email || "").toLowerCase().includes(termo) ||
-        (p.telefone || "").includes(termo)
-    );
-
-    // 🟢 FILTRO POR PAÍS: Brasil só mostra Brasil, Argentina só Argentina, Estados Unidos só Estados Unidos
-    if (paisFiltro) {
-        lista = lista.filter(p => (p.pais || PAIS_DEFAULT) === paisFiltro);
-    }
-
-    return lista.sort((a, b) => {
+    return [...filtro.resultado].sort((a, b) => {
         let valA, valB;
         if (ordenacao.campo === 'unidades') {
             valA = vinculos.filter(v => v.professorId === a.id).length;
@@ -262,7 +278,7 @@ export function ProfessoresTab() {
         if (valA > valB) return ordenacao.direcao === 'asc' ? 1 : -1;
         return 0;
     });
-  }, [meusProfessores, vinculos, busca, paisFiltro, ordenacao]);
+  }, [filtro.resultado, vinculos, ordenacao]);
 
   const professoresVisiveis = useMemo(() => {
       return professoresProcessados.slice(0, itensVisiveis);
@@ -608,34 +624,21 @@ export function ProfessoresTab() {
         </div>
       </div>
 
-      {/* BARRA DE FERRAMENTAS, BUSCA E FILTRO DE PAÍS */}
-      <div className="flex flex-col lg:flex-row justify-between items-center gap-4">
-          <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
-              <div className="relative w-full sm:w-96 group">
-                  <Search className="absolute left-4 top-3.5 w-5 h-5 text-slate-400 group-focus-within:text-green-500 transition-colors"/>
-                  <input 
-                      type="text" 
-                      placeholder={t('teachersTab.searchPlaceholder', 'Buscar por nome, telefone ou e-mail...')} 
-                      className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-green-500 shadow-sm transition-all text-slate-700 dark:text-white"
-                      value={busca}
-                      onChange={(e) => setBusca(e.target.value)}
-                  />
-              </div>
-
-              {/* 🟢 FILTRO DE PAÍS — mesmo comportamento de UnidadesTab/MentoresTab */}
-              <div className="relative w-full sm:w-56">
-                  <select 
-                      value={paisFiltro} 
-                      onChange={e => setPaisFiltro(e.target.value)} 
-                      className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold uppercase outline-none appearance-none shadow-sm dark:text-white"
-                  >
-                      <option value="">{t('teachersTab.filterCountry.all', 'Todos os Países')}</option>
-                      {PAISES.map(p => <option key={p.id} value={p.id}>{t(`common.countries.${p.id}`, p.nome)}</option>)}
-                  </select>
-                  <ChevronDown className="absolute right-4 top-3.5 w-4 h-4 text-slate-400 pointer-events-none"/>
-              </div>
-          </div>
-
+      {/* BUSCA + FILTROS (filtro padrão das Configurações) */}
+      <FiltroPadrao abaId="professores" filtro={filtro}
+          mostrar={["pais", "estado", ...(role === "admin" ? ["mentor"] : []), ...(role === "admin" || role === "mentor" ? ["lider"] : [])]}
+          placeholder={t('teachersTab.searchPlaceholder', 'Buscar por nome, telefone ou e-mail...')}
+          acoes={role === "admin" && (
+              <button type="button" onClick={() => setMostrarBuscaDoc(v => !v)} aria-expanded={mostrarBuscaDoc}
+                  className={`px-4 py-3 rounded-xl border text-xs font-black uppercase flex items-center justify-center gap-2 transition-colors ${mostrarBuscaDoc
+                      ? "border-green-500 bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300"
+                      : "border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-green-500 hover:text-green-600"}`}>
+                  <ScanSearch className="w-4 h-4"/> {t("document.search.title")}
+              </button>
+          )}>
+          {role === "admin" && mostrarBuscaDoc && <BuscaDocumento />}
+      </FiltroPadrao>
+      {role === "admin" && <div className="flex justify-end">
           {role === "admin" && (
               <button 
                   type="button"
@@ -647,7 +650,7 @@ export function ProfessoresTab() {
                   {t('teachersTab.fixEmailsBtn', 'Corrigir E-mails')}
               </button>
           )}
-      </div>
+      </div>}
 
       {/* TABELA DE DADOS */}
       <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden shadow-sm relative">

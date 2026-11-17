@@ -1,0 +1,14 @@
+{
+  "search": "Buscar por nombre, e-mail o teléfono...",
+  "country": "País",
+  "state": "Estado",
+  "mentor": "Mentor",
+  "leader": "Líder",
+  "allCountries": "Todos los países",
+  "allStates": "Todos los estados",
+  "allMentors": "Todos los mentores",
+  "noMentor": "Sin mentor",
+  "allLeaders": "Todos los líderes",
+  "clear": "Limpiar filtros",
+  "showing": "Mostrando {{count}} de {{total}}"
+}

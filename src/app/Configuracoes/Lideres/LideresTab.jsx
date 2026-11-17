@@ -7,7 +7,7 @@
 //   3) entra com o login antigo da unidade e é obrigado a atualizar o cadastro e conectar o Google
 //      (pages/AtualizarCadastro): assume como líder na hora e fica "a conferir" até o admin/mentor confirmar.
 // Admin vê todas as unidades; mentor só as dele (as regras do banco também garantem isso).
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { doc, writeBatch, serverTimestamp, addDoc, collection, deleteField, updateDoc } from "firebase/firestore";
 import { createUserWithEmailAndPassword, getAuth, signOut } from "firebase/auth";
 import { initializeApp, getApp, deleteApp } from "firebase/app";
@@ -24,6 +24,8 @@ import LinkUnidade from "../../../centrais/LinkUnidade";
 import LinkCentral from "../../../centrais/LinkCentral";
 import { tirarLiderDaUnidade, camposAoLiberarVaga, textoDaSaida, dadosDaVaga } from "./saidaDoLider";
 import { TornarLiderModal } from "./TornarLiderModal";
+import { FiltroPadrao } from "../ui/FiltroPadrao";
+import { useFiltroCascata } from "../ui/useFiltroCascata";
 import { BotaoDocumento, DocumentoModal, BuscaDocumento } from "../Documento/DocumentoModal";
 import i18n from "../../../i18n";
 import CampoDocumento from "../../../components/acesso/CampoDocumento";
@@ -54,11 +56,7 @@ export function LideresTab() {
   const meuNome = userData?.nome || userData?.email || "Admin";
   const podeAcessar = role === "admin" || role === "mentor";
 
-  const [busca, setBusca] = useState("");
   const [situacao, setSituacao] = useState("todas"); // todas | com | sem | conferir
-  const [paisFiltro, setPaisFiltro] = useState("");
-  const [estadoFiltro, setEstadoFiltro] = useState("");
-  const [mentorFiltro, setMentorFiltro] = useState("");
   const [mostrarBuscaDoc, setMostrarBuscaDoc] = useState(false);
   const pedidosRef = useRef(null);
   const [processando, setProcessando] = useState(null);
@@ -79,38 +77,26 @@ export function LideresTab() {
     return role === "admin" ? todas : todas.filter((u) => u.mentorId === userId);
   }, [catalogs?.unidades, role, userId]);
 
-  const paises = useMemo(() => [...new Set(minhasUnidades.map(siglaPais))].sort(), [minhasUnidades]);
-  const estados = useMemo(() => [...new Set(minhasUnidades
-    .filter((u) => !paisFiltro || siglaPais(u) === paisFiltro)
-    .map((u) => String(u.estado || "").trim().toUpperCase()).filter(Boolean))].sort(), [minhasUnidades, paisFiltro]);
-  // Mentores: só os que têm unidade no país/estado escolhido (o mentor é designado por região).
-  const mentoresDasUnidades = useMemo(() => {
-    const daRegiao = minhasUnidades
-      .filter((u) => !paisFiltro || siglaPais(u) === paisFiltro)
-      .filter((u) => !estadoFiltro || String(u.estado || "").trim().toUpperCase() === estadoFiltro);
-    return mentores
-      .filter((m) => daRegiao.some((u) => u.mentorId === m.id))
-      .sort((a, b) => String(a.nome || "").localeCompare(String(b.nome || "")));
-  }, [mentores, minhasUnidades, paisFiltro, estadoFiltro]);
+  // Filtro padrão (busca + país → estado → mentor), no navegador sobre as unidades já carregadas.
+  // A situação (com/sem líder/a conferir) continua sendo o seletor próprio desta aba.
+  const nomeMentor = useCallback((id) => mentores.find((m) => m.id === id)?.nome, [mentores]);
+  const soDaSituacao = useCallback((u) => situacao === "todas"
+    || (situacao === "com" && u.liderUid)
+    || (situacao === "sem" && !u.liderUid)
+    || (situacao === "conferir" && u.liderUid && u.liderAConferir === true), [situacao]);
+  const filtro = useFiltroCascata(minhasUnidades, {
+    getPais: siglaPais,
+    getEstados: (u) => [u.estado],
+    getMentorIds: (u) => [u.mentorId],
+    textoBusca: (u) => [u.nome, u.estado, u.liderNome, u.liderEmail, u.liderTelefone, u.lider2Nome, u.lider2Email, u.lider2Telefone],
+    nomeMentor,
+    extra: soDaSituacao,
+  });
+  // Líder novo "a conferir" aparece primeiro.
+  const lista = useMemo(
+    () => [...filtro.resultado].sort((a, b) => Number(b.liderAConferir === true) - Number(a.liderAConferir === true)),
+    [filtro.resultado]);
 
-  const lista = useMemo(() => {
-    const termo = busca.trim().toLowerCase();
-    return minhasUnidades
-      .filter((u) => situacao === "todas"
-        || (situacao === "com" && u.liderUid)
-        || (situacao === "sem" && !u.liderUid)
-        || (situacao === "conferir" && u.liderUid && u.liderAConferir === true))
-      .filter((u) => !paisFiltro || siglaPais(u) === paisFiltro)
-      .filter((u) => !estadoFiltro || String(u.estado || "").trim().toUpperCase() === estadoFiltro)
-      .filter((u) => !mentorFiltro || (mentorFiltro === "-" ? !u.mentorId : u.mentorId === mentorFiltro))
-      .filter((u) => !termo || [u.nome, u.estado, u.liderNome, u.liderEmail, u.liderTelefone, u.lider2Nome, u.lider2Email, u.lider2Telefone]
-        .some((v) => String(v || "").toLowerCase().includes(termo)))
-      // Líder novo "a conferir" aparece primeiro.
-      .sort((a, b) => Number(b.liderAConferir === true) - Number(a.liderAConferir === true));
-  }, [minhasUnidades, busca, situacao, paisFiltro, estadoFiltro, mentorFiltro]);
-
-  const filtrosAtivos = situacao !== "todas" || paisFiltro || estadoFiltro || mentorFiltro || busca;
-  const limparFiltros = () => { setSituacao("todas"); setPaisFiltro(""); setEstadoFiltro(""); setMentorFiltro(""); setBusca(""); };
 
   const kpis = useMemo(() => {
     const comLider = minhasUnidades.filter((u) => u.liderUid).length;
@@ -338,23 +324,19 @@ export function LideresTab() {
 
       {/* LISTA DE UNIDADES E SEUS LÍDERES */}
       <div className="space-y-4">
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/40 p-4 space-y-4">
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder={t("leadersTab.search")}
-                className="w-full pl-9 pr-3 py-3 rounded-xl bg-slate-100 dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-red-500" />
-            </div>
-            {role === "admin" && (
-              <button type="button" onClick={() => setMostrarBuscaDoc((v) => !v)} aria-expanded={mostrarBuscaDoc}
-                className={`px-4 py-3 rounded-xl border text-xs font-black uppercase flex items-center justify-center gap-2 transition-colors ${mostrarBuscaDoc
-                  ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300"
-                  : "border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-blue-500 hover:text-blue-600"}`}>
-                <ScanSearch className="w-4 h-4" /> {t("document.search.title")}
-              </button>
-            )}
-          </div>
-
+        <FiltroPadrao abaId="lideres" filtro={filtro}
+          mostrar={["pais", "estado", ...(role === "admin" ? ["mentor"] : [])]}
+          placeholder={t("leadersTab.search")} ativoExtra={situacao !== "todas"} aoLimpar={() => setSituacao("todas")}
+          acoes={<>
+              {role === "admin" && (
+                <button type="button" onClick={() => setMostrarBuscaDoc((v) => !v)} aria-expanded={mostrarBuscaDoc}
+                  className={`px-4 py-3 rounded-xl border text-xs font-black uppercase flex items-center justify-center gap-2 transition-colors ${mostrarBuscaDoc
+                    ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300"
+                    : "border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-blue-500 hover:text-blue-600"}`}>
+                  <ScanSearch className="w-4 h-4" /> {t("document.search.title")}
+                </button>
+              )}
+          </>}>
           {role === "admin" && mostrarBuscaDoc && <BuscaDocumento />}
 
           {/* Situação: um seletor só, com a contagem de cada grupo */}
@@ -376,44 +358,7 @@ export function LideresTab() {
               </button>
             ))}
           </div>
-
-          {/* Região: país → estado → mentor (cada um mostra só o que existe na escolha anterior) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
-            <label className="space-y-1">
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t("leadersTab.filter.country")}</span>
-              <select value={paisFiltro} onChange={(e) => { setPaisFiltro(e.target.value); setEstadoFiltro(""); setMentorFiltro(""); }}
-                className="w-full px-3 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-900 text-xs font-black uppercase text-slate-600 dark:text-slate-300 outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed">
-                <option value="">{t("leadersTab.filter.allCountries")}</option>
-                {paises.map((p) => <option key={p} value={p}>{t(`common.countries.${p}`, { defaultValue: p })}</option>)}
-              </select>
-            </label>
-            <label className="space-y-1">
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t("leadersTab.filter.state")}</span>
-              <select value={estadoFiltro} onChange={(e) => { setEstadoFiltro(e.target.value); setMentorFiltro(""); }} disabled={!paisFiltro}
-                className="w-full px-3 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-900 text-xs font-black uppercase text-slate-600 dark:text-slate-300 outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed">
-                <option value="">{t("leadersTab.filter.allStates")}</option>
-                {estados.map((e) => <option key={e} value={e}>{e}</option>)}
-              </select>
-            </label>
-            {role === "admin" && (
-              <label className="space-y-1">
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t("leadersTab.filter.mentor")}</span>
-                <select value={mentorFiltro} onChange={(e) => setMentorFiltro(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-900 text-xs font-black uppercase text-slate-600 dark:text-slate-300 outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed">
-                  <option value="">{t("leadersTab.filter.allMentors")}</option>
-                  {mentoresDasUnidades.map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}
-                  <option value="-">{t("leadersTab.filter.noMentor")}</option>
-                </select>
-              </label>
-            )}
-            {filtrosAtivos && (
-              <button type="button" onClick={limparFiltros} className="px-3 py-2.5 rounded-xl text-xs font-black uppercase text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center justify-center gap-1 lg:justify-start">
-                <X className="w-3.5 h-3.5" /> {t("leadersTab.filter.clear")}
-              </button>
-            )}
-          </div>
-        </div>
-        <p className="text-[11px] font-bold text-slate-400 text-right">{t("leadersTab.filter.showing", { count: lista.length, total: minhasUnidades.length })}</p>
+        </FiltroPadrao>
 
         {loadingCatalogs ? (
           <div className="py-16 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-red-500" /></div>

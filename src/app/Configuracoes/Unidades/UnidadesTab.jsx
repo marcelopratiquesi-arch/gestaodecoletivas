@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useAuth } from "../../../contexts/AuthContext";
 import {
   collection, addDoc, updateDoc, doc, query, where, serverTimestamp, writeBatch, onSnapshot, getDocs, deleteField
@@ -8,10 +8,12 @@ import { tirarLiderDaUnidade } from "../Lideres/saidaDoLider";
 import { publicarUnidade, publicarUnidades, removerUnidadeDaVitrine, ehCampoPublicoUnidade, reconstruirVitrine } from "../../../services/vitrinePublica";
 import { useTranslation } from "react-i18next";
 import LinkUnidade from "../../../centrais/LinkUnidade";
+import { FiltroPadrao } from "../ui/FiltroPadrao";
+import { useFiltroCascata } from "../ui/useFiltroCascata";
 
 import { 
     Building2, MapPin, Edit2, Trash2, AlertTriangle, CheckCircle2, 
-    Loader2, User, Search, Mail, Lock, Globe, Key, ChevronDown, ChevronUp, Ban, PowerOff, Plus, X, Phone, Check,
+    Loader2, User, Mail, Lock, Globe, Key, ChevronDown, ChevronUp, Ban, PowerOff, Plus, X, Phone, Check,
     Map, Maximize, GripHorizontal, Upload, FileSpreadsheet, ShieldAlert, UserCheck
 } from "lucide-react";
 
@@ -267,10 +269,6 @@ export function UnidadesTab() {
   });
   const [loading, setLoading] = useState(true);
   
-  const [busca, setBusca] = useState("");
-  const [estadoFiltro, setEstadoFiltro] = useState("");
-  const [mentorFiltro, setMentorFiltro] = useState("");
-  const [paisFiltro, setPaisFiltro] = useState("");
   const [sortConfig, setSortConfig] = useState({ field: 'nome', direction: 'asc' });
   
   const [modalUnidadeAberto, setModalUnidadeAberto] = useState(false);
@@ -350,35 +348,33 @@ export function UnidadesTab() {
     return () => { unsubUnidades(); unsubMentores(); };
   }, [role, userId, podeAcessar]);
 
-  const unidadesProcessadas = useMemo(() => {
-      let resultado = unidadesBase;
-      if (estadoFiltro) resultado = resultado.filter(u => u.estado === estadoFiltro);
-      if (mentorFiltro) resultado = resultado.filter(u => u.mentorId === mentorFiltro);
-      
-      if (paisFiltro) {
-          resultado = resultado.filter(u => {
-              const uPais = u.pais || PAIS_DEFAULT;
-              if (uPais === "Brasil" && paisFiltro === "BR") return true;
-              if (uPais === "Argentina" && paisFiltro === "AR") return true;
-              if (uPais === "Estados Unidos" && paisFiltro === "US") return true;
-              return uPais === paisFiltro;
-          });
+  // Filtro padrão (busca + país → estado → mentor → líder), no navegador sobre as unidades já carregadas.
+  // Unidades antigas podem ter o país escrito por extenso ("Brasil"); aqui tudo vira a sigla (BR/AR/US).
+  const SIGLA_PAIS = { Brasil: "BR", Argentina: "AR", "Estados Unidos": "US" };
+  const nomeMentor = useCallback((id) => mentores.find(m => m.id === id)?.nome, [mentores]);
+  const nomeLider = useCallback((id) => {
+      for (const u of unidadesBase) {
+          if (u.liderUid === id) return u.liderNome;
+          if (u.lider2Uid === id) return u.lider2Nome;
       }
+  }, [unidadesBase]);
+  const filtro = useFiltroCascata(unidadesBase, {
+      getPais: (u) => SIGLA_PAIS[u.pais] || u.pais || PAIS_DEFAULT,
+      getEstados: (u) => [u.estado],
+      getMentorIds: (u) => [u.mentorId],
+      getLiderIds: (u) => [u.liderUid, u.lider2Uid],
+      textoBusca: (u) => [u.nome, u.email, u.estado, u.telefone, u.liderNome, u.lider2Nome],
+      nomeMentor, nomeLider,
+  });
 
-      if (busca.trim()) {
-          const termo = busca.toLowerCase();
-          resultado = resultado.filter(u => 
-              (u.nome || "").toLowerCase().includes(termo) || (u.email || "").toLowerCase().includes(termo) ||
-              (u.estado || "").toLowerCase().includes(termo) || (u.telefone || "").toLowerCase().includes(termo)
-          );
-      }
-      return resultado.sort((a, b) => {
+  const unidadesProcessadas = useMemo(() => {
+      return [...filtro.resultado].sort((a, b) => {
           let valA = (a[sortConfig.field] || "").toLowerCase(); let valB = (b[sortConfig.field] || "").toLowerCase();
           if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
           if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
           return 0;
       });
-  }, [unidadesBase, busca, estadoFiltro, mentorFiltro, paisFiltro, sortConfig]);
+  }, [filtro.resultado, sortConfig]);
 
   const handleSort = (field) => { setSortConfig(prev => ({ field, direction: prev.field === field && prev.direction === 'asc' ? 'desc' : 'asc' })); };
   const SortIcon = ({ field }) => {
@@ -842,48 +838,9 @@ export function UnidadesTab() {
             </div>
         )}
 
-        <div className="flex flex-col lg:flex-row gap-4 items-center">
-            <div className="relative w-full lg:w-96 group">
-                <Search className="absolute left-4 top-3.5 w-5 h-5 text-slate-400 group-focus-within:text-red-500 transition-colors"/>
-                <input 
-                    type="text" placeholder={t('unitsTab.searchPlaceholder', "Buscar unidade, estado...")} 
-                    className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-red-500/50 shadow-sm transition-all dark:text-white"
-                    value={busca} onChange={(e) => setBusca(e.target.value)}
-                />
-            </div>
-            
-            {role === 'admin' && (
-                <div className="flex w-full lg:w-auto gap-4 flex-col sm:flex-row">
-                    <div className="relative w-full sm:w-56">
-                        <select value={estadoFiltro} onChange={e => setEstadoFiltro(e.target.value)} className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold uppercase outline-none appearance-none shadow-sm dark:text-white">
-                            <option value="">{t('unitsTab.extra.allStates').toUpperCase()}</option>
-                            {[...new Set(unidadesBase.map(u => u.estado).filter(Boolean))].sort().map(e => <option key={e} value={e}>{e}</option>)}
-                        </select>
-                        <ChevronDown className="absolute right-4 top-3.5 w-4 h-4 text-slate-400 pointer-events-none"/>
-                    </div>
-                    
-                    <div className="relative w-full sm:w-56">
-                        <select 
-                            value={paisFiltro} 
-                            onChange={e => setPaisFiltro(e.target.value)} 
-                            className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold uppercase outline-none appearance-none shadow-sm dark:text-white"
-                        >
-                            <option value="">{t('unitsTab.extra.allCountries').toUpperCase()}</option>
-                            {PAISES.map(p => <option key={p.id} value={p.id}>{t(`common.countries.${p.id}`, p.nome)}</option>)}
-                        </select>
-                        <ChevronDown className="absolute right-4 top-3.5 w-4 h-4 text-slate-400 pointer-events-none"/>
-                    </div>
-
-                    <div className="relative w-full sm:w-64">
-                        <select value={mentorFiltro} onChange={e => setMentorFiltro(e.target.value)} className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold uppercase outline-none appearance-none shadow-sm dark:text-white">
-                            <option value="">{t('unitsTab.extra.allMentors').toUpperCase()}</option>
-                            {mentores.map(m => <option key={m.id} value={m.id}>{m.nome}</option>)}
-                        </select>
-                        <ChevronDown className="absolute right-4 top-3.5 w-4 h-4 text-slate-400 pointer-events-none"/>
-                    </div>
-                </div>
-            )}
-        </div>
+        <FiltroPadrao abaId="unidades" filtro={filtro}
+            mostrar={["pais", "estado", ...(role === 'admin' ? ["mentor"] : []), "lider"]}
+            placeholder={t('unitsTab.searchPlaceholder', "Buscar unidade, estado...")} />
 
         {/* === TABELA DE ALTA DENSIDADE === */}
         <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden shadow-sm">

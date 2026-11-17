@@ -86,5 +86,24 @@
     "pendingHelp": "Mentores já cadastrados por você. Assim que cada um entrar com o Google usando o e-mail abaixo, aparece na lista de mentores.",
     "googleEmail": "E-mail do Google do mentor",
     "googleEmailHelp": "Sem senha: o mentor entra com o botão \"Entrar com Google\" usando exatamente este e-mail. O seu cadastro já é a aprovação."
+  },
+  "linked": {
+    "column": "Unidades",
+    "manage": "Gerenciar unidades deste mentor",
+    "title": "Unidades de {{name}}",
+    "help": "Tirar ou colocar aqui vale igual na aba Unidades: é o mesmo vínculo.",
+    "current": "Vinculadas ({{count}})",
+    "none": "Nenhuma unidade vinculada.",
+    "remove": "Tirar",
+    "chooseNew": "Passar para qual mentor?",
+    "confirmMove": "Confirmar",
+    "add": "Adicionar unidade",
+    "search": "Buscar unidade ou estado...",
+    "addButton": "Vincular",
+    "ofMentor": "hoje de {{name}}",
+    "noMentor": "sem mentor",
+    "noResults": "Nenhuma unidade encontrada.",
+    "confirmTake": "A unidade {{unit}} hoje é de {{from}}. Passar para {{to}}?",
+    "saveError": "Não foi possível salvar."
   }
 }
