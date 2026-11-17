@@ -45,20 +45,29 @@ export default function RelatorioRepetidos() {
         getDocs(collection(db, 'usuarios')),
         getDocs(collection(db, 'solicitacoes_acesso')),
       ]);
+      // Logins antigos não são pessoas: login da unidade (papel "unidade") e crachá de professor da
+      // senha antiga (sem loginGoogle, inativo desde o fim da senha 123456). Ficam numa lista à parte.
+      const ehLoginAntigo = (c) => {
+        const papel = String(c.role || '').toLowerCase();
+        return papel === 'unidade' || (papel === 'professor' && c.loginGoogle !== true);
+      };
+      const loginsAntigos = [];
       const registros = [
         ...(catalogs?.professores || []).map(p => ({
           origem: 'professor', id: String(p.id), nome: p.nome, email: p.email, telefone: p.telefone,
           pais: normalizarPais(p.pais), uidLogin: p.uidLogin || '',
           detalhe: p.status || '', unidade: '',
         })),
-        ...crachas.docs.map(d => {
+        ...crachas.docs.flatMap(d => {
           const c = d.data();
           const unidadeId = c.unidadeId || (c.unidadeIds || [])[0] || '';
-          return {
+          const registro = {
             origem: 'cracha', id: d.id, nome: c.nome, email: c.email || c.emailAuth, telefone: c.telefone,
             pais: paisDaUnidade(unidadeId), professorId: c.professorId || '',
             detalhe: formatRole(c.role), unidade: nomeUnidade(unidadeId),
           };
+          if (ehLoginAntigo(c)) { loginsAntigos.push({ ...registro, origem: 'loginAntigo' }); return []; }
+          return [registro];
         }),
         ...pedidos.docs.map(d => {
           const s = d.data();
@@ -70,7 +79,9 @@ export default function RelatorioRepetidos() {
           };
         }),
       ];
-      setEstado({ carregando: false, erro: false, resultado: acharRepetidos(registros), lidos: crachas.size + pedidos.size });
+      const resultado = acharRepetidos(registros);
+      resultado.problemas.loginAntigo = loginsAntigos.sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || '')));
+      setEstado({ carregando: false, erro: false, resultado, lidos: crachas.size + pedidos.size });
     } catch (err) {
       console.error('Relatório de repetidos:', err);
       setEstado({ carregando: false, erro: true, resultado: null, lidos: 0 });
@@ -95,7 +106,7 @@ export default function RelatorioRepetidos() {
     });
     const repetidos = TIPOS.flatMap(tipo => r[tipo].flatMap(g => g.itens.map(i => linha(tipo, valorDoGrupo(tipo, g), i))));
     const problemas = Object.entries(r.problemas).flatMap(([tipo, itens]) =>
-      itens.map(i => linha(tipo, tipo === 'telefoneInvalido' ? i.telefone : i.email, i)));
+      itens.map(i => linha(tipo, tipo === 'telefoneInvalido' ? i.telefone : (i.email || i.telefone || ''), i)));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(repetidos), t('backupTab.duplicates.sheet.duplicates').slice(0, 31));
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(problemas), t('backupTab.duplicates.sheet.problems').slice(0, 31));
@@ -109,7 +120,11 @@ export default function RelatorioRepetidos() {
 
   const lista = r ? (TIPOS.includes(aberto)
     ? r[aberto].map(g => ({ chave: g.valor, titulo: valorDoGrupo(aberto, g), extra: t('backupTab.duplicates.people', { count: g.pessoas }), itens: g.itens }))
-    : r.problemas[aberto].map((i, n) => ({ chave: `${i.origem}_${i.id}_${n}`, titulo: aberto === 'telefoneInvalido' ? i.telefone : i.email, itens: [i] }))
+    : r.problemas[aberto].map((i, n) => ({
+      chave: `${i.origem}_${i.id}_${n}`,
+      titulo: aberto === 'telefoneInvalido' ? i.telefone : aberto === 'loginAntigo' ? (i.email || i.telefone || '—') : i.email,
+      itens: [i],
+    }))
   ) : [];
 
   return (

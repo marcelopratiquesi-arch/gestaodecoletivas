@@ -53,12 +53,14 @@
       "nome": "Duplicate name",
       "emailDeMentira": "Fake email",
       "emailInvalido": "Invalid email",
-      "telefoneInvalido": "Invalid phone"
+      "telefoneInvalido": "Invalid phone",
+      "loginAntigo": "Old logins (not counted)"
     },
     "origin": {
       "professor": "Schedule teacher",
       "cracha": "Badge",
-      "pedido": "Access request"
+      "pedido": "Access request",
+      "loginAntigo": "Old login"
     },
     "requestStatus": {
       "pendente": "pending",

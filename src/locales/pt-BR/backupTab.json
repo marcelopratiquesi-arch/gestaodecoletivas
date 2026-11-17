@@ -53,12 +53,14 @@
       "nome": "Nome repetido",
       "emailDeMentira": "E-mail de mentira",
       "emailInvalido": "E-mail inválido",
-      "telefoneInvalido": "Telefone inválido"
+      "telefoneInvalido": "Telefone inválido",
+      "loginAntigo": "Logins antigos (fora da conta)"
     },
     "origin": {
       "professor": "Professor da grade",
       "cracha": "Crachá",
-      "pedido": "Pedido de acesso"
+      "pedido": "Pedido de acesso",
+      "loginAntigo": "Login antigo"
     },
     "requestStatus": {
       "pendente": "pendente",
