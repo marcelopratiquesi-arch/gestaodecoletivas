@@ -30,6 +30,9 @@ import { CabecalhoDoModal } from "../ui/CabecalhoDoModal";
 import { BotaoDeLinha } from "../ui/BotaoDeLinha";
 import { CabecalhoDaAba, CaixaDeNumeros, BotaoPrincipal, BotaoSecundario } from "../ui/CabecalhoDaAba";
 import { useFiltroCascata } from "../ui/useFiltroCascata";
+import SeloRepetido from "../ui/SeloRepetido";
+import { useSelosRepetidos } from "../ui/useSelosRepetidos";
+import JuntarFichasModal from "../Backup/JuntarFichasModal";
 
 // 🌍 PADRÃO OURO INTERNACIONAL — mesma identidade visual usada em MentoresTab
 const PAIS_CONFIG = {
@@ -324,6 +327,14 @@ export function ProfessoresTab() {
       const semDocumento = meusProfessores.filter(p => p.status === 'ativo' && !p.documentoOk).length;
       return { total: meusProfessores.length, ativos, inativos, semDocumento };
   }, [meusProfessores]);
+
+  // Selo "possível repetido": compara as fichas que esta tela já tem (0 leituras novas).
+  const registrosRepetidos = useMemo(() => meusProfessores.map(p => ({
+      origem: 'professor', id: String(p.id), nome: p.nome, email: p.email, telefone: p.telefone,
+      pais: p.pais || PAIS_DEFAULT, uidLogin: p.uidLogin || '',
+  })), [meusProfessores]);
+  const selosRepetidos = useSelosRepetidos(registrosRepetidos);
+  const [juntandoFichas, setJuntandoFichas] = useState(null);
 
   const getUnidadesVinculadas = (profId) => {
       const links = vinculos.filter(v => v.professorId === profId);
@@ -636,6 +647,15 @@ export function ProfessoresTab() {
                                 </td>
                                 <td className="p-4 font-black text-slate-800 dark:text-white text-base">
                                     <LinkCentral tipo="professor" alvo={p}>{p.nome}</LinkCentral>
+                                    <SeloRepetido
+                                        selo={selosRepetidos.get(`professor:${p.id}`)}
+                                        detalheDe={(o) => getUnidadesVinculadas(o.id).map(u => u.nome).join(', ') || o.email || ''}
+                                        onJuntar={role === 'admin' ? () => {
+                                            const s = selosRepetidos.get(`professor:${p.id}`);
+                                            const ids = new Set([String(p.id), ...(s?.mesma || []).map(o => String(o.id))]);
+                                            setJuntandoFichas(meusProfessores.filter(x => ids.has(String(x.id))).map(x => ({ ...x, id: String(x.id) })));
+                                        } : undefined}
+                                    />
                                     {p.documentoOk && (
                                         <span className="ml-2 inline-flex items-center gap-1 align-middle text-[9px] font-black px-1.5 py-0.5 rounded border border-green-200 bg-green-50 text-green-700 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400" title={t('teachersTab.cpf.hasDocument')}>
                                             <IdCard className="w-3 h-3" /> {t('teachersTab.cpf.badge')}
@@ -725,6 +745,10 @@ export function ProfessoresTab() {
                   <DownloadCloud className="w-4 h-4"/> {t('teachersTab.loadAll', 'Ver Todos')} ({professoresProcessados.length})
               </button>
           </div>
+      )}
+
+      {juntandoFichas && (
+          <JuntarFichasModal fichas={juntandoFichas} aoJuntar={() => {}} aoFechar={() => setJuntandoFichas(null)} />
       )}
 
       {/* MODAL 1: FLUXO DE VERIFICAÇÃO */}

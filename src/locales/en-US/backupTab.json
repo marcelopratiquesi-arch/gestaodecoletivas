@@ -38,7 +38,7 @@
   "restoreSelected": "Restore selected",
   "duplicates": {
     "title": "Duplicates report",
-    "desc": "Shows who appears with the same email, phone or name across schedule teachers, badges and access requests. Read-only, nothing is saved. Reads badges and requests once (a few hundred reads).",
+    "desc": "Shows who appears repeated across grid teachers, badges and access requests. Separates the same person with several records (suggests merging), different people sharing a phone (warning) and equal names with nothing else in common (info only). Read-only. Reads badges and requests once (a few hundred reads).",
     "generate": "Generate report",
     "regenerate": "Generate again",
     "download": "Download spreadsheet",
@@ -54,7 +54,10 @@
       "emailDeMentira": "Fake email",
       "emailInvalido": "Invalid email",
       "telefoneInvalido": "Invalid phone",
-      "loginAntigo": "Old logins (not counted)"
+      "loginAntigo": "Old logins (not counted)",
+      "mesma": "Same person on several records (merge)",
+      "outra": "Same phone, different people",
+      "soNome": "Only the name matches (maybe a namesake)"
     },
     "origin": {
       "professor": "Schedule teacher",
@@ -79,7 +82,9 @@
       "detail": "Role / status",
       "unit": "Unit",
       "id": "Id"
-    }
+    },
+    "cards_one": "{{count}} record",
+    "cards_other": "{{count}} records"
   },
   "merge": {
     "button": "Merge records ({{count}})",
@@ -101,9 +106,13 @@
     "sumSummaries": "Monthly closing rebuilt next time reports open: {{list}}",
     "sumFill": "Missing data that will be filled in: {{list}}",
     "sumDelete": "Records deleted after moving everything: {{count}}",
-    "keepField": { "nome": "Name to keep", "email": "Email to keep", "telefone": "Phone to keep" },
+    "keepField": {
+      "nome": "Name to keep",
+      "email": "Email to keep",
+      "telefone": "Phone to keep"
+    },
     "keeps": "Result: {{name}} · {{email}} · {{phone}}",
-    "sumDocument":"The ID (CPF/DNI/SSN) moves to the record that stays",
+    "sumDocument": "The ID (CPF/DNI/SSN) moves to the record that stays",
     "documentConflict": "These records have DIFFERENT IDs: they are different people and cannot be merged.",
     "cost": "Reads done now: {{reads}} · writes when merging: {{writes}}",
     "done": "Done! The records were merged into {{name}}'s.",
@@ -123,8 +132,21 @@
     "error": "Could not link (quota exhausted or offline). Try again.",
     "documentConflict": "The record and the badge have DIFFERENT IDs: they are different people. Not linked.",
     "copiedDocument": "The login's ID was copied to the record.",
-    "keepField": { "nome": "Name to keep", "email": "Email to keep", "telefone": "Phone to keep" },
-    "whatHappens":"When linking: the record starts using this login (the old login, if any, no longer applies to it), the badge points to the record and the login's ID goes to the record. Classes, units, validations and name stay as they are.",
+    "keepField": {
+      "nome": "Name to keep",
+      "email": "Email to keep",
+      "telefone": "Phone to keep"
+    },
+    "whatHappens": "When linking: the record starts using this login (the old login, if any, no longer applies to it), the badge points to the record and the login's ID goes to the record. Classes, units, validations and name stay as they are.",
     "leaderEffect": "This badge belongs to a leader/mentor. Once linked, the person becomes a 'leader who also teaches': if they ever leave the leadership, they keep teacher access. Link only if they teach (or taught) with this record."
+  },
+  "dupBadge": {
+    "other_one": "Same phone as another person",
+    "other_other": "Same phone as {{count}} other people",
+    "same_one": "Same person on {{count}} records",
+    "same_other": "Same person on {{count}} records",
+    "otherHint": "Please check: could be a typo or family. They are not the same person.",
+    "sameHint": "Looks like the same person on several records:",
+    "merge": "Merge records"
   }
 }

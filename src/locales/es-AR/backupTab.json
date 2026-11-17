@@ -38,7 +38,7 @@
   "restoreSelected": "Restaurar seleccionadas",
   "duplicates": {
     "title": "Informe de repetidos",
-    "desc": "Muestra quién aparece con el mismo correo, teléfono o nombre entre los profesores de la grilla, credenciales y solicitudes de acceso. Solo lee, no guarda nada. Lee las credenciales y solicitudes una vez (unos pocos cientos de lecturas).",
+    "desc": "Muestra quién aparece repetido entre profesores de la grilla, credenciales y pedidos de acceso. Separa la misma persona con varias fichas (sugiere unir), personas distintas con el mismo teléfono (alerta) y nombres iguales sin nada más en común (solo información). Solo lee, no graba nada. Lee las credenciales y pedidos una vez (unos pocos cientos de lecturas).",
     "generate": "Generar informe",
     "regenerate": "Generar de nuevo",
     "download": "Descargar planilla",
@@ -54,7 +54,10 @@
       "emailDeMentira": "Correo falso",
       "emailInvalido": "Correo inválido",
       "telefoneInvalido": "Teléfono inválido",
-      "loginAntigo": "Accesos antiguos (no cuentan)"
+      "loginAntigo": "Accesos antiguos (no cuentan)",
+      "mesma": "Misma persona en varias fichas (unir)",
+      "outra": "Mismo teléfono, personas distintas",
+      "soNome": "Solo el nombre es igual (quizás homónimo)"
     },
     "origin": {
       "professor": "Profesor de la grilla",
@@ -79,7 +82,9 @@
       "detail": "Rol / estado",
       "unit": "Unidad",
       "id": "Id"
-    }
+    },
+    "cards_one": "{{count}} ficha",
+    "cards_other": "{{count}} fichas"
   },
   "merge": {
     "button": "Unir fichas ({{count}})",
@@ -101,9 +106,13 @@
     "sumSummaries": "Cierre del mes rehecho al abrir los informes: {{list}}",
     "sumFill": "Datos faltantes que se completarán: {{list}}",
     "sumDelete": "Fichas borradas después de mover todo: {{count}}",
-    "keepField": { "nome": "Nombre que queda", "email": "Correo que queda", "telefone": "Teléfono que queda" },
+    "keepField": {
+      "nome": "Nombre que queda",
+      "email": "Correo que queda",
+      "telefone": "Teléfono que queda"
+    },
     "keeps": "Queda así: {{name}} · {{email}} · {{phone}}",
-    "sumDocument":"El documento (CPF/DNI/SSN) pasa a la ficha que queda",
+    "sumDocument": "El documento (CPF/DNI/SSN) pasa a la ficha que queda",
     "documentConflict": "Estas fichas tienen documentos DISTINTOS: son personas distintas y no se pueden unir.",
     "cost": "Lecturas hechas ahora: {{reads}} · escrituras al unir: {{writes}}",
     "done": "¡Listo! Las fichas se unieron en la de {{name}}.",
@@ -123,8 +132,21 @@
     "error": "No se pudo vincular (cuota agotada o sin conexión). Intentá de nuevo.",
     "documentConflict": "La ficha y la credencial tienen documentos DISTINTOS: son personas distintas. No se vinculó.",
     "copiedDocument": "El documento del acceso se copió a la ficha.",
-    "keepField": { "nome": "Nombre que queda", "email": "Correo que queda", "telefone": "Teléfono que queda" },
-    "whatHappens":"Al vincular: la ficha pasa a usar este acceso (el acceso antiguo, si existe, deja de valer para ella), la credencial apunta a la ficha y el documento del acceso va a la ficha. Clases, unidades, validaciones y nombre siguen igual.",
+    "keepField": {
+      "nome": "Nombre que queda",
+      "email": "Correo que queda",
+      "telefone": "Teléfono que queda"
+    },
+    "whatHappens": "Al vincular: la ficha pasa a usar este acceso (el acceso antiguo, si existe, deja de valer para ella), la credencial apunta a la ficha y el documento del acceso va a la ficha. Clases, unidades, validaciones y nombre siguen igual.",
     "leaderEffect": "Esta credencial es de líder/mentor. Vinculada a la ficha, la persona pasa a ser 'líder que también es profesor(a)': si algún día deja el liderazgo, sigue con acceso de profesor(a). Vinculá solo si da (o dio) clases con esta ficha."
+  },
+  "dupBadge": {
+    "other_one": "Mismo teléfono de otra persona",
+    "other_other": "Mismo teléfono de {{count}} personas más",
+    "same_one": "Misma persona en {{count}} fichas",
+    "same_other": "Misma persona en {{count}} fichas",
+    "otherHint": "Revisá: puede ser un error de tipeo o familia. No son la misma persona.",
+    "sameHint": "Parece ser la misma persona en varias fichas:",
+    "merge": "Unir fichas"
   }
 }

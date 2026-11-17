@@ -164,3 +164,107 @@ export function acharRepetidos(registros) {
     problemas,
   };
 }
+
+// ---------------- Análise inteligente (relatório e selos nas abas) ----------------
+// Mesma pessoa x pessoas diferentes:
+//  - "mesma pessoa": mesmo e-mail, ou mesmo telefone COM o mesmo nome (maiúscula/acento não contam). Várias fichas
+//    em unidades diferentes caem aqui: não é alarme, só sugestão de juntar.
+//  - "outra pessoa": mesmo telefone, mas nome e e-mail diferentes (digitação/família): o único alarme forte.
+//  - "só nome": mesmo nome sem nenhum outro dado igual (homônimo): lista discreta, sem selo.
+// Aceita os mesmos registros de acharRepetidos. Cada item sai com `chave` = `${origem}:${id}`.
+export const chaveRegistro = (r) => `${r.origem}:${r.id}`;
+
+export function analisarRepetidos(registros) {
+  const lista = registros || [];
+  const pai = new Map();
+  const achar = (k) => { while (pai.get(k) !== k) { pai.set(k, pai.get(pai.get(k))); k = pai.get(k); } return k; };
+  const unir = (a, b) => { const ra = achar(a), rb = achar(b); if (ra !== rb) pai.set(ra, rb); };
+  const garantir = (k) => { if (!pai.has(k)) pai.set(k, k); return k; };
+  const pessoaDe = (r) => (r.origem === 'professor' ? `p:${r.id}` : `u:${r.id}`);
+  for (const r of lista) garantir(pessoaDe(r));
+  // Ficha ligada ao crachá, e pedido do mesmo login, são a mesma pessoa.
+  for (const r of lista) {
+    if (r.origem === 'professor' && r.uidLogin) unir(pessoaDe(r), garantir(`u:${r.uidLogin}`));
+    if (r.origem !== 'professor' && r.professorId) unir(pessoaDe(r), garantir(`p:${r.professorId}`));
+  }
+
+  // Quem é "a mesma identidade" só pelas ligações ficha↔login (antes de comparar e-mail/telefone).
+  const identidade = new Map(lista.map(r => [pessoaDe(r), achar(pessoaDe(r))]));
+
+  const dados = lista.map(r => {
+    const email = normalizarEmail(r.email);
+    const emailBom = email && emailFormatoValido(email) && !emailDeMentira(email) ? email : '';
+    const tel = soNumeros(r.telefone) ? chaveTelefone(r.telefone, r.pais) : null;
+    return { r, email: emailBom, tel, nome: normalizarNome(r.nome) };
+  });
+  const porChave = (campo, extra = () => '') => {
+    const m = new Map();
+    for (const d of dados) {
+      if (!d[campo]) continue;
+      const k = `${d[campo]}|${extra(d)}`;
+      if (!m.has(k)) m.set(k, []);
+      m.get(k).push(d);
+    }
+    return m;
+  };
+  // Une: mesmo e-mail; mesmo telefone + mesmo nome.
+  for (const m of [porChave('email'), porChave('tel', d => d.nome)]) {
+    for (const itens of m.values()) for (let i = 1; i < itens.length; i++) unir(pessoaDe(itens[0].r), pessoaDe(itens[i].r));
+  }
+
+  const clusterDe = (d) => achar(pessoaDe(d.r));
+  const agrupar = (itens) => {
+    const porCluster = new Map();
+    for (const d of itens) {
+      const c = clusterDe(d);
+      if (!porCluster.has(c)) porCluster.set(c, []);
+      porCluster.get(c).push(d.r);
+    }
+    return [...porCluster.values()];
+  };
+
+  // Mesma pessoa: clusters com 2+ registros em fichas/crachás diferentes.
+  const clusters = new Map();
+  for (const d of dados) {
+    const c = clusterDe(d);
+    if (!clusters.has(c)) clusters.set(c, new Map());
+    clusters.get(c).set(chaveRegistro(d.r), d.r);
+  }
+  const mesmaPessoa = [...clusters.values()]
+    .map(m => [...m.values()])
+    .filter(itens => new Set(itens.map(i => identidade.get(pessoaDe(i)))).size >= 2)
+    .map(itens => ({ itens, nome: itens[0].nome }))
+    .sort((a, b) => b.itens.length - a.itens.length || String(a.nome).localeCompare(String(b.nome)));
+
+  // Outra pessoa: mesmo telefone em 2+ clusters.
+  const outraPessoa = [];
+  for (const [valor, itens] of porChave('tel')) {
+    const grupos = agrupar(itens);
+    if (grupos.length >= 2) outraPessoa.push({ valor: valor.slice(0, -1), grupos, itens: grupos.flat() });
+  }
+  outraPessoa.sort((a, b) => b.grupos.length - a.grupos.length || a.valor.localeCompare(b.valor));
+
+  // Só nome: mesmo nome em 2+ clusters e nenhum telefone/e-mail igual entre eles.
+  const emOutra = new Set(outraPessoa.flatMap(g => g.itens.map(chaveRegistro)));
+  const soNome = [];
+  for (const [valor, itens] of porChave('nome')) {
+    const grupos = agrupar(itens);
+    if (grupos.length >= 2) {
+      const semAlarme = grupos.filter(g => !g.some(i => emOutra.has(chaveRegistro(i))));
+      if (semAlarme.length >= 2) soNome.push({ valor: valor.slice(0, -1), grupos: semAlarme, itens: semAlarme.flat() });
+    }
+  }
+  soNome.sort((a, b) => b.grupos.length - a.grupos.length || a.valor.localeCompare(b.valor));
+
+  // Selos por registro (para as abas).
+  const selos = new Map();
+  const selo = (r) => { const k = chaveRegistro(r); if (!selos.has(k)) selos.set(k, { mesma: [], outra: [] }); return selos.get(k); };
+  for (const g of mesmaPessoa) for (const r of g.itens) selo(r).mesma = g.itens.filter(x => chaveRegistro(x) !== chaveRegistro(r));
+  for (const g of outraPessoa) {
+    for (const grupo of g.grupos) {
+      const outros = g.itens.filter(x => !grupo.includes(x));
+      for (const r of grupo) selo(r).outra.push(...outros.filter(o => !selo(r).outra.includes(o)));
+    }
+  }
+  return { mesmaPessoa, outraPessoa, soNome, selos };
+}

@@ -12,9 +12,9 @@ import { db } from '../../../services/firebase';
 import { useCatalogs } from '../../../contexts/CatalogContext';
 import { normalizarPais } from '../../../utils/feriados';
 import { formatRole } from '../../../utils/formatters';
-import { acharRepetidos } from '../../../utils/repetidos';
+import { acharRepetidos, analisarRepetidos } from '../../../utils/repetidos';
 
-const TIPOS = ['email', 'telefone', 'nome'];
+const TIPOS = ['mesma', 'outra', 'soNome'];
 
 function Item({ item, rotuloOrigem }) {
   return (
@@ -33,7 +33,7 @@ export default function RelatorioRepetidos() {
   // "lidos" guarda só crachás e pedidos (lidos uma vez); os professores vêm sempre do catálogo ao vivo,
   // então depois de juntar fichas o relatório se atualiza sozinho, sem ler de novo.
   const [estado, setEstado] = useState({ carregando: false, erro: false, lidos: null });
-  const [aberto, setAberto] = useState('email');
+  const [aberto, setAberto] = useState('mesma');
   const [juntando, setJuntando] = useState(null); // fichas da grade abertas na janela "Juntar fichas"
   const [ligando, setLigando] = useState(null);   // { fichas, crachas } da janela "Ligar ficha ao crachá"
 
@@ -100,9 +100,16 @@ export default function RelatorioRepetidos() {
       pais: normalizarPais(p.pais), uidLogin: p.uidLogin || '',
       detalhe: p.status || '', unidade: '',
     }));
-    const resultado = acharRepetidos([...professores, ...estado.lidos.registros]);
-    resultado.problemas.loginAntigo = estado.lidos.loginsAntigos;
-    return resultado;
+    const todos = [...professores, ...estado.lidos.registros];
+    const { mesmaPessoa, outraPessoa, soNome } = analisarRepetidos(todos);
+    const problemas = acharRepetidos(todos).problemas;
+    problemas.loginAntigo = estado.lidos.loginsAntigos;
+    return {
+      mesma: mesmaPessoa.map((g, n) => ({ valor: `m${n}`, titulo: g.nome, itens: g.itens, fichas: g.itens.filter(i => i.origem === 'professor').length })),
+      outra: outraPessoa.map(g => ({ valor: g.valor, titulo: g.itens[0].telefone, itens: g.itens, pessoas: g.grupos.length })),
+      soNome: soNome.map(g => ({ valor: g.valor, titulo: g.itens[0].nome, itens: g.itens, pessoas: g.grupos.length })),
+      problemas,
+    };
   }, [estado.lidos, catalogs?.professores]);
 
   // Depois de juntar: os crachás guardados aqui passam a apontar para a ficha que ficou (como no banco).
@@ -140,7 +147,7 @@ export default function RelatorioRepetidos() {
     return ids.map(id => professorPorId.get(id)).filter(Boolean).map(p => ({ ...p, id: String(p.id) }));
   };
   const origem = (o) => t(`backupTab.duplicates.origin.${o}`);
-  const valorDoGrupo = (tipo, g) => (tipo === 'telefone' ? g.itens[0].telefone : g.valor);
+  const valorDoGrupo = (tipo, g) => g.titulo;
 
   const baixarPlanilha = () => {
     const linha = (tipo, valor, item) => ({
@@ -169,7 +176,10 @@ export default function RelatorioRepetidos() {
   ] : [];
 
   const lista = r ? (TIPOS.includes(aberto)
-    ? r[aberto].map(g => ({ chave: g.valor, titulo: valorDoGrupo(aberto, g), extra: t('backupTab.duplicates.people', { count: g.pessoas }), itens: g.itens }))
+    ? r[aberto].map(g => ({
+      chave: g.valor, titulo: g.titulo, itens: g.itens,
+      extra: aberto === 'mesma' ? t('backupTab.duplicates.cards', { count: g.fichas }) : t('backupTab.duplicates.people', { count: g.pessoas }),
+    }))
     : r.problemas[aberto].map((i, n) => ({
       chave: `${i.origem}_${i.id}_${n}`,
       titulo: aberto === 'telefoneInvalido' ? i.telefone : aberto === 'loginAntigo' ? (i.email || i.telefone || '—') : i.email,
@@ -225,7 +235,7 @@ export default function RelatorioRepetidos() {
           ) : (
             <ul className="max-h-[28rem] overflow-y-auto divide-y divide-slate-100 dark:divide-slate-700 border border-slate-200 dark:border-slate-700 rounded-lg">
               {lista.map(g => {
-                const fichas = TIPOS.includes(aberto) ? fichasDoGrupo(g.itens) : [];
+                const fichas = aberto === 'mesma' ? fichasDoGrupo(g.itens) : [];
                 const soltos = fichas.length ? crachasSoltos(g.itens, fichas) : [];
                 return (
                 <li key={g.chave} className="px-3 py-2">
