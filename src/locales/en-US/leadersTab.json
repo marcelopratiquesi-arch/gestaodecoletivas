@@ -48,7 +48,9 @@
     "password": "Initial password",
     "passwordHint": "At least {{min}} characters. Share the password with the leader.",
     "cancel": "Cancel",
-    "save": "Save"
+    "save": "Save",
+    "sectionPerson": "Person and unit",
+    "sectionAccess": "Document and access"
   },
   "errors": {
     "unit": "Choose the location.",
@@ -56,7 +58,7 @@
     "phone": "Enter the leader's WhatsApp.",
     "email": "Invalid e-mail.",
     "password": "The password must have at least {{min}} characters.",
-    "emailInUse": "This e-mail already has a login. Use another e-mail, or ask the person to sign in with Google and approve the request.",
+    "emailInUse": "This e-mail already has a login (the person probably already signed in with Google). Ask them to sign in with Google using this e-mail and request access: the request shows up on top and you approve it. Or use another e-mail.",
     "save": "Could not save.",
     "remove": "Could not remove the leader.",
     "confirm": "Could not confirm the leader.",
@@ -91,7 +93,7 @@
     "title": "Pick an existing user as leader",
     "help": "Pick someone who already uses the system: teacher, leader of another unit or mentor. A teacher stays a teacher; a leader of another unit will lead both; a mentor/admin keeps their access.",
     "person": "Person",
-    "search": "Search by name or e-mail...",
+    "search": "Search by name, e-mail or document...",
     "reading": "Checking current access...",
     "now": {
       "teacher": "is currently a teacher.",
@@ -125,7 +127,10 @@
     "replaceWarning": "This spot belongs to {{name}}. When you save, they leave and the chosen person takes over.",
     "doneSecond": "{{name}} is now the 2nd leader of {{unit}}.",
     "tagAll": "All",
-    "registerNew": "Register new"
+    "registerNew": "Register new",
+    "docSearching": "Looking for this document...",
+    "docNoAccess": "This document exists, but the person has no access yet (only a request or incomplete record). Use the document search to delete or register.",
+    "docFree": "No person with this document. Use \"Register new\" to register them."
   },
   "second": {
     "badge": "2nd leader",

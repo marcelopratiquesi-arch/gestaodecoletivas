@@ -574,7 +574,7 @@ export function LideresTab() {
       {/* MODAL: CADASTRAR / EDITAR LÍDER */}
       {modal && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => !salvando && setModal(null)}>
-          <form onSubmit={salvar} onClick={(e) => e.stopPropagation()} className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 space-y-4">
+          <form onSubmit={salvar} onClick={(e) => e.stopPropagation()} className={`w-full ${modal.modo === "novo" ? "max-w-4xl" : "max-w-lg"} max-h-[92vh] overflow-y-auto bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-5 sm:p-7 space-y-5`}>
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-black text-slate-800 dark:text-white flex items-center gap-2">
                 {modal.modo === "editar" ? <Edit2 className="w-5 h-5 text-blue-600" /> : <UserPlus className="w-5 h-5 text-emerald-600" />}
@@ -583,6 +583,9 @@ export function LideresTab() {
               <button type="button" onClick={() => setModal(null)} disabled={salvando} className="p-1 text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
             </div>
 
+            <div className={modal.modo === "novo" ? "grid md:grid-cols-2 gap-6" : "space-y-4"}>
+            <div className="space-y-4">
+            <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600">{t("leadersTab.modal.sectionPerson")}</p>
             <label className="block space-y-1">
               <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t("leadersTab.modal.unit")}</span>
               <select value={form.unidadeId} onChange={(e) => setForm({ ...form, unidadeId: e.target.value })} disabled={!!modal.unidade || salvando}
@@ -619,7 +622,11 @@ export function LideresTab() {
               <input value={form.telefone} onChange={(e) => setForm({ ...form, telefone: e.target.value })} disabled={salvando} maxLength={30} placeholder="+55 31 99999-9999"
                 className="w-full p-3 rounded-xl bg-slate-100 dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-red-500" />
             </label>
+            </div>
 
+            {modal.modo === "novo" && (
+            <div className="space-y-4 md:border-l md:border-slate-200 md:dark:border-slate-700 md:pl-6">
+            <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600">{t("leadersTab.modal.sectionAccess")}</p>
             {modal.modo === "novo" && (
               <CampoDocumento claro id="novo-lider-documento" tipo={form.tipoDoc} onTipo={(v) => setForm((f) => ({ ...f, tipoDoc: v }))}
                 valor={form.documento} onValor={(v) => setForm((f) => ({ ...f, documento: v }))} desabilitado={salvando} />
@@ -637,6 +644,9 @@ export function LideresTab() {
                 <span className="text-[11px] text-slate-400">{t("leadersTab.modal.passwordHint", { min: SENHA_MINIMA })}</span>
               </label>
             )}
+            </div>
+            )}
+            </div>
 
             {erro && <p className="text-xs font-bold text-red-600 bg-red-50 dark:bg-red-900/20 p-3 rounded-xl">{erro}</p>}
 
