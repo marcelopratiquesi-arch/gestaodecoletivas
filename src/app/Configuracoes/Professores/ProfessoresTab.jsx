@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
 import LinkCentral from "../../../centrais/LinkCentral";
+import { BotaoDeLinha } from "../ui/BotaoDeLinha";
 import { ehLider, unidadesDoLider } from '../../../permissions';
 import PedidosProfessor from "../Pendencias/PedidosProfessor";
 import { BuscaDocumento } from "../Documento/DocumentoModal";
@@ -247,7 +248,11 @@ export function ProfessoresTab() {
   }, [meusVinculos, minhasUnidades]);
   const nomeMentor = useCallback((id) => (catalogosGlobais.mentores || []).find(m => m.id === id)?.nome, [catalogosGlobais.mentores]);
   const nomeLider = useCallback((id) => {
+  // Os números do topo são botões: a aba SEMPRE abre só com os ativos ("ativo"); "" = todos; "inativo" = só inativos.
+  const [statusFiltro, setStatusFiltro] = useState("ativo");
+  const soDoStatus = useCallback((p) => !statusFiltro || (statusFiltro === "ativo") === (p.status === "ativo"), [statusFiltro]);
       for (const u of minhasUnidades) {
+      extra: soDoStatus,
           if (u.liderUid === id) return u.liderNome;
           if (u.lider2Uid === id) return u.lider2Nome;
       }
@@ -580,13 +585,14 @@ export function ProfessoresTab() {
   return (
     <div className="p-6 animate-fade-in max-w-7xl mx-auto space-y-6 uppercase">
       {/* PEDIDOS DE ACESSO DE PROFESSORES (login pessoal pelo Google) */}
+          ativoExtra={statusFiltro !== "ativo"} aoLimpar={() => setStatusFiltro("ativo")}
       <PedidosProfessor />
       {/* HEADER E KPIS */}
       <CabecalhoDaAba abaId="professores" icone={UserPlus} titulo={t('teachersTab.title', 'Gestão de Professores')} subtitulo={t('teachersTab.subtitle', 'Controle de base e vínculos com as unidades.')}
         numeros={<CaixaDeNumeros abaId="professores" itens={[
-          { id: "total", rotulo: t('teachersTab.stats.total', 'Total'), valor: kpis.total },
-          { id: "ativo", rotulo: t('teachersTab.stats.active', 'Ativos'), valor: kpis.ativos, cor: "text-green-600" },
-          { id: "inativo", rotulo: t('teachersTab.stats.inactive', 'Inativos'), valor: kpis.inativos, cor: "text-red-500" },
+          { id: "total", rotulo: t('teachersTab.stats.total', 'Total'), valor: kpis.total, onClick: () => setStatusFiltro(""), ativo: statusFiltro === "" },
+          { id: "ativo", rotulo: t('teachersTab.stats.active', 'Ativos'), valor: kpis.ativos, cor: "text-green-600", onClick: () => setStatusFiltro("ativo"), ativo: statusFiltro === "ativo" },
+          { id: "inativo", rotulo: t('teachersTab.stats.inactive', 'Inativos'), valor: kpis.inativos, cor: "text-red-500", onClick: () => setStatusFiltro("inativo"), ativo: statusFiltro === "inativo" },
         ]} />}>
         {role === "admin" && (
           <BotaoSecundario icone={corrigindoBase ? Loader2 : Layers} onClick={corrigirEmailsAntigos} disabled={corrigindoBase} girar={corrigindoBase}>
@@ -696,18 +702,13 @@ export function ProfessoresTab() {
                                     <div className="flex gap-2 justify-end opacity-40 group-hover:opacity-100 transition-opacity">
                                         {podeEditar && (
                                             <>
-                                                <button type="button" onClick={() => abrirEdicao(p)} className={`p-2 rounded-lg transition-colors title={t('teachersTab.extra.editData')} ${!isTelefoneValido ? 'bg-red-50 text-red-600 animate-pulse' : 'bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400'}`}>
-                                                    <Edit2 className="w-4 h-4"/>
-                                                </button>
-                                                <button type="button" onClick={() => alternarStatusProf(p)} className={`p-2 rounded-lg transition-colors ${p.status === "ativo" ? "bg-orange-50 text-orange-600 hover:bg-orange-500 hover:text-white dark:bg-orange-900/30 dark:text-orange-400" : "bg-green-50 text-green-600 hover:bg-green-500 hover:text-white dark:bg-green-900/30 dark:text-green-400"}`} title={p.status === "ativo" ? t('teachersTab.extra.deactivateProfile') : t('teachersTab.extra.activateProfile')}>
-                                                    {p.status === "ativo" ? <Ban className="w-4 h-4"/> : <CheckCircle2 className="w-4 h-4"/>}
-                                                </button>
+                                                <BotaoDeLinha abaId="professores" tipo={!isTelefoneValido ? "perigo" : "editar"} className={!isTelefoneValido ? "animate-pulse" : ""} icone={Edit2} onClick={() => abrirEdicao(p)} title={t('teachersTab.extra.editData')} />
+                                                <BotaoDeLinha abaId="professores" tipo={p.status === "ativo" ? "desativar" : "ativar"} icone={p.status === "ativo" ? Ban : CheckCircle2} onClick={() => alternarStatusProf(p)}
+                                                    title={p.status === "ativo" ? t('teachersTab.extra.deactivateProfile') : t('teachersTab.extra.activateProfile')} />
                                             </>
                                         )}
                                         {podeExcluir && (
-                                            <button type="button" onClick={() => excluirProfessorTotal(p)} className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-600 hover:text-white dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-600 dark:hover:text-white transition-colors" title={t('teachersTab.extra.deleteNetwork')}>
-                                                <Trash2 className="w-4 h-4"/>
-                                            </button>
+                                            <BotaoDeLinha abaId="professores" tipo="perigo" icone={Trash2} onClick={() => excluirProfessorTotal(p)} title={t('teachersTab.extra.deleteNetwork')} />
                                         )}
                                     </div>
                                 </td>

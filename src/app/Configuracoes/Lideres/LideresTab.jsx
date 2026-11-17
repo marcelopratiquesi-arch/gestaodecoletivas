@@ -25,6 +25,7 @@ import LinkCentral from "../../../centrais/LinkCentral";
 import { tirarLiderDaUnidade, camposAoLiberarVaga, textoDaSaida, dadosDaVaga } from "./saidaDoLider";
 import { TornarLiderModal } from "./TornarLiderModal";
 import { FiltroPadrao } from "../ui/FiltroPadrao";
+import { BotaoDeLinha } from "../ui/BotaoDeLinha";
 import { CabecalhoDaAba, CaixaDeNumeros, BotaoPrincipal, BotaoSecundario } from "../ui/CabecalhoDaAba";
 import { useFiltroCascata } from "../ui/useFiltroCascata";
 import { BotaoDocumento, DocumentoModal, BuscaDocumento, AvisoDocumento } from "../Documento/DocumentoModal";
@@ -314,10 +315,10 @@ export function LideresTab() {
       {/* CABEÇALHO */}
       <CabecalhoDaAba abaId="lideres" icone={UserCheck} titulo={t("leadersTab.title")} subtitulo={t("leadersTab.subtitle")}
         numeros={<CaixaDeNumeros abaId="lideres" itens={[
-          { id: "total", rotulo: t("leadersTab.filter.all"), valor: kpis.total },
-          { id: "com", rotulo: t("leadersTab.filter.with"), valor: kpis.comLider, cor: "text-green-600" },
-          { id: "sem", rotulo: t("leadersTab.filter.without"), valor: kpis.semLider, cor: "text-red-500" },
-          { id: "conferir", rotulo: t("leadersTab.filter.toCheck"), valor: kpis.aConferir, cor: "text-amber-600" },
+          { id: "total", rotulo: t("leadersTab.filter.all"), valor: kpis.total, onClick: () => setSituacao("todas"), ativo: situacao === "todas" },
+          { id: "com", rotulo: t("leadersTab.filter.with"), valor: kpis.comLider, cor: "text-green-600", onClick: () => setSituacao("com"), ativo: situacao === "com" },
+          { id: "sem", rotulo: t("leadersTab.filter.without"), valor: kpis.semLider, cor: "text-red-500", onClick: () => setSituacao("sem"), ativo: situacao === "sem" },
+          { id: "conferir", rotulo: t("leadersTab.filter.toCheck"), valor: kpis.aConferir, cor: "text-amber-600", onClick: () => setSituacao("conferir"), ativo: situacao === "conferir" },
         ]} />}>
         <BotaoSecundario icone={UserCog} onClick={() => setTornarLider({ vaga: 1, unidade: null })}>{t("leadersTab.promote.button")}</BotaoSecundario>
         <BotaoPrincipal abaId="lideres" icone={UserPlus} onClick={() => abrirNovo(null)}>{t("leadersTab.new")}</BotaoPrincipal>
@@ -465,14 +466,9 @@ export function LideresTab() {
                                 </button>
                               )}
                               <BotaoDocumento onClick={() => setDocAlvo({ id: u.liderUid, nome: u.liderNome, email: u.liderEmail })} disabled={ocupado} />
-                              <button onClick={() => abrirEditar(u)} disabled={ocupado} title={t("leadersTab.edit")}
-                                className="p-2 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200 hover:bg-blue-50 hover:text-blue-600 disabled:opacity-50"><Edit2 className="w-4 h-4" /></button>
-                              <button onClick={() => abrirNovo(u)} disabled={ocupado} title={t("leadersTab.replace")}
-                                className="p-2 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200 hover:bg-emerald-50 hover:text-emerald-600 disabled:opacity-50"><UserPlus className="w-4 h-4" /></button>
-                              <button onClick={() => remover(u)} disabled={ocupado} title={t("leadersTab.remove")}
-                                className="p-2 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200 hover:bg-red-50 hover:text-red-600 disabled:opacity-50">
-                                {ocupado ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserX className="w-4 h-4" />}
-                              </button>
+                              <BotaoDeLinha abaId="lideres" icone={Edit2} onClick={() => abrirEditar(u)} disabled={ocupado} title={t("leadersTab.edit")} />
+                              <BotaoDeLinha abaId="lideres" icone={UserPlus} onClick={() => abrirNovo(u)} disabled={ocupado} title={t("leadersTab.replace")} />
+                              <BotaoDeLinha abaId="lideres" tipo="perigo" icone={ocupado ? Loader2 : UserX} girar={ocupado} onClick={() => remover(u)} disabled={ocupado} title={t("leadersTab.remove")} />
                             </>
                           ) : (
                             <>

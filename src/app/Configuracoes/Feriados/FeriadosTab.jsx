@@ -11,6 +11,7 @@ import { formatDate as formatarData } from '../../../utils/formatters';
 import { ESCOPOS_FERIADO, escopoDoFeriado, normalizarPais, normalizarTexto, ehCancelamentoAutomaticoDeFeriado } from '../../../utils/feriados';
 import { useTranslation } from 'react-i18next';
 import { CabecalhoDaAba } from '../ui/CabecalhoDaAba';
+import { BotaoDeLinha } from '../ui/BotaoDeLinha';
 
 // Tipo gravado no banco (português) -> chave de tradução.
 const TIPOS_FERIADO = { 'Recesso': 'recess', 'Feriado Nacional': 'national', 'Feriado Municipal': 'municipal' };
@@ -345,9 +346,7 @@ export function FeriadosTab() {
                         {t('holidaysTab.range', { start: formatDate(f.dataInicio), end: formatDate(f.dataFim) })}
                     </div>
                     </div>
-                    <button onClick={() => handleDelete(f)} className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
-                    <Trash2 className="w-4 h-4" />
-                    </button>
+                    <BotaoDeLinha abaId="feriados" tipo="perigo" icone={Trash2} onClick={() => handleDelete(f)} />
                 </div>
                 </div>
             ))}

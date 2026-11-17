@@ -23,6 +23,7 @@ import LinkCentral from "../../../centrais/LinkCentral";
 import { useCatalogs } from "../../../contexts/CatalogContext";
 import { UnidadesVinculadasModal } from "./UnidadesVinculadasModal";
 import { FiltroPadrao } from "../ui/FiltroPadrao";
+import { BotaoDeLinha } from "../ui/BotaoDeLinha";
 import { CabecalhoDaAba, CaixaDeNumeros, BotaoPrincipal, BotaoSecundario } from "../ui/CabecalhoDaAba";
 import { useFiltroCascata } from "../ui/useFiltroCascata";
 
@@ -148,7 +149,7 @@ export function MentoresTab() {
   const [loading, setLoading] = useState(true);
   
   // UX
-  const [statusFiltro, setStatusFiltro] = useState(""); // "" | ativo | inativo (clique nos números do topo)
+  const [statusFiltro, setStatusFiltro] = useState("ativo"); // abre SEMPRE com os ativos; "" = todos | ativo | inativo (clique nos números do topo)
   const [mostrarBuscaDoc, setMostrarBuscaDoc] = useState(false); // busca por CPF/DNI/SSN (esta aba já é só admin)
   const [sortConfig, setSortConfig] = useState({ field: 'nome', direction: 'asc' });
   const [modalAberto, setModalAberto] = useState(false);
@@ -433,14 +434,14 @@ export function MentoresTab() {
       <CabecalhoDaAba abaId="mentores" icone={ShieldCheck} titulo={t('mentorsTab.title', 'Gestão de Mentores')} subtitulo={t('mentorsTab.subtitle', 'Diretoria e Gestores Regionais.')}
         numeros={<CaixaDeNumeros abaId="mentores" itens={[
           { id: "total", rotulo: t('mentorsTab.extra.total'), valor: kpis.total, onClick: () => setStatusFiltro(""), ativo: statusFiltro === "" },
-          { id: "ativo", rotulo: t('mentorsTab.extra.active'), valor: kpis.ativos, cor: "text-green-600", onClick: () => setStatusFiltro(statusFiltro === "ativo" ? "" : "ativo"), ativo: statusFiltro === "ativo" },
-          { id: "inativo", rotulo: t('mentorsTab.extra.inactive'), valor: kpis.inativos, cor: "text-red-500", onClick: () => setStatusFiltro(statusFiltro === "inativo" ? "" : "inativo"), ativo: statusFiltro === "inativo" },
+          { id: "ativo", rotulo: t('mentorsTab.extra.active'), valor: kpis.ativos, cor: "text-green-600", onClick: () => setStatusFiltro("ativo"), ativo: statusFiltro === "ativo" },
+          { id: "inativo", rotulo: t('mentorsTab.extra.inactive'), valor: kpis.inativos, cor: "text-red-500", onClick: () => setStatusFiltro("inativo"), ativo: statusFiltro === "inativo" },
         ]} />}>
         <BotaoPrincipal abaId="mentores" icone={Plus} onClick={abrirModalNovo}>{t('mentorsTab.newMentor', 'Novo Mentor')}</BotaoPrincipal>
       </CabecalhoDaAba>
 
       {/* BUSCA + FILTROS (filtro padrão das Configurações; o status são os números do topo) */}
-      <FiltroPadrao abaId="mentores" filtro={filtro} mostrar={["pais", "estado"]} placeholder={t('mentorsTab.searchPlaceholder', 'Buscar mentor, e-mail ou telefone...')}
+      <FiltroPadrao abaId="mentores" filtro={filtro} mostrar={["pais", "estado"]} ativoExtra={statusFiltro !== "ativo"} aoLimpar={() => setStatusFiltro("ativo")} placeholder={t('mentorsTab.searchPlaceholder', 'Buscar mentor, e-mail ou telefone...')}
           acoes={role === "admin" && (
               <button type="button" onClick={() => setMostrarBuscaDoc(v => !v)} aria-expanded={mostrarBuscaDoc}
                   className={`px-4 py-3 rounded-xl border text-xs font-black uppercase flex items-center justify-center gap-2 transition-colors ${mostrarBuscaDoc
@@ -606,15 +607,10 @@ export function MentoresTab() {
                     <td className="p-4 text-right">
                         <div className="flex gap-2 justify-end opacity-40 group-hover:opacity-100 transition-opacity">
                             <BotaoDocumento onClick={() => setDocAlvo({ id: m.id, nome: m.nome, email: m.email })} />
-                            <button onClick={() => abrirModalEditar(m)} className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-600 dark:hover:text-white transition-colors" title={t('mentorsTab.table.edit', 'Editar Completo')}>
-                                <Edit2 className="w-4 h-4"/>
-                            </button>
-                            <button onClick={() => alternarStatus(m)} className={`p-2 rounded-lg transition-colors ${m.status === "ativo" ? "bg-orange-50 text-orange-600 hover:bg-orange-500 hover:text-white dark:bg-orange-900/30 dark:text-orange-400" : "bg-green-50 text-green-600 hover:bg-green-500 hover:text-white dark:bg-green-900/30 dark:text-green-400"}`} title={m.status === "ativo" ? t('mentorsTab.table.deactivate', 'Desactivar') : t('mentorsTab.table.activate', 'Ativar')}>
-                                {m.status === "ativo" ? <PowerOff className="w-4 h-4"/> : <CheckCircle2 className="w-4 h-4"/>}
-                            </button>
-                            <button onClick={() => excluir(m)} className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-600 hover:text-white dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-600 dark:hover:text-white transition-colors" title={t('mentorsTab.table.delete', 'Excluir Definitivamente')}>
-                                <Trash2 className="w-4 h-4"/>
-                            </button>
+                            <BotaoDeLinha abaId="mentores" icone={Edit2} onClick={() => abrirModalEditar(m)} title={t('mentorsTab.table.edit', 'Editar Completo')} />
+                            <BotaoDeLinha abaId="mentores" tipo={m.status === "ativo" ? "desativar" : "ativar"} icone={m.status === "ativo" ? PowerOff : CheckCircle2} onClick={() => alternarStatus(m)}
+                                title={m.status === "ativo" ? t('mentorsTab.table.deactivate', 'Desactivar') : t('mentorsTab.table.activate', 'Ativar')} />
+                            <BotaoDeLinha abaId="mentores" tipo="perigo" icone={Trash2} onClick={() => excluir(m)} title={t('mentorsTab.table.delete', 'Excluir Definitivamente')} />
                         </div>
                     </td>
                   </tr>

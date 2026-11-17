@@ -9,6 +9,7 @@ import { publicarUnidade, publicarUnidades, removerUnidadeDaVitrine, ehCampoPubl
 import { useTranslation } from "react-i18next";
 import LinkUnidade from "../../../centrais/LinkUnidade";
 import { FiltroPadrao } from "../ui/FiltroPadrao";
+import { BotaoDeLinha } from "../ui/BotaoDeLinha";
 import { CabecalhoDaAba, CaixaDeNumeros, BotaoPrincipal, BotaoSecundario } from "../ui/CabecalhoDaAba";
 import { useFiltroCascata } from "../ui/useFiltroCascata";
 
@@ -359,7 +360,11 @@ export function UnidadesTab() {
           if (u.lider2Uid === id) return u.lider2Nome;
       }
   }, [unidadesBase]);
+  // Os números do topo são botões: a aba SEMPRE abre só com as ativas ("ativa"); "" = todas; "inativa" = só inativas.
+  const [statusFiltro, setStatusFiltro] = useState("ativa");
+  const soDoStatus = useCallback((u) => !statusFiltro || (statusFiltro === "ativa") === (u.status === "ativa"), [statusFiltro]);
   const filtro = useFiltroCascata(unidadesBase, {
+      extra: soDoStatus,
       getPais: (u) => SIGLA_PAIS[u.pais] || u.pais || PAIS_DEFAULT,
       getEstados: (u) => [u.estado],
       getMentorIds: (u) => [u.mentorId],
@@ -766,9 +771,9 @@ export function UnidadesTab() {
         
         <CabecalhoDaAba abaId="unidades" icone={Building2} titulo={t('unitsTab.title', 'Gestão de Unidades')} subtitulo={t('unitsTab.subtitle', { count: kpis.total })}
           numeros={<CaixaDeNumeros abaId="unidades" itens={[
-            { id: "total", rotulo: t('unitsTab.extra.total'), valor: kpis.total },
-            { id: "ativa", rotulo: t('unitsTab.extra.active'), valor: kpis.ativas, cor: "text-green-600" },
-            { id: "inativa", rotulo: t('unitsTab.extra.inactive'), valor: kpis.inativas, cor: "text-red-500" },
+            { id: "total", rotulo: t('unitsTab.extra.total'), valor: kpis.total, onClick: () => setStatusFiltro(""), ativo: statusFiltro === "" },
+            { id: "ativa", rotulo: t('unitsTab.extra.active'), valor: kpis.ativas, cor: "text-green-600", onClick: () => setStatusFiltro("ativa"), ativo: statusFiltro === "ativa" },
+            { id: "inativa", rotulo: t('unitsTab.extra.inactive'), valor: kpis.inativas, cor: "text-red-500", onClick: () => setStatusFiltro("inativa"), ativo: statusFiltro === "inativa" },
           ]} />}>
           {role === 'admin' && (
             <>
@@ -814,7 +819,8 @@ export function UnidadesTab() {
 
         <FiltroPadrao abaId="unidades" filtro={filtro}
             mostrar={["pais", "estado", ...(role === 'admin' ? ["mentor"] : []), "lider"]}
-            placeholder={t('unitsTab.searchPlaceholder', "Buscar unidade, estado...")} />
+            placeholder={t('unitsTab.searchPlaceholder', "Buscar unidade, estado...")}
+            ativoExtra={statusFiltro !== "ativa"} aoLimpar={() => setStatusFiltro("ativa")} />
 
         {/* === TABELA DE ALTA DENSIDADE === */}
         <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden shadow-sm">
@@ -987,15 +993,10 @@ export function UnidadesTab() {
 
                       <td className="px-3 py-2 text-right">
                           <div className="flex gap-1 justify-end opacity-50 group-hover:opacity-100 transition-opacity">
-                              <button onClick={() => abrirEditarUnidade(u)} className="p-1.5 rounded-md bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-600 transition-colors" title={t('unitsTab.table.edit', "Editar Unidade")}>
-                                  <Edit2 className="w-3.5 h-3.5"/>
-                              </button>
-                              <button onClick={() => alternarStatus(u)} className={`p-1.5 rounded-md transition-colors ${u.status === "ativa" ? "bg-orange-50 text-orange-600 hover:bg-orange-500 hover:text-white dark:bg-orange-900/30 dark:text-orange-400" : "bg-green-50 text-green-600 hover:bg-green-500 hover:text-white dark:bg-green-900/30 dark:text-green-400"}`} title={u.status === "ativa" ? "Suspender" : "Reativar"}>
-                                  {u.status === "ativa" ? <PowerOff className="w-3.5 h-3.5"/> : <CheckCircle2 className="w-3.5 h-3.5"/>}
-                              </button>
-                              <button onClick={() => excluir(u)} className="p-1.5 rounded-md bg-red-50 text-red-600 hover:bg-red-600 hover:text-white dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-600 transition-colors" title={t('unitsTab.table.delete', "Excluir")}>
-                                  <Trash2 className="w-3.5 h-3.5"/>
-                              </button>
+                              <BotaoDeLinha abaId="unidades" compacto icone={Edit2} onClick={() => abrirEditarUnidade(u)} title={t('unitsTab.table.edit', "Editar Unidade")} />
+                              <BotaoDeLinha abaId="unidades" compacto tipo={u.status === "ativa" ? "desativar" : "ativar"} icone={u.status === "ativa" ? PowerOff : CheckCircle2} onClick={() => alternarStatus(u)}
+                                  title={u.status === "ativa" ? "Suspender" : "Reativar"} />
+                              <BotaoDeLinha abaId="unidades" compacto tipo="perigo" icone={Trash2} onClick={() => excluir(u)} title={t('unitsTab.table.delete', "Excluir")} />
                           </div>
                       </td>
                     </tr>

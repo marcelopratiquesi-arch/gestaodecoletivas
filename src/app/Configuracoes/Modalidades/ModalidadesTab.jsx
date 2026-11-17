@@ -12,6 +12,7 @@ import {
 } from "firebase/firestore";
 import { db } from "../../../services/firebase";
 import { CabecalhoDaAba, BotaoPrincipal } from "../ui/CabecalhoDaAba";
+import { BotaoDeLinha } from "../ui/BotaoDeLinha";
 import { FiltroPadrao } from "../ui/FiltroPadrao";
 import { useFiltroCascata } from "../ui/useFiltroCascata";
 import { 
@@ -351,15 +352,10 @@ export function ModalidadesTab() {
 
                   {podeEditar && (
                     <div className="flex items-center gap-1.5 md:border-l border-slate-200 dark:border-slate-700 md:pl-5 opacity-50 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => abrirEditar(m)} className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-xl transition-colors" title={t('modalitiesTab.editFull')}>
-                            <Edit2 className="w-4 h-4"/>
-                        </button>
-                        <button onClick={() => alternarStatus(m)} className={`p-2 rounded-xl transition-colors ${m.status === 'ativa' ? 'text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/30' : 'text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30'}`} title={m.status === 'ativa' ? t('modalitiesTab.deactivate') : t('modalitiesTab.activate')}>
-                            <Power className="w-4 h-4"/>
-                        </button>
-                        <button onClick={() => excluir(m)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-xl transition-colors" title={t('modalitiesTab.deleteForever')}>
-                            <Trash2 className="w-4 h-4"/>
-                        </button>
+                        <BotaoDeLinha abaId="modalidades" icone={Edit2} onClick={() => abrirEditar(m)} title={t('modalitiesTab.editFull')} />
+                        <BotaoDeLinha abaId="modalidades" tipo={m.status === 'ativa' ? "desativar" : "ativar"} icone={Power} onClick={() => alternarStatus(m)}
+                          title={m.status === 'ativa' ? t('modalitiesTab.deactivate') : t('modalitiesTab.activate')} />
+                        <BotaoDeLinha abaId="modalidades" tipo="perigo" icone={Trash2} onClick={() => excluir(m)} title={t('modalitiesTab.deleteForever')} />
                     </div>
                   )}
               </div>
