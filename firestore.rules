@@ -576,14 +576,29 @@ service cloud.firestore {
       allow write: if souAdmin();
     }
 
+    // ===================== TELEMETRIA DE LEITURAS (telemetria_leituras) =====================
+    // Resumo de quantas leituras cada pessoa fez no dia, por tela (src/services/telemetriaLeituras.js).
+    // Cada pessoa grava só o próprio documento do dia ({AAAA-MM-DD}_{uid}), com a hora do servidor e só estes
+    // campos; só o admin lê. Ninguém apaga.
+    match /telemetria_leituras/{docId} {
+      allow read: if souAdmin();
+      allow create, update: if logado()
+        && docId == request.resource.data.dia + '_' + request.auth.uid
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['dia', 'uid', 'papel', 'atualizadoEm', 'total', 'itens'])
+        && request.resource.data.atualizadoEm == request.time
+        && request.resource.data.total is int && request.resource.data.total >= 0
+        && request.resource.data.itens is map && request.resource.data.itens.size() <= 120;
+    }
+
     // ===================== DEMAIS COLEÇÕES =====================
     // Logados leem e escrevem (como antes), EXCETO as coleções com regra própria acima
-    // (usuarios, publico, validacoes, solicitacoes_acesso, convites_acesso, documentos_* e resumos_mensais).
+    // (usuarios, publico, validacoes, solicitacoes_acesso, convites_acesso, documentos_*, resumos_mensais e telemetria_leituras).
     // Professor não grava nada aqui, só cria registros de auditoria (log da validação e do "Sair").
     // (No Firestore, se QUALQUER regra libera, a ação passa; por isso as exceções precisam estar aqui.)
     match /{colecao}/{resto=**} {
-      allow read: if logado() && !(colecao in ['solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos']);
-      allow write: if logado() && !(colecao in ['usuarios', 'publico', 'validacoes', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'resumos_mensais', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos']) && !souProfessor();
+      allow read: if logado() && !(colecao in ['solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos', 'telemetria_leituras']);
+      allow write: if logado() && !(colecao in ['usuarios', 'publico', 'validacoes', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'resumos_mensais', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos', 'telemetria_leituras']) && !souProfessor();
       allow create: if logado() && colecao in ['auditoria_cronograma', 'auditoria_configuracoes'];
     }
   }
