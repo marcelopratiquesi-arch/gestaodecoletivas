@@ -64,7 +64,7 @@ export default function RelatorioRepetidos() {
           const unidadeId = c.unidadeId || (c.unidadeIds || [])[0] || '';
           const registro = {
             origem: 'cracha', id: d.id, nome: c.nome, email: c.email || c.emailAuth, telefone: c.telefone,
-            pais: paisDaUnidade(unidadeId), professorId: c.professorId || '',
+            pais: paisDaUnidade(unidadeId), professorId: c.professorId || '', papel: String(c.role || '').toLowerCase(),
             detalhe: formatRole(c.role), unidade: nomeUnidade(unidadeId),
           };
           if (ehLoginAntigo(c)) { loginsAntigos.push({ ...registro, origem: 'loginAntigo' }); return []; }

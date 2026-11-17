@@ -6,15 +6,17 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { montarPlanoJuncao } from '../utils/juntarFichas';
-import { removerProfessorDaVitrine } from './vitrinePublica';
-import { lerDocumentoDaFicha, passarDocumentoNoLote } from './documentoFichaService';
+import { publicarProfessor, removerProfessorDaVitrine } from './vitrinePublica';
+import { documentoDaFichaNoLote, lerDocumentoDaFicha, passarDocumentoNoLote } from './documentoFichaService';
+import { lerDocumento } from './documentoService';
+import { idDocumentoUnico } from '../utils/documento';
 import { espelharMudanca } from './aulasPublicas';
 
 const TAMANHO_LOTE = 450; // limite do Firestore: 500 operações por lote
 const docsDe = (snap) => snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
 // Lê só o que aponta para as fichas envolvidas (algumas dezenas/centenas de leituras).
-export async function prepararJuncao(principal, outras) {
+export async function prepararJuncao(principal, outras, manter = {}) {
   const idsOutras = outras.map(o => String(o.id));
   const todos = [String(principal.id), ...idsOutras];
   const logins = [...new Set([principal.uidLogin, ...outras.map(o => o.uidLogin)].filter(Boolean).map(String))];
@@ -40,7 +42,7 @@ export async function prepararJuncao(principal, outras) {
     plano: montarPlanoJuncao({
       principal, outras,
       aulas: docsDe(aulas), vinculos: docsDe(vinculos), validacoes: [...validacoes.values()],
-      crachas: docsDe(crachas), crachaDoLogin, documentos,
+      crachas: docsDe(crachas), crachaDoLogin, documentos, manter,
     }),
     leituras,
   };
@@ -48,9 +50,22 @@ export async function prepararJuncao(principal, outras) {
 
 // "Ligar ficha ao crachá": a mesma pessoa tem ficha na grade e crachá (ex.: líder que dá aula) sem estarem
 // ligados. Liga nos dois sentidos, como o sistema já faz: professores/{id}.uidLogin e usuarios/{uid}.professorId.
+// O documento (CPF) do login também vai para a ficha, se ela ainda não tem. Documentos diferentes = pessoas
+// diferentes: não liga. Devolve { copiouDocumento }.
 export async function ligarFichaAoCracha({ ficha, cracha, quem }) {
+  const [docLogin, docFicha] = await Promise.all([
+    lerDocumento(String(cracha.id)),
+    ficha.documentoOk ? lerDocumentoDaFicha(ficha.id) : Promise.resolve(null),
+  ]);
+  if (docLogin && docFicha && idDocumentoUnico(docLogin.tipo, docLogin.numero) !== idDocumentoUnico(docFicha.tipo, docFicha.numero)) {
+    throw new Error('DOCUMENTOS_DIFERENTES');
+  }
+  const copiar = !!docLogin && !docFicha;
   const batch = writeBatch(db);
-  batch.update(doc(db, 'professores', String(ficha.id)), { uidLogin: String(cracha.id), updatedAt: serverTimestamp() });
+  batch.update(doc(db, 'professores', String(ficha.id)), {
+    uidLogin: String(cracha.id), updatedAt: serverTimestamp(), ...(copiar ? { documentoOk: true } : {}),
+  });
+  if (copiar) documentoDaFichaNoLote(batch, { professorId: ficha.id, tipo: docLogin.tipo, numero: docLogin.numero, marcarFicha: false });
   batch.update(doc(db, 'usuarios', String(cracha.id)), { professorId: String(ficha.id) });
   await batch.commit();
   try {
@@ -58,7 +73,8 @@ export async function ligarFichaAoCracha({ ficha, cracha, quem }) {
       tipoAcao: 'ALTERADA',
       descricao: 'Ficha de professor ligada ao crachá.',
       diffExtras: `Ficha: ${ficha.nome || '-'} [${ficha.id}] ↔ crachá: ${cracha.nome || '-'} (${cracha.email || 'sem e-mail'}) [${cracha.id}]`
-        + (ficha.uidLogin && ficha.uidLogin !== cracha.id ? `. Login anterior da ficha: ${ficha.uidLogin}` : ''),
+        + (ficha.uidLogin && ficha.uidLogin !== cracha.id ? `. Login anterior da ficha: ${ficha.uidLogin}` : '')
+        + (copiar ? '. Documento de identificação do login copiado para a ficha' : ''),
       modulo: 'CONFIGURACOES',
       professorNome: ficha.nome || '-',
       unidadeNome: cracha.unidade || '-',
@@ -68,6 +84,7 @@ export async function ligarFichaAoCracha({ ficha, cracha, quem }) {
       dataAcao: serverTimestamp(),
     });
   } catch (e) { console.error('Falha ao gravar auditoria da ligação', e); }
+  return { copiouDocumento: copiar };
 }
 
 // Grava o plano em lotes. A ficha principal é atualizada e as outras apagadas só no fim.
@@ -106,6 +123,7 @@ export async function executarJuncao({ plano, principal, outras, quem, aoAvancar
   await final.commit();
 
   await Promise.all(plano.idsApagar.map(id => removerProfessorDaVitrine(id)));
+  if (plano.completar.nome) await publicarProfessor(plano.idPrincipal, plano.completar.nome);
 
   try {
     const resumo = outras.map(o => `${o.nome || '-'} [${o.id}] ${o.email || 'sem e-mail'} ${o.telefone || ''}`).join(' ; ');

@@ -13,7 +13,11 @@ export default function JuntarFichasModal({ fichas, aoJuntar, aoFechar }) {
   const { user, userData } = useAuth();
   const { catalogs } = useCatalogs();
   const [incluidas, setIncluidas] = useState(() => new Set(fichas.map(f => f.id)));
-  const [principalId, setPrincipalId] = useState(() => (fichas.find(f => f.status === 'ativo') || fichas[0]).id);
+  // Sugere ficar a ficha que já tem documento (é a mais nova e certa); senão a ativa.
+  const sugerida = fichas.find(f => f.documentoOk) || fichas.find(f => f.status === 'ativo') || fichas[0];
+  const [principalId, setPrincipalId] = useState(sugerida.id);
+  // Nome, e-mail e telefone que ficam: escolhidos entre os das fichas (padrão: os da ficha que fica).
+  const [manter, setManter] = useState({ nome: sugerida.nome || '', email: sugerida.email || '', telefone: sugerida.telefone || '' });
   const [etapa, setEtapa] = useState('escolher'); // escolher | conferindo | conferido | gravando | feito
   const [erro, setErro] = useState('');
   const [preparo, setPreparo] = useState(null);
@@ -42,7 +46,7 @@ export default function JuntarFichasModal({ fichas, aoJuntar, aoFechar }) {
   const conferir = async () => {
     setEtapa('conferindo'); setErro('');
     try {
-      setPreparo(await prepararJuncao(principal, outras));
+      setPreparo(await prepararJuncao(principal, outras, manter));
       setEtapa('conferido');
     } catch (e) {
       console.error('Conferir junção:', e);
@@ -100,7 +104,7 @@ export default function JuntarFichasModal({ fichas, aoJuntar, aoFechar }) {
                 </div>
                 <label className="text-xs font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1 shrink-0 cursor-pointer">
                   <input type="radio" name="fichaQueFica" checked={fica} disabled={ocupado || etapa === 'feito' || !incluidas.has(f.id)}
-                    onChange={() => mudarEscolha(() => setPrincipalId(f.id))} />
+                    onChange={() => mudarEscolha(() => { setPrincipalId(f.id); setManter({ nome: f.nome || '', email: f.email || '', telefone: f.telefone || '' }); })} />
                   {t('backupTab.merge.keep')}
                 </label>
               </li>
@@ -114,9 +118,28 @@ export default function JuntarFichasModal({ fichas, aoJuntar, aoFechar }) {
           </p>
         )}
 
+        {etapa !== 'feito' && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+            {['nome', 'email', 'telefone'].map(campo => {
+              const opcoes = [...new Set(fichas.filter(f => incluidas.has(f.id)).map(f => f[campo]).filter(Boolean))];
+              return (
+                <label key={campo} className="text-xs font-bold text-slate-500 space-y-1">
+                  <span className="block uppercase">{t(`backupTab.merge.keepField.${campo}`)}</span>
+                  <select value={manter[campo]} disabled={ocupado}
+                    onChange={e => { const v = e.target.value; mudarEscolha(() => setManter(m => ({ ...m, [campo]: v }))); }}
+                    className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 text-xs font-bold">
+                    {opcoes.map(v => <option key={v} value={v}>{v}</option>)}
+                  </select>
+                </label>
+              );
+            })}
+          </div>
+        )}
+
         {p && etapa !== 'feito' && (
           <div className="p-3 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-900/10 dark:border-amber-800 text-sm text-slate-700 dark:text-slate-200 space-y-1">
-            <p className="font-bold">{t('backupTab.merge.summaryTitle', { name: principal?.nome })}</p>
+            <p className="font-bold">{t('backupTab.merge.summaryTitle', { name: manter.nome || principal?.nome })}</p>
+            <p className="text-xs">{t('backupTab.merge.keeps', { name: manter.nome || '-', email: manter.email || '-', phone: manter.telefone || '-' })}</p>
             <ul className="list-disc pl-5 text-xs space-y-0.5">
               <li>{t('backupTab.merge.sumClasses', { count: p.aulas.length })}</li>
               <li>{t('backupTab.merge.sumUnits', { moved: p.vinculosMover.length, dup: p.vinculosApagar.length })}</li>

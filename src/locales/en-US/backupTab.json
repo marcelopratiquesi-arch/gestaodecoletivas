@@ -101,7 +101,9 @@
     "sumSummaries": "Monthly closing rebuilt next time reports open: {{list}}",
     "sumFill": "Missing data that will be filled in: {{list}}",
     "sumDelete": "Records deleted after moving everything: {{count}}",
-    "sumDocument": "The ID (CPF/DNI/SSN) moves to the record that stays",
+    "keepField": { "nome": "Name to keep", "email": "Email to keep", "telefone": "Phone to keep" },
+    "keeps": "Result: {{name}} · {{email}} · {{phone}}",
+    "sumDocument":"The ID (CPF/DNI/SSN) moves to the record that stays",
     "documentConflict": "These records have DIFFERENT IDs: they are different people and cannot be merged.",
     "cost": "Reads done now: {{reads}} · writes when merging: {{writes}}",
     "done": "Done! The records were merged into {{name}}'s.",
@@ -118,6 +120,10 @@
     "recordHasOther": "This record is linked to another login (probably the old one). Linking makes it use this badge.",
     "confirm": "Link",
     "done": "Done! {{name}}'s record is linked to the badge.",
-    "error": "Could not link (quota exhausted or offline). Try again."
+    "error": "Could not link (quota exhausted or offline). Try again.",
+    "documentConflict": "The record and the badge have DIFFERENT IDs: they are different people. Not linked.",
+    "copiedDocument": "The login's ID was copied to the record.",
+    "whatHappens": "When linking: the record starts using this login (the old login, if any, no longer applies to it), the badge points to the record and the login's ID goes to the record. Classes, units, validations and name stay as they are.",
+    "leaderEffect": "This badge belongs to a leader/mentor. Once linked, the person becomes a 'leader who also teaches': if they ever leave the leadership, they keep teacher access. Link only if they teach (or taught) with this record."
   }
 }

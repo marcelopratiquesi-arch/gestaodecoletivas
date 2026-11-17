@@ -94,6 +94,23 @@ export function fichasParecidas(fichas, { email, telefone, pais = 'BR', nome } =
   return achados;
 }
 
+/**
+ * Documento achado no LOGIN (crachá) de alguém: qual ficha da grade é dessa pessoa?
+ *  - ligada: a ficha que já aponta para esse login (uidLogin) ou que o crachá aponta (professorId);
+ *  - parecidas: fichas SEM documento com o mesmo e-mail, telefone ou nome do login. Fichas ligadas a OUTRO login
+ *    (quase sempre o login antigo da senha 123456) ENTRAM: ao confirmar, passam a usar este login.
+ *    Fichas com documento ficam de fora (já são de alguém, com outro documento).
+ */
+export function fichasDoLogin(fichas, uid, cracha = {}, pais = 'BR') {
+  const ligada = (fichas || []).find(p => p.uidLogin && p.uidLogin === uid)
+    || (cracha.professorId ? (fichas || []).find(p => String(p.id) === String(cracha.professorId)) : null)
+    || null;
+  if (ligada) return { ligada, parecidas: [] };
+  const parecidas = fichasParecidas(fichas, { email: cracha.email, telefone: cracha.telefone, pais, nome: cracha.nome })
+    .filter(a => !a.ficha.documentoOk);
+  return { ligada: null, parecidas };
+}
+
 // Nome como o cadastro guarda: sem espaços sobrando e em MAIÚSCULAS (acentos mantidos).
 export const limparNome = (nome) => String(nome ?? '').replace(/\s+/g, ' ').trim().toUpperCase();
 

@@ -44,7 +44,8 @@
     "onlyStaffSees": "Documento informado. Solo el administrador y el mentor ven y corrigen el número.",
     "optionalHint": "Opcional por ahora: completalo para terminar la ficha. Queda en un área protegida (solo admin y mentor lo ven).",
     "fixHint": "Corregí solo si el número está mal.",
-    "fromLogin": "Este documento es del acceso (login) de {{name}} ({{email}}). Vinculándolo a la ficha de la grilla, no queda duplicada."
+    "replacesOldLogin": "Esta ficha está vinculada a otro acceso (casi siempre el antiguo, con contraseña). Al confirmar, pasa a usar el acceso nuevo de esta persona.",
+    "fromLogin":"Este documento es del acceso (login) de {{name}} ({{email}}). Vinculándolo a la ficha de la grilla, no queda duplicada."
   },
   "newLinkBtn": "+ NUEVO VÍNCULO",
   "fixEmailsBtn": "CORREGIR CORREOS",

@@ -25,6 +25,7 @@ export default function LigarCrachaModal({ fichas, crachas, aoLigar, aoFechar })
   const [crachaId, setCrachaId] = useState(crachas[0]?.id);
   const [etapa, setEtapa] = useState('escolher'); // escolher | gravando | feito
   const [erro, setErro] = useState('');
+  const [copiou, setCopiou] = useState(false);
 
   const ficha = fichas.find(f => f.id === fichaId);
   const cracha = crachas.find(c => c.id === crachaId);
@@ -35,12 +36,13 @@ export default function LigarCrachaModal({ fichas, crachas, aoLigar, aoFechar })
   const ligar = async () => {
     setEtapa('gravando'); setErro('');
     try {
-      await ligarFichaAoCracha({ ficha, cracha, quem: { id: user?.uid, nome: userData?.nome, email: userData?.email } });
+      const r = await ligarFichaAoCracha({ ficha, cracha, quem: { id: user?.uid, nome: userData?.nome, email: userData?.email } });
+      setCopiou(!!r?.copiouDocumento);
       setEtapa('feito');
       aoLigar?.(cracha.id, ficha.id);
     } catch (e) {
       console.error('Ligar ficha ao crachá:', e);
-      setErro(t('backupTab.link.error')); setEtapa('escolher');
+      setErro(t(e?.message === 'DOCUMENTOS_DIFERENTES' ? 'backupTab.link.documentConflict' : 'backupTab.link.error')); setEtapa('escolher');
     }
   };
 
@@ -98,8 +100,15 @@ export default function LigarCrachaModal({ fichas, crachas, aoLigar, aoFechar })
         {etapa === 'feito' && (
           <p className="p-3 rounded-lg bg-green-100 text-green-700 text-sm font-bold flex items-center gap-2">
             <CircleCheck className="w-4 h-4 shrink-0" /> {t('backupTab.link.done', { name: ficha?.nome })}
+            {copiou && ` ${t('backupTab.link.copiedDocument')}`}
           </p>
         )}
+        {['lider', 'unidade', 'mentor'].includes(cracha?.papel) && etapa !== 'feito' && (
+          <p className="p-3 rounded-lg bg-sky-50 dark:bg-sky-900/20 text-sky-800 dark:text-sky-300 text-xs font-bold">
+            {t('backupTab.link.leaderEffect')}
+          </p>
+        )}
+        {etapa !== 'feito' && <p className="text-[11px] text-slate-500">{t('backupTab.link.whatHappens')}</p>}
 
         <div className="flex flex-wrap justify-end gap-2">
           {etapa === 'feito' ? (

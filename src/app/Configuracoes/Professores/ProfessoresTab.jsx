@@ -736,6 +736,7 @@ export function ProfessoresTab() {
               minhasUnidades={minhasUnidades}
               profInicial={novoVinculo.profInicial}
               documentoInicial={novoVinculo.documento || null}
+              podeLimparReserva={veDocumento}
               formatarTelefone={formatarTelefone}
               placeholderTelefone={getPhonePlaceholder}
               aoNovoCadastro={abrirCadastroCompleto}

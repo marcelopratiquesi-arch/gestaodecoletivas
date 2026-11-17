@@ -101,7 +101,9 @@
     "sumSummaries": "Cierre del mes rehecho al abrir los informes: {{list}}",
     "sumFill": "Datos faltantes que se completarán: {{list}}",
     "sumDelete": "Fichas borradas después de mover todo: {{count}}",
-    "sumDocument": "El documento (CPF/DNI/SSN) pasa a la ficha que queda",
+    "keepField": { "nome": "Nombre que queda", "email": "Correo que queda", "telefone": "Teléfono que queda" },
+    "keeps": "Queda así: {{name}} · {{email}} · {{phone}}",
+    "sumDocument":"El documento (CPF/DNI/SSN) pasa a la ficha que queda",
     "documentConflict": "Estas fichas tienen documentos DISTINTOS: son personas distintas y no se pueden unir.",
     "cost": "Lecturas hechas ahora: {{reads}} · escrituras al unir: {{writes}}",
     "done": "¡Listo! Las fichas se unieron en la de {{name}}.",
@@ -118,6 +120,10 @@
     "recordHasOther": "Esta ficha está vinculada a otro acceso (probablemente el antiguo). Al vincular, pasa a usar esta credencial.",
     "confirm": "Vincular",
     "done": "¡Listo! La ficha de {{name}} está vinculada a la credencial.",
-    "error": "No se pudo vincular (cuota agotada o sin conexión). Intentá de nuevo."
+    "error": "No se pudo vincular (cuota agotada o sin conexión). Intentá de nuevo.",
+    "documentConflict": "La ficha y la credencial tienen documentos DISTINTOS: son personas distintas. No se vinculó.",
+    "copiedDocument": "El documento del acceso se copió a la ficha.",
+    "whatHappens": "Al vincular: la ficha pasa a usar este acceso (el acceso antiguo, si existe, deja de valer para ella), la credencial apunta a la ficha y el documento del acceso va a la ficha. Clases, unidades, validaciones y nombre siguen igual.",
+    "leaderEffect": "Esta credencial es de líder/mentor. Vinculada a la ficha, la persona pasa a ser 'líder que también es profesor(a)': si algún día deja el liderazgo, sigue con acceso de profesor(a). Vinculá solo si da (o dio) clases con esta ficha."
   }
 }

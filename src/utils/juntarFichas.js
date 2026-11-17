@@ -18,7 +18,7 @@ const mesDe = (data) => String(data || '').slice(0, 7);
  * @param {object[]} p.crachas     crachás com professorId de alguma das outras
  * @param {object}   p.crachaDoLogin  { [uid]: crachá | null } dos uidLogin das fichas
  */
-export function montarPlanoJuncao({ principal, outras, aulas = [], vinculos = [], validacoes = [], crachas = [], crachaDoLogin = {}, documentos = {} }) {
+export function montarPlanoJuncao({ principal, outras, aulas = [], vinculos = [], validacoes = [], crachas = [], crachaDoLogin = {}, documentos = {}, manter = {} }) {
   const idPrincipal = String(principal.id);
   const idsOutras = new Set(outras.map(o => String(o.id)));
   idsOutras.delete(idPrincipal);
@@ -60,6 +60,10 @@ export function montarPlanoJuncao({ principal, outras, aulas = [], vinculos = []
       const achado = outras.find(o => o[campo])?.[campo];
       if (achado) completar[campo] = achado;
     }
+  }
+  // Nome, e-mail e telefone escolhidos na tela (podem vir de qualquer uma das fichas).
+  for (const campo of ['nome', 'email', 'telefone']) {
+    if (manter[campo] && manter[campo] !== principal[campo]) completar[campo] = manter[campo];
   }
   if (principal.status !== 'ativo' && outras.some(o => o.status === 'ativo')) completar.status = 'ativo';
   if (uidLogin && uidLogin !== String(principal.uidLogin || '')) completar.uidLogin = uidLogin;

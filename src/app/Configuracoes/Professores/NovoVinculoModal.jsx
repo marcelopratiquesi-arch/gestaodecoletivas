@@ -11,9 +11,9 @@ import { X, Search, CheckCircle2, AlertTriangle, ChevronDown, Loader2, Link as L
 import { db } from "../../../services/firebase";
 import CampoDocumento from "../../../components/acesso/CampoDocumento";
 import { documentoValido, formatarDocumento, limparDocumento, tipoDocumentoPadrao } from "../../../utils/documento";
-import { acharFichaPorDocumento, documentoDaFichaNoLote } from "../../../services/documentoFichaService";
+import { acharFichaPorDocumento, documentoDaFichaNoLote, limparReservaOrfa } from "../../../services/documentoFichaService";
 import { ERRO_DOCUMENTO_EM_USO, acharDonoDoDocumento, gravarComAviso } from "../../../services/documentoService";
-import { chaveTelefone, emailDeMentira, emailFormatoValido, fichasParecidas, normalizarEmail } from "../../../utils/repetidos";
+import { chaveTelefone, emailDeMentira, emailFormatoValido, fichasDoLogin, fichasParecidas, normalizarEmail } from "../../../utils/repetidos";
 
 const PAIS_DO_DOCUMENTO = { cpf: "BR", dni: "AR", ssn: "US" };
 const campoClasse = "w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-green-500 rounded-xl text-sm font-semibold outline-none transition-all dark:text-white normal-case";
@@ -28,7 +28,7 @@ function Aviso({ tipo = "erro", children }) {
 }
 
 export default function NovoVinculoModal({
-  professores, vinculos, unidades, minhasUnidades, profInicial = null, documentoInicial = null,
+  professores, vinculos, unidades, minhasUnidades, profInicial = null, documentoInicial = null, podeLimparReserva = false,
   formatarTelefone, placeholderTelefone, aoNovoCadastro, aoFechar, registrarLog,
 }) {
   const { t, i18n } = useTranslation();
@@ -65,9 +65,10 @@ export default function NovoVinculoModal({
       const dono = await acharFichaPorDocumento(tipo, n);
       if (dono) {
         const ficha = professores.find(p => String(p.id) === dono.professorId);
-        if (!ficha) return setErro(t("teachersTab.cpf.orphan"));
-        setAchado(ficha); setGravarDocumento(false); setEtapa("achado");
-        return;
+        if (ficha) { setAchado(ficha); setGravarDocumento(false); setEtapa("achado"); return; }
+        // Reserva de uma ficha que não existe mais: admin e mentor limpam a sobra e a busca segue.
+        if (!podeLimparReserva) return setErro(t("teachersTab.cpf.orphan"));
+        await limparReservaOrfa(tipo, n, dono.professorId);
       }
       // 2) Login (crachá) com este documento: a pessoa já tem acesso; acha (ou liga) a ficha da grade dela.
       const login = await acharDonoDoDocumento(tipo, n);
@@ -76,13 +77,10 @@ export default function NovoVinculoModal({
         const c = snap.exists() ? snap.data() : {};
         const pessoa = { uid: login.uid, nome: c.nome || "", email: c.email || "", telefone: c.telefone || "", papel: c.role || "" };
         setPessoaLogin(pessoa);
-        const ligada = professores.find(p => p.uidLogin === login.uid)
-          || (c.professorId && professores.find(p => String(p.id) === String(c.professorId)));
+        const { ligada, parecidas: achados } = fichasDoLogin(professores, login.uid, { ...c, email: pessoa.email }, pais);
         if (ligada) { setAchado(ligada); setGravarDocumento(!ligada.documentoOk); setEtapa("achado"); return; }
         setEmail(pessoa.email);
         setTelefone(formatarTelefone(pessoa.telefone, pais));
-        const achados = fichasParecidas(professores, { email: pessoa.email, telefone: pessoa.telefone, pais, nome: pessoa.nome })
-          .filter(a => !a.ficha.documentoOk && !a.ficha.uidLogin);
         if (achados.length) { setParecidas(achados); setEtapa("parecidas"); return; }
         aoNovoCadastro({ tipo, numero: n, email: normalizarEmail(pessoa.email), telefone: pessoa.telefone, pais, nome: pessoa.nome, uidLogin: login.uid });
         return;
@@ -215,6 +213,9 @@ export default function NovoVinculoModal({
                   <p className="text-xs text-slate-500 normal-case break-all">{[ficha.email, ficha.telefone].filter(Boolean).join(" · ")}</p>
                   <p className="text-xs text-slate-400 normal-case">{unidadesDaFicha(ficha.id) || t("teachersTab.table.noLinks")}</p>
                   <p className="text-[11px] font-bold text-amber-700 dark:text-amber-400 normal-case">{t("teachersTab.cpf.matched", { fields: campos.map(rotuloCampo).join(", ") })}</p>
+                  {pessoaLogin && ficha.uidLogin && ficha.uidLogin !== pessoaLogin.uid && (
+                    <p className="text-[11px] text-slate-500 normal-case">{t("teachersTab.cpf.replacesOldLogin")}</p>
+                  )}
                   <button type="button" onClick={() => escolher(ficha)} className="w-full py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-bold flex justify-center items-center gap-2">
                     <UserCheck className="w-4 h-4" /> {t("teachersTab.cpf.isThis")}
                   </button>

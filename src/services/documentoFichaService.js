@@ -4,7 +4,7 @@
 //    líder, mentor e admin conferem um documento digitado (get), ninguém além do admin lista;
 //  - na ficha (lida por todo logado) vai só "documentoOk: true".
 // O número NUNCA vai para auditoria, vitrine pública nem listas.
-import { doc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { auth, db } from './firebase';
 import { idDocumentoUnico, limparDocumento } from '../utils/documento';
 
@@ -48,6 +48,17 @@ export function documentoDaFichaNoLote(batch, { professorId, tipo, numero, anter
 export function apagarDocumentoDaFichaNoLote(batch, professorId, { tipo, numero }) {
   batch.delete(refGavetaFicha(professorId));
   batch.delete(refReservaFicha(tipo, numero));
+}
+
+/**
+ * Reserva "órfã": o documento aponta para uma ficha que não existe mais (ex.: ficha apagada por fora). Admin e
+ * mentor limpam a sobra (reserva e gaveta daquela ficha) para o documento poder ser ligado à ficha certa.
+ */
+export async function limparReservaOrfa(tipo, numero, professorId) {
+  const batch = writeBatch(db);
+  batch.delete(refReservaFicha(tipo, numero));
+  batch.delete(refGavetaFicha(professorId));
+  await batch.commit();
 }
 
 /** Coloca no batch a passagem do documento de uma ficha para outra (ao juntar fichas). Só admin. */
