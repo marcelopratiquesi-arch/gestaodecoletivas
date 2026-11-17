@@ -123,7 +123,8 @@
     "error": "Could not link (quota exhausted or offline). Try again.",
     "documentConflict": "The record and the badge have DIFFERENT IDs: they are different people. Not linked.",
     "copiedDocument": "The login's ID was copied to the record.",
-    "whatHappens": "When linking: the record starts using this login (the old login, if any, no longer applies to it), the badge points to the record and the login's ID goes to the record. Classes, units, validations and name stay as they are.",
+    "keepField": { "nome": "Name to keep", "email": "Email to keep", "telefone": "Phone to keep" },
+    "whatHappens":"When linking: the record starts using this login (the old login, if any, no longer applies to it), the badge points to the record and the login's ID goes to the record. Classes, units, validations and name stay as they are.",
     "leaderEffect": "This badge belongs to a leader/mentor. Once linked, the person becomes a 'leader who also teaches': if they ever leave the leadership, they keep teacher access. Link only if they teach (or taught) with this record."
   }
 }

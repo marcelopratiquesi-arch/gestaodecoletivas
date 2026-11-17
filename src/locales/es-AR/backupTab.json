@@ -123,7 +123,8 @@
     "error": "No se pudo vincular (cuota agotada o sin conexión). Intentá de nuevo.",
     "documentConflict": "La ficha y la credencial tienen documentos DISTINTOS: son personas distintas. No se vinculó.",
     "copiedDocument": "El documento del acceso se copió a la ficha.",
-    "whatHappens": "Al vincular: la ficha pasa a usar este acceso (el acceso antiguo, si existe, deja de valer para ella), la credencial apunta a la ficha y el documento del acceso va a la ficha. Clases, unidades, validaciones y nombre siguen igual.",
+    "keepField": { "nome": "Nombre que queda", "email": "Correo que queda", "telefone": "Teléfono que queda" },
+    "whatHappens":"Al vincular: la ficha pasa a usar este acceso (el acceso antiguo, si existe, deja de valer para ella), la credencial apunta a la ficha y el documento del acceso va a la ficha. Clases, unidades, validaciones y nombre siguen igual.",
     "leaderEffect": "Esta credencial es de líder/mentor. Vinculada a la ficha, la persona pasa a ser 'líder que también es profesor(a)': si algún día deja el liderazgo, sigue con acceso de profesor(a). Vinculá solo si da (o dio) clases con esta ficha."
   }
 }

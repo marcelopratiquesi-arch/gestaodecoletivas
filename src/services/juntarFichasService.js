@@ -52,7 +52,12 @@ export async function prepararJuncao(principal, outras, manter = {}) {
 // ligados. Liga nos dois sentidos, como o sistema já faz: professores/{id}.uidLogin e usuarios/{uid}.professorId.
 // O documento (CPF) do login também vai para a ficha, se ela ainda não tem. Documentos diferentes = pessoas
 // diferentes: não liga. Devolve { copiouDocumento }.
-export async function ligarFichaAoCracha({ ficha, cracha, quem }) {
+export async function ligarFichaAoCracha({ ficha, cracha, quem, manter = {} }) {
+  // Nome, e-mail e telefone escolhidos na tela (só grava o que mudou).
+  const dados = {};
+  if (manter.nome && manter.nome !== ficha.nome) dados.nome = manter.nome;
+  if (manter.email && manter.email.trim().toLowerCase() !== String(ficha.email || '').toLowerCase()) dados.email = manter.email.trim().toLowerCase();
+  if (manter.telefone && manter.telefone !== ficha.telefone) dados.telefone = manter.telefone;
   const [docLogin, docFicha] = await Promise.all([
     lerDocumento(String(cracha.id)),
     ficha.documentoOk ? lerDocumentoDaFicha(ficha.id) : Promise.resolve(null),
@@ -63,11 +68,13 @@ export async function ligarFichaAoCracha({ ficha, cracha, quem }) {
   const copiar = !!docLogin && !docFicha;
   const batch = writeBatch(db);
   batch.update(doc(db, 'professores', String(ficha.id)), {
-    uidLogin: String(cracha.id), updatedAt: serverTimestamp(), ...(copiar ? { documentoOk: true } : {}),
+    uidLogin: String(cracha.id), updatedAt: serverTimestamp(), ...dados, ...(copiar ? { documentoOk: true } : {}),
   });
   if (copiar) documentoDaFichaNoLote(batch, { professorId: ficha.id, tipo: docLogin.tipo, numero: docLogin.numero, marcarFicha: false });
-  batch.update(doc(db, 'usuarios', String(cracha.id)), { professorId: String(ficha.id) });
+  // O crachá acompanha o nome escolhido (o e-mail do crachá é o do login e não muda).
+  batch.update(doc(db, 'usuarios', String(cracha.id)), { professorId: String(ficha.id), ...(dados.nome ? { nome: dados.nome } : {}) });
   await batch.commit();
+  if (dados.nome) await publicarProfessor(ficha.id, dados.nome);
   try {
     await addDoc(collection(db, 'auditoria_cronograma'), {
       tipoAcao: 'ALTERADA',

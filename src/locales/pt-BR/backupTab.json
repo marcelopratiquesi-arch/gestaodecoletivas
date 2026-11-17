@@ -123,7 +123,8 @@
     "error": "Não foi possível ligar (cota esgotada ou sem conexão). Tente de novo.",
     "documentConflict": "A ficha e o crachá têm documentos (CPF) DIFERENTES: são pessoas diferentes. Não liguei.",
     "copiedDocument": "O CPF do login foi copiado para a ficha.",
-    "whatHappens": "Ao ligar: a ficha passa a usar este login (o login antigo, se houver, deixa de valer para ela), o crachá passa a apontar para a ficha e o CPF do login vai para a ficha. Aulas, unidades, validações e nome continuam como estão.",
+    "keepField": { "nome": "Nome que fica", "email": "E-mail que fica", "telefone": "Telefone que fica" },
+    "whatHappens":"Ao ligar: a ficha passa a usar este login (o login antigo, se houver, deixa de valer para ela), o crachá passa a apontar para a ficha e o CPF do login vai para a ficha. Aulas, unidades, validações e nome continuam como estão.",
     "leaderEffect": "Este crachá é de líder/mentor. Ligado à ficha, a pessoa vira 'líder que também é professor(a)': se um dia sair da liderança, continua com acesso de professor(a). Ligue só se ela dá (ou deu) aulas com esta ficha."
   }
 }

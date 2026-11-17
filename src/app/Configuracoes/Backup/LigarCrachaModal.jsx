@@ -26,6 +26,7 @@ export default function LigarCrachaModal({ fichas, crachas, aoLigar, aoFechar })
   const [etapa, setEtapa] = useState('escolher'); // escolher | gravando | feito
   const [erro, setErro] = useState('');
   const [copiou, setCopiou] = useState(false);
+  const [manter, setManter] = useState({}); // o que a pessoa escolheu manter; o que faltar fica com os dados da ficha
 
   const ficha = fichas.find(f => f.id === fichaId);
   const cracha = crachas.find(c => c.id === crachaId);
@@ -36,7 +37,8 @@ export default function LigarCrachaModal({ fichas, crachas, aoLigar, aoFechar })
   const ligar = async () => {
     setEtapa('gravando'); setErro('');
     try {
-      const r = await ligarFichaAoCracha({ ficha, cracha, quem: { id: user?.uid, nome: userData?.nome, email: userData?.email } });
+      const escolhido = Object.fromEntries(['nome', 'email', 'telefone'].map(c => [c, manter[c] ?? ficha?.[c] ?? '']));
+      const r = await ligarFichaAoCracha({ ficha, cracha, manter: escolhido, quem: { id: user?.uid, nome: userData?.nome, email: userData?.email } });
       setCopiou(!!r?.copiouDocumento);
       setEtapa('feito');
       aoLigar?.(cracha.id, ficha.id);
@@ -66,7 +68,7 @@ export default function LigarCrachaModal({ fichas, crachas, aoLigar, aoFechar })
             <p className="text-xs font-bold text-slate-500 uppercase mb-1">{t('backupTab.link.teacherRecord')}</p>
             <div className="divide-y divide-slate-100 dark:divide-slate-700 border border-slate-200 dark:border-slate-700 rounded-lg">
               {fichas.map(f => (
-                <Opcao key={f.id} nome="ficha" checked={f.id === fichaId} onChange={() => setFichaId(f.id)} disabled={etapa !== 'escolher'}
+                <Opcao key={f.id} nome="ficha" checked={f.id === fichaId} onChange={() => { setFichaId(f.id); setManter({}); }} disabled={etapa !== 'escolher'}
                   titulo={`${f.nome || '—'} · ${f.status || '-'}`} linha={[f.email, f.telefone].filter(Boolean).join(' · ') || '—'} />
               ))}
             </div>
@@ -82,6 +84,23 @@ export default function LigarCrachaModal({ fichas, crachas, aoLigar, aoFechar })
           </div>
         </div>
 
+        {etapa !== 'feito' && ficha && cracha && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+            {['nome', 'email', 'telefone'].map(campo => {
+              const opcoes = [...new Set([ficha[campo], cracha[campo]].filter(Boolean))];
+              return (
+                <label key={campo} className="text-xs font-bold text-slate-500 space-y-1">
+                  <span className="block uppercase">{t(`backupTab.link.keepField.${campo}`)}</span>
+                  <select value={manter[campo] ?? ficha[campo] ?? ''} disabled={etapa !== 'escolher'}
+                    onChange={e => setManter(m => ({ ...m, [campo]: e.target.value }))}
+                    className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 text-xs font-bold">
+                    {opcoes.map(v => <option key={v} value={v}>{v}</option>)}
+                  </select>
+                </label>
+              );
+            })}
+          </div>
+        )}
         {crachaEmOutraFicha && etapa !== 'feito' && (
           <p className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 text-xs font-bold flex items-center gap-2">
             <TriangleAlert className="w-4 h-4 shrink-0" /> {t('backupTab.link.badgeHasOther')}
