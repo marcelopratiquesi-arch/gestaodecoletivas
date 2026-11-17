@@ -43,7 +43,7 @@
     "value": "Valor Hora/Aula",
     "daysOfWeek": "Dias da Semana",
     "startDate": "Aula Registrada a partir de",
-    "endDate": "Encerrar Permanentemente em",
+    "endDate": "Encerrar a aula em (último dia)",
     "cancel": "Cancelar",
     "save": "Salvar",
     "delete": "Excluir",
@@ -80,5 +80,6 @@
     "duplicateConfirm": "⚠️ Já existe uma aula igual a esta (mesma unidade, modalidade, professor, horário e dia).\n\nSalvar mesmo assim pode pagar a mesma aula duas vezes.\n\nDeseja salvar mesmo assim?"
   },
   "unknownModality": "Desconhecido",
-  "unknownUnit": "Unidade Desconhecida"
+  "unknownUnit": "Unidade Desconhecida",
+  "startsOnBadge": "Começa em {{data}}"
 }

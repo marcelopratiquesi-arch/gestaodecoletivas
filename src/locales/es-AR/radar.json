@@ -87,7 +87,8 @@
       "selectDay": "¡Seleccioná al menos un día de la semana para la clase!",
       "noRetroactive": "ERROR DE INTEGRIDAD: ¡La fecha de inicio no puede ser retroactiva!",
       "saved": "¡CLASE REGISTRADA CON ÉXITO!",
-      "saveError": "Error al guardar la clase en la base de datos."
+      "saveError": "Error al guardar la clase en la base de datos.",
+      "valueRequired": "❌ Ingresá el valor de la clase (mayor que cero)."
     }
   },
   "floating": {

@@ -87,7 +87,8 @@
       "selectDay": "Select at least one day of the week for the class!",
       "noRetroactive": "INTEGRITY ERROR: The start date cannot be in the past!",
       "saved": "CLASS REGISTERED SUCCESSFULLY!",
-      "saveError": "Error saving the class to the database."
+      "saveError": "Error saving the class to the database.",
+      "valueRequired": "❌ Enter the class value (greater than zero)."
     }
   },
   "floating": {
