@@ -47,6 +47,7 @@ const getContrastColor = (hexColor) => {
 const ClassCard = ({ data, onClick, isReadOnly, defaultTeacher, t }) => {
   const textColor = getContrastColor(data.modalidadeCor || '#E6332A');
   const isEncerrada = data.dataFim && data.dataFim < getTodayStr();
+  const comecaEm = data.dataInicio && data.dataInicio > getTodayStr() ? data.dataInicio.split('-').reverse().join('/') : null;
 
   return (
     <div 
@@ -66,6 +67,11 @@ const ClassCard = ({ data, onClick, isReadOnly, defaultTeacher, t }) => {
           {formatFirstLastName(data.professorNome, defaultTeacher)}
         </span>
       </div>
+      {comecaEm && (
+        <span style={{ color: textColor }} className="mt-1 text-[8px] font-black uppercase tracking-wide border border-dashed rounded px-1.5 py-0.5 opacity-90">
+          {t('schedulePage.startsOnBadge', 'Começa em {{data}}', { data: comecaEm })}
+        </span>
+      )}
       {!isReadOnly && (
         <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
           <div className="bg-white/30 backdrop-blur-md p-1 rounded hover:bg-white/50" style={{ color: textColor }}>
@@ -95,6 +101,7 @@ const GlobalUnitBlock = ({ unitName, classes, isReadOnly, onEdit, t }) => {
       <div className="divide-y divide-slate-100 dark:divide-slate-700">
         {classes.map(aula => {
           const isEncerrada = aula.dataFim && aula.dataFim < getTodayStr();
+          const comecaEm = aula.dataInicio && aula.dataInicio > getTodayStr() ? aula.dataInicio.split('-').reverse().join('/') : null;
           const diasTraduzidos = (aula.dias || []).map(d => formatWeekday(d)).join(', ');
 
           return (
@@ -115,6 +122,7 @@ const GlobalUnitBlock = ({ unitName, classes, isReadOnly, onEdit, t }) => {
                     <div className="w-2 h-2 rounded-full" style={{ backgroundColor: aula.modalidadeCor || '#ccc' }}></div>
                     {aula.modalidadeNome}
                     {isEncerrada && <span className="text-[9px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded uppercase tracking-wide font-bold">{t('schedulePage.closedBadge', 'Encerrada')}</span>}
+                    {comecaEm && <span className="text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded uppercase tracking-wide font-bold">{t('schedulePage.startsOnBadge', 'Começa em {{data}}', { data: comecaEm })}</span>}
                  </h5>
                  <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-wide mt-1">
                     <Calendar className="w-3.5 h-3.5"/>

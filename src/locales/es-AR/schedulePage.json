@@ -43,7 +43,7 @@
     "value": "Valor Hora/Clase",
     "daysOfWeek": "Días de la Semana",
     "startDate": "Clase Registrada a partir de",
-    "endDate": "Finalizar Permanentemente en",
+    "endDate": "Finalizar la clase el (último día)",
     "cancel": "Cancelar",
     "save": "Guardar",
     "delete": "Eliminar",
@@ -80,5 +80,6 @@
     "duplicateConfirm": "⚠️ Ya existe una clase igual a esta (misma unidad, modalidad, profesor, horario y día).\n\nGuardar igualmente puede pagar la misma clase dos veces.\n\n¿Guardar igualmente?"
   },
   "unknownModality": "Desconocida",
-  "unknownUnit": "Sede Desconocida"
+  "unknownUnit": "Sede Desconocida",
+  "startsOnBadge": "Comienza el {{data}}"
 }

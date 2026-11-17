@@ -43,7 +43,7 @@
     "value": "Class/Hour Rate",
     "daysOfWeek": "Days of the Week",
     "startDate": "Class Registered starting from",
-    "endDate": "Permanently End on",
+    "endDate": "End class on (last day)",
     "cancel": "Cancel",
     "save": "Save",
     "delete": "Delete",
@@ -80,5 +80,6 @@
     "duplicateConfirm": "⚠️ A class just like this already exists (same unit, modality, teacher, time and day).\n\nSaving anyway may pay the same class twice.\n\nSave anyway?"
   },
   "unknownModality": "Unknown",
-  "unknownUnit": "Unknown Unit"
+  "unknownUnit": "Unknown Unit",
+  "startsOnBadge": "Starts on {{data}}"
 }
