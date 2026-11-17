@@ -58,3 +58,12 @@ export function crachaSemAcesso(cracha) {
 }
 // Recado para a tela de entrada mostrar "seu acesso está desativado" depois que o sistema desconecta.
 export const AVISO_SEM_ACESSO = "pratique_aviso_sem_acesso";
+
+// Professor só tem acesso depois de PEDIR e ser aprovado (login pelo Google). Crachá de professor sem
+// "loginGoogle: true" é o login antigo (e-mail e senha criado no cadastro): não vale mais, a pessoa precisa
+// pedir acesso. Mesma regra de crachaAtivo() no firestore.rules.
+export function professorDeLoginAntigo(cracha) {
+  return String(cracha?.role || "").trim().toLowerCase() === "professor" && cracha?.loginGoogle !== true;
+}
+// Recado para a tela de entrada explicar que o professor agora entra pelo Google e pede acesso.
+export const AVISO_PROFESSOR_LOGIN_ANTIGO = "pratique_aviso_professor_login_antigo";

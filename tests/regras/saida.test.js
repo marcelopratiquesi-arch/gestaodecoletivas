@@ -29,7 +29,7 @@ beforeEach(async () => {
     await setDoc(doc(db, 'usuarios/liderAB'), { role: 'lider', unidadeId: 'uniA', unidadeIds: ['uniA', 'uniB'], nome: 'Líder AB' });
     await setDoc(doc(db, 'usuarios/liderProf'), { role: 'lider', unidadeId: 'uniA', unidadeIds: ['uniA'], professorId: 'p1', nome: 'Líder Prof' });
     await setDoc(doc(db, 'professores/p1'), { nome: 'Prof', uidLogin: 'liderProf' });
-    await setDoc(doc(db, 'usuarios/outro'), { role: 'professor', professorId: 'p2', nome: 'Outro' });
+    await setDoc(doc(db, 'usuarios/outro'), { role: 'professor', professorId: 'p2', nome: 'Outro', loginGoogle: true });
   });
 });
 const como = (uid) => env.authenticatedContext(uid).firestore();

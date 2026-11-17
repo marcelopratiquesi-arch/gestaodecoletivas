@@ -35,5 +35,87 @@
   "chooseCollections": "Choose what to restore. The free limit is 20,000 writes per day: restore in parts if needed.",
   "selectedTotal": "Selected: {{total}} documents",
   "writeQuotaWarning": "Above the free limit of {{limit}} writes per day: the restore will stop halfway. Uncheck some collections and restore the rest tomorrow.",
-  "restoreSelected": "Restore selected"
+  "restoreSelected": "Restore selected",
+  "duplicates": {
+    "title": "Duplicates report",
+    "desc": "Shows who appears with the same email, phone or name across schedule teachers, badges and access requests. Read-only, nothing is saved. Reads badges and requests once (a few hundred reads).",
+    "generate": "Generate report",
+    "regenerate": "Generate again",
+    "download": "Download spreadsheet",
+    "error": "Could not read badges and requests (quota exhausted or offline). Try again later.",
+    "none": "No cases in this list.",
+    "readSummary": "{{teachers}} schedule teachers (already loaded, no reads) + {{reads}} badges and requests read now.",
+    "people_one": "{{count}} person",
+    "people_other": "{{count}} people",
+    "types": {
+      "email": "Duplicate email",
+      "telefone": "Duplicate phone",
+      "nome": "Duplicate name",
+      "emailDeMentira": "Fake email",
+      "emailInvalido": "Invalid email",
+      "telefoneInvalido": "Invalid phone",
+      "loginAntigo": "Old logins (not counted)"
+    },
+    "origin": {
+      "professor": "Schedule teacher",
+      "cracha": "Badge",
+      "pedido": "Access request",
+      "loginAntigo": "Old login"
+    },
+    "requestStatus": {
+      "pendente": "pending",
+      "aprovado": "approved",
+      "recusado": "declined"
+    },
+    "sheet": {
+      "duplicates": "Duplicates",
+      "problems": "Data issues",
+      "type": "Type",
+      "value": "Value",
+      "origin": "Source",
+      "name": "Name",
+      "email": "Email",
+      "phone": "Phone",
+      "detail": "Role / status",
+      "unit": "Unit",
+      "id": "Id"
+    }
+  },
+  "merge": {
+    "button": "Merge records ({{count}})",
+    "title": "Merge schedule records",
+    "desc": "Check the records that are the SAME person and choose the one to keep. Classes, units, validations and payments of the others move to it, and the other records are deleted.",
+    "include": "Include in merge",
+    "keep": "Keep this one",
+    "units": "Units: {{list}}",
+    "noUnits": "No unit",
+    "hasLogin": "has a linked login",
+    "check": "Check what changes",
+    "confirm": "Merge now",
+    "close": "Close",
+    "summaryTitle": "Everything moves to {{name}}'s record:",
+    "sumClasses": "Schedule classes moved: {{count}}",
+    "sumUnits": "Units moved: {{moved}} (duplicate links removed: {{dup}})",
+    "sumValidations": "Validations and payments moved: {{count}}",
+    "sumBadges": "Badges relinked: {{count}}",
+    "sumSummaries": "Monthly closing rebuilt next time reports open: {{list}}",
+    "sumFill": "Missing data that will be filled in: {{list}}",
+    "sumDelete": "Records deleted after moving everything: {{count}}",
+    "cost": "Reads done now: {{reads}} · writes when merging: {{writes}}",
+    "done": "Done! The records were merged into {{name}}'s.",
+    "readError": "Could not check (quota exhausted or offline). Try again later.",
+    "writeError": "The merge stopped halfway (quota or connection). Nothing is lost: check and merge again to finish."
+  },
+  "link": {
+    "button": "Link to badge",
+    "title": "Link record to badge",
+    "desc": "The same person has a schedule record and an access badge (e.g. a leader who teaches), but they are not linked. Pick the record and the badge. Nothing is deleted.",
+    "teacherRecord": "Schedule record",
+    "badge": "Badge",
+    "badgeHasOther": "This badge is already linked to another schedule record. Merge the records first (Merge records button), then link.",
+    "recordHasOther": "This record is linked to another login (probably the old one). Linking makes it use this badge.",
+    "confirm": "Link",
+    "done": "Done! {{name}}'s record is linked to the badge.",
+    "error": "Could not link (quota exhausted or offline). Try again."
+  }
 }

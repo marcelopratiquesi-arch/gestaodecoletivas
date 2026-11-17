@@ -12,9 +12,13 @@ service cloud.firestore {
     function autenticado() { return request.auth != null; }
     function temCracha() { return exists(/databases/$(database)/documents/usuarios/$(request.auth.uid)); }
     // Mentor com status "inativo" (aba Mentores) também fica sem acesso. Sem leitura extra: é o mesmo crachá.
+    // Professor só tem acesso pelo login do Google aprovado (loginGoogle == true). Crachá de professor do login
+    // antigo (e-mail e senha) não vale: a pessoa apaga o crachá antigo e pede acesso de novo.
     function crachaAtivo(c) {
-      return c.get('role', '').lower() != 'bloqueado'
-        && !(c.get('role', '').lower() == 'mentor' && c.get('status', '') == 'inativo');
+      let r = c.get('role', '').lower();
+      return r != 'bloqueado'
+        && !(r == 'mentor' && c.get('status', '') == 'inativo')
+        && !(r == 'professor' && c.get('loginGoogle', false) != true);
     }
     function logado() {
       return autenticado() && temCracha()
@@ -329,16 +333,39 @@ service cloud.firestore {
 
       // Mentor só cria crachá de líder/unidade para as unidades DELE (aprovação de pedido de acesso).
       allow create: if souAdmin()
-        || (logado() && meuPapel() == 'mentor' && papelNovo() == 'professor')
+        // Crachá de professor só nasce da APROVAÇÃO de um pedido (login do Google): nunca com e-mail e senha.
+        || (logado() && meuPapel() == 'mentor' && papelNovo() == 'professor' && request.resource.data.get('loginGoogle', false) == true)
         || (logado() && meuPapel() == 'mentor' && papelNovo() in papeisLider()
             && get(/databases/$(database)/documents/unidades/$(request.resource.data.unidadeId)).data.get('mentorId', '') == request.auth.uid
             && request.resource.data.get('unidadeIds', [request.resource.data.unidadeId]) == [request.resource.data.unidadeId])
-        || (logado() && meuPapel() in papeisLider() && papelNovo() == 'professor')
+        || (logado() && meuPapel() in papeisLider() && papelNovo() == 'professor' && request.resource.data.get('loginGoogle', false) == true)
         // Mentor novo convidado pelo admin (aba Mentores): no 1º acesso pelo Google, a própria pessoa cria
         // o crachá dela, SÓ se houver convite pendente para o e-mail Google dela e com os dados do convite.
         || mentorAceitaConvite(uid);
 
-      allow update: if souAdmin()
+      // As condições "da própria pessoa" vêm PRIMEIRO (são baratas: começam comparando o login com o crachá).
+      // O banco limita cada verificação a 1000 operações; esta regra é longa, então a ordem importa.
+      allow update:
+        // "Último acesso": a própria pessoa carimba só esse campo, com a hora do servidor (a aba Mentores mostra).
+        if (request.auth.uid == uid && logado() && camposAlterados().hasOnly(['ultimoAcesso'])
+            && request.resource.data.ultimoAcesso == request.time)
+        // Depois de gravar o documento na gaveta privada, a PRÓPRIA pessoa só marca "documentoOk" no crachá
+        // (o banco confere que o documento existe de verdade, na mesma gravação ou antes).
+        || (request.auth.uid == uid && logado() && camposAlterados().hasOnly(['documentoOk'])
+            && request.resource.data.documentoOk == true && existsAfter(caminhoDocumentoUsuario(uid)))
+        // Atualização de cadastro (troca do login antigo pelo login pessoal do Google): a própria pessoa
+        // atualiza SÓ os dados de contato, e só depois de conectar o Google à conta. O papel não muda,
+        // exceto o login antigo "unidade", que vira "lider". Unidade, status e o resto ficam como estão.
+        || (request.auth.uid == uid && logado()
+            && 'google.com' in request.auth.token.firebase.identities
+            && camposAlterados().hasOnly(['nome', 'telefone', 'email', 'emailAntigo', 'role', 'loginGoogle', 'cadastroAtualizadoEm', 'documentoOk', 'modalidades'])
+            && request.resource.data.get('modalidades', '') is string && request.resource.data.get('modalidades', '').size() <= 300
+            && (!('documentoOk' in request.resource.data) || (request.resource.data.documentoOk == true && existsAfter(caminhoDocumentoUsuario(uid))))
+            && request.resource.data.loginGoogle == true
+            && request.resource.data.nome is string && request.resource.data.nome.size() >= 3 && request.resource.data.nome.size() <= 80
+            && request.resource.data.telefone is string && request.resource.data.telefone.size() >= 6 && request.resource.data.telefone.size() <= 30
+            && (papelNovo() == papelDoAlvo() || (papelDoAlvo() == 'unidade' && papelNovo() == 'lider')))
+        || souAdmin()
         || (logado() && meuPapel() == 'mentor' && papelDoAlvo() in ['lider', 'unidade', 'professor']
             && camposAlterados().hasOnly(['nome', 'email', 'telefone']))
         || (logado() && meuPapel() in papeisLider() && papelDoAlvo() == 'professor'
@@ -347,28 +374,11 @@ service cloud.firestore {
         || (logado() && meuPapel() == 'mentor' && mentorMudaLideranca(uid))
         // Saída da função pela própria pessoa, e o mentor da unidade desfaz (ver saidaDaFuncao acima).
         || (logado() && saidaDaFuncao(uid))
-        // "Último acesso": a própria pessoa carimba só esse campo, com a hora do servidor (a aba Mentores mostra).
-        || (logado() && request.auth.uid == uid && camposAlterados().hasOnly(['ultimoAcesso'])
-            && request.resource.data.ultimoAcesso == request.time)
-        || (logado() && meuPapel() == 'mentor' && mentorDesfazSaida())
-        // Depois de gravar o documento na gaveta privada, a PRÓPRIA pessoa só marca "documentoOk" no crachá
-        // (o banco confere que o documento existe de verdade, na mesma gravação ou antes).
-        || (logado() && request.auth.uid == uid && camposAlterados().hasOnly(['documentoOk'])
-            && request.resource.data.documentoOk == true && existsAfter(caminhoDocumentoUsuario(uid)))
-        // Atualização de cadastro (troca do login antigo pelo login pessoal do Google): a própria pessoa
-        // atualiza SÓ os dados de contato, e só depois de conectar o Google à conta. O papel não muda,
-        // exceto o login antigo "unidade", que vira "lider". Unidade, status e o resto ficam como estão.
-        || (logado() && request.auth.uid == uid
-            && 'google.com' in request.auth.token.firebase.identities
-            && camposAlterados().hasOnly(['nome', 'telefone', 'email', 'emailAntigo', 'role', 'loginGoogle', 'cadastroAtualizadoEm', 'documentoOk', 'modalidades'])
-            && request.resource.data.get('modalidades', '') is string && request.resource.data.get('modalidades', '').size() <= 300
-            && (!('documentoOk' in request.resource.data) || (request.resource.data.documentoOk == true && existsAfter(caminhoDocumentoUsuario(uid))))
-            && request.resource.data.loginGoogle == true
-            && request.resource.data.nome is string && request.resource.data.nome.size() >= 3 && request.resource.data.nome.size() <= 80
-            && request.resource.data.telefone is string && request.resource.data.telefone.size() >= 6 && request.resource.data.telefone.size() <= 30
-            && (papelNovo() == papelDoAlvo() || (papelDoAlvo() == 'unidade' && papelNovo() == 'lider')));
+        || (logado() && meuPapel() == 'mentor' && mentorDesfazSaida());
 
       allow delete: if souAdmin()
+        // Professor do login antigo (sem Google): a própria pessoa apaga o crachá antigo para poder pedir acesso.
+        || (autenticado() && request.auth.uid == uid && papelDoAlvo() == 'professor' && resource.data.get('loginGoogle', false) != true)
         || (logado() && meuPapel() == 'mentor' && papelDoAlvo() in papeisLider()
             && get(/databases/$(database)/documents/unidades/$(resource.data.unidadeId)).data.get('mentorId', '') == request.auth.uid
             && unidadesDoAlvo().size() <= 1);

@@ -28,7 +28,7 @@ beforeEach(async () => {
     await setDoc(doc(db, 'usuarios/liderA'), { role: 'lider', unidadeId: 'uniA', unidadeIds: ['uniA'], nome: 'Líder A' });
     await setDoc(doc(db, 'usuarios/liderAB'), { role: 'lider', unidadeId: 'uniA', unidadeIds: ['uniA', 'uniB'], nome: 'Líder AB' });
     await setDoc(doc(db, 'usuarios/antigo'), { role: 'unidade', unidadeId: 'uniA', nome: 'Unidade A' });
-    await setDoc(doc(db, 'usuarios/prof'), { role: 'professor', nome: 'Prof' });
+    await setDoc(doc(db, 'usuarios/prof'), { role: 'professor', nome: 'Prof', loginGoogle: true });
     await setDoc(doc(db, 'usuarios/bloq'), { role: 'bloqueado', unidadeId: 'uniA', nome: 'Bloqueado' });
   });
 });

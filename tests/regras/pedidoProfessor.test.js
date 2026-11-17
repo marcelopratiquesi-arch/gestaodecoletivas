@@ -4,7 +4,7 @@
 import { readFileSync } from 'fs';
 import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest';
 import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing';
-import { doc, setDoc, getDocs, updateDoc, writeBatch, collection, query, where, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, getDoc, getDocs, deleteDoc, updateDoc, writeBatch, collection, query, where, serverTimestamp } from 'firebase/firestore';
 
 let env;
 beforeAll(async () => {
@@ -93,20 +93,30 @@ describe('quem lê e aprova pedido de professor', () => {
   });
 });
 
-describe('professor de login antigo atualiza o cadastro', () => {
+describe('professor de login antigo (e-mail e senha) NÃO tem mais acesso', () => {
   beforeEach(async () => {
     await env.withSecurityRulesDisabled(async (ctx) => {
       await setDoc(doc(ctx.firestore(), 'usuarios/profAntigo'), { role: 'professor', professorId: 'p1', nome: 'Prof Antigo', telefone: '123456' });
+      await setDoc(doc(ctx.firestore(), 'usuarios/profGoogle'), { role: 'professor', nome: 'Prof Google', loginGoogle: true, unidadeId: 'uniA' });
+      await setDoc(doc(ctx.firestore(), 'professores/p1'), { nome: 'Prof Antigo' });
     });
   });
-  it('confirma nome, telefone e modalidades (com o Google conectado)', async () => {
-    await assertSucceeds(updateDoc(doc(google('profAntigo'), 'usuarios/profAntigo'), {
-      nome: 'Prof Antigo', telefone: '(31) 98888-0000', email: 'prof@gmail.com', loginGoogle: true, modalidades: 'Pilates', cadastroAtualizadoEm: serverTimestamp(),
-    }));
+  it('não lê nem grava nada com o crachá antigo', async () => {
+    await assertFails(getDoc(doc(como('profAntigo'), 'professores/p1')));
+    await assertFails(setDoc(doc(como('profAntigo'), 'auditoria_configuracoes/x'), { a: 1 }));
   });
-  it('NÃO aceita modalidades gigantes nem mudar de função', async () => {
-    const base = { nome: 'Prof Antigo', telefone: '(31) 98888-0000', email: 'prof@gmail.com', loginGoogle: true, cadastroAtualizadoEm: serverTimestamp() };
-    await assertFails(updateDoc(doc(google('profAntigo'), 'usuarios/profAntigo'), { ...base, modalidades: 'x'.repeat(301) }));
-    await assertFails(updateDoc(doc(google('profAntigo'), 'usuarios/profAntigo'), { ...base, role: 'lider' }));
+  it('quem entrou pelo Google e foi aprovado (loginGoogle) continua lendo', async () => {
+    await assertSucceeds(getDoc(doc(como('profGoogle'), 'professores/p1')));
+  });
+  it('a própria pessoa apaga o crachá antigo e então consegue pedir acesso', async () => {
+    await assertFails(deleteDoc(doc(como('profGoogle'), 'usuarios/profGoogle')));
+    await assertFails(deleteDoc(doc(como('outraPessoa'), 'usuarios/profAntigo')));
+    await assertSucceeds(deleteDoc(doc(google('profAntigo', 'prof@gmail.com'), 'usuarios/profAntigo')));
+    await assertSucceeds(setDoc(doc(google('profAntigo', 'prof@gmail.com'), 'solicitacoes_acesso/profAntigo'), pedidoProf({ email: 'prof@gmail.com' })));
+  });
+  it('mentor e líder NÃO criam crachá de professor sem o Google (senha padrão)', async () => {
+    await assertFails(setDoc(doc(como('mentor1'), 'usuarios/novo1'), { role: 'professor', nome: 'X' }));
+    await assertFails(setDoc(doc(como('liderA'), 'usuarios/novo2'), { role: 'professor', nome: 'X' }));
+    await assertSucceeds(setDoc(doc(como('liderA'), 'usuarios/novo3'), { role: 'professor', nome: 'X', loginGoogle: true }));
   });
 });
