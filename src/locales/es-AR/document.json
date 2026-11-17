@@ -48,7 +48,37 @@
     "button": "Buscar",
     "notFound": "Ningún registro con este documento.",
     "found": "Registro: {{name}}",
-    "unknownName": "Persona sin nombre en el sistema"
+    "unknownName": "Persona sin nombre en el sistema",
+    "notFoundMentor": "No encontré este documento entre las personas de tus unidades.",
+    "role": {
+      "lider": "Líder",
+      "unidade": "Líder",
+      "mentor": "Mentor",
+      "professor": "Profesor",
+      "admin": "Administrador",
+      "bloqueado": "Bloqueado"
+    },
+    "request": {
+      "pendente": "Pedido de acceso pendiente",
+      "recusado": "Pedido de acceso rechazado",
+      "aprovado": "Pedido aprobado"
+    },
+    "orphan": "Documento trabado, sin registro ni pedido",
+    "fix": "Corregir documento",
+    "deleteRequest": "Eliminar pedido y liberar documento",
+    "freeDoc": "Liberar documento",
+    "hasBadgeHint": "Esta persona ya tiene acceso. Corregí el documento acá; para quitarle el acceso, usá el botón de quitar en su pestaña.",
+    "deleteHint": "Usalo cuando la persona entró con el e-mail equivocado: el pedido desaparece, el documento queda libre y ella pide acceso de nuevo con el e-mail correcto.",
+    "confirmDelete": "¿Eliminar el pedido de acceso de {{name}} y liberar el documento? La persona podrá pedir acceso de nuevo.",
+    "confirmFree": "¿Liberar este documento (registro de {{name}})? Ninguna persona queda ligada a él.",
+    "freed": "Listo: el documento quedó libre para registrarse de nuevo.",
+    "deleteError": "No se pudo eliminar. Probá de nuevo.",
+    "auditDelete": "Pedido de acceso eliminado y documento liberado.",
+    "auditFree": "Documento trabado liberado.",
+    "useAsLeader": "Usar a esta persona como líder",
+    "free": "Documento libre: podés registrar.",
+    "alreadyUsed": "Este documento ya está registrado:",
+    "orphanMentorHint": "Este documento está trabado sin registro. Pedile al administrador que lo libere."
   },
   "invite": {
     "label": "Documento (opcional)",

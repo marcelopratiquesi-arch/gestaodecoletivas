@@ -5,7 +5,7 @@
 //  - no pedido de acesso (ainda sem crachá) o número fica em documentos_do_pedido/{uid} e a
 //    reserva já é feita; depois de aprovada, a pessoa copia para a gaveta do crachá (tela "Informar documento").
 // O número NUNCA vai para auditoria, vitrine pública nem listas.
-import { doc, getDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, serverTimestamp, writeBatch } from "firebase/firestore";
 import { auth, db } from "./firebase";
 import { idDocumentoUnico, limparDocumento } from "../utils/documento";
 
@@ -59,4 +59,55 @@ export async function gravarComAviso(batch) {
     }
     throw e;
   }
+}
+
+/**
+ * Procura quem está com um documento reservado. Devolve { uid } ou null (não existe, ou você não tem permissão
+ * para ver: o mentor só enxerga quem é das unidades dele).
+ */
+export async function acharDonoDoDocumento(tipo, numero) {
+  try {
+    const snap = await getDoc(refReserva(tipo, numero));
+    return snap.exists() ? { uid: snap.data().uid } : null;
+  } catch (e) {
+    if (e?.code === "permission-denied") return null;
+    throw e;
+  }
+}
+
+/**
+ * Libera o documento de um pedido de acesso (usado quando o pedido é recusado): apaga a gaveta do pedido e a
+ * reserva, para a pessoa poder pedir de novo (com o mesmo ou com outro e-mail) sem ouvir "documento já cadastrado".
+ * Não mexe em quem já tem crachá. Nunca quebra a ação principal: se falhar, só avisa no console.
+ */
+export async function liberarDocumentoDoPedido(uid) {
+  try {
+    const d = await lerDocumentoDoPedido(uid);
+    if (!d) return;
+    const batch = writeBatch(db);
+    batch.delete(refGavetaPedido(uid));
+    batch.delete(refReserva(d.tipo, d.numero));
+    await batch.commit();
+  } catch (e) {
+    console.error("Não consegui liberar o documento do pedido", e);
+  }
+}
+
+/**
+ * Exclui um pedido de acesso por inteiro e libera o documento: apaga o pedido, a gaveta do pedido e a reserva
+ * (quando se sabe o documento). Serve para quem entrou com o e-mail errado e precisa começar de novo.
+ */
+export async function excluirPedidoELiberar(uid, documento = null) {
+  const batch = writeBatch(db);
+  batch.delete(doc(db, "solicitacoes_acesso", uid));
+  batch.delete(refGavetaPedido(uid));
+  if (documento) batch.delete(refReserva(documento.tipo, documento.numero));
+  await batch.commit();
+}
+
+/** Apaga só a reserva (documento "preso" sem pedido nem crachá). Só o admin consegue. */
+export async function liberarReserva(tipo, numero) {
+  const batch = writeBatch(db);
+  batch.delete(refReserva(tipo, numero));
+  await batch.commit();
 }

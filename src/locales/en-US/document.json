@@ -48,7 +48,37 @@
     "button": "Search",
     "notFound": "No record with this document.",
     "found": "Record: {{name}}",
-    "unknownName": "Person without a name in the system"
+    "unknownName": "Person without a name in the system",
+    "notFoundMentor": "I could not find this document among the people of your units.",
+    "role": {
+      "lider": "Leader",
+      "unidade": "Leader",
+      "mentor": "Mentor",
+      "professor": "Teacher",
+      "admin": "Administrator",
+      "bloqueado": "Blocked"
+    },
+    "request": {
+      "pendente": "Access request pending",
+      "recusado": "Access request refused",
+      "aprovado": "Request approved"
+    },
+    "orphan": "Stuck document, no record or request",
+    "fix": "Fix document",
+    "deleteRequest": "Delete request and free document",
+    "freeDoc": "Free document",
+    "hasBadgeHint": "This person already has access. Fix the document here; to remove access, use the remove button on their tab.",
+    "deleteHint": "Use when the person signed in with the wrong e-mail: the request is removed, the document is freed and they request access again with the right e-mail.",
+    "confirmDelete": "Delete the access request of {{name}} and free the document? The person will be able to request access again.",
+    "confirmFree": "Free this document (record of {{name}})? No person stays linked to it.",
+    "freed": "Done: the document is free to be registered again.",
+    "deleteError": "Could not delete. Try again.",
+    "auditDelete": "Access request deleted and document freed.",
+    "auditFree": "Stuck document freed.",
+    "useAsLeader": "Use this person as leader",
+    "free": "Document is free: you can register.",
+    "alreadyUsed": "This document is already registered:",
+    "orphanMentorHint": "This document is stuck without a record. Ask the administrator to free it."
   },
   "invite": {
     "label": "Document (optional)",
