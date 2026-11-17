@@ -1,14 +1,14 @@
 // LISTA: uma linha por aula, agrupada por horário fixo (unidade + horário + modalidade + professor),
 // com a mais antiga primeiro dentro de cada grupo. No celular cada linha vira 2–3 linhas curtas.
 import React from 'react';
-import { ArrowRightLeft, Lock, User, CircleX, Pencil, FileText, Star } from 'lucide-react';
+import { ArrowRightLeft, Lock, User, CircleX, CircleCheck, Pencil, FileText, Star } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { formatDate, formatWeekday, formatCancelReason } from '../../utils/formatters';
 import { StatusBadge } from './AulaCard';
 import { ValidacaoRapida } from './ValidacaoRapida';
 import { estadoDaAula } from './estadoDaAula';
 
-function LinhaAula({ item, verificarFuturo, onValidar, onCancelar, onValidarRapido, salvando }) {
+function LinhaAula({ item, verificarFuturo, onValidar, onCancelar, onValidarRapido, onValidarNoFeriado, salvando }) {
     const { t } = useTranslation();
     const isFuture = verificarFuturo(item.data);
     const { bloqueado, textoBloqueio, exigeJustificativa, validacaoRapida } = estadoDaAula(item, isFuture, t);
@@ -57,6 +57,11 @@ function LinhaAula({ item, verificarFuturo, onValidar, onCancelar, onValidarRapi
                         </>
                     ) : (
                         <>
+                            {item.podeValidarNoFeriado && onValidarNoFeriado && (
+                                <button type="button" onClick={() => onValidarNoFeriado(item)} className={`${botao} bg-emerald-500 text-white hover:bg-emerald-600`}>
+                                    <CircleCheck className="w-3.5 h-3.5"/> {t('dailyValidation.card.validateOnHoliday')}
+                                </button>
+                            )}
                             {item.status !== 'cancelada' && (
                                 <button type="button" onClick={() => onValidar(item)} className={`${botao} ${item.status === 'realizada' ? 'border-2 border-emerald-500 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20' : 'bg-emerald-500 text-white hover:bg-emerald-600'}`}>
                                     <Pencil className="w-3.5 h-3.5"/> {item.status === 'realizada' ? t('dailyValidation.card.edit') : t('dailyValidation.card.validate')}
@@ -73,7 +78,7 @@ function LinhaAula({ item, verificarFuturo, onValidar, onCancelar, onValidarRapi
     );
 }
 
-export function ListaAulas({ grupos, mostrarProfessor, verificarFuturo, onValidar, onCancelar, onValidarRapido, salvando }) {
+export function ListaAulas({ grupos, mostrarProfessor, verificarFuturo, onValidar, onCancelar, onValidarRapido, onValidarNoFeriado, salvando }) {
     const { t } = useTranslation();
     return (
         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden divide-y-4 divide-slate-100 dark:divide-slate-900">
@@ -91,7 +96,7 @@ export function ListaAulas({ grupos, mostrarProfessor, verificarFuturo, onValida
                         </div>
                         <div className="divide-y divide-slate-100 dark:divide-slate-700/60">
                             {grupo.itens.map(item => (
-                                <LinhaAula key={item.key} item={item} verificarFuturo={verificarFuturo} onValidar={onValidar} onCancelar={onCancelar} onValidarRapido={onValidarRapido} salvando={salvando} />
+                                <LinhaAula key={item.key} item={item} verificarFuturo={verificarFuturo} onValidar={onValidar} onCancelar={onCancelar} onValidarRapido={onValidarRapido} onValidarNoFeriado={onValidarNoFeriado} salvando={salvando} />
                             ))}
                         </div>
                     </section>
