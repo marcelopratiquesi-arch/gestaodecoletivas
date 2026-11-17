@@ -47,7 +47,7 @@ service cloud.firestore {
 
     // Mentor de alguma das unidades (até 5) de uma lista.
     function mentorDeAlguma(ids) {
-      return ids is list && ids.size() >= 1 && ids.size() <= 5
+      return ids is list && ids.size() >= 1
         && (mentorDaUnidadeId(ids[0])
           || (ids.size() > 1 && mentorDaUnidadeId(ids[1]))
           || (ids.size() > 2 && mentorDaUnidadeId(ids[2]))

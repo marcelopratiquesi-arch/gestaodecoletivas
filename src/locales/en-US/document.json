@@ -85,12 +85,13 @@
     "deleteLeaderHint": "Removes the person from the units, removes access and frees the document. They can request access again right away. Old classes and validations stay in the history.",
     "confirmDeleteLeader": "Delete the record of {{name}}? They leave the units, lose access and the document is freed.",
     "auditDeleteLeader": "Leader record deleted and document freed.",
-    "deleteLeaderError": "Could not delete. If the person leads more than one unit, ask the administrator.",
+    "deleteLeaderError": "Could not delete everything. Check the person's units and try again; if it persists, ask the administrator.",
     "cannot": {
       "staff": "This person is an admin or mentor: their access is only removed on the Mentors tab. Here you can fix the document.",
       "professor": "This person is a teacher: their record is removed on the Teachers tab. Here you can fix the document.",
       "liderEProfessor": "This person is also a teacher; so they do not lose teacher access, remove only the leader role on the unit (Leaders tab). Here you can fix the document.",
-      "outro": "This person has another kind of access. Here you can fix the document."
+      "outro": "This person has another kind of access. Here you can fix the document.",
+      "outroMentor": "This person also leads units of another mentor. Here you can fix the document; to delete the record, ask the administrator."
     }
   },
   "invite": {

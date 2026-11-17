@@ -148,7 +148,9 @@ function CartaoDoDocumento({ r, aoLiberar, aoEscolherPessoa, aoCadastrar, aoIrPa
   const [docAlvo, setDocAlvo] = useState(null);
   const [excluindo, setExcluindo] = useState(false);
   const [erro, setErro] = useState("");
-  const remocao = r.cracha ? avaliarRemocao(r.cracha, r.uid, catalogs?.professores || []) : null;
+  const meuId = userData?.id || userData?.uid;
+  const minhasUnidades = (catalogs?.unidades || []).filter((u) => u.mentorId === meuId).map((u) => String(u.id));
+  const remocao = r.cracha ? avaliarRemocao(r.cracha, r.uid, catalogs?.professores || [], { souAdmin, minhasUnidades }) : null;
 
   const nome = r.cracha?.nome || r.pedido?.nome || r.pedido?.email || t("document.search.unknownName");
   const email = r.pedido?.email || r.cracha?.email;
@@ -163,7 +165,7 @@ function CartaoDoDocumento({ r, aoLiberar, aoEscolherPessoa, aoCadastrar, aoIrPa
     setExcluindo(true); setErro("");
     try {
       const unidadesDele = await removerLiderELiberarDocumento({
-        uid: r.uid, documento: { tipo: r.tipo, numero: r.numero }, unidades: catalogs?.unidades || [],
+        uid: r.uid, cracha: r.cracha, souAdmin, documento: { tipo: r.tipo, numero: r.numero }, unidades: catalogs?.unidades || [],
         motivo: t("document.search.auditDeleteLeader"), quemId: userData?.id || userData?.uid, quemNome: userData?.nome || userData?.email || "-",
       });
       await registrarAuditoriaAcesso({
