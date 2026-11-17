@@ -9,6 +9,7 @@ import {
   TriangleAlert, CircleCheck, Loader2, ShieldAlert, Archive, X
 } from 'lucide-react';
 import { serializarValor, desserializarValor, linhaParaExcel } from '../../../utils/backupSerializacao';
+import RelatorioRepetidos from './RelatorioRepetidos';
 
 // === LISTA MESTRA DE BACKUP ===
 // Todas as coleções usadas pelo sistema. Coleções vazias custam só a contagem (não são lidas).
@@ -367,6 +368,8 @@ export default function BackupTab() {
               </div>
             )}
         </div>
+
+        <RelatorioRepetidos />
 
       </div>
 
