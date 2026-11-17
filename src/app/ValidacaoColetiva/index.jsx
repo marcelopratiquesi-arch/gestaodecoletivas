@@ -6,7 +6,7 @@ import { db } from '../../services/firebase';
 import { collection, query, where, onSnapshot, getDoc, doc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { ShieldCheck, LayoutDashboard, Download, MapPin, UserCog, Building2, Lock, Calendar, CheckCircle2, AlertCircle, Trophy, List, MessageSquare } from 'lucide-react';
 
-import { KPICard, MultiSelectDropdown, getTodayStr, normalizeDate, getDatesInRange, formatHeaderPeriodo, formatDateShort, filterPendingDates, getFirstLast, getEmojiByPercent } from './components';
+import { KPICard, MultiSelectDropdown, getTodayStr, normalizeDate, getDatesInRange, formatHeaderPeriodo, formatPendencias, getFirstLast, getEmojiByPercent } from './components';
 import { RankingTab, StatusTab, CobrancaTab } from './Tabs';
 import { getDiaSemana, toDate, formatDate, formatTime } from '../../utils/formatters';
 import { deduplicarValidacoes } from '../../utils/validacoes';
@@ -18,6 +18,17 @@ import { emBlocos } from '../../services/resumosMensais';
 // Nomes de quem validou (e que não são mentor nem professor do catálogo), buscados um a um e guardados
 // entre aberturas da tela. Antes a tela baixava a coleção "usuarios" inteira (~700 leituras) a cada abertura.
 const cacheNomes = new Map();
+const CHAVE_FILTROS = 'coletiva_filtros';
+const lerFiltrosSalvos = (userId) => {
+  const vazio = { estado: [], mentor: [], unidade: [], aba: 'ranking' };
+  if (!userId) return vazio;
+  try {
+    const x = JSON.parse(localStorage.getItem(`${CHAVE_FILTROS}_${userId}`) || 'null');
+    if (!x) return vazio;
+    const lista = (v) => (Array.isArray(v) ? v.filter(i => typeof i === 'string') : []);
+    return { estado: lista(x.estado), mentor: lista(x.mentor), unidade: lista(x.unidade), aba: ['ranking', 'status', 'cobranca'].includes(x.aba) ? x.aba : 'ranking' };
+  } catch { return vazio; }
+};
 const ESPERA_FILTRO_MS = 600;
 
 export default function ValidacaoColetiva() {
@@ -38,17 +49,22 @@ export default function ValidacaoColetiva() {
   const [dataInicio, setDataInicio] = useState(getTodayStr());
   const [dataFim, setDataFim] = useState(getTodayStr());
   
-  const [estadoFiltro, setEstadoFiltro] = useState([]);
-  const [mentorFiltro, setMentorFiltro] = useState([]);
-  const [unidadeFiltro, setUnidadeFiltro] = useState([]);
+  // Os filtros ficam lembrados neste aparelho (por pessoa); se der erro ao ler, começa vazio como antes.
+  const salvos = useMemo(() => lerFiltrosSalvos(userId), [userId]);
+  const [estadoSel, setEstadoFiltro] = useState(salvos.estado);
+  const [mentorSel, setMentorFiltro] = useState(salvos.mentor);
+  const [unidadeSel, setUnidadeFiltro] = useState(salvos.unidade);
 
-  const [activeTab, setActiveTab] = useState('ranking'); 
+  const [activeTab, setActiveTab] = useState(salvos.aba);
   const [expandedUnitId, setExpandedUnitId] = useState(null);
   const [showOnlyIssues, setShowOnlyIssues] = useState(false);
   const [sortConfig, setSortConfig] = useState({ key: 'percentual', direction: 'descending' });
   const [itensVisiveisStatus, setItensVisiveisStatus] = useState(12);
 
-  const isCofreGlobalFechado = role === 'admin' ? (estadoFiltro.length === 0 && mentorFiltro.length === 0 && unidadeFiltro.length === 0) : role === 'mentor' ? (estadoFiltro.length === 0 && unidadeFiltro.length === 0) : false;
+  useEffect(() => {
+    if (!userId) return;
+    try { localStorage.setItem(`${CHAVE_FILTROS}_${userId}`, JSON.stringify({ estado: estadoSel, mentor: mentorSel, unidade: unidadeSel, aba: activeTab })); } catch { /* sem armazenamento: tudo bem */ }
+  }, [userId, estadoSel, mentorSel, unidadeSel, activeTab]);
 
   const [now, setNow] = useState(new Date());
   // O relógio só precisa andar quando o período inclui hoje (aula de hoje que acabou de começar).
@@ -77,6 +93,15 @@ export default function ValidacaoColetiva() {
   }, [catalogs?.unidades, isMentor, userId]);
 
   const estadosOptions = useMemo(() => [...new Set(unidadesBase.map(u => u.estado).filter(Boolean))].sort().map(e => ({ value: e, label: e })), [unidadesBase]);
+  // Filtro lembrado de unidade/mentor/estado que não existe mais (unidade desativada, mentor trocado...) é ignorado,
+  // senão a tela abriria vazia sem a pessoa entender por quê.
+  const estadoFiltro = useMemo(() => loadingCatalogs ? estadoSel : estadoSel.filter(e => unidadesBase.some(u => u.estado === e)), [estadoSel, unidadesBase, loadingCatalogs]);
+  const mentorFiltro = useMemo(() => loadingCatalogs ? mentorSel : mentorSel.filter(id => unidadesBase.some(u => u.mentorId === id)), [mentorSel, unidadesBase, loadingCatalogs]);
+  const unidadeFiltro = useMemo(() => loadingCatalogs ? unidadeSel : unidadeSel.filter(id => unidadesBase.some(u => u.id === id)), [unidadeSel, unidadesBase, loadingCatalogs]);
+
+  // Admin precisa escolher algo antes (a rede inteira pesa). O mentor abre já com as unidades DELE (poucas).
+  const isCofreGlobalFechado = role === 'admin' && estadoFiltro.length === 0 && mentorFiltro.length === 0 && unidadeFiltro.length === 0;
+
   const unidadesFiltradasEstado = useMemo(() => estadoFiltro.length === 0 ? unidadesBase : unidadesBase.filter(u => estadoFiltro.includes(u.estado)), [unidadesBase, estadoFiltro]);
   
   const mentoresOptions = useMemo(() => {
@@ -287,7 +312,7 @@ export default function ValidacaoColetiva() {
         }
 
         return { 
-            id: unidade.id, nome: unidade.nome, telefone: unidade.telefone, mentorId: unidade.mentorId, 
+            id: unidade.id, nome: unidade.nome, telefone: unidade.telefone, pais: unidade.pais, mentorId: unidade.mentorId, 
             mentorNome: usuariosMap[unidade.mentorId]?.nome || t('common.unknown.noMentor'), totalEsperado: totalEsp, totalValidado: totalVal, 
             percentual: pct, pendencias: pends, statusTexto: totalEsp === 0 ? 'AGUARDANDO' : pct === 100 ? 'PARABÉNS!' : 'EM ANDAMENTO', 
             temCronograma: temCronograma,
@@ -308,6 +333,7 @@ export default function ValidacaoColetiva() {
                 id: u.mentorId, 
                 nome: u.mentorNome, 
                 telefone: mentorData?.telefone || "", 
+                pais: u.pais, 
                 totalUnidades: 0, 
                 unidadesComAulas: 0, 
                 somaPercentuais: 0, 
@@ -402,10 +428,12 @@ export default function ValidacaoColetiva() {
   // 🟢 NOVA FUNÇÃO EXPORTAR CSV BLINDADA (X-9)
   const exportarCSV = async () => {
     // 1. Lógica original de criação e download do CSV
-    const headers = ['unit', 'mentor', 'done', 'expected', 'status', 'progress', 'pendencies'].map(k => t(`groupValidation.csv.${k}`)).join(',') + "\n";
-    const rows = sortedUnidades.map(u => `${u.nome.toUpperCase()},${u.mentorNome.toUpperCase()},${u.totalValidado},${u.totalEsperado},${traduzirStatus(u.statusTexto).toUpperCase()},${u.percentual}%,${u.pendencias.length}`).join("\n");
+    const headers = ['unit', 'mentor', 'done', 'expected', 'status', 'progress', 'pendencies'].map(k => t(`groupValidation.csv.${k}`)).join(';') + "\r\n";
+    // Campo entre aspas (nome com ; ou , não quebra a coluna) e sem "=" no começo (Excel trataria como fórmula).
+    const campo = (x) => { let v = String(x ?? ''); if (/^[=+\-@]/.test(v)) v = "'" + v; return '"' + v.replace(/"/g, '""') + '"'; };
+    const rows = sortedUnidades.map(u => [u.nome, u.mentorNome, u.totalValidado, u.totalEsperado, traduzirStatus(u.statusTexto), u.percentual + '%', u.pendencias.length].map(campo).join(';')).join("\r\n");
     const link = document.createElement('a');
-    link.href = URL.createObjectURL(new Blob([headers + rows], { type: 'text/csv;charset=utf-8;' }));
+    link.href = URL.createObjectURL(new Blob(['\uFEFF' + headers + rows], { type: 'text/csv;charset=utf-8;' }));
     link.setAttribute('download', `validacao_coletiva_${dataInicio}.csv`);
     document.body.appendChild(link);
     link.click();
@@ -436,7 +464,7 @@ export default function ValidacaoColetiva() {
   const msgAdminToMentor = (m) => {
       const u100 = m.unidadesList.filter(u => u.percentual === 100).map(u => `✅ *${u.nome.toUpperCase()}*`);
       const uPendentes = m.unidadesList.filter(u => u.percentual < 100).map(u => {
-          const datas = filterPendingDates(u.pendencias).map(d => formatDateShort(d)).join(', ');
+          const datas = formatPendencias(u.pendencias);
           return t('groupValidation.messages.adminToMentor.pendingLine', { unit: u.nome.toUpperCase(), count: u.pendencias.length, dates: datas });
       });
 
@@ -458,7 +486,7 @@ export default function ValidacaoColetiva() {
   };
 
   const msgMentorToUnit = (u) => {
-      const datas = filterPendingDates(u.pendencias).map(d => formatDateShort(d)).join(', ');
+      const datas = formatPendencias(u.pendencias);
       return t('groupValidation.messages.mentorToUnit', { unit: u.nome.toUpperCase(), dates: datas });
   };
 
@@ -469,7 +497,7 @@ export default function ValidacaoColetiva() {
   if (loadingCatalogs) return <div className="h-screen flex items-center justify-center text-slate-400 font-black uppercase animate-pulse">{t('groupValidation.syncing')}</div>;
 
   return (
-    <div className="p-6 md:p-8 max-w-[1920px] mx-auto animate-fade-in space-y-8 uppercase">
+    <div className="p-6 md:p-8 max-w-[1920px] mx-auto animate-fade-in space-y-8">
       
       {/* HEADER E PAINEL DE CONTROLE UNIFICADO */}
       <div className="flex flex-col gap-5 border-b border-slate-200 dark:border-slate-700 pb-6">
