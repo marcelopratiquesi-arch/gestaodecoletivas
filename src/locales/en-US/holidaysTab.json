@@ -51,5 +51,31 @@
     "cidade_other": "City: {{value}} ({{count}} units)",
     "unidades_one": "{{count}} unit",
     "unidades_other": "{{count}} units"
+  },
+  "proposals": {
+    "mentorDesc": "You propose the holiday for your units and the administrator decides. It only applies once approved.",
+    "formTitle": "Propose Recess or Holiday",
+    "send": "Send proposal",
+    "confirmSend": "Send the holiday proposal for {{scope}} from {{start}} to {{end}}?\n\nNo class changes until the administrator approves.",
+    "sent": "Proposal sent! It only applies once the administrator approves it.",
+    "sendError": "Error sending the proposal.",
+    "pendingTitle": "Mentor proposals ({{count}})",
+    "mineTitle": "My proposals",
+    "none": "No proposals.",
+    "status": {
+      "pendente": "Pending",
+      "aprovada": "Approved",
+      "recusada": "Refused"
+    },
+    "by": "Proposed by {{name}}",
+    "reason": "Reason: {{reason}}",
+    "approve": "Approve",
+    "refuse": "Refuse",
+    "withdraw": "Withdraw",
+    "confirmApprove": "Approve \"{{name}}\"?\n\nClasses of {{scope}} from {{start}} to {{end}} will show as cancelled (holiday).",
+    "approvedMsg": "Holiday approved! Classes of {{scope}} in that period show as cancelled.",
+    "refuseReason": "Reason for refusing \"{{name}}\" (optional):",
+    "confirmWithdraw": "Withdraw the proposal \"{{name}}\"?",
+    "decideError": "Could not complete. Please try again."
   }
 }

@@ -51,5 +51,31 @@
     "cidade_other": "Cidade: {{value}} ({{count}} unidades)",
     "unidades_one": "{{count}} unidade",
     "unidades_other": "{{count}} unidades"
+  },
+  "proposals": {
+    "mentorDesc": "Você propõe o feriado para as suas unidades e o administrador decide. Só vale depois de aprovado.",
+    "formTitle": "Propor Recesso ou Feriado",
+    "send": "Enviar proposta",
+    "confirmSend": "Enviar a proposta de feriado para {{scope}} entre {{start}} e {{end}}?\n\nNenhuma aula muda até o administrador aprovar.",
+    "sent": "Proposta enviada! Ela só passa a valer quando o administrador aprovar.",
+    "sendError": "Erro ao enviar a proposta.",
+    "pendingTitle": "Propostas dos mentores ({{count}})",
+    "mineTitle": "Minhas propostas",
+    "none": "Nenhuma proposta.",
+    "status": {
+      "pendente": "Aguardando",
+      "aprovada": "Aprovada",
+      "recusada": "Recusada"
+    },
+    "by": "Proposto por {{name}}",
+    "reason": "Motivo: {{reason}}",
+    "approve": "Aprovar",
+    "refuse": "Recusar",
+    "withdraw": "Desistir",
+    "confirmApprove": "Aprovar \"{{name}}\"?\n\nAs aulas de {{scope}} entre {{start}} e {{end}} vão aparecer como canceladas (feriado).",
+    "approvedMsg": "Feriado aprovado! As aulas de {{scope}} nesse período aparecem como canceladas.",
+    "refuseReason": "Motivo da recusa de \"{{name}}\" (opcional):",
+    "confirmWithdraw": "Desistir da proposta \"{{name}}\"?",
+    "decideError": "Não foi possível concluir. Tente de novo."
   }
 }

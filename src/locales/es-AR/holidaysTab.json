@@ -51,5 +51,31 @@
     "cidade_other": "Ciudad: {{value}} ({{count}} sedes)",
     "unidades_one": "{{count}} sede",
     "unidades_other": "{{count}} sedes"
+  },
+  "proposals": {
+    "mentorDesc": "Proponés el feriado para tus unidades y el administrador decide. Solo vale una vez aprobado.",
+    "formTitle": "Proponer Receso o Feriado",
+    "send": "Enviar propuesta",
+    "confirmSend": "¿Enviar la propuesta de feriado para {{scope}} entre {{start}} y {{end}}?\n\nNinguna clase cambia hasta que el administrador apruebe.",
+    "sent": "¡Propuesta enviada! Solo vale cuando el administrador la apruebe.",
+    "sendError": "Error al enviar la propuesta.",
+    "pendingTitle": "Propuestas de mentores ({{count}})",
+    "mineTitle": "Mis propuestas",
+    "none": "Ninguna propuesta.",
+    "status": {
+      "pendente": "En espera",
+      "aprovada": "Aprobada",
+      "recusada": "Rechazada"
+    },
+    "by": "Propuesto por {{name}}",
+    "reason": "Motivo: {{reason}}",
+    "approve": "Aprobar",
+    "refuse": "Rechazar",
+    "withdraw": "Desistir",
+    "confirmApprove": "¿Aprobar \"{{name}}\"?\n\nLas clases de {{scope}} entre {{start}} y {{end}} aparecerán como canceladas (feriado).",
+    "approvedMsg": "¡Feriado aprobado! Las clases de {{scope}} en ese período aparecen como canceladas.",
+    "refuseReason": "Motivo del rechazo de \"{{name}}\" (opcional):",
+    "confirmWithdraw": "¿Desistir de la propuesta \"{{name}}\"?",
+    "decideError": "No se pudo completar. Intentá de nuevo."
   }
 }
