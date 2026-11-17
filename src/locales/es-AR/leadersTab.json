@@ -48,7 +48,9 @@
     "password": "Contraseña inicial",
     "passwordHint": "Mínimo {{min}} caracteres. Pasale la contraseña al líder.",
     "cancel": "Cancelar",
-    "save": "Guardar"
+    "save": "Guardar",
+    "sectionPerson": "Persona y unidad",
+    "sectionAccess": "Documento y acceso"
   },
   "errors": {
     "unit": "Elegí la sede.",
@@ -56,7 +58,7 @@
     "phone": "Escribí el WhatsApp del líder.",
     "email": "E-mail inválido.",
     "password": "La contraseña debe tener al menos {{min}} caracteres.",
-    "emailInUse": "Este e-mail ya tiene login en el sistema. Usá otro e-mail, o pedile a la persona que ingrese con Google y aprobá el pedido.",
+    "emailInUse": "Este e-mail ya tiene login (probablemente la persona ya entró con Google). Pedile que entre con Google con ese e-mail y pida acceso: el pedido aparece arriba y lo aprobás. O usá otro e-mail.",
     "save": "No se pudo guardar.",
     "remove": "No se pudo quitar al líder.",
     "confirm": "No se pudo confirmar al líder.",
@@ -91,7 +93,7 @@
     "title": "Elegir líder ya registrado",
     "help": "Elegí a quien ya entra al sistema: profesor, líder de otra unidad o mentor. El profesor sigue siendo profesor; el líder de otra unidad pasa a cuidar las dos; el mentor/admin mantiene su acceso.",
     "person": "Persona",
-    "search": "Buscar por nombre o e-mail...",
+    "search": "Buscar por nombre, e-mail o documento...",
     "reading": "Revisando el acceso actual...",
     "now": {
       "teacher": "hoy es profesor.",
@@ -125,7 +127,10 @@
     "replaceWarning": "Este lugar ya es de {{name}}. Al guardar, sale y entra la persona elegida.",
     "doneSecond": "{{name}} ahora es el 2º líder de la unidad {{unit}}.",
     "tagAll": "Todos",
-    "registerNew": "Registrar nuevo"
+    "registerNew": "Registrar nuevo",
+    "docSearching": "Buscando este documento...",
+    "docNoAccess": "Este documento existe, pero la persona todavía no tiene acceso (solo un pedido o registro incompleto). Usá la búsqueda por documento para eliminar o registrar.",
+    "docFree": "Ninguna persona con este documento. Usá \"Registrar nuevo\" para registrarla."
   },
   "second": {
     "badge": "2º líder",
