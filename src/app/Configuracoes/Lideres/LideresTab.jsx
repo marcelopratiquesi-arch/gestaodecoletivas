@@ -25,6 +25,7 @@ import LinkCentral from "../../../centrais/LinkCentral";
 import { tirarLiderDaUnidade, camposAoLiberarVaga, textoDaSaida, dadosDaVaga } from "./saidaDoLider";
 import { TornarLiderModal } from "./TornarLiderModal";
 import { FiltroPadrao } from "../ui/FiltroPadrao";
+import { CabecalhoDoModal } from "../ui/CabecalhoDoModal";
 import { BotaoDeLinha } from "../ui/BotaoDeLinha";
 import { CabecalhoDaAba, CaixaDeNumeros, BotaoPrincipal, BotaoSecundario } from "../ui/CabecalhoDaAba";
 import { useFiltroCascata } from "../ui/useFiltroCascata";
@@ -493,7 +494,7 @@ export function LideresTab() {
         <p className="text-[11px] text-slate-400 font-bold">{t("leadersTab.howTo")}</p>
       </div>
 
-      {docAlvo && <DocumentoModal alvo={docAlvo} onClose={() => setDocAlvo(null)} />}
+      {docAlvo && <DocumentoModal alvo={docAlvo} abaId="lideres" onClose={() => setDocAlvo(null)} />}
 
       {/* MODAL: ESCOLHER LÍDER JÁ CADASTRADO (1º ou 2º líder) */}
       {tornarLider && (
@@ -509,14 +510,11 @@ export function LideresTab() {
       {/* MODAL: CADASTRAR / EDITAR LÍDER */}
       {modal && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => !salvando && setModal(null)}>
-          <form onSubmit={salvar} onClick={(e) => e.stopPropagation()} className={`w-full ${modal.modo === "novo" ? "max-w-4xl" : "max-w-lg"} max-h-[92vh] overflow-y-auto bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-5 sm:p-7 space-y-5`}>
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-black text-slate-800 dark:text-white flex items-center gap-2">
-                {modal.modo === "editar" ? <Edit2 className="w-5 h-5 text-teal-600" /> : <UserPlus className="w-5 h-5 text-teal-600" />}
-                {modal.modo === "editar" ? t("leadersTab.modal.editTitle") : t("leadersTab.modal.newTitle")}
-              </h3>
-              <button type="button" onClick={() => setModal(null)} disabled={salvando} className="p-1 text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
-            </div>
+          <form onSubmit={salvar} onClick={(e) => e.stopPropagation()} className={`w-full ${modal.modo === "novo" ? "max-w-4xl" : "max-w-lg"} max-h-[92vh] flex flex-col overflow-hidden bg-white dark:bg-slate-800 rounded-2xl shadow-2xl`}>
+            <CabecalhoDoModal abaId="lideres" icone={modal.modo === "editar" ? Edit2 : UserPlus}
+              titulo={modal.modo === "editar" ? t("leadersTab.modal.editTitle") : t("leadersTab.modal.newTitle")}
+              onFechar={() => setModal(null)} desabilitado={salvando} />
+            <div className="p-5 sm:p-7 space-y-5 overflow-y-auto">
 
             <div className={modal.modo === "novo" ? "grid md:grid-cols-2 gap-6" : "space-y-4"}>
             <div className="space-y-4">
@@ -590,6 +588,7 @@ export function LideresTab() {
               <button type="submit" disabled={salvando} className="px-5 py-2.5 rounded-xl text-xs font-black uppercase bg-teal-500 hover:bg-teal-600 text-white flex items-center gap-1.5 disabled:opacity-50">
                 {salvando ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />} {t("leadersTab.modal.save")}
               </button>
+            </div>
             </div>
           </form>
         </div>

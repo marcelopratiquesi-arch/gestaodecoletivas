@@ -7,6 +7,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { doc, getDoc, serverTimestamp, writeBatch } from "firebase/firestore";
 import { useTranslation } from "react-i18next";
+import { CabecalhoDoModal } from "../ui/CabecalhoDoModal";
 import { X, Check, Loader2, Search, UserCog, UserPlus, AlertTriangle } from "lucide-react";
 import { db } from "../../../services/firebase";
 import { acharDonoDoDocumento } from "../../../services/documentoService";
@@ -181,13 +182,11 @@ export function TornarLiderModal({ unidades, todasUnidades, professores, mentore
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => !salvando && onClose()}>
-      <div onClick={(e) => e.stopPropagation()} className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 space-y-4 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-black text-slate-800 dark:text-white flex items-center gap-2">
-            <UserCog className="w-5 h-5 text-amber-600" /> {t(vaga === 2 ? "leadersTab.promote.titleSecond" : "leadersTab.promote.title")}
-          </h3>
-          <button type="button" onClick={onClose} disabled={salvando} className="p-1 text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
-        </div>
+      <div onClick={(e) => e.stopPropagation()} className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-h-[90vh] flex flex-col overflow-hidden">
+        <CabecalhoDoModal abaId="lideres" icone={UserCog}
+          titulo={t(vaga === 2 ? "leadersTab.promote.titleSecond" : "leadersTab.promote.title")}
+          onFechar={onClose} desabilitado={salvando} />
+        <div className="p-6 space-y-4 overflow-y-auto">
         <p className="text-xs text-slate-500 dark:text-slate-400">{t(vaga === 2 ? "leadersTab.promote.helpSecond" : "leadersTab.promote.help")}</p>
 
         <label className="block space-y-1">
@@ -215,7 +214,7 @@ export function TornarLiderModal({ unidades, todasUnidades, professores, mentore
             ))}
             {onCadastrar && (
               <button type="button" onClick={() => onCadastrar(unidade || null, vaga)} disabled={salvando}
-                className="ml-auto px-3 py-1.5 rounded-lg text-[11px] font-black uppercase bg-emerald-500 hover:bg-emerald-600 text-white flex items-center gap-1.5 disabled:opacity-50">
+                className="ml-auto px-3 py-1.5 rounded-lg text-[11px] font-black uppercase bg-teal-600 hover:bg-teal-700 text-white flex items-center gap-1.5 disabled:opacity-50">
                 <UserPlus className="w-3.5 h-3.5" /> {t("leadersTab.promote.registerNew")}
               </button>
             )}
@@ -260,6 +259,7 @@ export function TornarLiderModal({ unidades, todasUnidades, professores, mentore
             className="px-5 py-2.5 rounded-xl text-xs font-black uppercase bg-emerald-500 hover:bg-emerald-600 text-white flex items-center gap-1.5 disabled:opacity-50">
             {salvando ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />} {t("leadersTab.promote.save")}
           </button>
+        </div>
         </div>
       </div>
     </div>
