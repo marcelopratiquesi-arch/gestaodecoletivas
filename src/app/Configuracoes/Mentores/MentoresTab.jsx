@@ -23,6 +23,7 @@ import LinkCentral from "../../../centrais/LinkCentral";
 import { useCatalogs } from "../../../contexts/CatalogContext";
 import { UnidadesVinculadasModal } from "./UnidadesVinculadasModal";
 import { FiltroPadrao } from "../ui/FiltroPadrao";
+import { CabecalhoDoModal } from "../ui/CabecalhoDoModal";
 import { BotaoDeLinha } from "../ui/BotaoDeLinha";
 import { CabecalhoDaAba, CaixaDeNumeros, BotaoPrincipal, BotaoSecundario } from "../ui/CabecalhoDaAba";
 import { useFiltroCascata } from "../ui/useFiltroCascata";
@@ -626,22 +627,13 @@ export function MentoresTab() {
 
       {modalAberto && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-800 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-700">
-            
-            <div className="p-6 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 flex justify-between items-center">
-              <div>
-                  <h3 className="font-black text-xl text-slate-800 dark:text-white flex items-center gap-2">
-                      {mentorEditando ? <Edit2 className="w-5 h-5 text-blue-500"/> : <ShieldCheck className="w-5 h-5 text-blue-600"/>}
-                      {mentorEditando ? t('mentorsTab.modal.editTitle', 'Editar Mentor') : t('mentorsTab.modal.newTitle', 'Novo Mentor')}
-                  </h3>
-                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">{t('mentorsTab.modal.instructions', 'Preencha os dados abaixo.')}</p>
-              </div>
-              <button onClick={() => setModalAberto(false)} className="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-slate-400 hover:text-red-500">
-                  <X className="w-5 h-5"/>
-              </button>
-            </div>
-            
-            <form onSubmit={salvar} className="p-6 space-y-5">
+          <div className="bg-white dark:bg-slate-800 w-full max-w-lg max-h-[90vh] flex flex-col rounded-2xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-700">
+            <CabecalhoDoModal abaId="mentores" icone={mentorEditando ? Edit2 : ShieldCheck}
+              titulo={mentorEditando ? t('mentorsTab.modal.editTitle', 'Editar Mentor') : t('mentorsTab.modal.newTitle', 'Novo Mentor')}
+              subtitulo={t('mentorsTab.modal.instructions', 'Preencha os dados abaixo.')}
+              onFechar={() => setModalAberto(false)} />
+
+            <form onSubmit={salvar} className="p-6 space-y-5 overflow-y-auto">
               
               {erro && <div className="p-4 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100 flex items-center gap-2"><AlertTriangle className="w-5 h-5 flex-shrink-0"/> {erro}</div>}
               {sucesso && <div className="p-4 bg-green-50 text-green-600 text-sm rounded-lg border border-green-100 flex items-center gap-2"><CheckCircle2 className="w-5 h-5 flex-shrink-0"/> {sucesso}</div>}
