@@ -43,7 +43,8 @@
     "loading": "ID provided (loading…)",
     "onlyStaffSees": "ID provided. Only the admin and the mentor see and fix the number.",
     "optionalHint": "Optional for now: fill it in to complete the record. Kept in a protected area (only admin and mentor see it).",
-    "fixHint": "Change only if the number is wrong."
+    "fixHint": "Change only if the number is wrong.",
+    "fromLogin": "This ID belongs to the access (login) of {{name}} ({{email}}). Linking it to the schedule record avoids a duplicate."
   },
   "newLinkBtn": "+ NEW LINK",
   "fixEmailsBtn": "FIX EMAILS",
@@ -85,7 +86,7 @@
     "editTitle": "Edit Teacher",
     "newTitle": "New Teacher",
     "desc": "Fill in the details and click save.",
-    "loginEmail": "EMAIL (FIXED LOGIN)",
+    "loginEmail": "EMAIL",
     "fullName": "FULL NAME",
     "namePlaceholder": "Teacher's Name",
     "country": "COUNTRY",

@@ -169,6 +169,7 @@ export function ProfessoresTab() {
   const [docForm, setDocForm] = useState({ tipo: "cpf", numero: "" });
   const [docAnterior, setDocAnterior] = useState(null); // documento já gravado (admin/mentor veem e corrigem)
   const [avisoTelefoneNovo, setAvisoTelefoneNovo] = useState("");
+  const [uidLoginNovo, setUidLoginNovo] = useState(""); // cadastro novo de quem já tem login (documento achado no crachá)
   
   // Forms
   const [nome, setNome] = useState("");
@@ -342,7 +343,8 @@ export function ProfessoresTab() {
   function abrirCadastroCompleto(dados) {
       setNovoVinculo(null);
       setProfEditando(null);
-      setNome("");
+      setNome(dados.nome || "");
+      setUidLoginNovo(dados.uidLogin || "");
       setEmail(dados.email || "");
       setPais(dados.pais || PAIS_DEFAULT);
       setTelefone(formatarTelefone(dados.telefone || "", dados.pais || PAIS_DEFAULT));
@@ -379,7 +381,7 @@ export function ProfessoresTab() {
 
   // Avisos na hora (o mesmo é conferido de novo ao salvar): quem mais tem este e-mail, telefone ou nome.
   const parecidasNoForm = useMemo(() => (modalFormAberto
-      ? fichasParecidas(professoresTotais, { email: profEditando ? "" : email, telefone, pais, nome }, profEditando?.id)
+      ? fichasParecidas(professoresTotais, { email, telefone, pais, nome }, profEditando?.id)
       : []), [modalFormAberto, professoresTotais, email, telefone, pais, nome, profEditando]);
 
   async function salvarProfessor(e) {
@@ -394,7 +396,9 @@ export function ProfessoresTab() {
     const parar = (msg) => { setSalvando(false); setErro(msg); };
 
     if (!nomeLimpo) return parar(t('teachersTab.messages.nameRequired', 'Nome obrigatório'));
-    if (!profEditando) {
+    // E-mail: conferido no cadastro novo e sempre que for trocado na edição.
+    const emailMudou = !!profEditando && emailLimpo !== normalizarEmail(profEditando.email);
+    if (!profEditando || emailMudou) {
         if (!emailFormatoValido(emailLimpo)) return parar(t('teachersTab.cpf.emailInvalid'));
         if (emailDeMentira(emailLimpo)) return parar(t('teachersTab.cpf.emailFake'));
     }
@@ -409,7 +413,8 @@ export function ProfessoresTab() {
     const gravarDoc = docMudou && (!profEditando?.documentoOk || (veDocumento && !!docAnterior));
 
     // De novo ao salvar: e-mail de outra ficha barra (é a mesma pessoa ou o e-mail está errado).
-    const mesmoEmail = !profEditando && fichasParecidas(professoresTotais, { email: emailLimpo }).find(a => a.campos.includes('email'));
+    const mesmoEmail = (!profEditando || emailMudou)
+        && fichasParecidas(professoresTotais, { email: emailLimpo }, profEditando?.id).find(a => a.campos.includes('email'));
     if (mesmoEmail) return parar(t('teachersTab.cpf.emailTaken', { name: mesmoEmail.ficha.nome }));
 
     try {
@@ -421,10 +426,12 @@ export function ProfessoresTab() {
           if (profEditando.pais !== pais) mudancas.push(`País: ${profEditando.pais || PAIS_DEFAULT} ➔ ${pais}`);
           if (profEditando.status !== status) mudancas.push(`Status: ${profEditando.status} ➔ ${status}`);
           
+          if (emailMudou) mudancas.push(`E-mail: ${profEditando.email || 'Sem e-mail'} ➔ ${emailLimpo}`);
           if (gravarDoc) mudancas.push(docAnterior ? 'Documento de identificação corrigido' : 'Documento de identificação informado');
           const lote = writeBatch(db);
           lote.update(doc(db, "professores", profEditando.id), {
             nome: nomeLimpo, pais, telefone, status, updatedAt: serverTimestamp(),
+            ...(emailMudou ? { email: emailLimpo } : {}),
             ...(gravarDoc ? { documentoOk: true } : {}),
           });
           if (gravarDoc) documentoDaFichaNoLote(lote, { professorId: profEditando.id, tipo: docForm.tipo, numero: docNumero, anterior: docAnterior, marcarFicha: false });
@@ -449,6 +456,7 @@ export function ProfessoresTab() {
           const lote = writeBatch(db);
           lote.set(docRef, {
               nome: nomeLimpo, email: emailLimpo, pais, telefone, status, documentoOk: true,
+              ...(uidLoginNovo ? { uidLogin: uidLoginNovo } : {}),
               createdAt: serverTimestamp(), createdBy: userId, roleCreator: role
           });
           documentoDaFichaNoLote(lote, { professorId: docRef.id, tipo: docForm.tipo, numero: docNumero, marcarFicha: false });
@@ -584,7 +592,7 @@ export function ProfessoresTab() {
                   <ScanSearch className="w-4 h-4"/> {t("document.search.title")}
               </button>
           )}>
-          {(role === "admin" || role === "mentor") && mostrarBuscaDoc && <BuscaDocumento />}
+          {(role === "admin" || role === "mentor") && mostrarBuscaDoc && <BuscaDocumento aoResolverNaGrade={(d) => setNovoVinculo({ profInicial: null, documento: d })} />}
       </FiltroPadrao>
       {/* TABELA DE DADOS */}
       <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden shadow-sm relative">
@@ -726,6 +734,7 @@ export function ProfessoresTab() {
               unidades={unidades}
               minhasUnidades={minhasUnidades}
               profInicial={novoVinculo.profInicial}
+              documentoInicial={novoVinculo.documento || null}
               formatarTelefone={formatarTelefone}
               placeholderTelefone={getPhonePlaceholder}
               aoNovoCadastro={abrirCadastroCompleto}
@@ -759,7 +768,7 @@ export function ProfessoresTab() {
                     <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 pl-1">{t('teachersTab.formModal.loginEmail', 'E-mail (Login Fixo)')}</label>
                     <div className="relative">
                         <Mail className="absolute left-4 top-3.5 w-4 h-4 text-slate-400"/>
-                        <input className="w-full pl-11 pr-4 py-3 bg-slate-100 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold outline-none text-slate-500 cursor-not-allowed" value={email} disabled={true} />
+                        <input type="email" className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-green-500 rounded-xl text-sm font-bold outline-none transition-all dark:text-white normal-case" value={email} onChange={e => setEmail(e.target.value)} placeholder={t('teachersTab.verifyModal.emailPlaceholder')} />
                     </div>
                 </div>
 

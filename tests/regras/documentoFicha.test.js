@@ -107,6 +107,40 @@ describe('documento repetido', () => {
   });
 });
 
+describe('documento que já é de um login (caso Bárbara)', () => {
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), `documentos_unicos/cpf_${CPF}`), { uid: 'prof1', tipo: 'cpf', numero: CPF });
+    });
+  });
+  it('líder confere o CPF digitado e acha o login; professor não', async () => {
+    await assertSucceeds(getDoc(doc(como('liderA'), `documentos_unicos/cpf_${CPF}`)));
+    await assertFails(getDoc(doc(como('prof1'), `documentos_unicos/cpf_${CPF}`)));
+  });
+  it('liga a ficha ao login e grava o CPF nela no mesmo lote', async () => {
+    const db = como('liderA');
+    const b = writeBatch(db);
+    b.update(doc(db, 'professores/fichaAntiga'), { uidLogin: 'prof1', documentoOk: true });
+    b.set(doc(db, 'documentos_ficha/fichaAntiga'), { tipo: 'cpf', numero: CPF, atualizadoEm: serverTimestamp(), atualizadoPor: 'liderA' });
+    b.set(doc(db, `documentos_professor/cpf_${CPF}`), { professorId: 'fichaAntiga', tipo: 'cpf', numero: CPF });
+    await assertSucceeds(b.commit());
+  });
+  it('sem ligar ao login, o CPF dele NÃO vai para a ficha', async () => {
+    await assertFails(gravar('liderA', 'fichaAntiga'));
+  });
+  it('admin exclui o acesso do professor e libera o documento; mentor não', async () => {
+    const apagar = (quem) => {
+      const db = como(quem);
+      const b = writeBatch(db);
+      b.delete(doc(db, 'usuarios/prof1'));
+      b.delete(doc(db, `documentos_unicos/cpf_${CPF}`));
+      return b.commit();
+    };
+    await assertFails(apagar('mentor1'));
+    await assertSucceeds(apagar('admin1'));
+  });
+});
+
 describe('quem vê', () => {
   beforeEach(async () => { await gravar('admin1', 'fichaAntiga'); });
   it('número: admin e mentor leem; líder e professor não', async () => {

@@ -3,6 +3,7 @@
 // O banco é quem decide (firestore.rules: usuarios/{uid}/privado/documento). A auditoria registra QUE o documento
 // foi informado ou corrigido, nunca o número. Também tem a busca por documento (só admin).
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { doc, getDoc, writeBatch } from "firebase/firestore";
 import { useTranslation } from "react-i18next";
 import { Loader2, X, Search, IdCard, Trash2, UserCheck, UserPlus, Inbox } from "lucide-react";
@@ -10,7 +11,7 @@ import i18n from "../../../i18n";
 import { db } from "../../../services/firebase";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useCatalogs } from "../../../contexts/CatalogContext";
-import { avaliarRemocao, removerLiderELiberarDocumento } from "./removerCadastro";
+import { avaliarRemocao, removerLiderELiberarDocumento, removerProfessorELiberarDocumento } from "./removerCadastro";
 import { registrarAuditoriaAcesso } from "../../../services/auditoriaAcessos";
 import {
   documentoNoLote, gravarComAviso, lerDocumento, ERRO_DOCUMENTO_EM_USO, acharDonoDoDocumento, excluirPedidoELiberar, liberarReserva,
@@ -60,6 +61,7 @@ export function DocumentoModal({ alvo, onClose }) {
 
   async function salvar(e) {
     e.preventDefault();
+    e.stopPropagation(); // não deixa o envio "vazar" para o formulário da busca (recarregava a página)
     setErro(""); setOk("");
     if (!documentoValido(tipo, numero)) return setErro(t("document.errors.invalid"));
     setSalvando(true);
@@ -85,7 +87,9 @@ export function DocumentoModal({ alvo, onClose }) {
     }
   }
 
-  return (
+  // Portal: a janela é desenhada fora da página (ela é aberta de dentro do formulário da busca, e formulário
+  // dentro de formulário fazia o "Salvar documento" recarregar a página e cair na aba Mentores).
+  return createPortal(
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
       <form onSubmit={salvar} onClick={(e) => e.stopPropagation()} className="w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-5 space-y-4">
         <div className="flex items-start justify-between gap-3">
@@ -109,7 +113,8 @@ export function DocumentoModal({ alvo, onClose }) {
           </>
         )}
       </form>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -140,7 +145,7 @@ async function procurarDono(tipo, numero) {
  *  - quem já tem crachá: corrigir o documento (e, se vier `aoEscolherPessoa`, usar essa pessoa como líder);
  *  - pedido de acesso ou documento "preso": excluir e liberar, para a pessoa cadastrar de novo na hora.
  */
-function CartaoDoDocumento({ r, aoLiberar, aoEscolherPessoa, aoCadastrar, aoIrParaPedido }) {
+function CartaoDoDocumento({ r, aoLiberar, aoEscolherPessoa, aoCadastrar, aoIrParaPedido, aoResolverNaGrade }) {
   const { t } = useTranslation();
   const { userData } = useAuth();
   const souAdmin = ["admin", "administrador", "master"].includes(String(userData?.role || "").trim().toLowerCase());
@@ -161,9 +166,20 @@ function CartaoDoDocumento({ r, aoLiberar, aoEscolherPessoa, aoCadastrar, aoIrPa
 
   // Quem já foi aprovado como líder: tira das unidades, apaga o acesso e libera o documento.
   async function excluirCadastro() {
-    if (!window.confirm(t("document.search.confirmDeleteLeader", { name: nome }))) return;
+    if (!window.confirm(t(remocao?.professor ? "document.search.confirmDeleteTeacher" : "document.search.confirmDeleteLeader", { name: nome }))) return;
     setExcluindo(true); setErro("");
     try {
+      if (remocao?.professor) {
+        // Professor (só admin): apaga o acesso e libera o documento; a ficha da grade fica.
+        await removerProfessorELiberarDocumento({ uid: r.uid, documento: { tipo: r.tipo, numero: r.numero }, professores: catalogs?.professores || [] });
+        await registrarAuditoriaAcesso({
+          tipoAcao: "EXCLUÍDA", descricao: t("document.search.auditDeleteTeacher"), quem: userData,
+          alvo: { id: r.uid, nome, email }, papelAnterior: papel,
+          detalhes: t("document.modal.auditType", { type: t(`document.short.${r.tipo}`) }),
+        });
+        aoLiberar();
+        return;
+      }
       const unidadesDele = await removerLiderELiberarDocumento({
         uid: r.uid, cracha: r.cracha, souAdmin, documento: { tipo: r.tipo, numero: r.numero }, unidades: catalogs?.unidades || [],
         motivo: t("document.search.auditDeleteLeader"), quemId: userData?.id || userData?.uid, quemNome: userData?.nome || userData?.email || "-",
@@ -240,7 +256,13 @@ function CartaoDoDocumento({ r, aoLiberar, aoEscolherPessoa, aoCadastrar, aoIrPa
         {r.cracha && remocao?.pode && (
           <button type="button" onClick={excluirCadastro} disabled={excluindo}
             className="px-3 py-2 rounded-lg text-[11px] font-black uppercase bg-red-600 hover:bg-red-700 text-white flex items-center gap-1.5 disabled:opacity-50">
-            {excluindo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />} {t("document.search.deleteLeader")}
+            {excluindo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />} {t(remocao?.professor ? "document.search.deleteTeacher" : "document.search.deleteLeader")}
+          </button>
+        )}
+        {r.cracha && aoResolverNaGrade && (
+          <button type="button" onClick={() => aoResolverNaGrade({ tipo: r.tipo, numero: r.numero })}
+            className="px-3 py-2 rounded-lg text-[11px] font-black uppercase bg-green-600 hover:bg-green-700 text-white flex items-center gap-1.5">
+            <UserCheck className="w-3.5 h-3.5" /> {t("document.search.openInSchedule")}
           </button>
         )}
         {!r.cracha && (r.pedido || souAdmin) && (
@@ -252,7 +274,7 @@ function CartaoDoDocumento({ r, aoLiberar, aoEscolherPessoa, aoCadastrar, aoIrPa
         )}
       </div>
       {erro && <p className="text-xs font-bold text-red-600">{erro}</p>}
-      {r.cracha && <p className="text-[11px] text-slate-500">{t(remocao?.pode ? "document.search.deleteLeaderHint" : `document.search.cannot.${remocao?.motivo || "outro"}`)}</p>}
+      {r.cracha && <p className="text-[11px] text-slate-500">{t(remocao?.pode ? (remocao.professor ? "document.search.deleteTeacherHint" : "document.search.deleteLeaderHint") : `document.search.cannot.${remocao?.motivo || "outro"}`)}</p>}
       {!r.cracha && r.pedido && <p className="text-[11px] text-slate-500">{t("document.search.deleteHint")}</p>}
       {!r.cracha && !r.pedido && !souAdmin && <p className="text-[11px] text-slate-500">{t("document.search.orphanMentorHint")}</p>}
       {docAlvo && <DocumentoModal alvo={docAlvo} onClose={() => setDocAlvo(null)} />}
@@ -264,7 +286,7 @@ function CartaoDoDocumento({ r, aoLiberar, aoEscolherPessoa, aoCadastrar, aoIrPa
  * Busca de cadastro pelo documento (admin e mentor). Mostra quem está com o CPF e deixa resolver na hora.
  * O mentor só enxerga quem é das unidades dele (o banco garante).
  */
-export function BuscaDocumento({ aoCadastrar, aoEscolherPessoa, aoIrParaPedido }) {
+export function BuscaDocumento({ aoCadastrar, aoEscolherPessoa, aoIrParaPedido, aoResolverNaGrade }) {
   const { t } = useTranslation();
   const { userData } = useAuth();
   const souAdmin = ["admin", "administrador", "master"].includes(String(userData?.role || "").trim().toLowerCase());
@@ -319,7 +341,7 @@ export function BuscaDocumento({ aoCadastrar, aoEscolherPessoa, aoIrParaPedido }
           )}
         </div>
       )}
-      {resultado && typeof resultado === "object" && <CartaoDoDocumento r={resultado} aoLiberar={() => setResultado("liberado")} aoEscolherPessoa={aoEscolherPessoa} aoCadastrar={aoCadastrar} aoIrParaPedido={aoIrParaPedido} />}
+      {resultado && typeof resultado === "object" && <CartaoDoDocumento r={resultado} aoLiberar={() => setResultado("liberado")} aoEscolherPessoa={aoEscolherPessoa} aoCadastrar={aoCadastrar} aoIrParaPedido={aoIrParaPedido} aoResolverNaGrade={aoResolverNaGrade} />}
     </form>
   );
 }

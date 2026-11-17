@@ -43,7 +43,8 @@
     "loading": "Documento informado (carregando…)",
     "onlyStaffSees": "Documento informado. Só o admin e o mentor veem e corrigem o número.",
     "optionalHint": "Opcional por enquanto: preencha para completar a ficha. Fica em área protegida (só admin e mentor veem).",
-    "fixHint": "Corrija só se o número estiver errado."
+    "fixHint": "Corrija só se o número estiver errado.",
+    "fromLogin": "Este documento é do acesso (login) de {{name}} ({{email}}). Ligando à ficha da grade, ela não fica duplicada."
   },
   "newLinkBtn": "+ NOVO VÍNCULO",
   "fixEmailsBtn": "CORRIGIR E-MAILS",
@@ -85,7 +86,7 @@
     "editTitle": "Editar Professor",
     "newTitle": "Novo Professor",
     "desc": "Preencha os dados e clique em salvar.",
-    "loginEmail": "E-MAIL (LOGIN FIXO)",
+    "loginEmail": "E-MAIL",
     "fullName": "NOME COMPLETO",
     "namePlaceholder": "Nome do Professor",
     "country": "PAÍS",

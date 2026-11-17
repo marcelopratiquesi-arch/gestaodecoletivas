@@ -43,7 +43,8 @@
     "loading": "Documento informado (cargando…)",
     "onlyStaffSees": "Documento informado. Solo el administrador y el mentor ven y corrigen el número.",
     "optionalHint": "Opcional por ahora: completalo para terminar la ficha. Queda en un área protegida (solo admin y mentor lo ven).",
-    "fixHint": "Corregí solo si el número está mal."
+    "fixHint": "Corregí solo si el número está mal.",
+    "fromLogin": "Este documento es del acceso (login) de {{name}} ({{email}}). Vinculándolo a la ficha de la grilla, no queda duplicada."
   },
   "newLinkBtn": "+ NUEVO VÍNCULO",
   "fixEmailsBtn": "CORREGIR CORREOS",
@@ -85,7 +86,7 @@
     "editTitle": "Editar Profesor",
     "newTitle": "Nuevo Profesor",
     "desc": "Completa los datos y haz clic en guardar.",
-    "loginEmail": "CORREO (ACCESO FIJO)",
+    "loginEmail": "CORREO",
     "fullName": "NOMBRE COMPLETO",
     "namePlaceholder": "Nombre del Profesor",
     "country": "PAÍS",

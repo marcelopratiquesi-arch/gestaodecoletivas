@@ -6,13 +6,13 @@
 // Avisos sempre na tela (nunca alert do navegador), dizendo qual campo bateu e de quem é.
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { collection, doc, serverTimestamp, writeBatch } from "firebase/firestore";
+import { collection, doc, getDoc, serverTimestamp, writeBatch } from "firebase/firestore";
 import { X, Search, CheckCircle2, AlertTriangle, ChevronDown, Loader2, Link as LinkIcon, ArrowRight, Mail, Phone, UserCheck } from "lucide-react";
 import { db } from "../../../services/firebase";
 import CampoDocumento from "../../../components/acesso/CampoDocumento";
-import { documentoValido, limparDocumento, tipoDocumentoPadrao } from "../../../utils/documento";
+import { documentoValido, formatarDocumento, limparDocumento, tipoDocumentoPadrao } from "../../../utils/documento";
 import { acharFichaPorDocumento, documentoDaFichaNoLote } from "../../../services/documentoFichaService";
-import { ERRO_DOCUMENTO_EM_USO, gravarComAviso } from "../../../services/documentoService";
+import { ERRO_DOCUMENTO_EM_USO, acharDonoDoDocumento, gravarComAviso } from "../../../services/documentoService";
 import { chaveTelefone, emailDeMentira, emailFormatoValido, fichasParecidas, normalizarEmail } from "../../../utils/repetidos";
 
 const PAIS_DO_DOCUMENTO = { cpf: "BR", dni: "AR", ssn: "US" };
@@ -28,13 +28,15 @@ function Aviso({ tipo = "erro", children }) {
 }
 
 export default function NovoVinculoModal({
-  professores, vinculos, unidades, minhasUnidades, profInicial = null,
+  professores, vinculos, unidades, minhasUnidades, profInicial = null, documentoInicial = null,
   formatarTelefone, placeholderTelefone, aoNovoCadastro, aoFechar, registrarLog,
 }) {
   const { t, i18n } = useTranslation();
   const [etapa, setEtapa] = useState(profInicial ? "achado" : "documento"); // documento | contato | parecidas | achado
-  const [tipo, setTipo] = useState(() => tipoDocumentoPadrao(i18n.language));
-  const [numero, setNumero] = useState("");
+  const [tipo, setTipo] = useState(() => documentoInicial?.tipo || tipoDocumentoPadrao(i18n.language));
+  const [numero, setNumero] = useState(() => (documentoInicial ? formatarDocumento(documentoInicial.tipo, documentoInicial.numero) : ""));
+  // O documento é do LOGIN de alguém (crachá), ainda não da ficha da grade: { uid, nome, email, telefone, papel }.
+  const [pessoaLogin, setPessoaLogin] = useState(null);
   const [email, setEmail] = useState("");
   const [telefone, setTelefone] = useState("");
   const [achado, setAchado] = useState(profInicial);
@@ -56,15 +58,36 @@ export default function NovoVinculoModal({
     setErro("");
     if (!documentoValido(tipo, numero)) return setErro(t("document.errors.invalid"));
     setOcupado(true);
+    setPessoaLogin(null);
+    const n = limparDocumento(numero);
     try {
-      const dono = await acharFichaPorDocumento(tipo, limparDocumento(numero));
+      // 1) Ficha da grade com este documento.
+      const dono = await acharFichaPorDocumento(tipo, n);
       if (dono) {
         const ficha = professores.find(p => String(p.id) === dono.professorId);
         if (!ficha) return setErro(t("teachersTab.cpf.orphan"));
         setAchado(ficha); setGravarDocumento(false); setEtapa("achado");
-      } else {
-        setEtapa("contato");
+        return;
       }
+      // 2) Login (crachá) com este documento: a pessoa já tem acesso; acha (ou liga) a ficha da grade dela.
+      const login = await acharDonoDoDocumento(tipo, n);
+      if (login) {
+        const snap = await getDoc(doc(db, "usuarios", login.uid));
+        const c = snap.exists() ? snap.data() : {};
+        const pessoa = { uid: login.uid, nome: c.nome || "", email: c.email || "", telefone: c.telefone || "", papel: c.role || "" };
+        setPessoaLogin(pessoa);
+        const ligada = professores.find(p => p.uidLogin === login.uid)
+          || (c.professorId && professores.find(p => String(p.id) === String(c.professorId)));
+        if (ligada) { setAchado(ligada); setGravarDocumento(!ligada.documentoOk); setEtapa("achado"); return; }
+        setEmail(pessoa.email);
+        setTelefone(formatarTelefone(pessoa.telefone, pais));
+        const achados = fichasParecidas(professores, { email: pessoa.email, telefone: pessoa.telefone, pais, nome: pessoa.nome })
+          .filter(a => !a.ficha.documentoOk && !a.ficha.uidLogin);
+        if (achados.length) { setParecidas(achados); setEtapa("parecidas"); return; }
+        aoNovoCadastro({ tipo, numero: n, email: normalizarEmail(pessoa.email), telefone: pessoa.telefone, pais, nome: pessoa.nome, uidLogin: login.uid });
+        return;
+      }
+      setEtapa("contato");
     } catch (err) {
       console.error("Procurar documento:", err);
       setErro(t("teachersTab.cpf.searchError"));
@@ -96,6 +119,7 @@ export default function NovoVinculoModal({
     aoNovoCadastro({
       tipo, numero: limparDocumento(numero), email: normalizarEmail(email), telefone, pais,
       avisoTelefone: mesmoTelefone ? mesmoTelefone.ficha.nome : "",
+      nome: pessoaLogin?.nome || "", uidLogin: pessoaLogin?.uid || "",
     });
   }
 
@@ -105,11 +129,21 @@ export default function NovoVinculoModal({
     e.preventDefault();
     if (!unidadeId) return setErro(t("teachersTab.messages.selectUnit"));
     const jaVinculado = vinculos.some(v => String(v.professorId) === String(achado.id) && String(v.unidadeId) === String(unidadeId));
-    if (jaVinculado && !gravarDocumento) return setErro(t("teachersTab.messages.alreadyLinked"));
+    const precisaLigar = pessoaLogin && achado.uidLogin !== pessoaLogin.uid;
+    if (jaVinculado && !gravarDocumento && !precisaLigar) return setErro(t("teachersTab.messages.alreadyLinked"));
     setOcupado(true); setErro("");
     try {
       const batch = writeBatch(db);
-      if (gravarDocumento) documentoDaFichaNoLote(batch, { professorId: achado.id, tipo, numero });
+      // Documento de um login: a ficha passa a apontar para esse login (o banco confere que é a mesma pessoa).
+      const ligarLogin = pessoaLogin && achado.uidLogin !== pessoaLogin.uid ? pessoaLogin.uid : null;
+      if (ligarLogin || gravarDocumento) {
+        batch.update(doc(db, "professores", String(achado.id)), {
+          ...(ligarLogin ? { uidLogin: ligarLogin } : {}),
+          ...(gravarDocumento ? { documentoOk: true } : {}),
+          updatedAt: serverTimestamp(),
+        });
+      }
+      if (gravarDocumento) documentoDaFichaNoLote(batch, { professorId: achado.id, tipo, numero, marcarFicha: false });
       if (!jaVinculado) {
         batch.set(doc(collection(db, "vinculos")), {
           professorId: String(achado.id), unidadeId: String(unidadeId), status: "ativo", createdAt: serverTimestamp(),
@@ -119,6 +153,7 @@ export default function NovoVinculoModal({
       const uniNome = nomesUnidades.get(String(unidadeId)) || "";
       if (!jaVinculado) await registrarLog("ALTERADA", "Professor vinculado a nova unidade.", achado.nome, `Vinculado à: ${uniNome}`, uniNome);
       if (gravarDocumento) await registrarLog("ALTERADA", "Documento de identificação informado na ficha.", achado.nome, "", uniNome);
+      if (ligarLogin) await registrarLog("ALTERADA", "Ficha ligada ao login (acesso) do professor.", achado.nome, `Login: ${pessoaLogin.email || ligarLogin}`, uniNome);
       setSucesso(t("teachersTab.messages.linkedSuccess"));
       setTimeout(aoFechar, 1000);
     } catch (err) {
@@ -220,6 +255,9 @@ export default function NovoVinculoModal({
             </form>
           )}
 
+          {pessoaLogin && etapa !== "documento" && (
+            <Aviso tipo="info">{t("teachersTab.cpf.fromLogin", { name: pessoaLogin.nome || "-", email: pessoaLogin.email || "-" })}</Aviso>
+          )}
           {erro && <Aviso>{erro}</Aviso>}
           {sucesso && <Aviso tipo="ok">{sucesso}</Aviso>}
         </div>

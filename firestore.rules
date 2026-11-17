@@ -478,8 +478,9 @@ service cloud.firestore {
           && getAfter(caminho).data.tipo == request.resource.data.tipo;
       }
       allow read: if souAdmin();
-      allow get: if logado() && meuPapel() == 'mentor' && resource != null
-        && (mentorDoLider(resource.data.uid) || mentorDoPedidoDe(resource.data.uid));
+      // Conferir UM documento digitado (sem listar): líder, mentor e admin descobrem de qual login ele é, para ligar
+      // a pessoa à ficha da grade em vez de cadastrá-la de novo ("Adicionar professor").
+      allow get: if gestorDeCadastro();
       allow create: if request.resource.data.keys().hasOnly(['uid', 'tipo', 'numero'])
         && request.resource.data.uid is string
         && documentoFormatoOk(request.resource.data)
