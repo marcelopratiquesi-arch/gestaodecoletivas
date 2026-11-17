@@ -105,5 +105,17 @@
     "done": "Pronto! As fichas foram juntadas na de {{name}}.",
     "readError": "Não foi possível conferir (cota esgotada ou sem conexão). Tente de novo mais tarde.",
     "writeError": "A junção parou no meio (cota ou conexão). Nada se perde: confira e junte de novo para terminar."
+  },
+  "link": {
+    "button": "Ligar ao crachá",
+    "title": "Ligar ficha ao crachá",
+    "desc": "A mesma pessoa tem ficha na grade e crachá de acesso (ex.: líder que dá aula), mas eles não estão ligados. Escolha a ficha e o crachá dela. Nada é apagado.",
+    "teacherRecord": "Ficha da grade",
+    "badge": "Crachá",
+    "badgeHasOther": "Este crachá já está ligado a outra ficha da grade. Junte as fichas primeiro (botão Juntar fichas) e depois ligue.",
+    "recordHasOther": "Esta ficha está ligada a outro login (provavelmente o login antigo). Ao ligar, ela passa a usar este crachá.",
+    "confirm": "Ligar",
+    "done": "Pronto! A ficha de {{name}} está ligada ao crachá.",
+    "error": "Não foi possível ligar (cota esgotada ou sem conexão). Tente de novo."
   }
 }

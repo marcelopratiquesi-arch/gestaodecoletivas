@@ -105,5 +105,17 @@
     "done": "Done! The records were merged into {{name}}'s.",
     "readError": "Could not check (quota exhausted or offline). Try again later.",
     "writeError": "The merge stopped halfway (quota or connection). Nothing is lost: check and merge again to finish."
+  },
+  "link": {
+    "button": "Link to badge",
+    "title": "Link record to badge",
+    "desc": "The same person has a schedule record and an access badge (e.g. a leader who teaches), but they are not linked. Pick the record and the badge. Nothing is deleted.",
+    "teacherRecord": "Schedule record",
+    "badge": "Badge",
+    "badgeHasOther": "This badge is already linked to another schedule record. Merge the records first (Merge records button), then link.",
+    "recordHasOther": "This record is linked to another login (probably the old one). Linking makes it use this badge.",
+    "confirm": "Link",
+    "done": "Done! {{name}}'s record is linked to the badge.",
+    "error": "Could not link (quota exhausted or offline). Try again."
   }
 }

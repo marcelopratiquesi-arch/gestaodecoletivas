@@ -41,6 +41,30 @@ export async function prepararJuncao(principal, outras) {
   };
 }
 
+// "Ligar ficha ao crachá": a mesma pessoa tem ficha na grade e crachá (ex.: líder que dá aula) sem estarem
+// ligados. Liga nos dois sentidos, como o sistema já faz: professores/{id}.uidLogin e usuarios/{uid}.professorId.
+export async function ligarFichaAoCracha({ ficha, cracha, quem }) {
+  const batch = writeBatch(db);
+  batch.update(doc(db, 'professores', String(ficha.id)), { uidLogin: String(cracha.id), updatedAt: serverTimestamp() });
+  batch.update(doc(db, 'usuarios', String(cracha.id)), { professorId: String(ficha.id) });
+  await batch.commit();
+  try {
+    await addDoc(collection(db, 'auditoria_cronograma'), {
+      tipoAcao: 'ALTERADA',
+      descricao: 'Ficha de professor ligada ao crachá.',
+      diffExtras: `Ficha: ${ficha.nome || '-'} [${ficha.id}] ↔ crachá: ${cracha.nome || '-'} (${cracha.email || 'sem e-mail'}) [${cracha.id}]`
+        + (ficha.uidLogin && ficha.uidLogin !== cracha.id ? `. Login anterior da ficha: ${ficha.uidLogin}` : ''),
+      modulo: 'CONFIGURACOES',
+      professorNome: ficha.nome || '-',
+      unidadeNome: cracha.unidade || '-',
+      modalidadeNome: '-',
+      usuarioAcaoNome: quem?.nome || quem?.email || 'Administrador',
+      usuarioAcaoId: quem?.id || null,
+      dataAcao: serverTimestamp(),
+    });
+  } catch (e) { console.error('Falha ao gravar auditoria da ligação', e); }
+}
+
 // Grava o plano em lotes. A ficha principal é atualizada e as outras apagadas só no fim.
 export async function executarJuncao({ plano, principal, outras, quem, aoAvancar }) {
   const ops = [

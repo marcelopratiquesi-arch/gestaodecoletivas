@@ -105,5 +105,17 @@
     "done": "¡Listo! Las fichas se unieron en la de {{name}}.",
     "readError": "No se pudo revisar (cuota agotada o sin conexión). Intentá de nuevo más tarde.",
     "writeError": "La unión se detuvo a mitad (cuota o conexión). No se pierde nada: revisá y uní de nuevo para terminar."
+  },
+  "link": {
+    "button": "Vincular a la credencial",
+    "title": "Vincular ficha a la credencial",
+    "desc": "La misma persona tiene ficha en la grilla y credencial de acceso (ej.: líder que da clases), pero no están vinculadas. Elegí la ficha y su credencial. No se borra nada.",
+    "teacherRecord": "Ficha de la grilla",
+    "badge": "Credencial",
+    "badgeHasOther": "Esta credencial ya está vinculada a otra ficha de la grilla. Uní las fichas primero (botón Unir fichas) y después vinculá.",
+    "recordHasOther": "Esta ficha está vinculada a otro acceso (probablemente el antiguo). Al vincular, pasa a usar esta credencial.",
+    "confirm": "Vincular",
+    "done": "¡Listo! La ficha de {{name}} está vinculada a la credencial.",
+    "error": "No se pudo vincular (cuota agotada o sin conexión). Intentá de nuevo."
   }
 }
