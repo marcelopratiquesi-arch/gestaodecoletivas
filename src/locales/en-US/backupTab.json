@@ -35,5 +35,48 @@
   "chooseCollections": "Choose what to restore. The free limit is 20,000 writes per day: restore in parts if needed.",
   "selectedTotal": "Selected: {{total}} documents",
   "writeQuotaWarning": "Above the free limit of {{limit}} writes per day: the restore will stop halfway. Uncheck some collections and restore the rest tomorrow.",
-  "restoreSelected": "Restore selected"
+  "restoreSelected": "Restore selected",
+  "duplicates": {
+    "title": "Duplicates report",
+    "desc": "Shows who appears with the same email, phone or name across schedule teachers, badges and access requests. Read-only, nothing is saved. Reads badges and requests once (a few hundred reads).",
+    "generate": "Generate report",
+    "regenerate": "Generate again",
+    "download": "Download spreadsheet",
+    "error": "Could not read badges and requests (quota exhausted or offline). Try again later.",
+    "none": "No cases in this list.",
+    "readSummary": "{{teachers}} schedule teachers (already loaded, no reads) + {{reads}} badges and requests read now.",
+    "people_one": "{{count}} person",
+    "people_other": "{{count}} people",
+    "types": {
+      "email": "Duplicate email",
+      "telefone": "Duplicate phone",
+      "nome": "Duplicate name",
+      "emailDeMentira": "Fake email",
+      "emailInvalido": "Invalid email",
+      "telefoneInvalido": "Invalid phone"
+    },
+    "origin": {
+      "professor": "Schedule teacher",
+      "cracha": "Badge",
+      "pedido": "Access request"
+    },
+    "requestStatus": {
+      "pendente": "pending",
+      "aprovado": "approved",
+      "recusado": "declined"
+    },
+    "sheet": {
+      "duplicates": "Duplicates",
+      "problems": "Data issues",
+      "type": "Type",
+      "value": "Value",
+      "origin": "Source",
+      "name": "Name",
+      "email": "Email",
+      "phone": "Phone",
+      "detail": "Role / status",
+      "unit": "Unit",
+      "id": "Id"
+    }
+  }
 }

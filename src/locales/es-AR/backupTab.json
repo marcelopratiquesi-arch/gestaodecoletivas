@@ -35,5 +35,48 @@
   "chooseCollections": "Elegí qué restaurar. El límite gratuito es de 20.000 escrituras por día: restaurá en partes si hace falta.",
   "selectedTotal": "Seleccionado: {{total}} documentos",
   "writeQuotaWarning": "Supera el límite gratuito de {{limit}} escrituras por día: la restauración se va a cortar a la mitad. Desmarcá algunas colecciones y restaurá el resto mañana.",
-  "restoreSelected": "Restaurar seleccionadas"
+  "restoreSelected": "Restaurar seleccionadas",
+  "duplicates": {
+    "title": "Informe de repetidos",
+    "desc": "Muestra quién aparece con el mismo correo, teléfono o nombre entre los profesores de la grilla, credenciales y solicitudes de acceso. Solo lee, no guarda nada. Lee las credenciales y solicitudes una vez (unos pocos cientos de lecturas).",
+    "generate": "Generar informe",
+    "regenerate": "Generar de nuevo",
+    "download": "Descargar planilla",
+    "error": "No se pudieron leer las credenciales y solicitudes (cuota agotada o sin conexión). Intentá de nuevo más tarde.",
+    "none": "Ningún caso en esta lista.",
+    "readSummary": "{{teachers}} profesores de la grilla (ya cargados, sin lecturas) + {{reads}} credenciales y solicitudes leídas ahora.",
+    "people_one": "{{count}} persona",
+    "people_other": "{{count}} personas",
+    "types": {
+      "email": "Correo repetido",
+      "telefone": "Teléfono repetido",
+      "nome": "Nombre repetido",
+      "emailDeMentira": "Correo falso",
+      "emailInvalido": "Correo inválido",
+      "telefoneInvalido": "Teléfono inválido"
+    },
+    "origin": {
+      "professor": "Profesor de la grilla",
+      "cracha": "Credencial",
+      "pedido": "Solicitud de acceso"
+    },
+    "requestStatus": {
+      "pendente": "pendiente",
+      "aprovado": "aprobada",
+      "recusado": "rechazada"
+    },
+    "sheet": {
+      "duplicates": "Repetidos",
+      "problems": "Datos con problemas",
+      "type": "Tipo",
+      "value": "Valor",
+      "origin": "Origen",
+      "name": "Nombre",
+      "email": "Correo",
+      "phone": "Teléfono",
+      "detail": "Rol / estado",
+      "unit": "Unidad",
+      "id": "Id"
+    }
+  }
 }

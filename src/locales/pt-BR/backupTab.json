@@ -35,5 +35,48 @@
   "chooseCollections": "Escolha o que restaurar. O limite gratuito é de 20.000 gravações por dia: restaure em partes, se preciso.",
   "selectedTotal": "Selecionado: {{total}} documentos",
   "writeQuotaWarning": "Acima do limite gratuito de {{limit}} gravações por dia: a restauração vai parar no meio. Desmarque algumas coleções e restaure o restante amanhã.",
-  "restoreSelected": "Restaurar selecionadas"
+  "restoreSelected": "Restaurar selecionadas",
+  "duplicates": {
+    "title": "Relatório de repetidos",
+    "desc": "Mostra quem aparece com o mesmo e-mail, telefone ou nome entre professores da grade, crachás e pedidos de acesso. Só lê, não grava nada. Lê os crachás e pedidos uma vez (umas poucas centenas de leituras).",
+    "generate": "Gerar relatório",
+    "regenerate": "Gerar de novo",
+    "download": "Baixar planilha",
+    "error": "Não foi possível ler os crachás e pedidos (cota esgotada ou sem conexão). Tente de novo mais tarde.",
+    "none": "Nenhum caso nesta lista.",
+    "readSummary": "{{teachers}} professores da grade (já carregados, sem leitura) + {{reads}} crachás e pedidos lidos agora.",
+    "people_one": "{{count}} pessoa",
+    "people_other": "{{count}} pessoas",
+    "types": {
+      "email": "E-mail repetido",
+      "telefone": "Telefone repetido",
+      "nome": "Nome repetido",
+      "emailDeMentira": "E-mail de mentira",
+      "emailInvalido": "E-mail inválido",
+      "telefoneInvalido": "Telefone inválido"
+    },
+    "origin": {
+      "professor": "Professor da grade",
+      "cracha": "Crachá",
+      "pedido": "Pedido de acesso"
+    },
+    "requestStatus": {
+      "pendente": "pendente",
+      "aprovado": "aprovado",
+      "recusado": "recusado"
+    },
+    "sheet": {
+      "duplicates": "Repetidos",
+      "problems": "Dados com problema",
+      "type": "Tipo",
+      "value": "Valor",
+      "origin": "Origem",
+      "name": "Nome",
+      "email": "E-mail",
+      "phone": "Telefone",
+      "detail": "Papel / situação",
+      "unit": "Unidade",
+      "id": "Id"
+    }
+  }
 }
