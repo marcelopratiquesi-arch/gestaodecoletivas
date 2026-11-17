@@ -91,7 +91,7 @@
     "title": "Pick an existing user as leader",
     "help": "Pick someone who already uses the system: teacher, leader of another unit or mentor. A teacher stays a teacher; a leader of another unit will lead both; a mentor/admin keeps their access.",
     "person": "Person",
-    "search": "Search by name or e-mail...",
+    "search": "Search by name, e-mail or document...",
     "reading": "Checking current access...",
     "now": {
       "teacher": "is currently a teacher.",
@@ -125,7 +125,10 @@
     "replaceWarning": "This spot belongs to {{name}}. When you save, they leave and the chosen person takes over.",
     "doneSecond": "{{name}} is now the 2nd leader of {{unit}}.",
     "tagAll": "All",
-    "registerNew": "Register new"
+    "registerNew": "Register new",
+    "docSearching": "Looking for this document...",
+    "docNoAccess": "This document exists, but the person has no access yet (only a request or incomplete record). Use the document search to delete or register.",
+    "docFree": "No person with this document. Use \"Register new\" to register them."
   },
   "second": {
     "badge": "2nd leader",

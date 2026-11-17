@@ -91,7 +91,7 @@
     "title": "Escolher líder já cadastrado",
     "help": "Escolha quem já entra no sistema: professor, líder de outra unidade ou mentor. O professor continua professor; o líder de outra unidade passa a cuidar das duas; o mentor/admin continua com o acesso dele.",
     "person": "Pessoa",
-    "search": "Buscar por nome ou e-mail...",
+    "search": "Buscar por nome, e-mail ou CPF...",
     "reading": "Conferindo o acesso atual...",
     "now": {
       "teacher": "hoje é professor.",
@@ -125,7 +125,10 @@
     "replaceWarning": "Esta vaga já é de {{name}}. Ao salvar, ele sai e a pessoa escolhida entra.",
     "doneSecond": "{{name}} agora é o 2º líder da unidade {{unit}}.",
     "tagAll": "Todos",
-    "registerNew": "Cadastrar novo"
+    "registerNew": "Cadastrar novo",
+    "docSearching": "Procurando este documento...",
+    "docNoAccess": "Este documento existe, mas a pessoa ainda não tem acesso ao sistema (só um pedido ou cadastro incompleto). Use a busca por documento para excluir ou cadastrar.",
+    "docFree": "Nenhuma pessoa com este documento. Use \"Cadastrar novo\" para cadastrá-la."
   },
   "second": {
     "badge": "2º líder",

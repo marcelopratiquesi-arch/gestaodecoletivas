@@ -4,11 +4,13 @@
 //   se um dia deixar de ser líder, volta a ser só professor;
 // - líder de outra unidade: passa a cuidar das duas (não sai da outra);
 // - mentor ou admin: o acesso dele não muda; a unidade só passa a mostrar essa pessoa como líder.
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { doc, getDoc, writeBatch } from "firebase/firestore";
 import { useTranslation } from "react-i18next";
 import { X, Check, Loader2, Search, UserCog, UserPlus, AlertTriangle } from "lucide-react";
 import { db } from "../../../services/firebase";
+import { acharDonoDoDocumento } from "../../../services/documentoService";
+import { documentoValido, TIPOS_DOCUMENTO } from "../../../utils/documento";
 import { ehLider, liderMantemAcesso, unidadesDoLider } from "../../../permissions";
 import { professorDoLogin, tirarLiderDaUnidade, crachaAoEntrar, dadosDaVaga, textoDaSaida } from "./saidaDoLider";
 
@@ -22,6 +24,8 @@ export function TornarLiderModal({ unidades, todasUnidades, professores, mentore
   const [lendo, setLendo] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState("");
+  // Digitou um CPF/DNI/SSN válido na busca? Acha o dono do documento (null = nenhum; "buscando" enquanto confere).
+  const [donoDoc, setDonoDoc] = useState(null);
 
   const nomeDaUnidade = (id) => (todasUnidades.find((u) => String(u.id) === String(id))?.nome || id);
 
@@ -50,14 +54,36 @@ export function TornarLiderModal({ unidades, todasUnidades, professores, mentore
     return [...porUid.values()].sort((a, b) => String(a.nome).localeCompare(String(b.nome)));
   }, [professores, todasUnidades, mentores, vaga]);
 
+  useEffect(() => {
+    const texto = busca.trim();
+    const tipos = /^[\d.\-\s]+$/.test(texto) ? TIPOS_DOCUMENTO.filter((tp) => documentoValido(tp, texto)) : [];
+    if (tipos.length === 0) { setDonoDoc(null); return undefined; }
+    let vivo = true;
+    setDonoDoc("buscando");
+    (async () => {
+      try {
+        for (const tp of tipos) {
+          const dono = await acharDonoDoDocumento(tp, texto);
+          if (dono) { if (vivo) setDonoDoc({ uid: dono.uid }); return; }
+        }
+        if (vivo) setDonoDoc({ uid: null });
+      } catch (e) {
+        console.error(e);
+        if (vivo) setDonoDoc(null);
+      }
+    })();
+    return () => { vivo = false; };
+  }, [busca]);
+
   const candidatos = useMemo(() => {
+    if (donoDoc?.uid) return todosCandidatos.filter((c) => c.uid === donoDoc.uid);
     const termo = busca.trim().toLowerCase();
     return todosCandidatos
       .filter((c) => vaga !== 2 || !c.etiquetas.includes("mentor"))
       .filter((c) => tipo === "todos" || c.etiquetas.includes(tipo))
       .filter((c) => !termo || [c.nome, c.email].some((v) => String(v || "").toLowerCase().includes(termo)))
       .slice(0, 60);
-  }, [todosCandidatos, busca, tipo, vaga]);
+  }, [todosCandidatos, busca, tipo, vaga, donoDoc]);
 
   const unidade = unidades.find((u) => u.id === unidadeId);
 
@@ -191,7 +217,11 @@ export function TornarLiderModal({ unidades, todasUnidades, professores, mentore
           </div>
           <div className="max-h-56 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-700/50">
             {candidatos.length === 0 ? (
-              <p className="p-3 text-xs text-slate-400 font-bold">{t("leadersTab.promote.noPeople")}</p>
+              <p className="p-3 text-xs text-slate-400 font-bold">{
+                donoDoc === "buscando" ? t("leadersTab.promote.docSearching")
+                  : donoDoc?.uid ? t("leadersTab.promote.docNoAccess")
+                    : donoDoc ? t("leadersTab.promote.docFree")
+                      : t("leadersTab.promote.noPeople")}</p>
             ) : candidatos.map((c) => (
               <button type="button" key={c.uid} onClick={() => escolher(c)} disabled={salvando}
                 className={`w-full text-left p-3 text-sm hover:bg-slate-50 dark:hover:bg-slate-700/30 ${pessoa?.uid === c.uid ? "bg-emerald-50 dark:bg-emerald-900/20" : ""}`}>

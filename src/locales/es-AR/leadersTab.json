@@ -91,7 +91,7 @@
     "title": "Elegir líder ya registrado",
     "help": "Elegí a quien ya entra al sistema: profesor, líder de otra unidad o mentor. El profesor sigue siendo profesor; el líder de otra unidad pasa a cuidar las dos; el mentor/admin mantiene su acceso.",
     "person": "Persona",
-    "search": "Buscar por nombre o e-mail...",
+    "search": "Buscar por nombre, e-mail o documento...",
     "reading": "Revisando el acceso actual...",
     "now": {
       "teacher": "hoy es profesor.",
@@ -125,7 +125,10 @@
     "replaceWarning": "Este lugar ya es de {{name}}. Al guardar, sale y entra la persona elegida.",
     "doneSecond": "{{name}} ahora es el 2º líder de la unidad {{unit}}.",
     "tagAll": "Todos",
-    "registerNew": "Registrar nuevo"
+    "registerNew": "Registrar nuevo",
+    "docSearching": "Buscando este documento...",
+    "docNoAccess": "Este documento existe, pero la persona todavía no tiene acceso (solo un pedido o registro incompleto). Usá la búsqueda por documento para eliminar o registrar.",
+    "docFree": "Ninguna persona con este documento. Usá \"Registrar nuevo\" para registrarla."
   },
   "second": {
     "badge": "2º líder",
