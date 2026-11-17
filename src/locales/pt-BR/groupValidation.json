@@ -1,5 +1,6 @@
 {
   "syncing": "Sincronizando sistema...",
+  "error": { "title": "Não foi possível carregar as validações", "desc": "Os números não foram exibidos para não acusar ninguém por engano. Isso costuma acontecer quando o limite diário do banco acaba ou a internet falha. Aguarde um pouco e recarregue a página." },
   "title": "Validação Coletiva",
   "subtitle": "Monitoramento de adesão e auditoria em tempo real",
   "exportCsv": "Exportar CSV",

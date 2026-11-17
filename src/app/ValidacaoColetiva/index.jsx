@@ -26,6 +26,8 @@ export default function ValidacaoColetiva() {
   
   const { catalogs, loadingCatalogs } = useCatalogs();
   const [loadingRealtime, setLoadingRealtime] = useState(true);
+  // Erro ao buscar as validações (ex.: cota do banco esgotada): sem isso tudo apareceria como ATRASADO.
+  const [erroEscuta, setErroEscuta] = useState(false);
   const [usuariosBase, setUsuariosBase] = useState([]);
   const [validacoesBase, setValidacoesBase] = useState([]);
   
@@ -107,6 +109,7 @@ export default function ValidacaoColetiva() {
     const ids = JSON.parse(escopoUnidades);
     if (ids.length === 0) { setValidacoesBase([]); setLoadingRealtime(false); return; }
     setLoadingRealtime(true);
+    setErroEscuta(false);
     const blocos = emBlocos(ids);
     const porBloco = blocos.map(() => null);
     const cancelar = blocos.map((bloco, i) => onSnapshot(
@@ -115,7 +118,7 @@ export default function ValidacaoColetiva() {
             porBloco[i] = s.docs.map(d => ({id: d.id, ...d.data()}));
             if (porBloco.every(Boolean)) { setValidacoesBase(deduplicarValidacoes(porBloco.flat())); setLoadingRealtime(false); }
         },
-        e => { console.error(e); setLoadingRealtime(false); }
+        e => { console.error(e); setErroEscuta(true); setLoadingRealtime(false); }
     ));
     return () => cancelar.forEach(unsub => unsub());
   }, [dataInicio, dataFim, userId, isCofreGlobalFechado, loadingCatalogs, escopoUnidades]); 
@@ -140,6 +143,7 @@ export default function ValidacaoColetiva() {
 
     let uAtivas = unidadesBase;
     if (estadoFiltro.length > 0) uAtivas = uAtivas.filter(u => estadoFiltro.includes(u.estado));
+    if (mentorFiltro.length > 0) uAtivas = uAtivas.filter(u => mentorFiltro.includes(u.mentorId));
 
     const statusUnidades = uAtivas.filter(u => unidadeFiltro.length === 0 ? true : unidadeFiltro.includes(u.id)).map(unidade => {
         let totalEsp = 0, totalVal = 0, pends = [], hist = [];
@@ -163,7 +167,9 @@ export default function ValidacaoColetiva() {
                 if (dStr < todayStr || (dStr === todayStr && dHa < now)) {
                     
                     const pool = [...(vIndex[`${unidade.id}_${dStr}`] || [])];
-                    let fIdx = pool.findIndex(v => String(v.aulaId) === String(aula.id) || v.hora === aula.hora);
+                    // Mesma regra da Validação Diária e da Página de Início: só vale a validação DESTA aula.
+                    // (Antes casava também pelo horário: um aulão das 19h "validava" a aula normal das 19h.)
+                    let fIdx = pool.findIndex(v => !v.isAulao && String(v.aulaId) === String(aula.id));
 
                     // Regra única de feriado (src/utils/feriados.js): sem validação de pessoa, dia de feriado não entra
                     // no total esperado nem vira pendência; aparece no histórico como FERIADO.
@@ -238,9 +244,9 @@ export default function ValidacaoColetiva() {
             responsavelInfo.responsavelRole = uL?.role || lastV.userRole || lastV.validadoPorRole || 'sistema';
             responsavelInfo.data = formatDate(normalizeDate(lastV.data));
             
-            const t = lastV.validadoEm || lastV.timestamp;
-            if (t && t.seconds) {
-                responsavelInfo.horaValidacao = formatTime(t);
+            const quando = lastV.validadoEm || lastV.timestamp;
+            if (quando && quando.seconds) {
+                responsavelInfo.horaValidacao = formatTime(quando);
             }
         }
 
@@ -250,7 +256,11 @@ export default function ValidacaoColetiva() {
             percentual: pct, pendencias: pends, statusTexto: totalEsp === 0 ? 'AGUARDANDO' : pct === 100 ? 'PARABÉNS!' : 'EM ANDAMENTO', 
             temCronograma: temCronograma,
             historicoDetalhado: hist, 
-            lastValidation: lastV ? responsavelInfo : null 
+            lastValidation: lastV ? responsavelInfo : null,
+            // Valores usados só para ordenar as colunas da tabela (Status, Última atualização, Responsável).
+            status: totalEsp === 0 ? 0 : pct === 100 ? 2 : 1,
+            ultimaEm: lastV ? (lastV.validadoEm?.seconds || lastV.timestamp?.seconds || 0) : 0,
+            responsavel: lastV ? String(responsavelInfo.responsavelNome || '').toLowerCase() : ''
         };
     });
 
@@ -281,7 +291,7 @@ export default function ValidacaoColetiva() {
     });
 
     return { mentores: rankingMentores, unidades: statusUnidades, kpis: { totalAulas: statusUnidades.reduce((acc, u) => acc + u.totalEsperado, 0), unidadesValidadas: statusUnidades.filter(u => u.percentual === 100 && u.totalEsperado > 0).length, unidadesPendentes: statusUnidades.filter(u => u.percentual < 100).length } };
-  }, [unidadesBase, usuariosBase, catalogs, validacoesBase, dataInicio, dataFim, now, estadoFiltro, unidadeFiltro, isCofreGlobalFechado, t]);
+  }, [unidadesBase, usuariosBase, catalogs, validacoesBase, dataInicio, dataFim, now, estadoFiltro, mentorFiltro, unidadeFiltro, isCofreGlobalFechado, t]);
 
   const rankingUnidades = useMemo(() => {
       let filtered = [...dadosProcessados.unidades];
@@ -324,9 +334,14 @@ export default function ValidacaoColetiva() {
       if (unidadeFiltro.length > 0) items = items.filter(u => unidadeFiltro.includes(u.id));
       if (showOnlyIssues) items = items.filter(u => u.percentual < 100);
       
+      const chave = sortConfig.key === 'lastValidation' ? 'ultimaEm' : sortConfig.key;
       return items.sort((a,b) => {
-          let aValue = a[sortConfig.key];
-          let bValue = b[sortConfig.key];
+          let aValue = a[chave];
+          let bValue = b[chave];
+          if (typeof aValue === 'string' && typeof bValue === 'string') {
+              const c = aValue.localeCompare(bValue);
+              return sortConfig.direction === 'ascending' ? c : -c;
+          }
           if (aValue < bValue) return sortConfig.direction === 'ascending' ? -1 : 1;
           if (aValue > bValue) return sortConfig.direction === 'ascending' ? 1 : -1;
           return 0;
@@ -492,6 +507,14 @@ export default function ValidacaoColetiva() {
               <h3 className="text-2xl font-black text-slate-700 dark:text-white mb-3 uppercase">{t('groupValidation.locked.title')}</h3>
               <p className="text-slate-500 dark:text-slate-400 text-sm font-medium max-w-lg mx-auto leading-relaxed uppercase">{t('groupValidation.locked.desc')}</p>
           </div>
+      ) : erroEscuta ? (
+          <div role="alert" className="py-16 px-6 text-center bg-rose-50 dark:bg-rose-950/30 border-2 border-dashed border-rose-300 dark:border-rose-800 rounded-2xl m-4">
+              <AlertCircle className="w-10 h-10 text-rose-500 mx-auto mb-4"/>
+              <h3 className="text-xl font-black text-rose-700 dark:text-rose-300 mb-2">{t('groupValidation.error.title')}</h3>
+              <p className="text-rose-600 dark:text-rose-300 text-sm font-medium max-w-lg mx-auto leading-relaxed">{t('groupValidation.error.desc')}</p>
+          </div>
+      ) : loadingRealtime ? (
+          <div className="py-24 text-center text-slate-400 font-black tracking-widest animate-pulse">{t('groupValidation.syncing')}</div>
       ) : (
           <>
             {/* CARDS DE RESUMO */}
