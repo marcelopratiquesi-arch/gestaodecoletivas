@@ -153,7 +153,7 @@ export function ProfessoresTab() {
   
   // UX: Paginação e Ordenação
   const [itensVisiveis, setItensVisiveis] = useState(20);
-  const [mostrarBuscaDoc, setMostrarBuscaDoc] = useState(false); // busca por CPF/DNI/SSN (o banco só deixa o admin consultar)
+  const [mostrarBuscaDoc, setMostrarBuscaDoc] = useState(false); // busca por CPF/DNI/SSN (admin e mentor; o banco limita o mentor às unidades dele)
   const [ordenacao, setOrdenacao] = useState({ campo: 'nome', direcao: 'asc' });
 
   // Modais
@@ -606,7 +606,7 @@ export function ProfessoresTab() {
           mostrar={["pais", "estado", ...(role === "admin" ? ["mentor"] : []), ...(role === "admin" || role === "mentor" ? ["lider"] : [])]}
           placeholder={t('teachersTab.searchPlaceholder', 'Buscar por nome, telefone ou e-mail...')}
           ativoExtra={statusFiltro !== "ativo"} aoLimpar={() => setStatusFiltro("ativo")}
-          acoes={role === "admin" && (
+          acoes={(role === "admin" || role === "mentor") && (
               <button type="button" onClick={() => setMostrarBuscaDoc(v => !v)} aria-expanded={mostrarBuscaDoc}
                   className={`px-4 py-3 rounded-xl border text-xs font-black uppercase flex items-center justify-center gap-2 transition-colors ${mostrarBuscaDoc
                       ? "border-green-500 bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300"
@@ -614,7 +614,7 @@ export function ProfessoresTab() {
                   <ScanSearch className="w-4 h-4"/> {t("document.search.title")}
               </button>
           )}>
-          {role === "admin" && mostrarBuscaDoc && <BuscaDocumento />}
+          {(role === "admin" || role === "mentor") && mostrarBuscaDoc && <BuscaDocumento />}
       </FiltroPadrao>
       {/* TABELA DE DADOS */}
       <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden shadow-sm relative">
