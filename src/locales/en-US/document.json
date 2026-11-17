@@ -80,7 +80,18 @@
     "alreadyUsed": "This document is already registered:",
     "orphanMentorHint": "This document is stuck without a record. Ask the administrator to free it.",
     "registerLeader": "Register as leader",
-    "goToRequest": "Go to the request"
+    "goToRequest": "Go to the request",
+    "deleteLeader": "Delete record and free document",
+    "deleteLeaderHint": "Removes the person from the units, removes access and frees the document. They can request access again right away. Old classes and validations stay in the history.",
+    "confirmDeleteLeader": "Delete the record of {{name}}? They leave the units, lose access and the document is freed.",
+    "auditDeleteLeader": "Leader record deleted and document freed.",
+    "deleteLeaderError": "Could not delete. If the person leads more than one unit, ask the administrator.",
+    "cannot": {
+      "staff": "This person is an admin or mentor: their access is only removed on the Mentors tab. Here you can fix the document.",
+      "professor": "This person is a teacher: their record is removed on the Teachers tab. Here you can fix the document.",
+      "liderEProfessor": "This person is also a teacher; so they do not lose teacher access, remove only the leader role on the unit (Leaders tab). Here you can fix the document.",
+      "outro": "This person has another kind of access. Here you can fix the document."
+    }
   },
   "invite": {
     "label": "Document (optional)",

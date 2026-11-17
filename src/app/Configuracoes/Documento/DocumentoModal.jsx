@@ -9,6 +9,8 @@ import { Loader2, X, Search, IdCard, Trash2, UserCheck, UserPlus, Inbox } from "
 import i18n from "../../../i18n";
 import { db } from "../../../services/firebase";
 import { useAuth } from "../../../contexts/AuthContext";
+import { useCatalogs } from "../../../contexts/CatalogContext";
+import { avaliarRemocao, removerLiderELiberarDocumento } from "./removerCadastro";
 import { registrarAuditoriaAcesso } from "../../../services/auditoriaAcessos";
 import {
   documentoNoLote, gravarComAviso, lerDocumento, ERRO_DOCUMENTO_EM_USO, acharDonoDoDocumento, excluirPedidoELiberar, liberarReserva,
@@ -142,9 +144,11 @@ function CartaoDoDocumento({ r, aoLiberar, aoEscolherPessoa, aoCadastrar, aoIrPa
   const { t } = useTranslation();
   const { userData } = useAuth();
   const souAdmin = ["admin", "administrador", "master"].includes(String(userData?.role || "").trim().toLowerCase());
+  const { catalogs } = useCatalogs();
   const [docAlvo, setDocAlvo] = useState(null);
   const [excluindo, setExcluindo] = useState(false);
   const [erro, setErro] = useState("");
+  const remocao = r.cracha ? avaliarRemocao(r.cracha, r.uid, catalogs?.professores || []) : null;
 
   const nome = r.cracha?.nome || r.pedido?.nome || r.pedido?.email || t("document.search.unknownName");
   const email = r.pedido?.email || r.cracha?.email;
@@ -152,6 +156,29 @@ function CartaoDoDocumento({ r, aoLiberar, aoEscolherPessoa, aoCadastrar, aoIrPa
   const situacao = r.cracha
     ? t(`document.search.role.${papel}`, { defaultValue: papel || "-" })
     : r.pedido ? t(`document.search.request.${r.pedido.status}`, { defaultValue: r.pedido.status || "-" }) : t("document.search.orphan");
+
+  // Quem já foi aprovado como líder: tira das unidades, apaga o acesso e libera o documento.
+  async function excluirCadastro() {
+    if (!window.confirm(t("document.search.confirmDeleteLeader", { name: nome }))) return;
+    setExcluindo(true); setErro("");
+    try {
+      const unidadesDele = await removerLiderELiberarDocumento({
+        uid: r.uid, documento: { tipo: r.tipo, numero: r.numero }, unidades: catalogs?.unidades || [],
+        motivo: t("document.search.auditDeleteLeader"), quemId: userData?.id || userData?.uid, quemNome: userData?.nome || userData?.email || "-",
+      });
+      await registrarAuditoriaAcesso({
+        tipoAcao: "EXCLUÍDA", descricao: t("document.search.auditDeleteLeader"), quem: userData,
+        alvo: { id: r.uid, nome, email }, papelAnterior: papel, unidadeNome: unidadesDele.join(", ") || undefined,
+        detalhes: t("document.modal.auditType", { type: t(`document.short.${r.tipo}`) }),
+      });
+      aoLiberar();
+    } catch (err) {
+      console.error(err);
+      setErro(t("document.search.deleteLeaderError"));
+    } finally {
+      setExcluindo(false);
+    }
+  }
 
   async function liberar() {
     if (!window.confirm(t(r.pedido ? "document.search.confirmDelete" : "document.search.confirmFree", { name: nome }))) return;
@@ -208,6 +235,12 @@ function CartaoDoDocumento({ r, aoLiberar, aoEscolherPessoa, aoCadastrar, aoIrPa
             <IdCard className="w-3.5 h-3.5" /> {t("document.search.fix")}
           </button>
         )}
+        {r.cracha && remocao?.pode && (
+          <button type="button" onClick={excluirCadastro} disabled={excluindo}
+            className="px-3 py-2 rounded-lg text-[11px] font-black uppercase bg-red-600 hover:bg-red-700 text-white flex items-center gap-1.5 disabled:opacity-50">
+            {excluindo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />} {t("document.search.deleteLeader")}
+          </button>
+        )}
         {!r.cracha && (r.pedido || souAdmin) && (
           <button type="button" onClick={liberar} disabled={excluindo}
             className="px-3 py-2 rounded-lg text-[11px] font-black uppercase bg-red-600 hover:bg-red-700 text-white flex items-center gap-1.5 disabled:opacity-50">
@@ -217,7 +250,7 @@ function CartaoDoDocumento({ r, aoLiberar, aoEscolherPessoa, aoCadastrar, aoIrPa
         )}
       </div>
       {erro && <p className="text-xs font-bold text-red-600">{erro}</p>}
-      {r.cracha && <p className="text-[11px] text-slate-500">{t("document.search.hasBadgeHint")}</p>}
+      {r.cracha && <p className="text-[11px] text-slate-500">{t(remocao?.pode ? "document.search.deleteLeaderHint" : `document.search.cannot.${remocao?.motivo || "outro"}`)}</p>}
       {!r.cracha && r.pedido && <p className="text-[11px] text-slate-500">{t("document.search.deleteHint")}</p>}
       {!r.cracha && !r.pedido && !souAdmin && <p className="text-[11px] text-slate-500">{t("document.search.orphanMentorHint")}</p>}
       {docAlvo && <DocumentoModal alvo={docAlvo} onClose={() => setDocAlvo(null)} />}

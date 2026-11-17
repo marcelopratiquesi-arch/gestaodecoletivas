@@ -80,7 +80,18 @@
     "alreadyUsed": "Este documento ya está registrado:",
     "orphanMentorHint": "Este documento está trabado sin registro. Pedile al administrador que lo libere.",
     "registerLeader": "Registrar como líder",
-    "goToRequest": "Ir al pedido"
+    "goToRequest": "Ir al pedido",
+    "deleteLeader": "Eliminar registro y liberar documento",
+    "deleteLeaderHint": "Saca a la persona de las unidades, quita el acceso y libera el documento. Puede pedir acceso de nuevo enseguida. Las clases y validaciones antiguas quedan en el historial.",
+    "confirmDeleteLeader": "¿Eliminar el registro de {{name}}? Sale de las unidades, pierde el acceso y el documento queda libre.",
+    "auditDeleteLeader": "Registro de líder eliminado y documento liberado.",
+    "deleteLeaderError": "No se pudo eliminar. Si la persona lidera más de una unidad, pedile al administrador.",
+    "cannot": {
+      "staff": "Esta persona es admin o mentor: su acceso solo se quita en la pestaña Mentores. Acá podés corregir el documento.",
+      "professor": "Esta persona es profesor: su registro se quita en la pestaña Profesores. Acá podés corregir el documento.",
+      "liderEProfessor": "Esta persona también es profesor; para que no pierda el acceso de profesor, quitale solo la función de líder en la unidad (pestaña Líderes). Acá podés corregir el documento.",
+      "outro": "Esta persona tiene otro tipo de acceso. Acá podés corregir el documento."
+    }
   },
   "invite": {
     "label": "Documento (opcional)",

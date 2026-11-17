@@ -3,7 +3,7 @@
 import { readFileSync } from 'fs';
 import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest';
 import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing';
-import { doc, setDoc, updateDoc, writeBatch, getDoc, getDocs, collection, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, writeBatch, getDoc, getDocs, collection, deleteDoc, deleteField, serverTimestamp } from 'firebase/firestore';
 
 let env;
 beforeAll(async () => {
@@ -270,5 +270,41 @@ describe('achar e liberar o documento de um pedido de acesso (entrou com o e-mai
   });
   it('mentor NÃO apaga a reserva de um líder que já tem crachá de outra unidade', async () => {
     await assertFails(deleteDoc(doc(como('mentor2'), 'documentos_unicos', `cpf_${CPF}`)));
+  });
+});
+
+describe('excluir o cadastro de líder já aprovado e liberar o documento', () => {
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      await setDoc(doc(db, 'unidades/uniA'), { nome: 'A', mentorId: 'mentor1', liderUid: 'liderA', liderNome: 'Líder A' });
+      await setDoc(doc(db, 'documentos_privados/liderA'), { tipo: 'cpf', numero: CPF, atualizadoPor: 'liderA' });
+      await setDoc(doc(db, 'documentos_unicos', `cpf_${CPF}`), { uid: 'liderA', tipo: 'cpf', numero: CPF });
+    });
+  });
+  const excluir = (quem, alvo = 'liderA', numero = CPF) => {
+    const db = como(quem);
+    const b = writeBatch(db);
+    b.update(doc(db, 'unidades/uniA'), { liderUid: deleteField(), liderNome: deleteField() });
+    b.delete(doc(db, 'usuarios', alvo));
+    b.delete(doc(db, 'documentos_privados', alvo));
+    b.delete(doc(db, 'documentos_do_pedido', alvo));
+    b.delete(doc(db, 'documentos_unicos', `cpf_${numero}`));
+    return b.commit();
+  };
+  it('o mentor da unidade exclui o líder e libera o documento', async () => {
+    await assertSucceeds(excluir('mentor1'));
+  });
+  it('o admin também', async () => {
+    await assertSucceeds(excluir('admin1'));
+  });
+  it('NÃO exclui: mentor de outra unidade, outro líder, quem não tem crachá', async () => {
+    await assertFails(excluir('mentor2'));
+    await assertFails(excluir('outroLider'));
+    await assertFails(excluir('forasteiro'));
+  });
+  it('mentor NÃO apaga a gaveta de documento de líder de outra unidade', async () => {
+    await assertFails(deleteDoc(doc(como('mentor2'), 'documentos_privados/liderA')));
+    await assertSucceeds(deleteDoc(doc(como('mentor1'), 'documentos_privados/liderA')));
   });
 });
