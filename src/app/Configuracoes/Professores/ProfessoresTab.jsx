@@ -26,6 +26,7 @@ import { ehLider, unidadesDoLider } from '../../../permissions';
 import PedidosProfessor from "../Pendencias/PedidosProfessor";
 import { BuscaDocumento } from "../Documento/DocumentoModal";
 import { FiltroPadrao } from "../ui/FiltroPadrao";
+import { CabecalhoDoModal } from "../ui/CabecalhoDoModal";
 import { BotaoDeLinha } from "../ui/BotaoDeLinha";
 import { CabecalhoDaAba, CaixaDeNumeros, BotaoPrincipal, BotaoSecundario } from "../ui/CabecalhoDaAba";
 import { useFiltroCascata } from "../ui/useFiltroCascata";
@@ -747,18 +748,10 @@ export function ProfessoresTab() {
       {modalFormAberto && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in zoom-in duration-200">
           <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200 dark:border-slate-700 flex flex-col max-h-[90vh]">
-            <div className="p-6 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 flex justify-between items-center shrink-0">
-                <div>
-                    <h3 className="font-black text-xl text-slate-800 dark:text-white flex items-center gap-2">
-                        <Edit2 className="w-5 h-5 text-green-600"/>
-                        {profEditando ? t('teachersTab.formModal.editTitle', 'Editar Professor') : t('teachersTab.formModal.newTitle', 'Novo Cadastro')}
-                    </h3>
-                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">{t('teachersTab.formModal.desc', 'Preencha os dados e clique em salvar.')}</p>
-                </div>
-                <button type="button" onClick={() => setModalFormAberto(false)} className="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-slate-400 hover:text-red-500">
-                    <X className="w-5 h-5"/>
-                </button>
-            </div>
+            <CabecalhoDoModal abaId="professores" icone={Edit2}
+              titulo={profEditando ? t('teachersTab.formModal.editTitle', 'Editar Professor') : t('teachersTab.formModal.newTitle', 'Novo Cadastro')}
+              subtitulo={t('teachersTab.formModal.desc', 'Preencha os dados e clique em salvar.')}
+              onFechar={() => setModalFormAberto(false)} />
 
             <form onSubmit={salvarProfessor} className="p-6 space-y-5 overflow-y-auto custom-scrollbar">
                 {erro && <div className="text-red-600 text-sm font-bold bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 p-4 rounded-xl flex items-center gap-2"><AlertTriangle className="w-5 h-5 flex-shrink-0"/> {erro}</div>}

@@ -18,7 +18,7 @@
     "unitsMentor": "Sedes que acompañás",
     "alsoTeacher": "¿También das clases en estas sedes?",
     "unitTeacher": "Tu unidad",
-    "modalities": "Modalidades que das (opcional)",
+    "modalities": "Modalidades que das",
     "modalitiesPlaceholder": "Ej.: Zumba, Pilates"
   },
   "form": {
@@ -42,7 +42,8 @@
     "phone": "Escribí un WhatsApp válido.",
     "unit": "Elegí al menos una sede.",
     "send": "No se pudo enviar el pedido. Probá de nuevo.",
-    "modalities": "Las modalidades pueden tener como máximo 120 caracteres."
+    "modalities": "Elegiste demasiadas modalidades. Sacá alguna.",
+    "modalitiesRequired": "Elegí al menos una modalidad que das."
   },
   "invite": {
     "title": "¡Hola, {{name}}!",
@@ -59,7 +60,9 @@
     "leaderUnits": "Podés elegir hasta {{max}} sedes.",
     "mentorUnits": "Podés elegir hasta {{max}} sedes. El administrador las revisa en la aprobación.",
     "teacherUnit": "Elegí tu unidad principal. El líder puede sumar otras unidades después.",
-    "modalities": "Podés dejarlo en blanco. El líder lo ajusta después."
+    "modalities": "Tocá las modalidades que das. Solo aparecen las modalidades registradas en el sistema.",
+    "modalitiesLoading": "Cargando las modalidades...",
+    "modalitiesNone": "No hay modalidades disponibles ahora. Probá de nuevo en un momento."
   },
   "approver": {
     "lider": "Quién aprueba: el mentor de la sede o el administrador.",

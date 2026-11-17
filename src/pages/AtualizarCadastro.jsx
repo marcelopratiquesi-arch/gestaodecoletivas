@@ -27,8 +27,9 @@ import { pedirOutrasUnidades, MAX_UNIDADES_EXTRAS } from "../app/Configuracoes/L
 import {
   FundoAcesso, Marca, Passos, CartaoEscolha, FuncaoEscolhida, SeletorUnidades, CaixaAjuda, BotaoVermelho, BotaoLink, IconeGoogle, classeRotulo,
 } from "../components/acesso/AcessoUI";
-import { useUnidadesPublicas } from "../components/acesso/acessoDados";
+import { useUnidadesPublicas, LIMITE_MODALIDADES } from "../components/acesso/acessoDados";
 import CampoDocumento from "../components/acesso/CampoDocumento";
+import SeletorModalidades from "../components/acesso/SeletorModalidades";
 import { documentoValido, formatarDocumento, tipoDocumentoPadrao } from "../utils/documento";
 import { documentoNoLote, gravarComAviso, lerDocumento, ERRO_DOCUMENTO_EM_USO } from "../services/documentoService";
 
@@ -59,7 +60,7 @@ export default function AtualizarCadastro() {
   const [resposta, setResposta] = useState(""); // "segue" = continua na função; "professor" | "saiu" = não segue
   const [nome, setNome] = useState("");
   const [telefone, setTelefone] = useState("");
-  const [modalidades, setModalidades] = useState(""); // professor: opcional, texto livre
+  const [modalidades, setModalidades] = useState(""); // professor: modalidades escolhidas (texto "Zumba, Pilates")
   const [docTipo, setDocTipo] = useState(() => tipoDocumentoPadrao(i18n.language));
   const [docNumero, setDocNumero] = useState("");
   const [docAnterior, setDocAnterior] = useState(null); // documento já guardado (ex.: informado pelo admin)
@@ -135,7 +136,7 @@ export default function AtualizarCadastro() {
     if (telefoneLimpo.replace(/\D/g, "").length < 8) { setPasso("dados"); return setErro(t("updateProfile.errors.phone")); }
 
     if (!documentoValido(docTipo, docNumero)) { setPasso("dados"); return setErro(t("document.errors.invalid")); }
-    if (modalidades.length > 120) { setPasso("dados"); return setErro(t("accessRequest.errors.modalities")); }
+    if (modalidades.length > LIMITE_MODALIDADES) { setPasso("dados"); return setErro(t("accessRequest.errors.modalities")); }
 
     setSalvando(true);
     try {
@@ -413,15 +414,7 @@ export default function AtualizarCadastro() {
             <CampoDocumento id="atu-documento" tipo={docTipo} onTipo={setDocTipo} valor={docNumero} onValor={setDocNumero} />
             <p className="text-[11px] text-zinc-500 ml-1">{t("document.hint")}</p>
           </div>
-          {souProfessor && (
-            <div className="space-y-1">
-              <label htmlFor="atu-modalidades" className={classeRotulo}>{t("accessRequest.fields.modalities")}</label>
-              <input id="atu-modalidades" value={modalidades} onChange={(e) => setModalidades(e.target.value)} maxLength={120}
-                className="w-full bg-zinc-900/50 border border-zinc-700 text-white font-bold px-4 py-3 rounded-xl focus:border-red-600 outline-none placeholder:text-zinc-600 placeholder:font-normal"
-                placeholder={t("accessRequest.fields.modalitiesPlaceholder")} />
-              <p className="text-[11px] text-zinc-500 ml-1">{t("accessRequest.hints.modalities")}</p>
-            </div>
-          )}
+          {souProfessor && <SeletorModalidades id="atu-modalidades" valor={modalidades} onChange={setModalidades} desabilitado={salvando} />}
           {souLider && (
             <div className="space-y-1.5">
               <span className={classeRotulo}>{t("updateProfile.fields.unitsLeader")}</span>

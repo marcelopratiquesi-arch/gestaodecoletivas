@@ -6,6 +6,8 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { doc, getDoc, writeBatch } from "firebase/firestore";
 import { useTranslation } from "react-i18next";
+import { CabecalhoDoModal } from "../ui/CabecalhoDoModal";
+import { temaDaAba } from "../ui/temas";
 import { Loader2, X, Search, IdCard, Trash2, UserCheck, UserPlus, Inbox } from "lucide-react";
 import i18n from "../../../i18n";
 import { db } from "../../../services/firebase";
@@ -33,7 +35,7 @@ export function BotaoDocumento({ onClick, disabled }) {
 }
 
 /** @param {{alvo:{id:string,nome?:string,email?:string,papel?:string}, onClose:()=>void}} props */
-export function DocumentoModal({ alvo, onClose }) {
+export function DocumentoModal({ alvo, onClose, abaId = "mentores" }) {
   const { t } = useTranslation();
   const { userData } = useAuth();
   const souAdmin = ["admin", "administrador", "master"].includes(String(userData?.role || "").trim().toLowerCase());
@@ -91,11 +93,9 @@ export function DocumentoModal({ alvo, onClose }) {
   // dentro de formulário fazia o "Salvar documento" recarregar a página e cair na aba Mentores).
   return createPortal(
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
-      <form onSubmit={salvar} onClick={(e) => e.stopPropagation()} className="w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-5 space-y-4">
-        <div className="flex items-start justify-between gap-3">
-          <h3 className="font-black text-slate-800 dark:text-white">{t("document.modal.title", { name: alvo.nome || alvo.email || "-" })}</h3>
-          <button type="button" onClick={onClose} className="p-1 text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
-        </div>
+      <form onSubmit={salvar} onClick={(e) => e.stopPropagation()} className="w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden bg-white dark:bg-slate-800 rounded-2xl shadow-2xl">
+        <CabecalhoDoModal abaId={abaId} icone={IdCard} titulo={t("document.modal.title", { name: alvo.nome || alvo.email || "-" })} onFechar={onClose} />
+        <div className="p-5 space-y-4 overflow-y-auto">
         {carregando ? (
           <div className="flex justify-center py-6"><Loader2 className="w-6 h-6 animate-spin text-blue-500" /></div>
         ) : (
@@ -106,12 +106,13 @@ export function DocumentoModal({ alvo, onClose }) {
             {ok && <p className="text-xs font-bold text-emerald-600">{ok}</p>}
             <div className="flex justify-end gap-2">
               <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-xl text-xs font-black uppercase bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200">{t("document.modal.cancel")}</button>
-              <button type="submit" disabled={salvando} className="px-5 py-2.5 rounded-xl text-xs font-black uppercase bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-1.5 disabled:opacity-50">
+              <button type="submit" disabled={salvando} className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase ${temaDaAba(abaId).botao} flex items-center gap-1.5 disabled:opacity-50`}>
                 {salvando && <Loader2 className="w-4 h-4 animate-spin" />} {t("document.modal.save")}
               </button>
             </div>
           </>
         )}
+        </div>
       </form>
     </div>,
     document.body

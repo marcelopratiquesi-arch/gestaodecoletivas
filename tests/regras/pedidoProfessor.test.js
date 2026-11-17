@@ -49,7 +49,7 @@ describe('pedido de professor', () => {
   it('NÃO aceita mais de uma unidade, modalidades enormes nem papel inventado', async () => {
     const db = google('nova', 'novata@gmail.com');
     await assertFails(setDoc(doc(db, 'solicitacoes_acesso/nova'), pedidoProf({ unidadeIds: ['uniA', 'uniB'] })));
-    await assertFails(setDoc(doc(db, 'solicitacoes_acesso/nova'), pedidoProf({ modalidades: 'x'.repeat(121) })));
+    await assertFails(setDoc(doc(db, 'solicitacoes_acesso/nova'), pedidoProf({ modalidades: 'x'.repeat(301) })));
     await assertFails(setDoc(doc(db, 'solicitacoes_acesso/nova'), pedidoProf({ papel: 'admin' })));
   });
 });

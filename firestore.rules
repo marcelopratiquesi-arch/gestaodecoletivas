@@ -129,15 +129,39 @@ service cloud.firestore {
 
     // ===================== PÁGINA PÚBLICA DE HORÁRIOS =====================
     // Sem login, a página de horários lê só: a "vitrine" (nome/endereço das unidades e nome dos
-    // professores), as aulas e as modalidades. Os cadastros completos de unidades e professores
+    // professores), a cópia pública das aulas (aulas_publicas, sem o valor) e as modalidades. Os cadastros completos de unidades e professores
     // (com e-mail, telefone e login) exigem login.
     match /publico/{docId} {
       allow read: if true;
       allow write: if logado() && meuPapel() in ['admin', 'administrador', 'master', 'mentor', 'lider', 'unidade'];
     }
-    match /aulas/{document=**} {
+    // Aulas: cada um grava só as da própria unidade (admin: todas). Ninguém além do admin apaga de verdade
+    // (a tela "exclui" marcando excluido:true). Esta regra é a única que libera gravar em aulas: a coleção está na
+    // lista de exceções da regra-curinga lá embaixo.
+    function podeGravarAulaDa(unidadeId) {
+      return souAdmin()
+        || (unidadeId is string && unidadeId != '' && logado()
+            && ((meuPapel() == 'mentor' && mentorDaUnidadeId(unidadeId))
+                || (meuPapel() in papeisLider()
+                    && (unidadeId == meuUsuario().get('unidadeId', '') || unidadeId in meuUsuario().get('unidadeIds', [])))));
+    }
+    match /aulas/{aulaId} {
+      // Tem o valor que cada professor recebe: só quem está logado. A página pública lê aulas_publicas (sem valor).
+      allow read: if logado();
+      allow create: if podeGravarAulaDa(request.resource.data.get('unidadeId', ''));
+      // Editar: a unidade de antes E a de depois têm que ser dele (senão dava para "jogar" aula na unidade dos outros).
+      allow update: if podeGravarAulaDa(resource.data.get('unidadeId', ''))
+        && podeGravarAulaDa(request.resource.data.get('unidadeId', ''));
+      allow delete: if souAdmin();
+    }
+    // Cópia pública da grade (sem o valor da aula), lida pela página de horários sem login.
+    // Gravada junto com a aula (mesma operação) por quem pode gravar a aula daquela unidade. Ver services/aulasPublicas.js.
+    match /aulas_publicas/{aulaId} {
       allow read: if true;
-      allow write: if logado() && !souProfessor();
+      allow create, update: if podeGravarAulaDa(request.resource.data.get('unidadeId', ''))
+        && !('valor' in request.resource.data)
+        && (resource == null || podeGravarAulaDa(resource.data.get('unidadeId', '')));
+      allow delete: if souAdmin() || podeGravarAulaDa(resource.data.get('unidadeId', ''));
     }
     match /modalidades/{document=**} {
       allow read: if true;
@@ -363,7 +387,7 @@ service cloud.firestore {
         || (request.auth.uid == uid && logado()
             && 'google.com' in request.auth.token.firebase.identities
             && camposAlterados().hasOnly(['nome', 'telefone', 'email', 'emailAntigo', 'role', 'loginGoogle', 'cadastroAtualizadoEm', 'documentoOk', 'modalidades'])
-            && request.resource.data.get('modalidades', '') is string && request.resource.data.get('modalidades', '').size() <= 120
+            && request.resource.data.get('modalidades', '') is string && request.resource.data.get('modalidades', '').size() <= 300
             && (!('documentoOk' in request.resource.data) || (request.resource.data.documentoOk == true && existsAfter(caminhoDocumentoUsuario(uid))))
             && request.resource.data.loginGoogle == true
             && request.resource.data.nome is string && request.resource.data.nome.size() >= 3 && request.resource.data.nome.size() <= 80
@@ -413,7 +437,7 @@ service cloud.firestore {
           && d.telefone is string && d.telefone.size() >= 6 && d.telefone.size() <= 30
           && d.get('papel', 'lider') in ['lider', 'mentor', 'professor']
           && (d.get('papel', 'lider') != 'professor' || (ids is list && ids.size() == 1))
-          && d.get('modalidades', '') is string && d.get('modalidades', '').size() <= 120
+          && d.get('modalidades', '') is string && d.get('modalidades', '').size() <= 300
           && d.get('tambemProfessor', false) is bool
           && d.get('unidadeNomes', []) is list && d.get('unidadeNomes', []).size() <= 5
           && ids is list && ids.size() >= 1 && ids.size() <= 5 && ids[0] == d.get('unidadeId', '')
@@ -654,7 +678,7 @@ service cloud.firestore {
     // (No Firestore, se QUALQUER regra libera, a ação passa; por isso as exceções precisam estar aqui.)
     match /{colecao}/{resto=**} {
       allow read: if logado() && !(colecao in ['solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos', 'documentos_ficha', 'documentos_professor']);
-      allow write: if logado() && !(colecao in ['usuarios', 'publico', 'validacoes', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'resumos_mensais', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos', 'professores', 'documentos_ficha', 'documentos_professor']) && !souProfessor();
+      allow write: if logado() && !(colecao in ['usuarios', 'publico', 'validacoes', 'aulas', 'aulas_publicas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'resumos_mensais', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos', 'professores', 'documentos_ficha', 'documentos_professor']) && !souProfessor();
       allow create: if logado() && colecao in ['auditoria_cronograma', 'auditoria_configuracoes'];
     }
   }
