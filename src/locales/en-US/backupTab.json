@@ -80,5 +80,30 @@
       "unit": "Unit",
       "id": "Id"
     }
+  },
+  "merge": {
+    "button": "Merge records ({{count}})",
+    "title": "Merge schedule records",
+    "desc": "Check the records that are the SAME person and choose the one to keep. Classes, units, validations and payments of the others move to it, and the other records are deleted.",
+    "include": "Include in merge",
+    "keep": "Keep this one",
+    "units": "Units: {{list}}",
+    "noUnits": "No unit",
+    "hasLogin": "has a linked login",
+    "check": "Check what changes",
+    "confirm": "Merge now",
+    "close": "Close",
+    "summaryTitle": "Everything moves to {{name}}'s record:",
+    "sumClasses": "Schedule classes moved: {{count}}",
+    "sumUnits": "Units moved: {{moved}} (duplicate links removed: {{dup}})",
+    "sumValidations": "Validations and payments moved: {{count}}",
+    "sumBadges": "Badges relinked: {{count}}",
+    "sumSummaries": "Monthly closing rebuilt next time reports open: {{list}}",
+    "sumFill": "Missing data that will be filled in: {{list}}",
+    "sumDelete": "Records deleted after moving everything: {{count}}",
+    "cost": "Reads done now: {{reads}} · writes when merging: {{writes}}",
+    "done": "Done! The records were merged into {{name}}'s.",
+    "readError": "Could not check (quota exhausted or offline). Try again later.",
+    "writeError": "The merge stopped halfway (quota or connection). Nothing is lost: check and merge again to finish."
   }
 }

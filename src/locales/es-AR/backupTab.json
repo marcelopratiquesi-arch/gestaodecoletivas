@@ -80,5 +80,30 @@
       "unit": "Unidad",
       "id": "Id"
     }
+  },
+  "merge": {
+    "button": "Unir fichas ({{count}})",
+    "title": "Unir fichas de la grilla",
+    "desc": "Marcá las fichas que son la MISMA persona y elegí la que queda. Clases, unidades, validaciones y pagos de las otras pasan a ella, y las otras fichas se borran.",
+    "include": "Incluir en la unión",
+    "keep": "Queda esta",
+    "units": "Unidades: {{list}}",
+    "noUnits": "Sin unidad",
+    "hasLogin": "tiene acceso vinculado",
+    "check": "Revisar qué cambia",
+    "confirm": "Unir ahora",
+    "close": "Cerrar",
+    "summaryTitle": "Todo pasa a la ficha de {{name}}:",
+    "sumClasses": "Clases de la grilla movidas: {{count}}",
+    "sumUnits": "Unidades movidas: {{moved}} (vínculos repetidos quitados: {{dup}})",
+    "sumValidations": "Validaciones y pagos movidos: {{count}}",
+    "sumBadges": "Credenciales revinculadas: {{count}}",
+    "sumSummaries": "Cierre del mes rehecho al abrir los informes: {{list}}",
+    "sumFill": "Datos faltantes que se completarán: {{list}}",
+    "sumDelete": "Fichas borradas después de mover todo: {{count}}",
+    "cost": "Lecturas hechas ahora: {{reads}} · escrituras al unir: {{writes}}",
+    "done": "¡Listo! Las fichas se unieron en la de {{name}}.",
+    "readError": "No se pudo revisar (cuota agotada o sin conexión). Intentá de nuevo más tarde.",
+    "writeError": "La unión se detuvo a mitad (cuota o conexión). No se pierde nada: revisá y uní de nuevo para terminar."
   }
 }

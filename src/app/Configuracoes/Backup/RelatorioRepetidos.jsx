@@ -5,7 +5,8 @@ import React, { useMemo, useState } from 'react';
 import { collection, getDocs } from 'firebase/firestore';
 import * as XLSX from 'xlsx';
 import { useTranslation } from 'react-i18next';
-import { Users, Loader2, FileSpreadsheet, Search, TriangleAlert } from 'lucide-react';
+import { Users, Loader2, FileSpreadsheet, Search, TriangleAlert, Merge } from 'lucide-react';
+import JuntarFichasModal from './JuntarFichasModal';
 import { db } from '../../../services/firebase';
 import { useCatalogs } from '../../../contexts/CatalogContext';
 import { normalizarPais } from '../../../utils/feriados';
@@ -28,8 +29,11 @@ function Item({ item, rotuloOrigem }) {
 export default function RelatorioRepetidos() {
   const { t } = useTranslation();
   const { catalogs } = useCatalogs();
-  const [estado, setEstado] = useState({ carregando: false, erro: false, resultado: null, lidos: 0 });
+  // "lidos" guarda só crachás e pedidos (lidos uma vez); os professores vêm sempre do catálogo ao vivo,
+  // então depois de juntar fichas o relatório se atualiza sozinho, sem ler de novo.
+  const [estado, setEstado] = useState({ carregando: false, erro: false, lidos: null });
   const [aberto, setAberto] = useState('email');
+  const [juntando, setJuntando] = useState(null); // fichas da grade abertas na janela "Juntar fichas"
 
   const unidadePorId = useMemo(
     () => new Map((catalogs?.unidades || []).map(u => [String(u.id), u])),
@@ -39,7 +43,7 @@ export default function RelatorioRepetidos() {
   const paisDaUnidade = (id) => normalizarPais(unidadePorId.get(String(id))?.pais);
 
   const gerar = async () => {
-    setEstado({ carregando: true, erro: false, resultado: null, lidos: 0 });
+    setEstado({ carregando: true, erro: false, lidos: null });
     try {
       const [crachas, pedidos] = await Promise.all([
         getDocs(collection(db, 'usuarios')),
@@ -53,11 +57,6 @@ export default function RelatorioRepetidos() {
       };
       const loginsAntigos = [];
       const registros = [
-        ...(catalogs?.professores || []).map(p => ({
-          origem: 'professor', id: String(p.id), nome: p.nome, email: p.email, telefone: p.telefone,
-          pais: normalizarPais(p.pais), uidLogin: p.uidLogin || '',
-          detalhe: p.status || '', unidade: '',
-        })),
         ...crachas.docs.flatMap(d => {
           const c = d.data();
           const unidadeId = c.unidadeId || (c.unidadeIds || [])[0] || '';
@@ -79,16 +78,47 @@ export default function RelatorioRepetidos() {
           };
         }),
       ];
-      const resultado = acharRepetidos(registros);
-      resultado.problemas.loginAntigo = loginsAntigos.sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || '')));
-      setEstado({ carregando: false, erro: false, resultado, lidos: crachas.size + pedidos.size });
+      loginsAntigos.sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || '')));
+      setEstado({ carregando: false, erro: false, lidos: { registros, loginsAntigos, total: crachas.size + pedidos.size } });
     } catch (err) {
       console.error('Relatório de repetidos:', err);
-      setEstado({ carregando: false, erro: true, resultado: null, lidos: 0 });
+      setEstado({ carregando: false, erro: true, lidos: null });
     }
   };
 
-  const r = estado.resultado;
+  const professorPorId = useMemo(
+    () => new Map((catalogs?.professores || []).map(p => [String(p.id), p])),
+    [catalogs?.professores]
+  );
+
+  const r = useMemo(() => {
+    if (!estado.lidos) return null;
+    const professores = (catalogs?.professores || []).map(p => ({
+      origem: 'professor', id: String(p.id), nome: p.nome, email: p.email, telefone: p.telefone,
+      pais: normalizarPais(p.pais), uidLogin: p.uidLogin || '',
+      detalhe: p.status || '', unidade: '',
+    }));
+    const resultado = acharRepetidos([...professores, ...estado.lidos.registros]);
+    resultado.problemas.loginAntigo = estado.lidos.loginsAntigos;
+    return resultado;
+  }, [estado.lidos, catalogs?.professores]);
+
+  // Depois de juntar: os crachás guardados aqui passam a apontar para a ficha que ficou (como no banco).
+  const aoJuntar = (idPrincipal, idsApagados) => {
+    const apagados = new Set(idsApagados.map(String));
+    setEstado(prev => (!prev.lidos ? prev : {
+      ...prev,
+      lidos: {
+        ...prev.lidos,
+        registros: prev.lidos.registros.map(x => (apagados.has(String(x.professorId)) ? { ...x, professorId: idPrincipal } : x)),
+      },
+    }));
+  };
+
+  const fichasDoGrupo = (itens) => {
+    const ids = [...new Set(itens.filter(i => i.origem === 'professor').map(i => i.id))];
+    return ids.map(id => professorPorId.get(id)).filter(Boolean).map(p => ({ ...p, id: String(p.id) }));
+  };
   const origem = (o) => t(`backupTab.duplicates.origin.${o}`);
   const valorDoGrupo = (tipo, g) => (tipo === 'telefone' ? g.itens[0].telefone : g.valor);
 
@@ -158,7 +188,7 @@ export default function RelatorioRepetidos() {
       {r && (
         <>
           <p className="text-[11px] text-slate-400 mb-3">
-            {t('backupTab.duplicates.readSummary', { teachers: (catalogs?.professores || []).length, reads: estado.lidos })}
+            {t('backupTab.duplicates.readSummary', { teachers: (catalogs?.professores || []).length, reads: estado.lidos.total })}
           </p>
           <div className="flex flex-wrap gap-2 mb-4">
             {contagens.map(c => (
@@ -174,17 +204,35 @@ export default function RelatorioRepetidos() {
             <p className="text-sm text-slate-500">{t('backupTab.duplicates.none')}</p>
           ) : (
             <ul className="max-h-[28rem] overflow-y-auto divide-y divide-slate-100 dark:divide-slate-700 border border-slate-200 dark:border-slate-700 rounded-lg">
-              {lista.map(g => (
+              {lista.map(g => {
+                const fichas = TIPOS.includes(aberto) ? fichasDoGrupo(g.itens) : [];
+                return (
                 <li key={g.chave} className="px-3 py-2">
-                  <p className="text-sm font-bold text-slate-800 dark:text-slate-100 break-all">
-                    {g.titulo} {g.extra && <span className="text-xs font-normal text-slate-400">({g.extra})</span>}
-                  </p>
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <p className="text-sm font-bold text-slate-800 dark:text-slate-100 break-all">
+                      {g.titulo} {g.extra && <span className="text-xs font-normal text-slate-400">({g.extra})</span>}
+                    </p>
+                    {fichas.length >= 2 && (
+                      <button onClick={() => setJuntando(fichas)} className="py-1 px-2 border border-amber-300 dark:border-amber-700 rounded-lg text-xs font-bold text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 flex items-center gap-1 shrink-0">
+                        <Merge className="w-3.5 h-3.5" /> {t('backupTab.merge.button', { count: fichas.length })}
+                      </button>
+                    )}
+                  </div>
                   <ul className="mt-1 space-y-0.5">{g.itens.map((i, n) => <Item key={`${i.origem}_${i.id}_${n}`} item={i} rotuloOrigem={origem(i.origem)} />)}</ul>
                 </li>
-              ))}
+                );
+              })}
             </ul>
           )}
         </>
+      )}
+
+      {juntando && (
+        <JuntarFichasModal
+          fichas={juntando}
+          aoJuntar={aoJuntar}
+          aoFechar={() => setJuntando(null)}
+        />
       )}
     </div>
   );

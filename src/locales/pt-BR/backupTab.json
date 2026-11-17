@@ -80,5 +80,30 @@
       "unit": "Unidade",
       "id": "Id"
     }
+  },
+  "merge": {
+    "button": "Juntar fichas ({{count}})",
+    "title": "Juntar fichas da grade",
+    "desc": "Marque as fichas que são a MESMA pessoa e escolha a que fica. Aulas, unidades, validações e pagamentos das outras passam para ela, e as outras fichas são apagadas.",
+    "include": "Incluir na junção",
+    "keep": "Fica esta",
+    "units": "Unidades: {{list}}",
+    "noUnits": "Sem unidade",
+    "hasLogin": "tem login ligado",
+    "check": "Conferir o que muda",
+    "confirm": "Juntar agora",
+    "close": "Fechar",
+    "summaryTitle": "Tudo passa para a ficha de {{name}}:",
+    "sumClasses": "Aulas da grade movidas: {{count}}",
+    "sumUnits": "Unidades movidas: {{moved}} (ligações repetidas removidas: {{dup}})",
+    "sumValidations": "Validações e pagamentos movidos: {{count}}",
+    "sumBadges": "Crachás religados: {{count}}",
+    "sumSummaries": "Fechamento do mês refeito na próxima abertura dos relatórios: {{list}}",
+    "sumFill": "Dados que faltavam e serão completados: {{list}}",
+    "sumDelete": "Fichas apagadas depois de mover tudo: {{count}}",
+    "cost": "Leituras feitas agora: {{reads}} · gravações ao juntar: {{writes}}",
+    "done": "Pronto! As fichas foram juntadas na de {{name}}.",
+    "readError": "Não foi possível conferir (cota esgotada ou sem conexão). Tente de novo mais tarde.",
+    "writeError": "A junção parou no meio (cota ou conexão). Nada se perde: confira e junte de novo para terminar."
   }
 }
