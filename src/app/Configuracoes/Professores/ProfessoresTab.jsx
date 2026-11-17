@@ -5,12 +5,8 @@ import { useCatalogs } from "../../../contexts/CatalogContext";
 import { db } from "../../../services/firebase";
 import { publicarProfessor, removerProfessorDaVitrine } from "../../../services/vitrinePublica";
 import {
-  addDoc, collection, deleteDoc, doc, onSnapshot, serverTimestamp, updateDoc, query, where, setDoc
+  addDoc, collection, deleteDoc, doc, onSnapshot, serverTimestamp, updateDoc, query, where
 } from "firebase/firestore";
-
-// Auth Imports (Instância Secundária)
-import { createUserWithEmailAndPassword, getAuth, signOut } from "firebase/auth";
-import { initializeApp, getApp, deleteApp } from "firebase/app"; 
 
 // TODOS OS ÍCONES IMPORTADOS CORRETAMENTE
 import { 
@@ -175,7 +171,6 @@ export function ProfessoresTab() {
   const [sucesso, setSucesso] = useState("");
   const [corrigindoBase, setCorrigindoBase] = useState(false);
 
-  const senhaPadrao = "123456";
 
   // ==========================================
   // 0. MOTOR DE AUDITORIA (CÂMERA INVISÍVEL)
@@ -410,8 +405,6 @@ export function ProfessoresTab() {
         return setErro("WhatsApp inválido. Digite o número completo com DDD (Ex: 31 99999-8888).");
     }
 
-    let secondaryApp = null;
-
     try {
       const duplicados = professoresTotais.filter(p => 
           p.nome.toLowerCase() === nomeLimpo.toLowerCase() && p.id !== (profEditando?.id || 'new')
@@ -450,23 +443,13 @@ export function ProfessoresTab() {
           setSucesso(t('teachersTab.messages.updated', 'Dados atualizados!'));
       } else { 
           // 🟢 AUDITORIA: Criação de novo professor
-          secondaryApp = initializeApp(getApp().options, "SecondaryAppProfCreate");
-          const secondaryAuth = getAuth(secondaryApp);
-          const userCred = await createUserWithEmailAndPassword(secondaryAuth, emailLimpo, senhaPadrao);
-          const newUid = userCred.user.uid;
-
-          const docRef = await addDoc(collection(db, "professores"), { 
-              nome: nomeLimpo, email: emailLimpo, pais, telefone, status, uidLogin: newUid, 
+          // Só o cadastro da grade: NÃO cria login nem senha. O professor entra pelo Google e pede acesso;
+          // líder, mentor ou admin aprovam em Pendências.
+          const docRef = await addDoc(collection(db, "professores"), {
+              nome: nomeLimpo, email: emailLimpo, pais, telefone, status,
               createdAt: serverTimestamp(), createdBy: userId, roleCreator: role
           });
           await publicarProfessor(docRef.id, nomeLimpo);
-
-          await setDoc(doc(db, "usuarios", newUid), {
-            nome: nomeLimpo, email: emailLimpo, role: "professor", professorId: docRef.id,
-            status: "ativo", criadoPor: userId
-          });
-
-          await signOut(secondaryAuth);
 
           let logDetalhe = `Email: ${emailLimpo}`;
           let nomeUnidadeAudit = "";
@@ -497,11 +480,8 @@ export function ProfessoresTab() {
       }, 1000);
 
     } catch (e) { 
-        if (e.code === 'auth/email-already-in-use') setErro(t('teachersTab.messages.emailExists', 'E-mail já cadastrado no sistema.'));
-        else setErro(t('teachersTab.messages.saveError', 'Erro: ') + e.message); 
+        setErro(t('teachersTab.messages.saveError', 'Erro: ') + e.message);
         setSalvando(false);
-    } finally { 
-        if (secondaryApp) await deleteApp(secondaryApp).catch(() => {});
     }
   }
 
@@ -953,7 +933,7 @@ export function ProfessoresTab() {
                 {!profEditando && (
                     <div className="space-y-4 pt-2">
                         <div className="p-4 bg-blue-50 dark:bg-blue-900/10 text-blue-700 dark:text-blue-400 text-xs font-medium rounded-xl border border-blue-200 dark:border-blue-800">
-                            <strong>{t('teachersTab.formModal.defaultPassNote', 'Senha padrão será')}</strong> <code className="bg-white dark:bg-slate-800 px-1.5 py-0.5 rounded font-bold ml-1 text-slate-800 dark:text-white shadow-sm">{senhaPadrao}</code>.
+                            <strong>{t('teachersTab.formModal.noLoginNote', 'Isto cria só o cadastro do professor.')}</strong> {t('teachersTab.formModal.noLoginNoteHint', 'Para acessar o sistema, ele entra pelo Google e pede acesso; o líder, o mentor ou o admin aprovam em Pendências.')}
                         </div>
                         {minhasUnidades.length > 0 && (
                             <div>

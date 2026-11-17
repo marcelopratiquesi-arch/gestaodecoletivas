@@ -1,5 +1,6 @@
 {
   "accessDisabled": "Your access to the system is disabled. Contact the administrator.",
+  "teacherOldLogin": "Teacher login with email and password has ended. Sign in with Google, on the first-access tab, and request access: your unit leader or mentor will approve it.",
   "subtitle": "Group Classes Management",
   "emailLabel": "Username / Email",
   "emailPlaceholder": "your@email.com",

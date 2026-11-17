@@ -1,8 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { onAuthStateChanged, signOut, unlink } from "firebase/auth";
-import { doc, getDoc, updateDoc, collection, addDoc, serverTimestamp } from "firebase/firestore"; // 🟢 Importações do X-9
+import { doc, getDoc, updateDoc, deleteDoc, collection, addDoc, serverTimestamp } from "firebase/firestore"; // 🟢 Importações do X-9
 import { auth, db } from "../services/firebase"; // ✅ caminho correto
-import { crachaSemAcesso, AVISO_SEM_ACESSO } from "../permissions";
+import { crachaSemAcesso, professorDeLoginAntigo, AVISO_SEM_ACESSO, AVISO_PROFESSOR_LOGIN_ANTIGO } from "../permissions";
 
 const AuthContext = createContext(null);
 
@@ -14,7 +14,8 @@ const entrouPeloGoogle = (firebaseUser) => temProvedor(firebaseUser, "google.com
 
 // Perfis que já são obrigados a trocar o login antigo (e-mail e senha) pelo login pessoal do Google.
 // Admin fica para uma próxima etapa.
-const PAPEIS_QUE_MIGRAM = ["lider", "unidade", "mentor", "professor"];
+// Professor NÃO migra: o login antigo dele deixa de valer e ele pede acesso (ver professorDeLoginAntigo).
+const PAPEIS_QUE_MIGRAM = ["lider", "unidade", "mentor"];
 // Quem precisa informar o documento de identificação (CPF/DNI/SSN). Professor entra numa etapa futura.
 const PAPEIS_COM_DOCUMENTO = ["lider", "unidade", "mentor", "professor", "admin", "administrador", "master"];
 
@@ -52,6 +53,30 @@ export function AuthProvider({ children }) {
           return;
         }
         // Login antigo sem crachá = sem acesso
+        await signOut(auth);
+        setUser(null);
+        setUserData(null);
+        setAguardandoAprovacao(false);
+        setLoading(false);
+        return;
+      }
+
+      // Professor com o login antigo (e-mail e senha): não entra mais. Se chegou pelo Google, o crachá antigo
+      // é apagado (o banco só deixa a própria pessoa apagar este tipo de crachá) e ela cai na tela de pedido
+      // de acesso; se chegou por senha, sai e a tela de entrada explica o que fazer.
+      if (professorDeLoginAntigo(snap.data())) {
+        if (entrouPeloGoogle(firebaseUser)) {
+          try {
+            await deleteDoc(ref);
+            setUserData(null);
+            setAguardandoAprovacao(true);
+            setLoading(false);
+            return;
+          } catch (e) {
+            console.error("Não foi possível limpar o crachá antigo do professor:", e);
+          }
+        }
+        try { sessionStorage.setItem(AVISO_PROFESSOR_LOGIN_ANTIGO, "1"); } catch { /* sem aviso, mas sai igual */ }
         await signOut(auth);
         setUser(null);
         setUserData(null);
