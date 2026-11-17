@@ -5,7 +5,7 @@ import { auth } from "../services/firebase";
 import { User, Lock, Loader2, AlertCircle, ChevronDown, Check } from "lucide-react";
 import { useTranslation } from "react-i18next"; 
 import { LANGUAGES } from "../utils/formatters";
-import { AVISO_SEM_ACESSO } from "../permissions";
+import { AVISO_SEM_ACESSO, AVISO_PROFESSOR_LOGIN_ANTIGO } from "../permissions";
 import PrimeiroAcesso from "../components/acesso/PrimeiroAcesso";
 
 export default function Login() {
@@ -20,6 +20,10 @@ export default function Login() {
       if (sessionStorage.getItem(AVISO_SEM_ACESSO)) {
         sessionStorage.removeItem(AVISO_SEM_ACESSO);
         return t("login.accessDisabled");
+      }
+      if (sessionStorage.getItem(AVISO_PROFESSOR_LOGIN_ANTIGO)) {
+        sessionStorage.removeItem(AVISO_PROFESSOR_LOGIN_ANTIGO);
+        return t("login.teacherOldLogin");
       }
     } catch { /* sem aviso */ }
     return "";
