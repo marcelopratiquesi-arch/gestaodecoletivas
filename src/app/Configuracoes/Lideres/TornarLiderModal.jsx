@@ -5,7 +5,7 @@
 // - líder de outra unidade: passa a cuidar das duas (não sai da outra);
 // - mentor ou admin: o acesso dele não muda; a unidade só passa a mostrar essa pessoa como líder.
 import { useEffect, useMemo, useState } from "react";
-import { doc, getDoc, writeBatch } from "firebase/firestore";
+import { doc, getDoc, serverTimestamp, writeBatch } from "firebase/firestore";
 import { useTranslation } from "react-i18next";
 import { X, Check, Loader2, Search, UserCog, UserPlus, AlertTriangle } from "lucide-react";
 import { db } from "../../../services/firebase";
@@ -157,6 +157,11 @@ export function TornarLiderModal({ unidades, todasUnidades, professores, mentore
         uid, nome, email: dados.email || pessoa.email, telefone: dados.telefone || pessoa.telefone,
         tipo: dados.loginGoogle === true ? "google" : "senha",
       }));
+      // Se a pessoa tinha pedido pendente para esta unidade, ele é dado como atendido (some de Pendências).
+      const pedidoUnidade = await getDoc(doc(db, "pedidos_unidade", `${uid}_${unidade.id}`)).catch(() => null);
+      if (pedidoUnidade?.exists() && pedidoUnidade.data().status === "pendente") {
+        batch.update(pedidoUnidade.ref, { status: "aprovado", analisadoPor: quemId, analisadoPorNome: quemNome, analisadoEm: serverTimestamp() });
+      }
       await batch.commit();
 
       const extras = [`${nome} (${dados.email || pessoa.email || "-"}) — era ${papel || "-"}`];

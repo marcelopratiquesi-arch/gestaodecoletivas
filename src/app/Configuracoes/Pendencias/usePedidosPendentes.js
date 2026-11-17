@@ -60,9 +60,15 @@ export function usePedidosPendentes() {
 
   const extras = useMemo(() => {
     if (!podeVer) return [];
-    if (role === "admin") return extrasTodos;
-    const minhas = new Set((catalogs?.unidades || []).filter((u) => u.mentorId === userId).map((u) => u.id));
-    return extrasTodos.filter((x) => minhas.has(String(x.unidadeId)));
+    const unidades = catalogs?.unidades || [];
+    // Pedido que já foi resolvido por outro caminho (a pessoa já lidera a unidade) some da lista na hora.
+    const pendentes = extrasTodos.filter((x) => {
+      const u = unidades.find((un) => String(un.id) === String(x.unidadeId));
+      return !(u && (u.liderUid === x.uid || u.lider2Uid === x.uid));
+    });
+    if (role === "admin") return pendentes;
+    const minhas = new Set(unidades.filter((u) => u.mentorId === userId).map((u) => u.id));
+    return pendentes.filter((x) => minhas.has(String(x.unidadeId)));
   }, [podeVer, extrasTodos, role, catalogs?.unidades, userId]);
 
   const visiveis = useMemo(() => {
