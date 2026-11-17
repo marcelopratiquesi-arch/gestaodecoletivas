@@ -129,7 +129,7 @@ service cloud.firestore {
 
     // ===================== PÁGINA PÚBLICA DE HORÁRIOS =====================
     // Sem login, a página de horários lê só: a "vitrine" (nome/endereço das unidades e nome dos
-    // professores), as aulas e as modalidades. Os cadastros completos de unidades e professores
+    // professores), a cópia pública das aulas (aulas_publicas, sem o valor) e as modalidades. Os cadastros completos de unidades e professores
     // (com e-mail, telefone e login) exigem login.
     match /publico/{docId} {
       allow read: if true;
@@ -146,7 +146,8 @@ service cloud.firestore {
                     && (unidadeId == meuUsuario().get('unidadeId', '') || unidadeId in meuUsuario().get('unidadeIds', [])))));
     }
     match /aulas/{aulaId} {
-      allow read: if true;
+      // Tem o valor que cada professor recebe: só quem está logado. A página pública lê aulas_publicas (sem valor).
+      allow read: if logado();
       allow create: if podeGravarAulaDa(request.resource.data.get('unidadeId', ''));
       // Editar: a unidade de antes E a de depois têm que ser dele (senão dava para "jogar" aula na unidade dos outros).
       allow update: if podeGravarAulaDa(resource.data.get('unidadeId', ''))
