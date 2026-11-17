@@ -48,7 +48,9 @@
     "password": "Senha inicial",
     "passwordHint": "Mínimo de {{min}} caracteres. Passe a senha para o líder.",
     "cancel": "Cancelar",
-    "save": "Salvar"
+    "save": "Salvar",
+    "sectionPerson": "Pessoa e unidade",
+    "sectionAccess": "Documento e acesso"
   },
   "errors": {
     "unit": "Escolha a unidade.",
@@ -56,7 +58,7 @@
     "phone": "Digite o WhatsApp do líder.",
     "email": "E-mail inválido.",
     "password": "A senha precisa ter pelo menos {{min}} caracteres.",
-    "emailInUse": "Este e-mail já tem login no sistema. Use outro e-mail, ou peça para a pessoa entrar com o Google e aprove o pedido.",
+    "emailInUse": "Este e-mail já tem login no sistema (provavelmente a pessoa já entrou com o Google). Peça para ela entrar com o Google com esse e-mail e pedir acesso: o pedido aparece em cima e você aprova. Ou use outro e-mail.",
     "save": "Não foi possível salvar.",
     "remove": "Não foi possível remover o líder.",
     "confirm": "Não foi possível confirmar o líder.",

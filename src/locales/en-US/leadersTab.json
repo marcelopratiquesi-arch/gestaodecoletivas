@@ -48,7 +48,9 @@
     "password": "Initial password",
     "passwordHint": "At least {{min}} characters. Share the password with the leader.",
     "cancel": "Cancel",
-    "save": "Save"
+    "save": "Save",
+    "sectionPerson": "Person and unit",
+    "sectionAccess": "Document and access"
   },
   "errors": {
     "unit": "Choose the location.",
@@ -56,7 +58,7 @@
     "phone": "Enter the leader's WhatsApp.",
     "email": "Invalid e-mail.",
     "password": "The password must have at least {{min}} characters.",
-    "emailInUse": "This e-mail already has a login. Use another e-mail, or ask the person to sign in with Google and approve the request.",
+    "emailInUse": "This e-mail already has a login (the person probably already signed in with Google). Ask them to sign in with Google using this e-mail and request access: the request shows up on top and you approve it. Or use another e-mail.",
     "save": "Could not save.",
     "remove": "Could not remove the leader.",
     "confirm": "Could not confirm the leader.",
