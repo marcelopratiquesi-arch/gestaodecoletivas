@@ -78,7 +78,9 @@
     "useAsLeader": "Use this person as leader",
     "free": "Document is free: you can register.",
     "alreadyUsed": "This document is already registered:",
-    "orphanMentorHint": "This document is stuck without a record. Ask the administrator to free it."
+    "orphanMentorHint": "This document is stuck without a record. Ask the administrator to free it.",
+    "registerLeader": "Register as leader",
+    "goToRequest": "Go to the request"
   },
   "invite": {
     "label": "Document (optional)",

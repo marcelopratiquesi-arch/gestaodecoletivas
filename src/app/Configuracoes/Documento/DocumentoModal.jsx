@@ -5,7 +5,7 @@
 import { useEffect, useState } from "react";
 import { doc, getDoc, writeBatch } from "firebase/firestore";
 import { useTranslation } from "react-i18next";
-import { Loader2, X, Search, IdCard, Trash2, UserCheck } from "lucide-react";
+import { Loader2, X, Search, IdCard, Trash2, UserCheck, UserPlus, Inbox } from "lucide-react";
 import i18n from "../../../i18n";
 import { db } from "../../../services/firebase";
 import { useAuth } from "../../../contexts/AuthContext";
@@ -138,7 +138,7 @@ async function procurarDono(tipo, numero) {
  *  - quem já tem crachá: corrigir o documento (e, se vier `aoEscolherPessoa`, usar essa pessoa como líder);
  *  - pedido de acesso ou documento "preso": excluir e liberar, para a pessoa cadastrar de novo na hora.
  */
-function CartaoDoDocumento({ r, aoLiberar, aoEscolherPessoa }) {
+function CartaoDoDocumento({ r, aoLiberar, aoEscolherPessoa, aoCadastrar, aoIrParaPedido }) {
   const { t } = useTranslation();
   const { userData } = useAuth();
   const souAdmin = ["admin", "administrador", "master"].includes(String(userData?.role || "").trim().toLowerCase());
@@ -184,6 +184,18 @@ function CartaoDoDocumento({ r, aoLiberar, aoEscolherPessoa }) {
         {!r.cracha && r.pedido?.unidadeNomes?.length > 0 && <p className="text-[11px] text-slate-400 font-bold">{r.pedido.unidadeNomes.join(", ")}</p>}
       </div>
       <div className="flex flex-wrap gap-2">
+        {!r.cracha && aoCadastrar && (
+          <button type="button" onClick={() => aoCadastrar({ tipo: r.tipo, numero: r.numero, nome: r.pedido?.nome || "", email: r.pedido?.email || "", telefone: r.pedido?.telefone || "" })}
+            className="px-3 py-2 rounded-lg text-[11px] font-black uppercase bg-teal-600 hover:bg-teal-700 text-white flex items-center gap-1.5">
+            <UserPlus className="w-3.5 h-3.5" /> {t("document.search.registerLeader")}
+          </button>
+        )}
+        {!r.cracha && r.pedido?.status === "pendente" && aoIrParaPedido && (
+          <button type="button" onClick={aoIrParaPedido}
+            className="px-3 py-2 rounded-lg text-[11px] font-black uppercase bg-amber-500 hover:bg-amber-600 text-white flex items-center gap-1.5">
+            <Inbox className="w-3.5 h-3.5" /> {t("document.search.goToRequest")}
+          </button>
+        )}
         {r.cracha && aoEscolherPessoa && (
           <button type="button" onClick={aoEscolherPessoa}
             className="px-3 py-2 rounded-lg text-[11px] font-black uppercase bg-teal-600 hover:bg-teal-700 text-white flex items-center gap-1.5">
@@ -217,7 +229,7 @@ function CartaoDoDocumento({ r, aoLiberar, aoEscolherPessoa }) {
  * Busca de cadastro pelo documento (admin e mentor). Mostra quem está com o CPF e deixa resolver na hora.
  * O mentor só enxerga quem é das unidades dele (o banco garante).
  */
-export function BuscaDocumento() {
+export function BuscaDocumento({ aoCadastrar, aoEscolherPessoa, aoIrParaPedido }) {
   const { t } = useTranslation();
   const { userData } = useAuth();
   const souAdmin = ["admin", "administrador", "master"].includes(String(userData?.role || "").trim().toLowerCase());
@@ -250,9 +262,29 @@ export function BuscaDocumento() {
         {buscando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />} {t("document.search.button")}
       </button>
       {erro && <p className="text-xs font-bold text-red-600">{erro}</p>}
-      {resultado === "nao" && <p className="text-xs font-bold text-slate-500">{souAdmin ? t("document.search.notFound") : t("document.search.notFoundMentor")}</p>}
-      {resultado === "liberado" && <p className="text-sm font-black text-emerald-600">{t("document.search.freed")}</p>}
-      {resultado && typeof resultado === "object" && <CartaoDoDocumento r={resultado} aoLiberar={() => setResultado("liberado")} />}
+      {resultado === "nao" && (
+        <div className="space-y-2">
+          <p className="text-xs font-bold text-slate-500">{souAdmin ? t("document.search.notFound") : t("document.search.notFoundMentor")}</p>
+          {aoCadastrar && (
+            <button type="button" onClick={() => aoCadastrar({ tipo, numero: limparDocumento(numero), nome: "", email: "", telefone: "" })}
+              className="px-3 py-2 rounded-lg text-[11px] font-black uppercase bg-teal-600 hover:bg-teal-700 text-white flex items-center gap-1.5">
+              <UserPlus className="w-3.5 h-3.5" /> {t("document.search.registerLeader")}
+            </button>
+          )}
+        </div>
+      )}
+      {resultado === "liberado" && (
+        <div className="space-y-2">
+          <p className="text-sm font-black text-emerald-600">{t("document.search.freed")}</p>
+          {aoCadastrar && (
+            <button type="button" onClick={() => aoCadastrar({ tipo, numero: limparDocumento(numero), nome: "", email: "", telefone: "" })}
+              className="px-3 py-2 rounded-lg text-[11px] font-black uppercase bg-teal-600 hover:bg-teal-700 text-white flex items-center gap-1.5">
+              <UserPlus className="w-3.5 h-3.5" /> {t("document.search.registerLeader")}
+            </button>
+          )}
+        </div>
+      )}
+      {resultado && typeof resultado === "object" && <CartaoDoDocumento r={resultado} aoLiberar={() => setResultado("liberado")} aoEscolherPessoa={aoEscolherPessoa} aoCadastrar={aoCadastrar} aoIrParaPedido={aoIrParaPedido} />}
     </form>
   );
 }
@@ -261,7 +293,7 @@ export function BuscaDocumento() {
  * Aviso dentro do cadastro de líder: assim que o documento fica válido, confere se ele já está com alguém.
  * Se estiver, mostra quem é e as saídas (usar a pessoa, corrigir, ou excluir e liberar). Se estiver livre, avisa.
  */
-export function AvisoDocumento({ tipo, numero, aoEscolherPessoa }) {
+export function AvisoDocumento({ tipo, numero, aoEscolherPessoa, aoMudarDono }) {
   const { t } = useTranslation();
   const [estado, setEstado] = useState(null); // null | "livre" | "liberado" | "erro" | { ...dono }
   const valido = TIPOS_DOCUMENTO.includes(tipo) && documentoValido(tipo, numero);
@@ -269,10 +301,11 @@ export function AvisoDocumento({ tipo, numero, aoEscolherPessoa }) {
 
   useEffect(() => {
     setEstado(null);
+    aoMudarDono?.(null);
     if (!chave) return undefined;
     let vivo = true;
     procurarDono(tipo, numero)
-      .then((dono) => vivo && setEstado(dono || "livre"))
+      .then((dono) => { if (!vivo) return; setEstado(dono || "livre"); aoMudarDono?.(dono); })
       .catch((e) => { console.error(e); if (vivo) setEstado("erro"); });
     return () => { vivo = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -285,7 +318,7 @@ export function AvisoDocumento({ tipo, numero, aoEscolherPessoa }) {
   return (
     <div className="space-y-2">
       <p className="text-xs font-bold text-amber-600">{t("document.search.alreadyUsed")}</p>
-      <CartaoDoDocumento r={estado} aoLiberar={() => setEstado("liberado")} aoEscolherPessoa={aoEscolherPessoa} />
+      <CartaoDoDocumento r={estado} aoLiberar={() => { setEstado("liberado"); aoMudarDono?.(null); }} aoEscolherPessoa={aoEscolherPessoa} />
     </div>
   );
 }
