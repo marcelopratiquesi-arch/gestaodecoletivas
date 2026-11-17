@@ -64,14 +64,20 @@
     "directFixDesc": "Replaces the data directly. Attention: This alters the teacher's name and schedules in the past. Use only if the class was registered incorrectly just now.",
     "justReplace": "Just Replace Data",
     "backToForm": "Back to form",
-    "selectDateAlert": "Select the exact date the new configuration takes effect."
+    "selectDateAlert": "Select the exact date the new configuration takes effect.",
+    "cutBeforeStart": "❌ The new phase must start AFTER this class's start date ({{inicio}}).\n\nTo change it from the beginning, use \"Just Replace Data\".",
+    "cutAfterEnd": "❌ This class ends on {{fim}}. The new phase must start on or before that date.",
+    "cutHasValidations": "❌ This class already has validations on: {{datas}}.\n\nCutting earlier would make those classes disappear from reports and payroll. The earliest possible cut is {{minimo}} (already filled in).",
+    "cutAfterNewEnd": "❌ The end date entered ({{fim}}) is earlier than the start of the new phase."
   },
   "alerts": {
     "fillRequired": "❌ Fill in all required fields.",
     "invalidDates": "❌ The end date cannot be earlier than the start date.",
     "deleteConfirm": "🗑️ SMART TRASH:\n\nDo you want to hide this class from the grid? It will be removed from everyone's view, but the history and database will be preserved (Soft Delete).",
     "deleteError": "Error sending the class to the trash.",
-    "saveError": "Error saving."
+    "saveError": "Error saving.",
+    "valueRequired": "❌ Enter the class value (greater than zero).",
+    "duplicateConfirm": "⚠️ A class just like this already exists (same unit, modality, teacher, time and day).\n\nSaving anyway may pay the same class twice.\n\nSave anyway?"
   },
   "unknownModality": "Unknown",
   "unknownUnit": "Unknown Unit"

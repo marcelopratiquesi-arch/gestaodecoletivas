@@ -64,14 +64,20 @@
     "directFixDesc": "Reemplaza los datos directamente. Atención: Esto altera el nombre del profesor y horarios en el pasado. Úsalo solo si la clase fue registrada incorrectamente justo ahora.",
     "justReplace": "Solo Reemplazar Datos",
     "backToForm": "Volver al formulario",
-    "selectDateAlert": "Selecciona la fecha exacta en la que la nueva configuración empieza a valer."
+    "selectDateAlert": "Selecciona la fecha exacta en la que la nueva configuración empieza a valer.",
+    "cutBeforeStart": "❌ La nueva fase debe comenzar DESPUÉS del inicio de esta clase ({{inicio}}).\n\nPara cambiarla desde el principio, usá \"Solo reemplazar datos\".",
+    "cutAfterEnd": "❌ Esta clase termina el {{fim}}. La nueva fase debe comenzar hasta esa fecha.",
+    "cutHasValidations": "❌ Esta clase ya tiene validaciones en: {{datas}}.\n\nCortar antes haría que esas clases desaparezcan de los informes y del pago. El corte más temprano posible es {{minimo}} (ya completado).",
+    "cutAfterNewEnd": "❌ La fecha de finalización indicada ({{fim}}) es anterior al inicio de la nueva fase."
   },
   "alerts": {
     "fillRequired": "❌ Completa todos los campos obligatorios.",
     "invalidDates": "❌ La fecha de finalización no puede ser anterior a la fecha de inicio.",
     "deleteConfirm": "🗑️ PAPELERA INTELIGENTE:\n\n¿Deseas ocultar esta clase de la grilla? Será removida de la vista de todos, pero el historial y la base de datos se preservarán (Soft Delete).",
     "deleteError": "Error al enviar la clase a la papelera.",
-    "saveError": "Error al guardar."
+    "saveError": "Error al guardar.",
+    "valueRequired": "❌ Ingresá el valor de la clase (mayor que cero).",
+    "duplicateConfirm": "⚠️ Ya existe una clase igual a esta (misma unidad, modalidad, profesor, horario y día).\n\nGuardar igualmente puede pagar la misma clase dos veces.\n\n¿Guardar igualmente?"
   },
   "unknownModality": "Desconocida",
   "unknownUnit": "Sede Desconocida"

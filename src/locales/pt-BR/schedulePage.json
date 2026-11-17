@@ -64,14 +64,20 @@
     "directFixDesc": "Substitui os dados diretamente. Atenção: Isso altera o nome do professor e horários no passado. Use apenas se a aula foi cadastrada errada agora mesmo.",
     "justReplace": "Apenas Substituir Dados",
     "backToForm": "Voltar para o formulário",
-    "selectDateAlert": "Selecione a data exata em que a nova configuração começa a valer."
+    "selectDateAlert": "Selecione a data exata em que a nova configuração começa a valer.",
+    "cutBeforeStart": "❌ A nova fase precisa começar DEPOIS do início desta aula ({{inicio}}).\n\nPara mudar desde o começo, use \"Apenas Substituir Dados\".",
+    "cutAfterEnd": "❌ Esta aula termina em {{fim}}. A nova fase precisa começar até essa data.",
+    "cutHasValidations": "❌ Esta aula já tem validação em: {{datas}}.\n\nCortar antes disso faria essas aulas sumirem dos relatórios e do pagamento. O corte mais cedo possível é {{minimo}} (já preenchido).",
+    "cutAfterNewEnd": "❌ A data de encerramento informada ({{fim}}) é anterior ao início da nova fase."
   },
   "alerts": {
     "fillRequired": "❌ Preencha todos os campos obrigatórios.",
     "invalidDates": "❌ A data de encerramento não pode ser anterior à data de início.",
     "deleteConfirm": "🗑️ LIXEIRA INTELIGENTE:\n\nDeseja ocultar esta aula da grade? Ela será removida da visualização de todos, mas o histórico e o banco de dados serão preservados (Soft Delete).",
     "deleteError": "Erro ao enviar a aula para a lixeira.",
-    "saveError": "Erro ao salvar."
+    "saveError": "Erro ao salvar.",
+    "valueRequired": "❌ Informe o valor da aula (maior que zero).",
+    "duplicateConfirm": "⚠️ Já existe uma aula igual a esta (mesma unidade, modalidade, professor, horário e dia).\n\nSalvar mesmo assim pode pagar a mesma aula duas vezes.\n\nDeseja salvar mesmo assim?"
   },
   "unknownModality": "Desconhecido",
   "unknownUnit": "Unidade Desconhecida"
