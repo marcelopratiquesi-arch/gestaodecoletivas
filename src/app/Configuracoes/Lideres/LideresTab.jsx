@@ -25,6 +25,7 @@ import LinkCentral from "../../../centrais/LinkCentral";
 import { tirarLiderDaUnidade, camposAoLiberarVaga, textoDaSaida, dadosDaVaga } from "./saidaDoLider";
 import { TornarLiderModal } from "./TornarLiderModal";
 import { FiltroPadrao } from "../ui/FiltroPadrao";
+import { CabecalhoDaAba, CaixaDeNumeros, BotaoPrincipal, BotaoSecundario } from "../ui/CabecalhoDaAba";
 import { useFiltroCascata } from "../ui/useFiltroCascata";
 import { BotaoDocumento, DocumentoModal, BuscaDocumento } from "../Documento/DocumentoModal";
 import i18n from "../../../i18n";
@@ -291,23 +292,16 @@ export function LideresTab() {
   return (
     <div className="p-6 space-y-8">
       {/* CABEÇALHO */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-black text-slate-800 dark:text-white flex items-center gap-3">
-            <span className="p-2 bg-emerald-600 text-white rounded-lg"><UserCheck className="w-6 h-6" /></span>
-            {t("leadersTab.title")}
-          </h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 max-w-3xl">{t("leadersTab.subtitle")}</p>
-        </div>
-        <div className="flex flex-wrap gap-2 self-start md:self-auto">
-          <button onClick={() => setTornarLider({ vaga: 1, unidade: null })} className="px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:border-amber-500 hover:text-amber-600 text-xs font-black uppercase flex items-center gap-2 transition-colors">
-            <UserCog className="w-4 h-4" /> {t("leadersTab.promote.button")}
-          </button>
-          <button onClick={() => abrirNovo(null)} className="px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-black uppercase flex items-center gap-2 shadow-sm transition-colors">
-            <UserPlus className="w-4 h-4" /> {t("leadersTab.new")}
-          </button>
-        </div>
-      </div>
+      <CabecalhoDaAba abaId="lideres" icone={UserCheck} titulo={t("leadersTab.title")} subtitulo={t("leadersTab.subtitle")}
+        numeros={<CaixaDeNumeros abaId="lideres" itens={[
+          { id: "total", rotulo: t("leadersTab.filter.all"), valor: kpis.total },
+          { id: "com", rotulo: t("leadersTab.filter.with"), valor: kpis.comLider, cor: "text-green-600" },
+          { id: "sem", rotulo: t("leadersTab.filter.without"), valor: kpis.semLider, cor: "text-red-500" },
+          { id: "conferir", rotulo: t("leadersTab.filter.toCheck"), valor: kpis.aConferir, cor: "text-amber-600" },
+        ]} />}>
+        <BotaoSecundario icone={UserCog} onClick={() => setTornarLider({ vaga: 1, unidade: null })}>{t("leadersTab.promote.button")}</BotaoSecundario>
+        <BotaoPrincipal abaId="lideres" icone={UserPlus} onClick={() => abrirNovo(null)}>{t("leadersTab.new")}</BotaoPrincipal>
+      </CabecalhoDaAba>
 
       {/* PEDIDOS DE ACESSO (login pelo Google) */}
       {totalPendencias > 0 && (
@@ -349,11 +343,11 @@ export function LideresTab() {
             ].map((f) => (
               <button key={f.id} type="button" onClick={() => setSituacao(f.id)} aria-pressed={situacao === f.id}
                 className={`px-3.5 py-2 rounded-lg text-xs font-black uppercase flex items-center gap-2 transition-colors ${situacao === f.id
-                  ? "bg-white dark:bg-slate-700 text-red-600 shadow-sm"
+                  ? "bg-white dark:bg-slate-700 text-teal-600 shadow-sm"
                   : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"}`}>
                 {f.rotulo}
                 <span className={`min-w-[1.5rem] px-1.5 py-0.5 rounded-md text-[10px] text-center ${situacao === f.id
-                  ? "bg-red-600 text-white"
+                  ? "bg-teal-600 text-white"
                   : f.id === "conferir" && f.n > 0 ? "bg-amber-100 text-amber-700" : "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-300"}`}>{f.n}</span>
               </button>
             ))}

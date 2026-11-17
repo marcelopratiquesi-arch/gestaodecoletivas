@@ -9,6 +9,7 @@ import { publicarUnidade, publicarUnidades, removerUnidadeDaVitrine, ehCampoPubl
 import { useTranslation } from "react-i18next";
 import LinkUnidade from "../../../centrais/LinkUnidade";
 import { FiltroPadrao } from "../ui/FiltroPadrao";
+import { CabecalhoDaAba, CaixaDeNumeros, BotaoPrincipal, BotaoSecundario } from "../ui/CabecalhoDaAba";
 import { useFiltroCascata } from "../ui/useFiltroCascata";
 
 import { 
@@ -763,50 +764,23 @@ export function UnidadesTab() {
     <>
       <div className="p-6 animate-fade-in max-w-[1600px] mx-auto space-y-6 uppercase">
         
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-slate-200 dark:border-slate-700 pb-6">
-          <div>
-            <h2 className="text-2xl font-black text-slate-800 dark:text-white flex items-center gap-3">
-              <span className="p-2 bg-red-600 text-white rounded-lg shadow-md shadow-red-500/20"><Building2 className="w-6 h-6"/></span>
-              {t('unitsTab.title', 'Gestão de Unidades')}
-            </h2>
-            <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-2">{t('unitsTab.subtitle', { count: kpis.total })}</p>
-          </div>
-
-          <div className="flex gap-3 w-full md:w-auto h-[48px]">
-              <div className="flex items-center gap-4 bg-white dark:bg-slate-800 px-4 h-full rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
-                  <div className="text-center">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('unitsTab.extra.total')}</p>
-                      <p className="text-lg font-black text-slate-700 dark:text-white leading-none">{kpis.total}</p>
-                  </div>
-                  <div className="w-px h-8 bg-slate-200 dark:bg-slate-700"></div>
-                  <div className="text-center">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('unitsTab.extra.active')}</p>
-                      <p className="text-lg font-black text-green-600 leading-none">{kpis.ativas}</p>
-                  </div>
-                  <div className="w-px h-8 bg-slate-200 dark:bg-slate-700"></div>
-                  <div className="text-center">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('unitsTab.extra.inactive')}</p>
-                      <p className="text-lg font-black text-red-500 leading-none">{kpis.inativas}</p>
-                  </div>
-              </div>
-              
-              {role === 'admin' && (
-                  <>
-                      <input type="file" accept=".csv" ref={fileInputRef} className="hidden" onChange={handleFileUpload} />
-                      <button onClick={() => fileInputRef.current.click()} className="px-5 h-full bg-slate-800 dark:bg-slate-900 text-white rounded-xl font-bold text-xs uppercase tracking-wide hover:bg-slate-700 shadow-lg flex items-center justify-center gap-2 transition-transform active:scale-95 border dark:border-slate-700 whitespace-nowrap">
-                          <Upload className="w-4 h-4"/> Importar Infra (CSV)
-                      </button>
-                      <button onClick={atualizarPaginaPublica} disabled={atualizandoVitrine} title={t('unitsTab.publicPage.hint')} className="px-5 h-full bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl font-bold text-xs uppercase tracking-wide hover:bg-slate-50 dark:hover:bg-slate-700 shadow-lg flex items-center justify-center gap-2 transition-transform active:scale-95 border border-slate-200 dark:border-slate-700 whitespace-nowrap disabled:opacity-50">
-                          {atualizandoVitrine ? <Loader2 className="w-4 h-4 animate-spin"/> : <Globe className="w-4 h-4"/>} {t('unitsTab.publicPage.button')}
-                      </button>
-                  </>
-              )}
-
-              <button onClick={abrirNovaUnidade} className="px-5 h-full bg-red-600 text-white rounded-xl font-bold text-xs uppercase tracking-wide hover:bg-red-700 shadow-lg shadow-red-500/20 flex items-center justify-center gap-2 transition-transform active:scale-95 whitespace-nowrap">
-                  <Plus className="w-4 h-4"/> {t('unitsTab.newUnit', 'Nova Unidade')}
-              </button>
-          </div>
-        </div>
+        <CabecalhoDaAba abaId="unidades" icone={Building2} titulo={t('unitsTab.title', 'Gestão de Unidades')} subtitulo={t('unitsTab.subtitle', { count: kpis.total })}
+          numeros={<CaixaDeNumeros abaId="unidades" itens={[
+            { id: "total", rotulo: t('unitsTab.extra.total'), valor: kpis.total },
+            { id: "ativa", rotulo: t('unitsTab.extra.active'), valor: kpis.ativas, cor: "text-green-600" },
+            { id: "inativa", rotulo: t('unitsTab.extra.inactive'), valor: kpis.inativas, cor: "text-red-500" },
+          ]} />}>
+          {role === 'admin' && (
+            <>
+              <input type="file" accept=".csv" ref={fileInputRef} className="hidden" onChange={handleFileUpload} />
+              <BotaoSecundario icone={Upload} onClick={() => fileInputRef.current.click()}>Importar Infra (CSV)</BotaoSecundario>
+              <BotaoSecundario icone={atualizandoVitrine ? Loader2 : Globe} onClick={atualizarPaginaPublica} disabled={atualizandoVitrine} girar={atualizandoVitrine} title={t('unitsTab.publicPage.hint')}>
+                {t('unitsTab.publicPage.button')}
+              </BotaoSecundario>
+            </>
+          )}
+          <BotaoPrincipal abaId="unidades" icone={Plus} onClick={abrirNovaUnidade}>{t('unitsTab.newUnit', 'Nova Unidade')}</BotaoPrincipal>
+        </CabecalhoDaAba>
 
         {role === 'admin' && unidadesComSenhaGravada.length > 0 && (
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-2xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 normal-case">

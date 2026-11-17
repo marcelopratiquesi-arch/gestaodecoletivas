@@ -11,8 +11,11 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import { db } from "../../../services/firebase";
+import { CabecalhoDaAba, BotaoPrincipal } from "../ui/CabecalhoDaAba";
+import { FiltroPadrao } from "../ui/FiltroPadrao";
+import { useFiltroCascata } from "../ui/useFiltroCascata";
 import { 
-  Dumbbell, Plus, Search, Edit2, Trash2, Power, 
+  Dumbbell, Plus, Edit2, Trash2, Power, 
   CheckCircle2, AlertTriangle, Loader2, Palette, Maximize,
   X, Check, GripHorizontal
 } from "lucide-react";
@@ -126,7 +129,6 @@ export function ModalidadesTab() {
 
   const [loading, setLoading] = useState(true);
   const [modalidades, setModalidades] = useState([]);
-  const [busca, setBusca] = useState(""); 
 
   const [erro, setErro] = useState("");
   const [sucesso, setSucesso] = useState("");
@@ -187,10 +189,9 @@ export function ModalidadesTab() {
     } catch (e) { setErro(t('modalitiesTab.messages.loadError')); } finally { setLoading(false); }
   }
 
-  const modalidadesFiltradas = useMemo(() => {
-    const termo = busca.toLowerCase();
-    return modalidades.filter(m => m.nome.toLowerCase().includes(termo));
-  }, [modalidades, busca]);
+  // Só o nome (filtro padrão com busca e contagem, sem seletores).
+  const filtro = useFiltroCascata(modalidades, { textoBusca: (m) => [m.nome] });
+  const modalidadesFiltradas = filtro.resultado;
 
   function abrirNova() {
     if (!podeEditar) return;
@@ -277,38 +278,13 @@ export function ModalidadesTab() {
   if (!podeVer) return <div className="p-8 text-center text-slate-400">{t('modalitiesTab.noAccess')}</div>;
 
   return (
-    <div className="p-6 animate-fade-in max-w-[1200px] mx-auto">
+    <div className="p-6 animate-fade-in max-w-[1200px] mx-auto space-y-6">
       
-      <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 border-b border-slate-200 dark:border-slate-700 pb-6">
-        <div>
-          <h2 className="text-2xl font-black text-slate-800 dark:text-white flex items-center gap-3">
-            <span className="p-2 bg-red-600 text-white rounded-lg shadow-md shadow-red-500/20"><Dumbbell className="w-6 h-6"/></span>
-            {t('modalitiesTab.title')}
-          </h2>
-          <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-2">
-            {t('modalitiesTab.subtitle')}
-          </p>
-        </div>
+      <CabecalhoDaAba abaId="modalidades" icone={Dumbbell} titulo={t('modalitiesTab.title')} subtitulo={t('modalitiesTab.subtitle')}>
+        {podeEditar && <BotaoPrincipal abaId="modalidades" icone={Plus} onClick={abrirNova}>{t('modalitiesTab.new')}</BotaoPrincipal>}
+      </CabecalhoDaAba>
 
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          <div className="relative w-full md:w-72">
-            <Search className="absolute left-4 top-3.5 w-4 h-4 text-slate-400" />
-            <input 
-              type="text" 
-              placeholder={t('modalitiesTab.search')} 
-              className="w-full pl-11 pr-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl text-sm font-bold bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-red-600 focus:border-red-600 outline-none shadow-sm transition-all uppercase"
-              value={busca}
-              onChange={e => setBusca(e.target.value)}
-            />
-          </div>
-          
-          {podeEditar && (
-            <button onClick={abrirNova} className="px-6 py-3 bg-red-600 text-white rounded-xl font-bold uppercase tracking-wide shadow-lg shadow-red-500/20 hover:bg-red-700 text-xs flex items-center gap-2 whitespace-nowrap transition-transform active:scale-95 h-full">
-              <Plus className="w-4 h-4"/> {t('modalitiesTab.new')}
-            </button>
-          )}
-        </div>
-      </div>
+      <FiltroPadrao abaId="modalidades" filtro={filtro} mostrar={[]} placeholder={t('modalitiesTab.search')} />
 
       {erro && <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm font-bold flex items-center gap-2"><AlertTriangle className="w-5 h-5"/>{erro}</div>}
       {sucesso && <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-xl text-green-700 text-sm font-bold flex items-center gap-2"><CheckCircle2 className="w-5 h-5"/>{sucesso}</div>}

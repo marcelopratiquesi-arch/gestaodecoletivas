@@ -1,6 +1,6 @@
 // Cabeçalho padrão de toda aba das Configurações: ícone colorido + título + subtítulo + (números) + (botões).
 // Troca os cabeçalhos copiados e colados de cada aba (as abas passam a usar isto na etapa 4 do plano).
-import { temaDaAba } from "./temas";
+import { temaDaAba, BOTAO_FERRAMENTA } from "./temas";
 
 /**
  * @param {{abaId:string, icone:React.ElementType, titulo:string, subtitulo?:string,
@@ -60,6 +60,17 @@ export function CaixaDeNumeros({ itens, abaId }) {
         );
       })}
     </div>
+  );
+}
+
+/** Botão extra do cabeçalho ("Importar CSV", "Corrigir E-mails", "Tornar líder"...). Mesmo formato em todas as abas. */
+export function BotaoSecundario({ icone, girar, children, ...resto }) {
+  const Icone = icone;
+  return (
+    <button type="button" {...resto}
+      className={`px-5 py-2 rounded-xl font-bold text-xs uppercase tracking-wide flex items-center justify-center gap-2 transition-transform active:scale-95 whitespace-nowrap disabled:opacity-50 ${BOTAO_FERRAMENTA}`}>
+      {Icone && <Icone className={`w-4 h-4 ${girar ? "animate-spin" : ""}`} />} {children}
+    </button>
   );
 }
 

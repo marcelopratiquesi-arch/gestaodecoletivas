@@ -23,6 +23,7 @@ import LinkCentral from "../../../centrais/LinkCentral";
 import { useCatalogs } from "../../../contexts/CatalogContext";
 import { UnidadesVinculadasModal } from "./UnidadesVinculadasModal";
 import { FiltroPadrao } from "../ui/FiltroPadrao";
+import { CabecalhoDaAba, CaixaDeNumeros, BotaoPrincipal, BotaoSecundario } from "../ui/CabecalhoDaAba";
 import { useFiltroCascata } from "../ui/useFiltroCascata";
 
 // 🌍 PADRÃO OURO INTERNACIONAL — cada país com sua cor de identidade
@@ -429,45 +430,14 @@ export function MentoresTab() {
     <div className="p-6 animate-fade-in max-w-7xl mx-auto space-y-6 uppercase">
       
       {/* HEADER E KPIS */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-slate-200 dark:border-slate-700 pb-6">
-        <div>
-          <h2 className="text-2xl font-black text-slate-800 dark:text-white flex items-center gap-3">
-            <span className="p-2 bg-blue-600 text-white rounded-lg shadow-md shadow-blue-500/20">
-                <ShieldCheck className="w-6 h-6"/>
-            </span>
-            {t('mentorsTab.title', 'Gestão de Mentores')}
-          </h2>
-          <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-2">
-              {t('mentorsTab.subtitle', 'Diretoria e Gestores Regionais.')}
-          </p>
-        </div>
-
-        <div className="flex gap-3 w-full md:w-auto">
-            <div className="flex items-center gap-4 bg-white dark:bg-slate-800 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
-                <button type="button" onClick={() => setStatusFiltro("")} aria-pressed={statusFiltro === ""} className={`text-center rounded-lg px-2 py-1 transition-colors ${statusFiltro === "" ? "bg-slate-100 dark:bg-slate-700" : "hover:bg-slate-50 dark:hover:bg-slate-700/50"}`}>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('mentorsTab.extra.total')}</p>
-                    <p className="text-lg font-black text-slate-700 dark:text-white leading-none">{kpis.total}</p>
-                </button>
-                <div className="w-px h-8 bg-slate-200 dark:bg-slate-700"></div>
-                <button type="button" onClick={() => setStatusFiltro(statusFiltro === "ativo" ? "" : "ativo")} aria-pressed={statusFiltro === "ativo"} className={`text-center rounded-lg px-2 py-1 transition-colors ${statusFiltro === "ativo" ? "bg-green-100 dark:bg-green-900/30" : "hover:bg-slate-50 dark:hover:bg-slate-700/50"}`}>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('mentorsTab.extra.active')}</p>
-                    <p className="text-lg font-black text-green-600 leading-none">{kpis.ativos}</p>
-                </button>
-                <div className="w-px h-8 bg-slate-200 dark:bg-slate-700"></div>
-                <button type="button" onClick={() => setStatusFiltro(statusFiltro === "inativo" ? "" : "inativo")} aria-pressed={statusFiltro === "inativo"} className={`text-center rounded-lg px-2 py-1 transition-colors ${statusFiltro === "inativo" ? "bg-red-100 dark:bg-red-900/30" : "hover:bg-slate-50 dark:hover:bg-slate-700/50"}`}>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('mentorsTab.extra.inactive')}</p>
-                    <p className="text-lg font-black text-red-500 leading-none">{kpis.inativos}</p>
-                </button>
-            </div>
-            
-            <button 
-                onClick={abrirModalNovo} 
-                className="px-5 py-2 h-full bg-blue-600 text-white rounded-xl font-bold text-xs uppercase tracking-wide hover:bg-blue-700 shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 transition-transform active:scale-95 whitespace-nowrap"
-            >
-                <Plus className="w-4 h-4"/> {t('mentorsTab.newMentor', 'Novo Mentor')}
-            </button>
-        </div>
-      </div>
+      <CabecalhoDaAba abaId="mentores" icone={ShieldCheck} titulo={t('mentorsTab.title', 'Gestão de Mentores')} subtitulo={t('mentorsTab.subtitle', 'Diretoria e Gestores Regionais.')}
+        numeros={<CaixaDeNumeros abaId="mentores" itens={[
+          { id: "total", rotulo: t('mentorsTab.extra.total'), valor: kpis.total, onClick: () => setStatusFiltro(""), ativo: statusFiltro === "" },
+          { id: "ativo", rotulo: t('mentorsTab.extra.active'), valor: kpis.ativos, cor: "text-green-600", onClick: () => setStatusFiltro(statusFiltro === "ativo" ? "" : "ativo"), ativo: statusFiltro === "ativo" },
+          { id: "inativo", rotulo: t('mentorsTab.extra.inactive'), valor: kpis.inativos, cor: "text-red-500", onClick: () => setStatusFiltro(statusFiltro === "inativo" ? "" : "inativo"), ativo: statusFiltro === "inativo" },
+        ]} />}>
+        <BotaoPrincipal abaId="mentores" icone={Plus} onClick={abrirModalNovo}>{t('mentorsTab.newMentor', 'Novo Mentor')}</BotaoPrincipal>
+      </CabecalhoDaAba>
 
       {/* BUSCA + FILTROS (filtro padrão das Configurações; o status são os números do topo) */}
       <FiltroPadrao abaId="mentores" filtro={filtro} mostrar={["pais", "estado"]} placeholder={t('mentorsTab.searchPlaceholder', 'Buscar mentor, e-mail ou telefone...')}

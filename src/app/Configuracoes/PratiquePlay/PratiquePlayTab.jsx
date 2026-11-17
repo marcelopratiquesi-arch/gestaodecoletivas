@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from "../../../services/firebase"; 
 import { useTranslation } from "react-i18next";
+import { CabecalhoDaAba, BotaoPrincipal } from "../ui/CabecalhoDaAba";
 import { collection, addDoc, getDocs, deleteDoc, doc, onSnapshot, serverTimestamp, query, orderBy } from "firebase/firestore";
 import { 
   Headphones, Music, PlayCircle, Trash2, Loader2, 
@@ -103,19 +104,7 @@ export function PratiquePlayTab() {
   return (
     <div className="p-6 md:p-8 animate-fade-in max-w-6xl mx-auto space-y-6">
       
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-slate-200 dark:border-slate-700 pb-6">
-        <div>
-          <h2 className="text-2xl font-black text-slate-800 dark:text-white flex items-center gap-3 uppercase tracking-tight">
-            <span className="p-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl shadow-lg shadow-blue-500/20">
-                <Video className="w-6 h-6"/>
-            </span>
-            {t('playTab.title')}
-          </h2>
-          <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-2 uppercase tracking-wide">
-             {t('playTab.subtitle')}
-          </p>
-        </div>
-      </div>
+      <CabecalhoDaAba abaId="pratique-play" icone={Video} titulo={t('playTab.title')} subtitulo={t('playTab.subtitle')} />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           

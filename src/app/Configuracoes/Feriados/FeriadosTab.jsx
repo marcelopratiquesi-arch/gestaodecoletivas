@@ -10,6 +10,7 @@ import { Calendar, Plus, Trash2, Loader2, CalendarDays, MapPin, Search, CheckSqu
 import { formatDate as formatarData } from '../../../utils/formatters';
 import { ESCOPOS_FERIADO, escopoDoFeriado, normalizarPais, normalizarTexto, ehCancelamentoAutomaticoDeFeriado } from '../../../utils/feriados';
 import { useTranslation } from 'react-i18next';
+import { CabecalhoDaAba } from '../ui/CabecalhoDaAba';
 
 // Tipo gravado no banco (português) -> chave de tradução.
 const TIPOS_FERIADO = { 'Recesso': 'recess', 'Feriado Nacional': 'national', 'Feriado Municipal': 'municipal' };
@@ -197,15 +198,14 @@ export function FeriadosTab() {
   return (
     <div className="p-6 animate-fade-in space-y-8">
 
+      <CabecalhoDaAba abaId="feriados" icone={CalendarDays} titulo={t('settingsPage.tabs.feriados', 'Feriados')} subtitulo={t('holidaysTab.desc')} />
+
       {/* CARD DE CADASTRO */}
       <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-6 shadow-sm relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-1.5 h-full bg-red-600"></div>
+        <div className="absolute top-0 left-0 w-1.5 h-full bg-pink-600"></div>
         <div className="flex items-center gap-2 mb-6">
-          <CalendarDays className="w-6 h-6 text-red-600" />
-          <div>
-            <h3 className="font-bold text-slate-700 dark:text-white uppercase text-sm">{t('holidaysTab.title')}</h3>
-            <p className="text-xs text-slate-400">{t('holidaysTab.desc')}</p>
-          </div>
+          <CalendarDays className="w-6 h-6 text-pink-600" />
+          <h3 className="font-bold text-slate-700 dark:text-white uppercase text-sm">{t('holidaysTab.title')}</h3>
         </div>
 
         <form onSubmit={handleSave} className="space-y-5">
