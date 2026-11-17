@@ -25,7 +25,11 @@
     "allValidatedDesc": "Parabéns, não há pendências nesta data.",
     "noCancellationsTitle": "Nenhum cancelamento",
     "noClassesTitle": "Nenhuma aula encontrada",
-    "adjustFiltersDesc": "Tente ajustar os filtros ou a data selecionada."
+    "adjustFiltersDesc": "Tente ajustar os filtros ou a data selecionada.",
+    "loadErrorTitle": "Não foi possível carregar as validações",
+    "loadErrorDesc": "O banco recusou a consulta (sem conexão ou limite do dia atingido). Para não validar nada em dobro, a lista fica escondida. Tente de novo mais tarde.",
+    "noLinkedUnitTitle": "Nenhuma unidade vinculada",
+    "noLinkedUnitDesc": "Seu acesso ainda não tem unidade. Peça ao seu mentor para vincular você a uma unidade."
   },
   "card": {
     "unit": "Unidade",
