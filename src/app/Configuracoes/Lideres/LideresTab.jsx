@@ -24,7 +24,7 @@ import LinkUnidade from "../../../centrais/LinkUnidade";
 import LinkCentral from "../../../centrais/LinkCentral";
 import { tirarLiderDaUnidade, camposAoLiberarVaga, textoDaSaida, dadosDaVaga } from "./saidaDoLider";
 import { TornarLiderModal } from "./TornarLiderModal";
-import { BotaoDocumento, DocumentoModal, BuscaDocumento } from "../Documento/DocumentoModal";
+import { BotaoDocumento, DocumentoModal, BuscaDocumento, AvisoDocumento } from "../Documento/DocumentoModal";
 import i18n from "../../../i18n";
 import CampoDocumento from "../../../components/acesso/CampoDocumento";
 import { documentoNoLote, gravarComAviso, ERRO_DOCUMENTO_EM_USO } from "../../../services/documentoService";
@@ -345,7 +345,7 @@ export function LideresTab() {
               <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder={t("leadersTab.search")}
                 className="w-full pl-9 pr-3 py-3 rounded-xl bg-slate-100 dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-red-500" />
             </div>
-            {role === "admin" && (
+            {podeAcessar && (
               <button type="button" onClick={() => setMostrarBuscaDoc((v) => !v)} aria-expanded={mostrarBuscaDoc}
                 className={`px-4 py-3 rounded-xl border text-xs font-black uppercase flex items-center justify-center gap-2 transition-colors ${mostrarBuscaDoc
                   ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300"
@@ -355,7 +355,7 @@ export function LideresTab() {
             )}
           </div>
 
-          {role === "admin" && mostrarBuscaDoc && <BuscaDocumento />}
+          {mostrarBuscaDoc && <BuscaDocumento />}
 
           {/* Situação: um seletor só, com a contagem de cada grupo */}
           <div className="flex flex-wrap gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-900 w-fit max-w-full">
@@ -599,6 +599,10 @@ export function LideresTab() {
             {modal.modo === "novo" && (
               <CampoDocumento claro id="novo-lider-documento" tipo={form.tipoDoc} onTipo={(v) => setForm((f) => ({ ...f, tipoDoc: v }))}
                 valor={form.documento} onValor={(v) => setForm((f) => ({ ...f, documento: v }))} desabilitado={salvando} />
+            )}
+            {modal.modo === "novo" && (
+              <AvisoDocumento tipo={form.tipoDoc} numero={form.documento}
+                aoEscolherPessoa={() => { const { unidade, vaga } = modal; setModal(null); setTornarLider({ vaga: vaga === 2 ? 2 : 1, unidade }); }} />
             )}
 
             {modal.modo === "novo" && (

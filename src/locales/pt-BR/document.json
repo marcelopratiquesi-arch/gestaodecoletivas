@@ -48,7 +48,37 @@
     "button": "Buscar",
     "notFound": "Nenhum cadastro com este documento.",
     "found": "Cadastro: {{name}}",
-    "unknownName": "Pessoa sem nome no sistema"
+    "unknownName": "Pessoa sem nome no sistema",
+    "notFoundMentor": "Não encontrei este documento entre as pessoas das suas unidades.",
+    "role": {
+      "lider": "Líder",
+      "unidade": "Líder",
+      "mentor": "Mentor",
+      "professor": "Professor",
+      "admin": "Administrador",
+      "bloqueado": "Bloqueado"
+    },
+    "request": {
+      "pendente": "Pedido de acesso pendente",
+      "recusado": "Pedido de acesso recusado",
+      "aprovado": "Pedido aprovado"
+    },
+    "orphan": "Documento preso, sem cadastro nem pedido",
+    "fix": "Corrigir documento",
+    "deleteRequest": "Excluir pedido e liberar documento",
+    "freeDoc": "Liberar documento",
+    "hasBadgeHint": "Esta pessoa já tem acesso. Corrija o documento aqui; para tirar o acesso, use o botão de remover na aba dela.",
+    "deleteHint": "Use quando a pessoa entrou com o e-mail errado: o pedido some, o documento fica livre e ela pede de novo com o e-mail certo.",
+    "confirmDelete": "Excluir o pedido de acesso de {{name}} e liberar o documento? A pessoa poderá pedir acesso de novo.",
+    "confirmFree": "Liberar este documento (cadastro de {{name}})? Nenhuma pessoa fica ligada a ele.",
+    "freed": "Pronto: o documento está livre para ser cadastrado de novo.",
+    "deleteError": "Não foi possível excluir. Tente de novo.",
+    "auditDelete": "Pedido de acesso excluído e documento liberado.",
+    "auditFree": "Documento preso liberado.",
+    "useAsLeader": "Usar esta pessoa como líder",
+    "free": "Documento livre: pode cadastrar.",
+    "alreadyUsed": "Este documento já está cadastrado:",
+    "orphanMentorHint": "Este documento está preso sem cadastro. Peça ao administrador para liberar."
   },
   "invite": {
     "label": "Documento (opcional)",

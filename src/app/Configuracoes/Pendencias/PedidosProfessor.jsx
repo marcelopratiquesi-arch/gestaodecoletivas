@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next";
 import { Check, X, Loader2, Building2, Phone, Mail, User, Clock, Dumbbell, Info } from "lucide-react";
 import { db } from "../../../services/firebase";
 import { registrarAuditoriaAcesso } from "../../../services/auditoriaAcessos";
+import { liberarDocumentoDoPedido } from "../../../services/documentoService";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useCatalogs } from "../../../contexts/CatalogContext";
 import { usePedidosProfessor } from "./usePedidosProfessor";
@@ -71,6 +72,7 @@ export default function PedidosProfessor() {
         status: "recusado", motivo: motivo.trim(),
         analisadoPor: userId, analisadoPorNome: meuNome, analisadoEm: serverTimestamp(),
       });
+      await liberarDocumentoDoPedido(p.id); // libera o CPF: a pessoa pode pedir de novo
     } catch (e) {
       console.error(e);
       alert(t("pendingTab.refuseError"));

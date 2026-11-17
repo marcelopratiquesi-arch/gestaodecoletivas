@@ -3,7 +3,7 @@
 import { readFileSync } from 'fs';
 import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest';
 import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing';
-import { doc, setDoc, updateDoc, writeBatch, getDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, writeBatch, getDoc, getDocs, collection, deleteDoc, serverTimestamp } from 'firebase/firestore';
 
 let env;
 beforeAll(async () => {
@@ -120,9 +120,10 @@ describe('quem vê o documento', () => {
     const dados = (await getDoc(doc(como('outroLider'), 'usuarios/liderA'))).data();
     if (JSON.stringify(dados).includes(CPF)) throw new Error('CPF vazou no crachá');
   });
-  it('só o admin lê a reserva (busca por documento)', async () => {
+  it('admin lê a reserva; o mentor só a de quem é das unidades dele (busca por documento)', async () => {
     await assertSucceeds(getDoc(doc(como('admin1'), `documentos_unicos/cpf_${CPF}`)));
-    await assertFails(getDoc(doc(como('mentor1'), `documentos_unicos/cpf_${CPF}`)));
+    await assertSucceeds(getDoc(doc(como('mentor1'), `documentos_unicos/cpf_${CPF}`)));
+    await assertFails(getDoc(doc(como('mentor2'), `documentos_unicos/cpf_${CPF}`)));
     await assertFails(getDoc(doc(como('liderA'), `documentos_unicos/cpf_${CPF}`)));
   });
 });
@@ -210,5 +211,64 @@ describe('atualização de cadastro com o documento', () => {
   });
   it('NÃO diz "documentoOk" na atualização sem ter o documento', async () => {
     await assertFails(updateDoc(doc(como('liderX'), 'usuarios/liderX'), atualiza({ documentoOk: true })));
+  });
+});
+
+describe('achar e liberar o documento de um pedido de acesso (entrou com o e-mail errado)', () => {
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      await setDoc(doc(db, 'solicitacoes_acesso/novo1'), { nome: 'Novo', email: 'a@x.com', papel: 'lider', unidadeId: 'uniA', unidadeIds: ['uniA'], status: 'pendente' });
+      await setDoc(doc(db, 'documentos_do_pedido/novo1'), { tipo: 'cpf', numero: CPF2, atualizadoPor: 'novo1' });
+      await setDoc(doc(db, 'documentos_unicos', `cpf_${CPF2}`), { uid: 'novo1', tipo: 'cpf', numero: CPF2 });
+      await setDoc(doc(db, 'documentos_privados/liderA'), { tipo: 'cpf', numero: CPF, atualizadoPor: 'liderA' });
+      await setDoc(doc(db, 'documentos_unicos', `cpf_${CPF}`), { uid: 'liderA', tipo: 'cpf', numero: CPF });
+    });
+  });
+  const liberar = (quem) => {
+    const db = como(quem);
+    const b = writeBatch(db);
+    b.delete(doc(db, 'solicitacoes_acesso/novo1'));
+    b.delete(doc(db, 'documentos_do_pedido/novo1'));
+    b.delete(doc(db, 'documentos_unicos', `cpf_${CPF2}`));
+    return b.commit();
+  };
+
+  it('admin e o mentor da unidade do pedido acham quem está com o documento', async () => {
+    await assertSucceeds(getDoc(doc(como('admin1'), 'documentos_unicos', `cpf_${CPF2}`)));
+    await assertSucceeds(getDoc(doc(como('mentor1'), 'documentos_unicos', `cpf_${CPF2}`)));
+  });
+  it('mentor também acha o documento de um líder com crachá das unidades dele', async () => {
+    await assertSucceeds(getDoc(doc(como('mentor1'), 'documentos_unicos', `cpf_${CPF}`)));
+  });
+  it('NÃO acha o de gente de outra unidade, nem documento que não existe', async () => {
+    await assertFails(getDoc(doc(como('mentor2'), 'documentos_unicos', `cpf_${CPF2}`)));
+    await assertFails(getDoc(doc(como('mentor2'), 'documentos_unicos', `cpf_${CPF}`)));
+    await assertFails(getDoc(doc(como('mentor1'), 'documentos_unicos', 'cpf_00000000000')));
+  });
+  it('líder e quem não tem crachá NÃO acham documentos', async () => {
+    await assertFails(getDoc(doc(como('liderA'), 'documentos_unicos', `cpf_${CPF2}`)));
+    await assertFails(getDoc(doc(como('forasteiro'), 'documentos_unicos', `cpf_${CPF2}`)));
+  });
+  it('mentor NÃO lista a coleção inteira', async () => {
+    await assertFails(getDocs(collection(como('mentor1'), 'documentos_unicos')));
+  });
+  it('admin e o mentor da unidade excluem o pedido e liberam o documento', async () => {
+    await assertSucceeds(liberar('mentor1'));
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const reserva = await getDoc(doc(ctx.firestore(), 'documentos_unicos', `cpf_${CPF2}`));
+      if (reserva.exists()) throw new Error('a reserva deveria ter sido apagada');
+    });
+  });
+  it('admin também libera', async () => {
+    await assertSucceeds(liberar('admin1'));
+  });
+  it('NÃO libera: mentor de outra unidade, líder, quem não tem crachá', async () => {
+    await assertFails(liberar('mentor2'));
+    await assertFails(liberar('liderA'));
+    await assertFails(liberar('forasteiro'));
+  });
+  it('mentor NÃO apaga a reserva de um líder que já tem crachá de outra unidade', async () => {
+    await assertFails(deleteDoc(doc(como('mentor2'), 'documentos_unicos', `cpf_${CPF}`)));
   });
 });
