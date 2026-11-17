@@ -7,6 +7,7 @@ import {
 import { db } from './firebase';
 import { montarPlanoJuncao } from '../utils/juntarFichas';
 import { removerProfessorDaVitrine } from './vitrinePublica';
+import { espelharMudanca } from './aulasPublicas';
 
 const TAMANHO_LOTE = 450; // limite do Firestore: 500 operações por lote
 const docsDe = (snap) => snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -69,6 +70,8 @@ export async function ligarFichaAoCracha({ ficha, cracha, quem }) {
 export async function executarJuncao({ plano, principal, outras, quem, aoAvancar }) {
   const ops = [
     ...plano.aulas.map(id => (b) => b.update(doc(db, 'aulas', id), { professorId: plano.idPrincipal })),
+    // A cópia pública da grade (sem valor) acompanha a troca de professor.
+    ...plano.aulas.map(id => (b) => espelharMudanca(b, id, { professorId: plano.idPrincipal })),
     ...plano.vinculosMover.map(id => (b) => b.update(doc(db, 'vinculos', id), { professorId: plano.idPrincipal })),
     ...plano.vinculosApagar.map(id => (b) => b.delete(doc(db, 'vinculos', id))),
     ...plano.validacoes.map(({ id, mudar }) => (b) => b.update(doc(db, 'validacoes', id), mudar)),

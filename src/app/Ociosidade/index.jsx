@@ -2,7 +2,8 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCatalogs } from '../../contexts/CatalogContext';
 import { db } from '../../services/firebase';
-import { collection, query, where, getDocs, addDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, writeBatch } from 'firebase/firestore';
+import { espelharAula } from '../../services/aulasPublicas';
 import { 
   Radar, Filter, Clock, MapPin, Target, AlertTriangle, PlusCircle, 
   Loader2, Flame, LayoutGrid, CalendarDays, Sun, Sunset, Moon, X, 
@@ -565,12 +566,18 @@ export default function RadarDeGrade() {
 
         setSaving(true);
         try {
-            await addDoc(collection(db, 'aulas'), {
+            // Aula e cópia pública (sem o valor) gravadas juntas.
+            const novaAula = {
                 unidadeId: previewModal.unidadeId, dias: formData.dias, hora: formData.hora,
                 modalidadeId: formData.modalidadeId, professorId: formData.professorId,
                 valor: formData.valor || 0, dataInicio: formData.dataInicio, excluido: false,
                 dataCriacao: new Date().toISOString()
-            });
+            };
+            const lote = writeBatch(db);
+            const novaRef = doc(collection(db, 'aulas'));
+            lote.set(novaRef, novaAula);
+            espelharAula(lote, novaRef.id, novaAula);
+            await lote.commit();
             setAddAulaModal({ ...addAulaModal, isOpen: false });
             alert(t('radar.newClass.alerts.saved'));
         } catch (error) { alert(t('radar.newClass.alerts.saveError')); } 

@@ -135,9 +135,32 @@ service cloud.firestore {
       allow read: if true;
       allow write: if logado() && meuPapel() in ['admin', 'administrador', 'master', 'mentor', 'lider', 'unidade'];
     }
-    match /aulas/{document=**} {
+    // Aulas: cada um grava só as da própria unidade (admin: todas). Ninguém além do admin apaga de verdade
+    // (a tela "exclui" marcando excluido:true). Esta regra é a única que libera gravar em aulas: a coleção está na
+    // lista de exceções da regra-curinga lá embaixo.
+    function podeGravarAulaDa(unidadeId) {
+      return souAdmin()
+        || (unidadeId is string && unidadeId != '' && logado()
+            && ((meuPapel() == 'mentor' && mentorDaUnidadeId(unidadeId))
+                || (meuPapel() in papeisLider()
+                    && (unidadeId == meuUsuario().get('unidadeId', '') || unidadeId in meuUsuario().get('unidadeIds', [])))));
+    }
+    match /aulas/{aulaId} {
       allow read: if true;
-      allow write: if logado() && !souProfessor();
+      allow create: if podeGravarAulaDa(request.resource.data.get('unidadeId', ''));
+      // Editar: a unidade de antes E a de depois têm que ser dele (senão dava para "jogar" aula na unidade dos outros).
+      allow update: if podeGravarAulaDa(resource.data.get('unidadeId', ''))
+        && podeGravarAulaDa(request.resource.data.get('unidadeId', ''));
+      allow delete: if souAdmin();
+    }
+    // Cópia pública da grade (sem o valor da aula), lida pela página de horários sem login.
+    // Gravada junto com a aula (mesma operação) por quem pode gravar a aula daquela unidade. Ver services/aulasPublicas.js.
+    match /aulas_publicas/{aulaId} {
+      allow read: if true;
+      allow create, update: if podeGravarAulaDa(request.resource.data.get('unidadeId', ''))
+        && !('valor' in request.resource.data)
+        && (resource == null || podeGravarAulaDa(resource.data.get('unidadeId', '')));
+      allow delete: if souAdmin() || podeGravarAulaDa(resource.data.get('unidadeId', ''));
     }
     match /modalidades/{document=**} {
       allow read: if true;
@@ -605,7 +628,7 @@ service cloud.firestore {
     // (No Firestore, se QUALQUER regra libera, a ação passa; por isso as exceções precisam estar aqui.)
     match /{colecao}/{resto=**} {
       allow read: if logado() && !(colecao in ['solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos']);
-      allow write: if logado() && !(colecao in ['usuarios', 'publico', 'validacoes', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'resumos_mensais', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos']) && !souProfessor();
+      allow write: if logado() && !(colecao in ['usuarios', 'publico', 'validacoes', 'aulas', 'aulas_publicas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'resumos_mensais', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos']) && !souProfessor();
       allow create: if logado() && colecao in ['auditoria_cronograma', 'auditoria_configuracoes'];
     }
   }

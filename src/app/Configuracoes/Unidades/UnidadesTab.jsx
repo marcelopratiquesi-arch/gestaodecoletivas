@@ -453,7 +453,7 @@ export function UnidadesTab() {
       setAtualizandoVitrine(true);
       try {
           const r = await reconstruirVitrine();
-          await registrarLogAuditoria('ALTERADA', 'Página pública de horários atualizada.', 'Várias', `${r.unidades} unidade(s), ${r.professores} professor(es), ${r.tamanhoKb} KB.`);
+          await registrarLogAuditoria('ALTERADA', 'Página pública de horários atualizada.', 'Várias', `${r.unidades} unidade(s), ${r.professores} professor(es), ${r.aulas} aula(s), ${r.tamanhoKb} KB.`);
           alert(t('unitsTab.publicPage.done', { units: r.unidades, teachers: r.professores }));
       } catch (e) {
           console.error(e);

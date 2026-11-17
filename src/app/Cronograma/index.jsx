@@ -10,7 +10,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useCatalogs } from '../../contexts/CatalogContext';
 import { db } from '../../services/firebase'; 
 import { 
-  collection, addDoc, updateDoc, doc, serverTimestamp, writeBatch, getDocs, query, where
+  collection, doc, serverTimestamp, writeBatch, getDocs, query, where
 } from 'firebase/firestore';
 import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
 import { DIAS_SEMANA_GRADE, formatWeekday, getCurrencySymbol } from '../../utils/formatters';
@@ -18,6 +18,7 @@ import { useLocation, useSearchParams } from 'react-router-dom';
 import { ehLider, unidadesDoLider } from '../../permissions';
 import { valorDaAulaValido, aulaRepetida, validarCorteNovaFase, diaAnterior, professorPodeReceberAula } from '../../utils/cronogramaRegras';
 import { ehCancelamentoAutomaticoDeFeriado } from '../../utils/feriados';
+import { espelharAula, espelharMudanca, removerAulaPublica } from '../../services/aulasPublicas';
 
 // --- FUNÇÕES UTILITÁRIAS ---
 const getTodayStr = () => new Date().toLocaleDateString('en-CA');
@@ -371,11 +372,6 @@ export default function CronogramaPage() {
         };
   };
 
-  const registrarLogAuditoria = async (...args) => {
-    try {
-        await addDoc(collection(db, 'auditoria_cronograma'), montarLogAuditoria(...args));
-    } catch (e) { console.error("Erro ao gerar log de auditoria", e); }
-  };
 
   const handleFirstSaveClick = (e) => {
     e.preventDefault();
@@ -470,18 +466,24 @@ export default function CronogramaPage() {
       if (!confirmarSeRepetida(payload)) return;
       setSaving(true);
       try {
+          // Aula, cópia pública (sem valor) e log gravados juntos: ou tudo, ou nada.
+          const lote = writeBatch(db);
           if (editingClass) {
               const estadoAnt = buildEstadoCompleto(editingClass);
               const estadoNov = buildEstadoCompleto(payload);
-              await updateDoc(doc(db, "aulas", editingClass.id), { ...payload, updatedAt: serverTimestamp() });
+              lote.update(doc(db, "aulas", editingClass.id), { ...payload, updatedAt: serverTimestamp() });
+              espelharAula(lote, editingClass.id, payload);
               const acao = isVigencia ? 'VIGÊNCIA' : 'ALTERADA';
               const desc = isVigencia ? 'Datas limite atualizadas.' : 'Aula editada (Correção Direta).';
-              await registrarLogAuditoria(acao, desc, "Atualização de dados sem quebra de histórico.", estadoAnt, estadoNov);
+              lote.set(doc(collection(db, 'auditoria_cronograma')), montarLogAuditoria(acao, desc, "Atualização de dados sem quebra de histórico.", estadoAnt, estadoNov));
           } else {
               const estadoNov = buildEstadoCompleto(payload);
-              await addDoc(collection(db, "aulas"), { ...payload, createdAt: serverTimestamp() });
-              await registrarLogAuditoria('NOVA', 'Aula adicionada na grade.', `Dias: ${payload.dias.join(', ')} | Hora: ${payload.hora}`, null, estadoNov);
+              const novaRef = doc(collection(db, "aulas"));
+              lote.set(novaRef, { ...payload, createdAt: serverTimestamp() });
+              espelharAula(lote, novaRef.id, payload);
+              lote.set(doc(collection(db, 'auditoria_cronograma')), montarLogAuditoria('NOVA', 'Aula adicionada na grade.', `Dias: ${payload.dias.join(', ')} | Hora: ${payload.hora}`, null, estadoNov));
           }
+          await lote.commit();
           closeModal();
       } catch (e) {
           alert(t('schedulePage.alerts.saveError', "Erro ao salvar."));
@@ -537,7 +539,10 @@ export default function CronogramaPage() {
           // Tudo ou nada: ou encerra a antiga, cria a nova e registra o log, ou não muda nada.
           const lote = writeBatch(db);
           lote.update(doc(db, "aulas", editingClass.id), { dataFim: dataFimAntiga, updatedAt: serverTimestamp() });
-          lote.set(doc(collection(db, "aulas")), { ...payloadNova, createdAt: serverTimestamp() });
+          espelharMudanca(lote, editingClass.id, { dataFim: dataFimAntiga });
+          const novaRef = doc(collection(db, "aulas"));
+          lote.set(novaRef, { ...payloadNova, createdAt: serverTimestamp() });
+          espelharAula(lote, novaRef.id, payloadNova);
           lote.set(doc(collection(db, 'auditoria_cronograma')), montarLogAuditoria('ALTERADA', 'Transição estrutural gravada.', `[A PARTIR DE ${fmt(dataCorteTransicao)}]\n${diffString}`, estadoAnt, estadoNov));
           await lote.commit();
 
@@ -557,13 +562,15 @@ export default function CronogramaPage() {
         setSaving(true);
         const estadoAnt = buildEstadoCompleto(editingClass);
         
-        await updateDoc(doc(db, "aulas", editingClass.id), { 
+        const lote = writeBatch(db);
+        lote.update(doc(db, "aulas", editingClass.id), { 
             excluido: true,
             deletedAt: serverTimestamp(),
             deletedBy: userId
         });
-        
-        await registrarLogAuditoria('EXCLUÍDA', 'Aula enviada para a Lixeira (Soft Delete).', 'Ação de ocultar ativada. Relatórios antigos preservados.', estadoAnt, null);
+        removerAulaPublica(lote, editingClass.id);
+        lote.set(doc(collection(db, 'auditoria_cronograma')), montarLogAuditoria('EXCLUÍDA', 'Aula enviada para a Lixeira (Soft Delete).', 'Ação de ocultar ativada. Relatórios antigos preservados.', estadoAnt, null));
+        await lote.commit();
         closeModal();
       } catch (error) { 
           console.error(error);
