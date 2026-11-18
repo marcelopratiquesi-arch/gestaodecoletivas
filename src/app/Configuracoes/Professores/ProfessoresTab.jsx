@@ -33,6 +33,7 @@ import { useFiltroCascata } from "../ui/useFiltroCascata";
 import SeloRepetido from "../ui/SeloRepetido";
 import { useSelosRepetidos } from "../ui/useSelosRepetidos";
 import JuntarFichasModal from "../Backup/JuntarFichasModal";
+import { liberarContatos, sincronizarEAvisar } from "../../../services/contatoService";
 
 // 🌍 PADRÃO OURO INTERNACIONAL — mesma identidade visual usada em MentoresTab
 const PAIS_CONFIG = {
@@ -448,6 +449,12 @@ export function ProfessoresTab() {
           });
           if (gravarDoc) documentoDaFichaNoLote(lote, { professorId: profEditando.id, tipo: docForm.tipo, numero: docNumero, anterior: docAnterior, marcarFicha: false });
           await (gravarDoc ? gravarComAviso(lote) : lote.commit());
+          // Reserva de e-mail/telefone (F3 parte A): depois de salvo; se já é de outra pessoa, só avisa.
+          await sincronizarEAvisar({
+            dono: { professorId: profEditando.id, uid: profEditando.uidLogin },
+            antes: { email: profEditando.email, telefone: profEditando.telefone, pais: profEditando.pais },
+            depois: { email: emailMudou ? emailLimpo : profEditando.email, telefone, pais },
+          }, t);
           if (profEditando.nome !== nomeLimpo) await publicarProfessor(profEditando.id, nomeLimpo);
           
           if (profEditando.uidLogin) {
@@ -481,6 +488,10 @@ export function ProfessoresTab() {
               });
           }
           await gravarComAviso(lote);
+          await sincronizarEAvisar({
+            dono: { professorId: docRef.id, uid: uidLoginNovo },
+            depois: { email: emailLimpo, telefone, pais },
+          }, t);
           await publicarProfessor(docRef.id, nomeLimpo);
 
           let logDetalhe = `Email: ${emailLimpo} | Documento de identificação informado`;
@@ -538,6 +549,7 @@ export function ProfessoresTab() {
           if (docDaFicha) apagarDocumentoDaFichaNoLote(lote, p.id, docDaFicha);
           lote.delete(doc(db, "professores", p.id));
           await lote.commit();
+          await liberarContatos({ professorId: p.id }, { email: p.email, telefone: p.telefone, pais: p.pais });
           await removerProfessorDaVitrine(p.id);
           const vinculadosDoProf = vinculos.filter(v => v.professorId === p.id);
           vinculadosDoProf.forEach(v => deleteDoc(doc(db, "vinculos", v.id)));

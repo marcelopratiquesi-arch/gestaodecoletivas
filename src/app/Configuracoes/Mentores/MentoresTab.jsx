@@ -29,6 +29,7 @@ import { CabecalhoDaAba, CaixaDeNumeros, BotaoPrincipal, BotaoSecundario } from 
 import { useFiltroCascata } from "../ui/useFiltroCascata";
 import SeloRepetido from "../ui/SeloRepetido";
 import { useSelosRepetidos } from "../ui/useSelosRepetidos";
+import { sincronizarEAvisar } from "../../../services/contatoService";
 
 // 🌍 PADRÃO OURO INTERNACIONAL — cada país com sua cor de identidade
 const PAIS_CONFIG = {
@@ -333,6 +334,12 @@ export function MentoresTab() {
           status, 
           atualizadoEm: serverTimestamp()
         });
+        // Reserva de e-mail/telefone (F3 parte A): depois de salvo; se já é de outra pessoa, só avisa.
+        await sincronizarEAvisar({
+          dono: { uid: mentorEditando.id },
+          antes: { email: mentorEditando.email, telefone: mentorEditando.telefone, pais: mentorEditando.pais || PAIS_DEFAULT },
+          depois: { email: mentorEditando.email, telefone: telefone.trim(), pais },
+        }, t);
 
         if (mudancas.length > 0) {
             await registrarLogAuditoria('ALTERADA', 'Dados cadastrais do Mentor atualizados.', { ...mentorEditando, nome: nome.trim() }, mudancas.join(' | '));
