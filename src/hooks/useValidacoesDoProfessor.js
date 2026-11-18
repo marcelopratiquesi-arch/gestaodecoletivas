@@ -14,7 +14,7 @@ export function meuProfessorId(userData, professores = []) {
   return userData?.professorId || professores.find(p => p.uidLogin === uid)?.id || null;
 }
 
-const VAZIO = { chave: null, proprias: [], substituidas: [], prontoP: false, prontoS: false };
+const VAZIO = { chave: null, proprias: [], substituidas: [], prontoP: false, prontoS: false, erro: false };
 
 export function useValidacoesDoProfessor(professorId, dataInicio, dataFim) {
   const chave = professorId && dataInicio && dataFim ? `${professorId}|${dataInicio}|${dataFim}` : null;
@@ -24,7 +24,7 @@ export function useValidacoesDoProfessor(professorId, dataInicio, dataFim) {
     if (!chave) return;
     // Cada resposta só vale para a consulta atual (chave); respostas de uma consulta antiga são descartadas.
     const gravar = (campos) => setEstado(prev => ({ ...(prev.chave === chave ? prev : { ...VAZIO, chave }), ...campos }));
-    const erro = (pronto) => (e) => { console.error('Erro ao ler validações do professor:', e); gravar({ [pronto]: true }); };
+    const erro = (pronto) => (e) => { console.error('Erro ao ler validações do professor:', e); gravar({ [pronto]: true, erro: true }); };
 
     const qProprias = query(collection(db, 'validacoes'),
       where('data', '>=', dataInicio), where('data', '<=', dataFim), where('professorId', '==', String(professorId)));
@@ -49,5 +49,8 @@ export function useValidacoesDoProfessor(professorId, dataInicio, dataFim) {
     return deduplicarValidacoes([...porId.values()]);
   }, [chave, atual, estado, dataInicio, dataFim]);
 
-  return { validacoes, carregando };
+  // erro: o banco recusou (sem conexão, limite do dia...). Lista vazia aqui NÃO quer dizer "nada validado".
+  const erro = !!chave && atual && estado.erro;
+
+  return { validacoes, carregando, erro };
 }
