@@ -3,6 +3,7 @@ import { collection, onSnapshot, query, orderBy, where } from 'firebase/firestor
 import { db } from '../services/firebase';
 import { useAuth } from './AuthContext'; // 🟢 1. Importamos o porteiro (Autenticação)
 import { ehLider, unidadesDoLider } from '../permissions';
+import { definirUsuarioTelemetria } from '../services/telemetriaLeituras';
 
 const CatalogContext = createContext();
 
@@ -49,6 +50,9 @@ export const CatalogProvider = ({ children }) => {
     const uid = user?.uid || null;
     const papel = String(userData?.role || "").trim().toLowerCase();
     const meuProfessorId = papel === 'professor' ? (userData?.professorId || null) : null;
+
+    // Telemetria de leituras: informa quem está usando (perfil), para o resumo de leituras por perfil e tela.
+    useEffect(() => { definirUsuarioTelemetria(uid, papel); }, [uid, papel]);
 
     // ---------- 1ª camada: cadastros pequenos (completos) ----------
     const [base, setBase] = useState(BASE_VAZIA);
