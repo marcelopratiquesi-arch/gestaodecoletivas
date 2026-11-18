@@ -16,7 +16,7 @@ import { useFiltroCascata } from "../ui/useFiltroCascata";
 import { 
     Building2, MapPin, Edit2, Trash2, AlertTriangle, CheckCircle2, 
     Loader2, User, Mail, Lock, Globe, Key, ChevronDown, ChevronUp, Ban, PowerOff, Plus, X, Phone, Check,
-    Map, Maximize, GripHorizontal, Upload, FileSpreadsheet, ShieldAlert, UserCheck
+    Map as MapIcon, Maximize, GripHorizontal, Upload, FileSpreadsheet, ShieldAlert, UserCheck
 } from "lucide-react";
 
 // 🌍 PADRÃO OURO INTERNACIONAL
@@ -964,7 +964,7 @@ export function UnidadesTab() {
                           )}
                           {!editandoMapaId && !u.linkGoogleMaps && (
                               <div className="flex items-center gap-1.5 group/edit w-fit">
-                                  <Map className="w-3 h-3 shrink-0 text-slate-300"/>
+                                  <MapIcon className="w-3 h-3 shrink-0 text-slate-300"/>
                                   <span className="text-[9px] font-bold uppercase text-slate-400 italic">{t('unitsTab.extra.noMapsLink')}</span>
                                   <Edit2 onClick={() => { setEditandoMapaId(u.id); setMapaInline(u.linkGoogleMaps || ""); }} className="w-3 h-3 opacity-0 group-hover/edit:opacity-100 cursor-pointer text-blue-500 ml-1"/>
                               </div>
@@ -1248,7 +1248,7 @@ export function UnidadesTab() {
                   <div className="md:col-span-2">
                       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-1 block">{t('unitsTab.extra.form.mapsLink')}</label>
                       <div className="relative">
-                          <Map className="absolute left-4 top-3.5 w-4 h-4 text-slate-400"/>
+                          <MapIcon className="absolute left-4 top-3.5 w-4 h-4 text-slate-400"/>
                           <input 
                               value={linkMaps} 
                               onChange={e=>setLinkMaps(e.target.value)} 

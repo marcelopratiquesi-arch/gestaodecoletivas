@@ -6,12 +6,14 @@ import {
   collection, addDoc, getDocs, deleteDoc, doc, updateDoc, deleteField,
   writeBatch, query, where, serverTimestamp
 } from 'firebase/firestore';
-import { Calendar, Plus, Trash2, Loader2, CalendarDays, MapPin, Search, CheckSquare, Square, Check, X, Inbox, Pencil } from 'lucide-react';
+import { Calendar, Plus, Trash2, Loader2, CalendarDays, MapPin, Search, CheckSquare, Square, Check, X, Inbox, Pencil, RefreshCw } from 'lucide-react';
 import { formatDate as formatarData } from '../../../utils/formatters';
 import { ESCOPOS_FERIADO, escopoDoFeriado, normalizarPais, normalizarTexto, ehCancelamentoAutomaticoDeFeriado, feriadoAplicaNaUnidade, unidadesDeExcecao } from '../../../utils/feriados';
 import { impactoDoFeriado, comecaNoPassado, feriadosParecidos } from '../../../utils/feriadosImpacto';
 import { montarFeriado, feriadoDaProposta, ESCOPOS_DO_MENTOR, STATUS_PROPOSTA, CAMPOS_DE_ABRANGENCIA } from '../../../utils/feriadosProposta';
 import { useTranslation } from 'react-i18next';
+import { FeriadosSugeridos } from './FeriadosSugeridos';
+import { dataLocalStr } from '../../../utils/agendaAulas';
 import { CabecalhoDaAba } from '../ui/CabecalhoDaAba';
 import { BotaoDeLinha } from '../ui/BotaoDeLinha';
 
@@ -23,16 +25,25 @@ const FORM_INICIAL = { nome: '', dataInicio: '', dataFim: '', tipo: 'Recesso', e
 
 export function FeriadosTab() {
   const { userData } = useAuth(); // Pegando dados do Admin para Auditoria
-  const { catalogs } = useCatalogs();
+  const { catalogs, loadingCatalogs } = useCatalogs();
   const { t } = useTranslation();
   const userId = userData?.id || userData?.uid;
   // Só o admin cria feriado de verdade. O mentor envia uma PROPOSTA (feriados_propostas) e o admin aprova ou recusa.
   const ehAdmin = String(userData?.role || '').trim().toLowerCase() === 'admin';
   const escoposDisponiveis = ehAdmin ? ESCOPOS_FERIADO : ESCOPOS_DO_MENTOR;
 
-  const [feriados, setFeriados] = useState([]);
+  // Os feriados vêm do catálogo global, que já é atualizado ao vivo: criar, editar ou apagar aparece sozinho (sem reler o banco).
+  const feriados = useMemo(
+      () => [...(catalogs?.feriados || [])].sort((a, b) => String(a.dataInicio || '').localeCompare(String(b.dataInicio || ''))),
+      [catalogs?.feriados]
+  );
+  const loading = loadingCatalogs;
   const [propostas, setPropostas] = useState([]);
-  const [loading, setLoading] = useState(false);
+  // Filtros da lista
+  const [filtroPeriodo, setFiltroPeriodo] = useState('proximos'); // proximos | passados | todos
+  const [filtroAno, setFiltroAno] = useState('');
+  const [filtroEscopo, setFiltroEscopo] = useState('');
+  const [buscaLista, setBuscaLista] = useState('');
   const [processando, setProcessando] = useState(false);
   const [buscaUnidade, setBuscaUnidade] = useState('');
   const [buscaExcecao, setBuscaExcecao] = useState('');
@@ -74,7 +85,7 @@ export function FeriadosTab() {
       } catch (e) { console.error("Erro ao gerar log de auditoria", e); }
   };
 
-  useEffect(() => { loadFeriados(); loadPropostas(); // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { loadPropostas(); // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Admin: só as pendentes (as decididas já viraram feriado ou foram recusadas). Mentor: as dele, com o resultado.
@@ -87,20 +98,6 @@ export function FeriadosTab() {
       setPropostas(snap.docs.map(d => ({ id: d.id, ...d.data() }))
         .sort((a, b) => String(b.dataInicio || '').localeCompare(String(a.dataInicio || ''))));
     } catch (e) { console.error('Erro ao carregar propostas de feriado', e); }
-  }
-
-  async function loadFeriados() {
-    setLoading(true);
-    try {
-      const snap = await getDocs(collection(db, "feriados"));
-      const lista = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-                             .sort((a, b) => String(a.dataInicio || '').localeCompare(String(b.dataInicio || '')));
-      setFeriados(lista);
-    } catch (e) {
-      console.error("Erro ao carregar feriados", e);
-    } finally {
-      setLoading(false);
-    }
   }
 
   const formatDate = (date) => (date ? formatarData(date) : "");
@@ -124,9 +121,27 @@ export function FeriadosTab() {
       const alvo = normalizarTexto(cidade);
       if (alvo.length < 3) return [];
       return unidades
-          .filter(u => normalizarTexto(u.cidade) === alvo || normalizarTexto(u.enderecoCompleto).includes(alvo))
+          .filter(u => (u.cidade ? normalizarTexto(u.cidade) === alvo : normalizarTexto(u.enderecoCompleto).includes(alvo)))
           .map(u => String(u.id));
   };
+
+  // ADMIN: unidade nova na mesma cidade não entra sozinha no feriado de cidade; este botão acrescenta as que faltam.
+  async function atualizarUnidadesDaCidade(feriado) {
+      const atuais = (feriado.unidadeIds || []).map(String);
+      const fora = unidadesDeExcecao(feriado);
+      const faltam = sugerirUnidadesDaCidade(feriado.cidade).filter(id => !atuais.includes(id) && !fora.includes(id));
+      if (faltam.length === 0) return alert(t('holidaysTab.cityActions.upToDate'));
+      const nomes = faltam.map(id => unidades.find(u => String(u.id) === id)?.nome || id);
+      if (!window.confirm(t('holidaysTab.cityActions.confirmAdd', { city: feriado.cidade, count: faltam.length, names: nomes.slice(0, 8).join(', ') }))) return;
+      try {
+          await updateDoc(doc(db, 'feriados', feriado.id), { unidadeIds: [...atuais, ...faltam], atualizadoPor: userId || null, atualizadoEm: serverTimestamp() });
+          await registrarLogAuditoria('ALTERADA', 'Unidades da cidade atualizadas no feriado.', feriado.nome, `Cidade: ${feriado.cidade} | Acrescentadas: ${nomes.join(', ')}`);
+          alert(t('holidaysTab.cityActions.done', { count: faltam.length }));
+      } catch (e) {
+          console.error(e);
+          alert(t('holidaysTab.edit.error'));
+      }
+  }
 
   const alterarEscopo = (escopo) => setForm(prev => ({ ...prev, escopo, estado: '', cidade: '', unidadeIds: [], unidadesExcecao: [] }));
 
@@ -196,9 +211,6 @@ export function FeriadosTab() {
         await updateDoc(doc(db, 'feriados', editandoId), { ...novoFeriado, ...limpar, atualizadoPor: userId || null, atualizadoEm: serverTimestamp() });
         await registrarLogAuditoria('ALTERADA', `${form.tipo} editado.`, form.nome,
             `De: ${formatDate(antigo.dataInicio)} até ${formatDate(antigo.dataFim)} | ${descreverAbrangencia(antigo)}  ➔  Para: ${formatDate(form.dataInicio)} até ${formatDate(form.dataFim)} | ${abrangencia}`);
-        setFeriados(prev => prev.map(x => (x.id === editandoId
-            ? { id: x.id, ...Object.fromEntries(Object.entries(x).filter(([k]) => !CAMPOS_DE_ABRANGENCIA.includes(k))), ...novoFeriado }
-            : x)).sort((a, b) => String(a.dataInicio).localeCompare(String(b.dataInicio))));
         setEditandoId(null);
         setForm(formVazio());
         setBuscaUnidade(''); setBuscaExcecao('');
@@ -207,7 +219,7 @@ export function FeriadosTab() {
       }
 
       // O feriado é calculado na hora por todas as telas (src/utils/feriados.js): não grava mais cancelamentos em massa.
-      const feriadoDoc = await addDoc(collection(db, "feriados"), { ...novoFeriado, criadoPor: userId || null, criadoEm: serverTimestamp() });
+      await addDoc(collection(db, "feriados"), { ...novoFeriado, criadoPor: userId || null, criadoEm: serverTimestamp() });
 
       await registrarLogAuditoria(
           'NOVA',
@@ -216,7 +228,6 @@ export function FeriadosTab() {
           `Período: ${formatDate(form.dataInicio)} até ${formatDate(form.dataFim)} | Abrangência: ${abrangencia}`
       );
 
-      setFeriados(prev => [...prev, { id: feriadoDoc.id, ...novoFeriado }].sort((a, b) => String(a.dataInicio).localeCompare(String(b.dataInicio))));
       setForm(formVazio());
       setBuscaUnidade(''); setBuscaExcecao('');
       alert(t('holidaysTab.messages.created', { scope: abrangencia }));
@@ -288,7 +299,6 @@ export function FeriadosTab() {
       await registrarLogAuditoria('NOVA', `Proposta de feriado aprovada (de ${proposta.propostoPorNome || 'mentor'}).`, proposta.nome,
         `Período: ${formatDate(proposta.dataInicio)} até ${formatDate(proposta.dataFim)} | Abrangência: ${abrangencia}`);
       setPropostas(prev => prev.filter(p => p.id !== proposta.id));
-      setFeriados(prev => [...prev, { id: feriadoRef.id, ...feriado, criadoEm: null }].sort((a, b) => String(a.dataInicio).localeCompare(String(b.dataInicio))));
       alert(t('holidaysTab.proposals.approvedMsg', { scope: abrangencia }));
     } catch (e) {
       console.error(e);
@@ -344,13 +354,35 @@ export function FeriadosTab() {
       // 🟢 AUDITORIA
       await registrarLogAuditoria('EXCLUÍDA', 'Evento removido do calendário.', feriado.nome, `O recesso/feriado foi deletado do sistema. Cancelamentos automáticos removidos: ${automaticos.length}`);
 
-      setFeriados(prev => prev.filter(f => f.id !== feriado.id));
       if (editandoId === feriado.id) cancelarEdicao();
     } catch (e) {
       console.error(e);
       alert(t('holidaysTab.messages.deleteError'));
     }
   }
+
+  const hojeStr = dataLocalStr();
+  const contagem = useMemo(() => ({
+      proximos: feriados.filter(f => (f.dataFim || f.dataInicio) >= hojeStr).length,
+      passados: feriados.filter(f => (f.dataFim || f.dataInicio) < hojeStr).length,
+      todos: feriados.length,
+  }), [feriados, hojeStr]);
+  const anosDosFeriados = useMemo(
+      () => [...new Set(feriados.map(f => String(f.dataInicio || '').slice(0, 4)).filter(a => /^\d{4}$/.test(a)))].sort().reverse(),
+      [feriados]
+  );
+  const feriadosVisiveis = useMemo(() => {
+      const termo = normalizarTexto(buscaLista);
+      const lista = feriados.filter(f => {
+          const fim = f.dataFim || f.dataInicio || '';
+          if (filtroPeriodo === 'proximos' && fim < hojeStr) return false;
+          if (filtroPeriodo === 'passados' && fim >= hojeStr) return false;
+          if (filtroAno && String(f.dataInicio || '').slice(0, 4) !== filtroAno) return false;
+          if (filtroEscopo && escopoDoFeriado(f) !== filtroEscopo) return false;
+          return !termo || normalizarTexto(f.nome).includes(termo);
+      });
+      return filtroPeriodo === 'passados' ? [...lista].reverse() : lista; // passados: o mais recente primeiro
+  }, [feriados, filtroPeriodo, filtroAno, filtroEscopo, buscaLista, hojeStr]);
 
   const inputClass = "w-full p-3 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pink-500";
   const labelClass = "text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1 block";
@@ -553,18 +585,42 @@ export function FeriadosTab() {
         </div>
       )}
 
+      {/* CALENDÁRIO SUGERIDO (só admin) */}
+      {ehAdmin && <FeriadosSugeridos feriados={feriados} unidades={catalogs?.unidades || []} aulas={catalogs?.aulas || []} usuario={userData} />}
+
       {/* LISTA DE FERIADOS */}
       <div>
         <h4 className="font-bold text-slate-700 dark:text-white text-sm uppercase mb-4 pl-1 flex items-center gap-2">
             <Calendar className="w-4 h-4"/> {t('holidaysTab.calendar')}
         </h4>
 
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          {[['proximos', contagem.proximos], ['passados', contagem.passados], ['todos', contagem.todos]].map(([chave, n]) => (
+            <button key={chave} type="button" onClick={() => setFiltroPeriodo(chave)}
+              className={`px-3 py-2 rounded-lg text-xs font-bold uppercase border transition-colors ${filtroPeriodo === chave ? 'bg-pink-600 text-white border-pink-600' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:border-pink-300'}`}>
+              {t(`holidaysTab.filters.${chave}`)} ({n})
+            </button>
+          ))}
+          <select className={`${inputClass} !w-auto`} value={filtroAno} onChange={e => setFiltroAno(e.target.value)}>
+            <option value="">{t('holidaysTab.filters.allYears')}</option>
+            {anosDosFeriados.map(a => <option key={a} value={a}>{a}</option>)}
+          </select>
+          <select className={`${inputClass} !w-auto`} value={filtroEscopo} onChange={e => setFiltroEscopo(e.target.value)}>
+            <option value="">{t('holidaysTab.filters.allScopes')}</option>
+            {ESCOPOS_FERIADO.map(e => <option key={e} value={e}>{t(`holidaysTab.scopes.${e}`)}</option>)}
+          </select>
+          <div className="relative flex-1 min-w-[180px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"/>
+            <input className={`${inputClass} pl-9`} value={buscaLista} onChange={e => setBuscaLista(e.target.value)} placeholder={t('holidaysTab.filters.search')} />
+          </div>
+        </div>
+
         {loading ? (
             <div className="text-center py-10"><Loader2 className="w-8 h-8 animate-spin mx-auto text-slate-400"/></div>
         ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {feriados.map(f => (
-                <div key={f.id} className="group bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-5 hover:shadow-md transition-all relative">
+            {feriadosVisiveis.map(f => (
+                <div key={f.id} className={`group bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-5 hover:shadow-md transition-all relative ${(f.dataFim || f.dataInicio) < hojeStr ? 'opacity-60' : ''}`}>
                 <div className="flex justify-between items-start">
                     <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-2">
@@ -583,6 +639,7 @@ export function FeriadosTab() {
                     </div>
                     {ehAdmin && (
                       <div className="flex gap-1.5 shrink-0">
+                        {escopoDoFeriado(f) === 'cidade' && <BotaoDeLinha abaId="feriados" icone={RefreshCw} title={t('holidaysTab.cityActions.refresh')} onClick={() => atualizarUnidadesDaCidade(f)} />}
                         <BotaoDeLinha abaId="feriados" icone={Pencil} title={t('holidaysTab.edit.tooltip')} onClick={() => iniciarEdicao(f)} />
                         <BotaoDeLinha abaId="feriados" tipo="perigo" icone={Trash2} onClick={() => handleDelete(f)} />
                       </div>
@@ -590,10 +647,10 @@ export function FeriadosTab() {
                 </div>
                 </div>
             ))}
-            {feriados.length === 0 && (
+            {feriadosVisiveis.length === 0 && (
                 <div className="col-span-full py-12 text-center border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl text-slate-400">
                 <Calendar className="w-12 h-12 mx-auto mb-2 opacity-20"/>
-                {t('holidaysTab.none')}
+                {feriados.length === 0 ? t('holidaysTab.none') : t('holidaysTab.filters.none')}
                 </div>
             )}
             </div>

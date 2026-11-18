@@ -95,5 +95,39 @@
     "hint": "Marcá las unidades que NO descansan en este feriado.",
     "label_one": "excepto {{count}} unidad",
     "label_other": "excepto {{count}} unidades"
+  },
+  "filters": {
+    "proximos": "Próximos",
+    "passados": "Pasados",
+    "todos": "Todos",
+    "allYears": "Todos los años",
+    "allScopes": "Todos los alcances",
+    "search": "Buscar feriado...",
+    "none": "Ningún feriado en este filtro."
+  },
+  "suggested": {
+    "title": "Calendario sugerido",
+    "pending": "{{count}} por decidir",
+    "desc": "Feriados nacionales calculados para el país y el año. No se aplica nada solo: aplicás lo que quieras y descartás el resto. Los marcados \"Revisar\" dependen de decretos del gobierno y pueden cambiar.",
+    "showDismissed": "Mostrar descartados",
+    "applySelected": "Aplicar seleccionados ({{count}})",
+    "apply": "Aplicar",
+    "dismiss": "Descartar",
+    "restore": "Volver a la lista",
+    "check": "Revisar",
+    "past": "Ya pasó",
+    "applied_badge": "Aplicado",
+    "empty": "Nada para mostrar.",
+    "warnAR": "En Argentina el gobierno decreta feriados puente todos los años. Revisá el calendario oficial antes de aplicar.",
+    "confirmApply": "¿Aplicar {{count}} feriado(s) a nivel país?\n\nEsto afecta {{classes}} clase(s) en total.",
+    "andMore": "… y {{count}} más",
+    "applied": "{{count}} feriado(s) aplicado(s).",
+    "error": "Error al aplicar los feriados."
+  },
+  "cityActions": {
+    "refresh": "Agregar las unidades de la ciudad",
+    "upToDate": "Ya están todas las unidades de esta ciudad.",
+    "confirmAdd": "¿Agregar {{count}} unidad(es) de {{city}} a este feriado?\n\n{{names}}",
+    "done": "{{count}} unidad(es) agregada(s)."
   }
 }
