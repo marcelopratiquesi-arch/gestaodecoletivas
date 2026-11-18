@@ -16,6 +16,7 @@ import { usePedidosProfessor } from "./usePedidosProfessor";
 import FichaDoPedido from "./FichaDoPedido";
 import { aprovarProfessorPedido } from "../../../services/aprovarProfessorService";
 import { normalizarPais } from "../../../utils/feriados";
+import { avisoDeConflito } from "../../../services/contatoService";
 
 const formatarData = (ts, idioma) => {
   const d = ts?.toDate?.();
@@ -48,8 +49,9 @@ export default function PedidosProfessor() {
     if (!window.confirm(pergunta)) return;
     setProcessando(p.id);
     let levouDocumento = false;
+    let conflitos = [];
     try {
-      ({ levouDocumento } = await aprovarProfessorPedido({
+      ({ levouDocumento, conflitos } = await aprovarProfessorPedido({
         pedido: p, unidade, ficha, documento: escolha.documento, podeLevarDocumento: podeVerDocumento,
         quem: { id: userId, nome: meuNome },
       }));
@@ -60,7 +62,10 @@ export default function PedidosProfessor() {
           alvo: { id: p.id, nome: p.nome, email: p.email, emailGoogle: p.email },
         });
       } catch (e) { console.error("Falha ao gravar auditoria", e); }
-      alert(ficha ? t("pendingTab.teacher.link.approvedLinked", { name: p.nome, record: ficha.nome }) : t("pendingTab.teacher.approved", { name: p.nome }));
+      alert([
+        ficha ? t("pendingTab.teacher.link.approvedLinked", { name: p.nome, record: ficha.nome }) : t("pendingTab.teacher.approved", { name: p.nome }),
+        avisoDeConflito(conflitos, t),
+      ].filter(Boolean).join("\n\n"));
     } catch (e) {
       console.error(e);
       alert(t("pendingTab.approveError") + " " + (e.message || ""));

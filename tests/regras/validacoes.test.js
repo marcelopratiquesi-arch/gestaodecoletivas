@@ -10,7 +10,7 @@ let env;
 beforeAll(async () => {
   env = await initializeTestEnvironment({
     projectId: 'demo-gestao-pratique',
-    firestore: { rules: readFileSync('firestore.rules', 'utf8'), host: '127.0.0.1', port: Number(process.env.FIRESTORE_EMULATOR_HOST?.split(':').pop() || 8080) },
+    firestore: { rules: readFileSync('firestore.rules', 'utf8'), host: '127.0.0.1', port: Number(globalThis.process?.env?.FIRESTORE_EMULATOR_HOST?.split(':').pop() || 8080) },
   });
 });
 afterAll(async () => { await env?.cleanup(); });
@@ -226,5 +226,43 @@ describe('editar, cancelar e reverter aulão', () => {
   it('mentor de outra unidade não mexe no aulão', async () => {
     await montar();
     await assertFails(updateDoc(ref('mentor2'), { status: 'cancelada', motivoCancelamento: 'Chuva/Clima', validadoPor: 'mentor2' }));
+  });
+});
+
+// Etapa 4: o mentor passa a ter as mesmas travas que a tela já aplicava.
+describe('mentor: travas novas', () => {
+  it('continua validando aula da unidade dele hoje', async () => { await assertSucceeds(validacao('mentor1', 'aulaP1', HOJE)); });
+  it('não valida aula de data futura', async () => { await assertFails(validacao('mentor1', 'aulaP1', AMANHA)); });
+  it('não muda o valor da aula', async () => { await assertFails(validacao('mentor1', 'aulaP1', HOJE, { valorEfetivo: 999 })); });
+  it('não grava aula de outra unidade disfarçada com a unidade dele', async () => {
+    await assertFails(validacao('mentor1', 'aulaB', HOJE, { unidadeId: 'uniA' }));
+  });
+  it('edição mantém o valor da época (mesmo diferente do cronograma de hoje)', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'validacoes/aulaP1_' + HOJE), { aulaId: 'aulaP1', data: HOJE, unidadeId: 'uniA', professorId: 'p1', status: 'realizada', alunos: 10, valorEfetivo: 35, validadoPor: 'liderA' });
+    });
+    await assertSucceeds(updateDoc(doc(como('mentor1'), 'validacoes/aulaP1_' + HOJE), { alunos: 12, validadoPor: 'mentor1' }));
+  });
+  it('lança aulão na unidade dele (valor livre), mas não com data futura', async () => {
+    const aulao = (data) => addDoc(collection(como('mentor1'), 'validacoes'), {
+      isAulao: true, data, unidadeId: 'uniA', professorId: 'p1', status: 'realizada', alunos: 40, valorPago: 300, validadoPor: 'mentor1',
+    });
+    await assertSucceeds(aulao(HOJE));
+    await assertFails(aulao(AMANHA));
+  });
+});
+
+describe('cancelar limpa os restos e feriado pode virar validação', () => {
+  it('líder cancela aula realizada apagando alunos e substituto', async () => {
+    await assertSucceeds(updateDoc(doc(como('liderA'), 'validacoes/feitaHoje'), {
+      status: 'cancelada', motivoCancelamento: 'Chuva/Clima', validadoPor: 'liderA',
+      alunos: deleteField(), professorOriginalId: deleteField(), motivoSubstituicao: deleteField(),
+    }));
+  });
+  it('líder valida por cima do cancelamento automático de feriado', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'validacoes/aulaP1_' + HOJE), { aulaId: 'aulaP1', data: HOJE, unidadeId: 'uniA', professorId: 'p1', status: 'cancelada', motivoCancelamento: 'Recesso/Feriado', valorEfetivo: 0, validadoPor: 'SISTEMA_FERIADO' });
+    });
+    await assertSucceeds(validacao('liderA', 'aulaP1', HOJE));
   });
 });

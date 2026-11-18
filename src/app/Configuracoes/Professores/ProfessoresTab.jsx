@@ -33,6 +33,7 @@ import { useFiltroCascata } from "../ui/useFiltroCascata";
 import SeloRepetido from "../ui/SeloRepetido";
 import { useSelosRepetidos } from "../ui/useSelosRepetidos";
 import JuntarFichasModal from "../Backup/JuntarFichasModal";
+import { liberarContatos, sincronizarEAvisar } from "../../../services/contatoService";
 
 // 🌍 PADRÃO OURO INTERNACIONAL — mesma identidade visual usada em MentoresTab
 const PAIS_CONFIG = {
@@ -256,12 +257,7 @@ export function ProfessoresTab() {
       return mapa;
   }, [meusVinculos, minhasUnidades]);
   const nomeMentor = useCallback((id) => (catalogosGlobais.mentores || []).find(m => m.id === id)?.nome, [catalogosGlobais.mentores]);
-  const nomeLider = useCallback((id) => {
-      for (const u of minhasUnidades) {
-          if (u.liderUid === id) return u.liderNome;
-          if (u.lider2Uid === id) return u.lider2Nome;
-      }
-  }, [minhasUnidades]);
+  const nomeUnidade = useCallback((id) => minhasUnidades.find(u => String(u.id) === id)?.nome, [minhasUnidades]);
   // Os números do topo são botões: a aba SEMPRE abre só com os ativos ("ativo"); "" = todos; "inativo" = só inativos.
   const [statusFiltro, setStatusFiltro] = useState("ativo");
   // "semDocumento" = fichas ativas ainda sem CPF/DNI/SSN (para irem sendo completadas).
@@ -275,9 +271,9 @@ export function ProfessoresTab() {
       getPais: (p) => p.pais || PAIS_DEFAULT,
       getEstados: (p) => (unidadesDoProf[p.id] || []).map(u => u.estado),
       getMentorIds: (p) => (unidadesDoProf[p.id] || []).map(u => u.mentorId),
-      getLiderIds: (p) => (unidadesDoProf[p.id] || []).flatMap(u => [u.liderUid, u.lider2Uid]),
+      getUnidadeIds: (p) => (unidadesDoProf[p.id] || []).map(u => String(u.id)),
       textoBusca: (p) => [p.nome, p.email, p.telefone],
-      nomeMentor, nomeLider,
+      nomeMentor, nomeUnidade,
   });
 
   // ==========================================
@@ -448,6 +444,12 @@ export function ProfessoresTab() {
           });
           if (gravarDoc) documentoDaFichaNoLote(lote, { professorId: profEditando.id, tipo: docForm.tipo, numero: docNumero, anterior: docAnterior, marcarFicha: false });
           await (gravarDoc ? gravarComAviso(lote) : lote.commit());
+          // Reserva de e-mail/telefone (F3 parte A): depois de salvo; se já é de outra pessoa, só avisa.
+          await sincronizarEAvisar({
+            dono: { professorId: profEditando.id, uid: profEditando.uidLogin },
+            antes: { email: profEditando.email, telefone: profEditando.telefone, pais: profEditando.pais },
+            depois: { email: emailMudou ? emailLimpo : profEditando.email, telefone, pais },
+          }, t);
           if (profEditando.nome !== nomeLimpo) await publicarProfessor(profEditando.id, nomeLimpo);
           
           if (profEditando.uidLogin) {
@@ -481,6 +483,10 @@ export function ProfessoresTab() {
               });
           }
           await gravarComAviso(lote);
+          await sincronizarEAvisar({
+            dono: { professorId: docRef.id, uid: uidLoginNovo },
+            depois: { email: emailLimpo, telefone, pais },
+          }, t);
           await publicarProfessor(docRef.id, nomeLimpo);
 
           let logDetalhe = `Email: ${emailLimpo} | Documento de identificação informado`;
@@ -538,6 +544,7 @@ export function ProfessoresTab() {
           if (docDaFicha) apagarDocumentoDaFichaNoLote(lote, p.id, docDaFicha);
           lote.delete(doc(db, "professores", p.id));
           await lote.commit();
+          await liberarContatos({ professorId: p.id }, { email: p.email, telefone: p.telefone, pais: p.pais });
           await removerProfessorDaVitrine(p.id);
           const vinculadosDoProf = vinculos.filter(v => v.professorId === p.id);
           vinculadosDoProf.forEach(v => deleteDoc(doc(db, "vinculos", v.id)));
@@ -593,7 +600,7 @@ export function ProfessoresTab() {
 
       {/* BUSCA + FILTROS (filtro padrão das Configurações) */}
       <FiltroPadrao abaId="professores" filtro={filtro}
-          mostrar={["pais", "estado", ...(role === "admin" ? ["mentor"] : []), ...(role === "admin" || role === "mentor" ? ["lider"] : [])]}
+          mostrar={["pais", "estado", ...(role === "admin" ? ["mentor"] : []), ...(role === "admin" || role === "mentor" ? ["unidade"] : [])]}
           placeholder={t('teachersTab.searchPlaceholder', 'Buscar por nome, telefone ou e-mail...')}
           ativoExtra={statusFiltro !== "ativo"} aoLimpar={() => setStatusFiltro("ativo")}
           acoes={(role === "admin" || role === "mentor") && (

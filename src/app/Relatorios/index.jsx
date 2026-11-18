@@ -14,7 +14,7 @@ import { DIAS_SEMANA as diasSemanaMap, getDiaSemana, formatCurrency, formatDate,
 import {
   BarChart2, Filter, DollarSign, Users, Calendar,
   CheckCircle2, XCircle, Clock, ChevronRight, ChevronDown,
-  LayoutDashboard, Map, Globe, UserCheck, AlertTriangle,
+  LayoutDashboard, Globe, UserCheck, AlertTriangle,
   Download, FileSpreadsheet, FileText, X, User, MousePointerClick, ArrowRightLeft,
   ArrowDown, DownloadCloud, Star, AlignJustify, Layers, Lock, PieChart, Activity, TrendingUp, Search, CheckSquare, Square
 } from 'lucide-react';

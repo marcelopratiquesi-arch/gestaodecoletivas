@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { Users, Loader2, FileSpreadsheet, Search, TriangleAlert, Merge, Link2 } from 'lucide-react';
 import JuntarFichasModal from './JuntarFichasModal';
 import LigarCrachaModal from './LigarCrachaModal';
+import CriarReservas from './CriarReservas';
 import { db } from '../../../services/firebase';
 import { useCatalogs } from '../../../contexts/CatalogContext';
 import { normalizarPais } from '../../../utils/feriados';
@@ -109,6 +110,7 @@ export default function RelatorioRepetidos() {
       outra: outraPessoa.map(g => ({ valor: g.valor, titulo: g.itens[0].telefone, itens: g.itens, pessoas: g.grupos.length })),
       soNome: soNome.map(g => ({ valor: g.valor, titulo: g.itens[0].nome, itens: g.itens, pessoas: g.grupos.length })),
       problemas,
+      todos,
     };
   }, [estado.lidos, catalogs?.professores]);
 
@@ -220,6 +222,7 @@ export default function RelatorioRepetidos() {
           <p className="text-[11px] text-slate-400 mb-3">
             {t('backupTab.duplicates.readSummary', { teachers: (catalogs?.professores || []).length, reads: estado.lidos.total })}
           </p>
+          <CriarReservas registros={r.todos} rotuloOrigem={origem} />
           <div className="flex flex-wrap gap-2 mb-4">
             {contagens.map(c => (
               <button key={c.chave} onClick={() => setAberto(c.chave)}

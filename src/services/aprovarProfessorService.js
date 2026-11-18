@@ -9,6 +9,8 @@ import { db } from './firebase';
 import { lerDocumentoDoPedido } from './documentoService';
 import { acharFichaPorDocumento, documentoDaFichaNoLote, lerDocumentoDaFicha } from './documentoFichaService';
 import { fichasParecidas, forcaDosCampos } from '../utils/repetidos';
+import { normalizarPais } from '../utils/feriados';
+import { sincronizarContatos } from './contatoService';
 
 /**
  * @returns {{ candidatas: {ficha, campos: string[], bloqueada?: string}[], documento: {tipo, numero}|null }}
@@ -78,5 +80,10 @@ export async function aprovarProfessorPedido({ pedido, unidade, ficha = null, do
     status: 'aprovado', analisadoPor: quem.id, analisadoPorNome: quem.nome, analisadoEm: serverTimestamp(),
   });
   await batch.commit();
-  return { levouDocumento };
+  // Reserva de e-mail/telefone (F3 parte A): depois de salvo, nunca desfaz a aprovação.
+  const { conflitos } = await sincronizarContatos({
+    dono: { uid: pedido.id, professorId: idFicha || undefined },
+    depois: { email: pedido.email, telefone: pedido.telefone, pais: normalizarPais(unidade.pais) },
+  });
+  return { levouDocumento, conflitos };
 }

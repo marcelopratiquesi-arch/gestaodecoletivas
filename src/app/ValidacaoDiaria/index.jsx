@@ -3,7 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useCatalogs } from '../../contexts/CatalogContext'; 
 import { db } from '../../services/firebase';
 import { 
-  collection, query, where, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, deleteDoc, setDoc, deleteField
+  collection, query, where, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, deleteDoc, setDoc, deleteField, getDoc
 } from 'firebase/firestore';
 import { 
   Calendar, CircleCheck, CircleX, TriangleAlert, 
@@ -16,12 +16,12 @@ import { PilhaAulas } from './PilhaAulas';
 import { ListaAulas } from './ListaAulas';
 import { ValidationModal } from './ValidationModal';
 import { useLocation } from 'react-router-dom';
-import { getDiaSemana, formatCurrency, formatPeriod } from '../../utils/formatters';
+import { getDiaSemana, formatCurrency, formatPeriod, formatCancelReason } from '../../utils/formatters';
 import {
   idValidacao, deduplicarValidacoes, regraDePrazo, hojeLocal, mesLocal, dataLocal,
   alunosValidos, LIMITE_ALUNOS, MIN_JUSTIFICATIVA, DIAS_RETROATIVOS_LIDER, pendenciasDoProfessor
 } from '../../utils/validacoes';
-import { feriadoNoDia } from '../../utils/feriados';
+import { feriadoNoDia, ehCancelamentoAutomaticoDeFeriado } from '../../utils/feriados';
 import { aulaNaGradeDoDia, datasEntre, somarDias } from '../../utils/agendaAulas';
 import { invalidarCacheInicio } from '../../services/cacheInicio';
 import { useValidacoesDoProfessor, meuProfessorId } from '../../hooks/useValidacoesDoProfessor';
@@ -575,6 +575,9 @@ export default function ValidacaoDiariaPage() {
 
         let status = 'pendente';
         let dadosValidacao = validacao;
+        // Cancelada só por ser feriado (sem ninguém ter decidido): a de agora, calculada na hora, ou um registro
+        // antigo gravado pelo sistema (validadoPor SISTEMA_FERIADO).
+        let feriadoAutomatico = ehCancelamentoAutomaticoDeFeriado(validacao);
 
         if (validacao) {
             status = validacao.status;
@@ -582,15 +585,20 @@ export default function ValidacaoDiariaPage() {
             // Regra única de feriado (src/utils/feriados.js): só a unidade dentro da abrangência do feriado.
             status = 'cancelada';
             dadosValidacao = { motivoCancelamento: 'Recesso/Feriado', status: 'cancelada' };
+            feriadoAutomatico = true;
         }
 
+        const prazo = regraDePrazo(role, dataString);
         gradeFinal.push({
           key: `${aula.id}-${dataString}`,
           data: dataString, diaSemana: diaSemanaNome, aulaBase: aula,
           professor: professorExibicao, professorTitular: profDoCatalogo,
           unidade: unidadeValida, modalidade: modalidadeExibicao,
           validacao: dadosValidacao || null, status: status,
-          somenteLeitura, prazo: regraDePrazo(role, dataString)
+          somenteLeitura, prazo,
+          // A unidade abriu no feriado e a aula aconteceu: admin, mentor e líder podem validar mesmo assim.
+          podeValidarNoFeriado: feriadoAutomatico && status === 'cancelada' && !somenteLeitura && prazo.pode
+            && (role === 'admin' || role === 'mentor' || ehLider(role)),
         });
       });
 
@@ -736,6 +744,15 @@ export default function ValidacaoDiariaPage() {
     setAcaoAtual({ tipo, item }); setModalOpen(true);
   };
 
+  // Aula cancelada só por ser feriado, mas a unidade abriu: admin, mentor e líder validam normalmente.
+  // A janela abre como aula pendente; ao gravar, o registro do dia (ID fixo aulaId_data) vira a validação
+  // de verdade. Registro antigo do sistema com outro ID perde para a validação feita por pessoa.
+  const validarNoFeriado = (item) => {
+    if (!item?.podeValidarNoFeriado) return;
+    if (!window.confirm(t('dailyValidation.alerts.confirmHolidayValidation'))) return;
+    abrirModal('validar', { ...item, status: 'pendente', validacao: null, validadoNoFeriado: true });
+  };
+
   const handleReverterCancelamento = async () => {
       if (!acaoAtual?.item) return;
       if (!acaoAtual.item.validacao?.id && acaoAtual.item.validacao?.motivoCancelamento === 'Recesso/Feriado') return alert(t('dailyValidation.alerts.autoHolidayRevert'));
@@ -875,16 +892,33 @@ export default function ValidacaoDiariaPage() {
             payload.motivoCancelamento = inputValor === 'Outros' ? inputObs : inputValor; payload.substituicao = false;
             diffLog.push(`Cancelamento: ${payload.motivoCancelamento}`);
           }
+          if (item.validadoNoFeriado) diffLog.push('Unidade abriu no feriado');
 
           if (item.validacao?.id) {
             // Editar uma validação não muda o valor da época: mantém o valor gravado quando a aula foi validada.
             if (item.validacao.valorEfetivo !== undefined && item.validacao.valorEfetivo !== null) payload.valorEfetivo = item.validacao.valorEfetivo;
             if (tipo === 'validar' && item.validacao.alunos !== payload.alunos) diffLog.push(`Edição Alunos: de ${item.validacao.alunos} para ${payload.alunos}`);
-            await updateDoc(doc(db, 'validacoes', item.validacao.id), payload);
+            // A edição junta com o que já estava gravado: tira o que não vale mais, para não sobrar resto
+            // (ex.: aula realizada que vira cancelada continuava com o número de alunos e o substituto).
+            const limpeza = tipo === 'validar'
+                ? { motivoCancelamento: deleteField() }
+                : { alunos: deleteField(), professorOriginalId: deleteField(), motivoSubstituicao: deleteField() };
+            await updateDoc(doc(db, 'validacoes', item.validacao.id), { ...payload, ...limpeza });
             await registrarLogAuditoria('ALTERADA', tipo === 'validar' ? `Validação editada.` : `Cancelamento editado.`, item, diffLog.join(' | ') + textoJustificativa);
           } else {
             // ID fixo por aula/dia: se outra pessoa validar ao mesmo tempo, atualiza o mesmo registro (sem duplicar).
-            await setDoc(doc(db, 'validacoes', idValidacao(payload.aulaId, payload.data)), payload);
+            const refDia = doc(db, 'validacoes', idValidacao(payload.aulaId, payload.data));
+            // A tela pode estar atrasada (sem internet, banco lento): confere no banco antes de gravar por cima
+            // do que outra pessoa já registrou. O cancelamento automático de feriado pode ser substituído sem aviso.
+            const existente = await getDoc(refDia);
+            if (existente.exists() && !ehCancelamentoAutomaticoDeFeriado(existente.data())) {
+                const atual = existente.data();
+                const comoEsta = atual.status === 'cancelada'
+                    ? t('dailyValidation.alerts.alreadyCanceled', { motivo: formatCancelReason(atual.motivoCancelamento) || '-' })
+                    : t('dailyValidation.alerts.alreadyValidated', { count: atual.alunos ?? 0 });
+                if (!window.confirm(t('dailyValidation.alerts.confirmOverwrite', { comoEsta }))) return;
+            }
+            await setDoc(refDia, payload);
             await registrarLogAuditoria('NOVA', tipo === 'validar' ? `Aula validada.` : `Aula cancelada.`, item, diffLog.join(' | ') + textoJustificativa);
           }
       }
@@ -1073,6 +1107,7 @@ export default function ValidacaoDiariaPage() {
                     onValidar={(i) => abrirModal('validar', i)}
                     onCancelar={(i) => abrirModal('cancelar', i)}
                     onValidarRapido={validarRapido}
+                    onValidarNoFeriado={validarNoFeriado}
                     salvando={processando}
                 />
             ) : (
@@ -1091,6 +1126,7 @@ export default function ValidacaoDiariaPage() {
                                 onValidar={(i) => abrirModal('validar', i)}
                                 onCancelar={(i) => abrirModal('cancelar', i)}
                                 onValidarRapido={validarRapido}
+                                onValidarNoFeriado={validarNoFeriado}
                                 salvando={processando}
                                 ocultarProfessor={isProfessor && !item.professor?.isSubstituto && !item.somenteLeitura}
                                 verificarFuturo={verificarFuturo}
