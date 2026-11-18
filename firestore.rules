@@ -588,6 +588,42 @@ service cloud.firestore {
       allow delete: if adminOuMentor();
     }
 
+    // ===================== CONTATOS ÚNICOS (um e-mail / um telefone = uma pessoa) =====================
+    // Reserva contatos_unicos/{email_x | tel_BR:xx} = { tipo, uid?, professorId? }: o dono é a pessoa (o crachá
+    // e/ou a ficha da grade ligada a ele). A reserva de OUTRA pessoa não pode ser tomada.
+    // F3 parte A: só a coleção nova; os cadastros ainda gravam sem exigir reserva (isso é a parte B).
+    match /contatos_unicos/{id} {
+      function caminhoFicha(pid) { return /databases/$(database)/documents/professores/$(pid); }
+      // A ficha existe; com login junto, a ficha tem que estar ligada a esse login (uma consulta só por ficha:
+      // o banco limita as consultas por gravação, e o botão do admin grava em lote).
+      function fichaOk(d) {
+        return !('professorId' in d)
+          || (d.professorId is string && d.professorId.size() > 0
+              && ('uid' in d
+                  ? get(caminhoFicha(d.professorId)).data.get('uidLogin', '') == d.uid
+                  : exists(caminhoFicha(d.professorId))));
+      }
+      function formatoOk(d) {
+        return d.keys().hasOnly(['tipo', 'uid', 'professorId'])
+          && ((d.tipo == 'email' && id.matches('^email_[^ @]+@[^ @]+$')) || (d.tipo == 'tel' && id.matches('^tel_[A-Z]{2}:[0-9]{8,10}$')))
+          && ('uid' in d || 'professorId' in d)
+          && (!('uid' in d) || (d.uid is string && d.uid.size() > 0))
+          && fichaOk(d);
+      }
+      // Grava: líder, mentor e admin; ou a própria pessoa, só com o próprio login.
+      function podeGravar(d) { return gestorDeCadastro() || (logado() && d.get('uid', '') == request.auth.uid); }
+      function minha() { return autenticado() && resource.data.get('uid', '') == request.auth.uid; }
+      allow get: if gestorDeCadastro() || minha();
+      allow list: if souAdmin();
+      allow create: if podeGravar(request.resource.data) && formatoOk(request.resource.data);
+      // Só a MESMA pessoa atualiza: mantém o login ou a ficha de antes (ex.: junta o login à ficha ligada).
+      allow update: if podeGravar(request.resource.data) && formatoOk(request.resource.data)
+        && request.resource.data.tipo == resource.data.tipo
+        && ((resource.data.get('uid', '') != '' && request.resource.data.get('uid', '') == resource.data.get('uid', ''))
+            || (resource.data.get('professorId', '') != '' && request.resource.data.get('professorId', '') == resource.data.get('professorId', '')));
+      allow delete: if gestorDeCadastro() || minha();
+    }
+
     // ===================== AVISOS DE SAÍDA (saidas_acesso) =====================
     // Quando alguém diz "não sou mais da unidade" / "não sou mais mentor", o acesso dele é desligado na hora
     // (ver saidaDaFuncao em usuarios) e este aviso aparece em Pendências: o mentor da unidade (ou o admin) pode
@@ -702,8 +738,8 @@ service cloud.firestore {
     // Professor não grava nada aqui, só cria registros de auditoria (log da validação e do "Sair").
     // (No Firestore, se QUALQUER regra libera, a ação passa; por isso as exceções precisam estar aqui.)
     match /{colecao}/{resto=**} {
-      allow read: if logado() && !(colecao in ['feriados_propostas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos', 'documentos_ficha', 'documentos_professor']);
-      allow write: if logado() && !(colecao in ['feriados', 'feriados_propostas', 'usuarios', 'publico', 'validacoes', 'aulas', 'aulas_publicas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'resumos_mensais', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos', 'professores', 'documentos_ficha', 'documentos_professor']) && !souProfessor();
+      allow read: if logado() && !(colecao in ['feriados_propostas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos', 'documentos_ficha', 'documentos_professor', 'contatos_unicos']);
+      allow write: if logado() && !(colecao in ['feriados', 'feriados_propostas', 'usuarios', 'publico', 'validacoes', 'aulas', 'aulas_publicas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'resumos_mensais', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos', 'professores', 'documentos_ficha', 'documentos_professor', 'contatos_unicos']) && !souProfessor();
       allow create: if logado() && colecao in ['auditoria_cronograma', 'auditoria_configuracoes'];
     }
   }

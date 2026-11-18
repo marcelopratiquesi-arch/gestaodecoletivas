@@ -32,6 +32,8 @@ import CampoDocumento from "../components/acesso/CampoDocumento";
 import SeletorModalidades from "../components/acesso/SeletorModalidades";
 import { documentoValido, formatarDocumento, tipoDocumentoPadrao } from "../utils/documento";
 import { documentoNoLote, gravarComAviso, lerDocumento, ERRO_DOCUMENTO_EM_USO } from "../services/documentoService";
+import { sincronizarEAvisar } from "../services/contatoService";
+import { normalizarPais } from "../utils/feriados";
 
 const temGoogle = (u) => (u?.providerData || []).some((p) => p.providerId === "google.com");
 const emailDoGoogle = (u) => (u?.providerData || []).find((p) => p.providerId === "google.com")?.email || "";
@@ -183,6 +185,14 @@ export default function AtualizarCadastro() {
       }
       documentoNoLote(batch, { uid, tipo: docTipo, numero: docNumero, anterior: docAnterior });
       await gravarComAviso(batch);
+
+      // Reserva de e-mail/telefone (F3 parte A): depois de salvo; se já é de outra pessoa, só avisa.
+      const pais = normalizarPais(userData.pais || unidade?.pais);
+      await sincronizarEAvisar({
+        dono: { uid, professorId: userData.professorId },
+        antes: { email: emailAntigo, telefone: userData.telefone, pais },
+        depois: { email, telefone: telefoneLimpo, pais },
+      }, t);
 
       try {
         await addDoc(collection(db, "auditoria_configuracoes"), {

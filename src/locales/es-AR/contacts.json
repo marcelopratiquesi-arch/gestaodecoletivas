@@ -1,0 +1,22 @@
+{
+  "inUse": "Guardado. Atención: {{fields}} también está en el registro de otra persona. Revisalo en el Informe de repetidos (pestaña Backup).",
+  "fields": {
+    "email": "el e-mail",
+    "tel": "el teléfono",
+    "both": "el e-mail y el teléfono"
+  },
+  "reserve": {
+    "button": "Crear reservas de los registros actuales",
+    "hint": "Graba el bloqueo de e-mail y teléfono para quienes ya están registrados. Los conflictos de abajo son la limpieza que falta antes de bloquear repetidos.",
+    "working": "Creando reservas...",
+    "done": "{{created}} reservas creadas, {{ok}} ya estaban bien.",
+    "conflicts": "Conflictos ({{count}}): el mismo dato en personas diferentes",
+    "taken": "Ya reservados para otra persona ({{count}})",
+    "none": "Ningún conflicto.",
+    "error": "No pude crear las reservas.",
+    "type": {
+      "email": "E-mail",
+      "tel": "Teléfono"
+    }
+  }
+}

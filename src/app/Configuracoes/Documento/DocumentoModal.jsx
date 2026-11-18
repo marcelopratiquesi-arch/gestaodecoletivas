@@ -172,7 +172,11 @@ function CartaoDoDocumento({ r, aoLiberar, aoEscolherPessoa, aoCadastrar, aoIrPa
     try {
       if (remocao?.professor) {
         // Professor (só admin): apaga o acesso e libera o documento; a ficha da grade fica.
-        await removerProfessorELiberarDocumento({ uid: r.uid, documento: { tipo: r.tipo, numero: r.numero }, professores: catalogs?.professores || [] });
+        const unidadeDoCracha = (catalogs?.unidades || []).find((u) => String(u.id) === String(r.cracha?.unidadeId));
+        await removerProfessorELiberarDocumento({
+          uid: r.uid, documento: { tipo: r.tipo, numero: r.numero }, professores: catalogs?.professores || [],
+          cracha: r.cracha ? { ...r.cracha, pais: r.cracha.pais || unidadeDoCracha?.pais } : null,
+        });
         await registrarAuditoriaAcesso({
           tipoAcao: "EXCLUÍDA", descricao: t("document.search.auditDeleteTeacher"), quem: userData,
           alvo: { id: r.uid, nome, email }, papelAnterior: papel,

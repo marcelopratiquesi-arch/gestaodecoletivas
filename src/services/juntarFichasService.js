@@ -10,6 +10,7 @@ import { publicarProfessor, removerProfessorDaVitrine } from './vitrinePublica';
 import { documentoDaFichaNoLote, lerDocumentoDaFicha, passarDocumentoNoLote } from './documentoFichaService';
 import { lerDocumento } from './documentoService';
 import { idDocumentoUnico } from '../utils/documento';
+import { liberarContatos, sincronizarContatos } from './contatoService';
 import { espelharMudanca } from './aulasPublicas';
 
 const TAMANHO_LOTE = 450; // limite do Firestore: 500 operações por lote
@@ -74,6 +75,14 @@ export async function ligarFichaAoCracha({ ficha, cracha, quem, manter = {} }) {
   // O crachá acompanha o nome escolhido (o e-mail do crachá é o do login e não muda).
   batch.update(doc(db, 'usuarios', String(cracha.id)), { professorId: String(ficha.id), ...(dados.nome ? { nome: dados.nome } : {}) });
   await batch.commit();
+  // Reservas de e-mail/telefone: ficha e crachá agora são a mesma pessoa.
+  const dono = { professorId: String(ficha.id), uid: String(cracha.id) };
+  await sincronizarContatos({
+    dono,
+    antes: { email: ficha.email, telefone: ficha.telefone, pais: ficha.pais },
+    depois: { email: dados.email ?? ficha.email, telefone: dados.telefone ?? ficha.telefone, pais: ficha.pais },
+  });
+  await sincronizarContatos({ dono, depois: { email: cracha.email, telefone: cracha.telefone, pais: cracha.pais || ficha.pais } });
   if (dados.nome) await publicarProfessor(ficha.id, dados.nome);
   try {
     await addDoc(collection(db, 'auditoria_cronograma'), {
@@ -128,6 +137,18 @@ export async function executarJuncao({ plano, principal, outras, quem, aoAvancar
   });
   plano.idsApagar.forEach(id => final.delete(doc(db, 'professores', id)));
   await final.commit();
+
+  // Reservas de e-mail/telefone: as fichas apagadas soltam as delas e a que ficou reserva os dados finais.
+  for (const o of outras) await liberarContatos({ professorId: String(o.id) }, { email: o.email, telefone: o.telefone, pais: o.pais });
+  await sincronizarContatos({
+    dono: { professorId: String(plano.idPrincipal), uid: principal.uidLogin },
+    antes: { email: principal.email, telefone: principal.telefone, pais: principal.pais },
+    depois: {
+      email: plano.completar.email ?? principal.email,
+      telefone: plano.completar.telefone ?? principal.telefone,
+      pais: plano.completar.pais ?? principal.pais,
+    },
+  });
 
   await Promise.all(plano.idsApagar.map(id => removerProfessorDaVitrine(id)));
   if (plano.completar.nome) await publicarProfessor(plano.idPrincipal, plano.completar.nome);
