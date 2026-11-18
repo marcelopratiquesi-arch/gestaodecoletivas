@@ -22,7 +22,7 @@ import {
   alunosValidos, LIMITE_ALUNOS, MIN_JUSTIFICATIVA, DIAS_RETROATIVOS_LIDER, pendenciasDoProfessor
 } from '../../utils/validacoes';
 import { feriadoNoDia } from '../../utils/feriados';
-import { aulaNaGradeDoDia, datasEntre } from '../../utils/agendaAulas';
+import { aulaNaGradeDoDia, datasEntre, somarDias } from '../../utils/agendaAulas';
 import { invalidarCacheInicio } from '../../services/cacheInicio';
 import { useValidacoesDoProfessor, meuProfessorId } from '../../hooks/useValidacoesDoProfessor';
 import { useMediaAlunos, numeroEstranho } from '../../hooks/useMediaAlunos';
@@ -254,30 +254,41 @@ export default function ValidacaoDiariaPage() {
     [isProfessor, userData, catalogs.professores]
   );
 
-  // O professor sempre carrega o mês atual inteiro (para o aviso de pendências), mais o período escolhido.
+  // Professor: duas buscas que não se repetem.
+  // 1) Mês atual até hoje (aviso de pendências). É a MESMA busca do selo do menu, e o Firebase
+  //    divide a mesma busca entre os dois (sem ler em dobro).
+  // 2) Só se ele olhar algo de meses anteriores: aquele pedaço, até o último dia do mês passado.
+  //    (Antes carregava do mês escolhido até hoje: olhar janeiro em novembro lia 11 meses.)
+  //    Dia futuro não tem validação, então nada depois de hoje é buscado.
   const inicioMesAtual = `${mesLocal()}-01`;
   const hoje = hojeLocal();
-  const faixaProfessor = {
-    inicio: periodo.inicio < inicioMesAtual ? periodo.inicio : inicioMesAtual,
-    fim: periodo.fim > hoje ? periodo.fim : hoje,
-  };
-  const { validacoes: validacoesProfessor, carregando: carregandoProfessor, erro: erroProfessor } =
-    useValidacoesDoProfessor(meuProfId, faixaProfessor.inicio, faixaProfessor.fim);
+  const fimDoMesPassado = somarDias(inicioMesAtual, -1);
+  const extraInicio = periodo.inicio < inicioMesAtual ? periodo.inicio : null;
+  const extraFim = extraInicio ? [periodo.fim, hoje, fimDoMesPassado].sort()[0] : null;
+  const mesAtualProf = useValidacoesDoProfessor(meuProfId, inicioMesAtual, hoje);
+  const anterioresProf = useValidacoesDoProfessor(extraInicio && extraFim >= extraInicio ? meuProfId : null, extraInicio, extraFim);
+
+  const carregandoProfessor = mesAtualProf.carregando || anterioresProf.carregando;
+  const erroProfessor = mesAtualProf.erro || anterioresProf.erro;
+  const validacoesProfessor = useMemo(() => {
+      const porId = new Map();
+      [...mesAtualProf.validacoes, ...anterioresProf.validacoes].forEach(v => porId.set(v.id, v));
+      return deduplicarValidacoes([...porId.values()]);
+  }, [mesAtualProf.validacoes, anterioresProf.validacoes]);
 
   const validacoesDaTela = isProfessor ? validacoesProfessor : validacoesRealtime;
-  const carregandoValidacoes = isProfessor ? carregandoProfessor : loading;
   // O banco recusou a leitura: a tela NÃO mostra a lista (senão tudo pareceria pendente e alguém validaria em dobro).
   const erroValidacoes = isProfessor ? erroProfessor : erroRealtime;
   // Líder/mentor/professor sem nenhuma unidade (admin sempre enxerga a rede).
   const semUnidade = !loadingCatalogs && role !== 'admin' && catalogs.unidades.length === 0;
 
   const pendentesDoMes = useMemo(() => {
-    if (!isProfessor || loadingCatalogs || carregandoProfessor) return [];
+    if (!isProfessor || loadingCatalogs || mesAtualProf.carregando) return [];
     return pendenciasDoProfessor({
       aulas: catalogs.aulas, unidades: catalogs.unidades, feriados: catalogs.feriados,
-      validacoes: validacoesProfessor, professorId: meuProfId, getDiaSemana, feriadoNoDia,
+      validacoes: mesAtualProf.validacoes, professorId: meuProfId, getDiaSemana, feriadoNoDia,
     });
-  }, [isProfessor, loadingCatalogs, carregandoProfessor, catalogs, validacoesProfessor, meuProfId]);
+  }, [isProfessor, loadingCatalogs, mesAtualProf.carregando, catalogs, mesAtualProf.validacoes, meuProfId]);
 
   const verPendentesDoMes = () => {
       setModoFiltro('mes'); setMesFiltro(mesLocal()); setFiltroStatus('pendente'); setItensVisiveis(12);
@@ -387,6 +398,18 @@ export default function ValidacaoDiariaPage() {
       return JSON.stringify(blocosDeUnidades(ids, globalCatalogs?.aulas || []));
   }, [role, unidadesLiderKey, filtroUnidade, unidadesFiltradasSelect, globalCatalogs?.aulas]);
 
+  // Quem marca várias unidades uma a uma não abre uma busca nova a cada clique: a busca espera
+  // a pessoa parar de mexer no filtro por um instante (na primeira vez vai direto).
+  const [blocosEscutados, setBlocosEscutados] = useState(blocosAlvoKey);
+  useEffect(() => {
+      if (blocosEscutados === blocosAlvoKey) return undefined;
+      const espera = setTimeout(() => setBlocosEscutados(blocosAlvoKey), blocosEscutados === '[]' ? 0 : 700);
+      return () => clearTimeout(espera);
+  }, [blocosAlvoKey, blocosEscutados]);
+  // Enquanto espera, a tela fica em "carregando" (senão a unidade recém-marcada pareceria toda pendente).
+  const filtroMudando = !isProfessor && blocosEscutados !== blocosAlvoKey;
+  const carregandoValidacoes = isProfessor ? carregandoProfessor : (loading || filtroMudando);
+
   useEffect(() => {
     // Professor: as validações vêm do useValidacoesDoProfessor (as dele + as das aulas dele substituídas).
     if (role === 'professor') return;
@@ -418,7 +441,7 @@ export default function ValidacaoDiariaPage() {
     // Uma consulta por bloco de até 30 unidades, cada uma escutando o banco ao vivo; a lista final junta
     // todas (sem repetir) e tira duplicatas antigas. Nenhum caminho lê a rede inteira.
     // (O professor não passa por aqui: as validações dele vêm do useValidacoesDoProfessor.)
-    const consultas = JSON.parse(blocosAlvoKey).map(bloco => query(ref, ...periodo, where('unidadeId', 'in', bloco)));
+    const consultas = JSON.parse(blocosEscutados).map(bloco => query(ref, ...periodo, where('unidadeId', 'in', bloco)));
     if (consultas.length === 0) {
         setValidacoesRealtime([]);
         setLoading(false);
@@ -447,7 +470,8 @@ export default function ValidacaoDiariaPage() {
     }));
 
     return () => cancelar.forEach(unsub => unsub());
-  }, [modoFiltro, dataFiltro, mesFiltro, periodoFiltro, blocosAlvoKey, catalogs.unidades.length, catalogs.professores, role, isCofreFechado, loadingCatalogs]);
+  // (Não depende mais do catálogo de professores: editar um professor em qualquer lugar reabria a busca e relia tudo.)
+  }, [modoFiltro, dataFiltro, mesFiltro, periodoFiltro, blocosEscutados, catalogs.unidades.length, role, isCofreFechado, loadingCatalogs]);
 
   // ==========================================
   // 3. PROCESSADOR DE GRADE VISUAL
@@ -470,6 +494,38 @@ export default function ValidacaoDiariaPage() {
 
     const meuProfessorId = meuProfId;
 
+    // Fichários em memória: cada busca vira consulta direta, em vez de varrer as listas inteiras
+    // para cada aula de cada dia (no mês de muitas unidades eram milhões de comparações e a tela travava).
+    const porId = (lista) => new Map((lista || []).map(x => [String(x.id), x]));
+    const unidadesPorId = porId(catalogs.unidades);
+    const professoresPorId = porId(catalogs.professores);
+    const modalidadesPorId = porId(catalogs.modalidades);
+    const validacaoPorAulaDia = new Map();
+    const auloesPorDia = new Map();
+    validacoesDaTela.forEach(v => {
+        if (v.isAulao) {
+            if (!auloesPorDia.has(v.data)) auloesPorDia.set(v.data, []);
+            auloesPorDia.get(v.data).push(v);
+        }
+        const chave = `${v.aulaId}|${v.data}`;
+        if (!validacaoPorAulaDia.has(chave)) validacaoPorAulaDia.set(chave, v); // a 1ª, como antes
+    });
+    const unidadesEscolhidas = new Set(filtroUnidade.map(String));
+    const filtraPorRede = role === 'admin' || role === 'mentor';
+    // Filtro de unidade/estado/mentor/modalidade não depende do dia: aplicado uma vez só.
+    const unidadePassaNoFiltro = (unidade, idBruto) => {
+        if (!unidade) return false;
+        if (unidadesEscolhidas.size > 0 && !unidadesEscolhidas.has(String(idBruto))) return false;
+        if (filtraPorRede) {
+            if (filtroEstado.length > 0 && !filtroEstado.includes(unidade.estado)) return false;
+            if (filtroMentor.length > 0 && !filtroMentor.includes(unidade.mentorId)) return false;
+        }
+        return true;
+    };
+    const aulasCandidatas = catalogs.aulas.filter(aula =>
+        unidadePassaNoFiltro(unidadesPorId.get(String(aula.unidadeId)), aula.unidadeId)
+        && !(filtroModalidade.length > 0 && !filtroModalidade.includes(String(aula.modalidadeId))));
+
     let gradeFinal = [];
 
     datasParaVerificar.forEach(dataObj => {
@@ -477,21 +533,12 @@ export default function ValidacaoDiariaPage() {
       const diaSemanaNome = getDiaSemana(dataObj);
 
       // Regra única (src/utils/agendaAulas.js): dia da semana + vigência da aula. A Página de Início usa a mesma.
-      const aulasDoDia = catalogs.aulas.filter(aula => aulaNaGradeDoDia(aula, dataString, diaSemanaNome));
+      const aulasDoDia = aulasCandidatas.filter(aula => aulaNaGradeDoDia(aula, dataString, diaSemanaNome));
 
       aulasDoDia.forEach(aula => {
-        const unidadeValida = catalogs.unidades.find(u => String(u.id) === String(aula.unidadeId));
-        if (!unidadeValida) return; 
+        const unidadeValida = unidadesPorId.get(String(aula.unidadeId));
 
-        // 🟢 A CASCATA PROTEGENDO O LAÇO DE REPETIÇÃO
-        if (filtroUnidade.length > 0 && !filtroUnidade.includes(String(aula.unidadeId))) return;
-        if (role === 'admin' || role === 'mentor') {
-            if (filtroEstado.length > 0 && !filtroEstado.includes(unidadeValida.estado)) return;
-            if (filtroMentor.length > 0 && !filtroMentor.includes(unidadeValida.mentorId)) return;
-        }
-        if (filtroModalidade.length > 0 && !filtroModalidade.includes(String(aula.modalidadeId))) return;
-
-        const validacao = validacoesDaTela.find(v => String(v.aulaId) === String(aula.id) && v.data === dataString);
+        const validacao = validacaoPorAulaDia.get(`${aula.id}|${dataString}`);
 
         // Professor vê as aulas em que é titular e também as que ele deu como SUBSTITUTO
         // (essas só para consulta: quem valida/edita é o titular, a unidade ou o mentor).
@@ -503,8 +550,8 @@ export default function ValidacaoDiariaPage() {
             somenteLeitura = !souTitular;
         }
         
-        const profDoCatalogo = catalogs.professores.find(p => String(p.id) === String(aula.professorId));
-        const modDoCatalogo = catalogs.modalidades.find(m => String(m.id) === String(aula.modalidadeId));
+        const profDoCatalogo = professoresPorId.get(String(aula.professorId));
+        const modDoCatalogo = modalidadesPorId.get(String(aula.modalidadeId));
 
         let professorExibicao = profDoCatalogo ? { ...profDoCatalogo } : { nome: t('common.unknown.deletedTeacher') }; 
         let modalidadeExibicao = modDoCatalogo ? { ...modDoCatalogo } : { nome: t('common.unknown.deletedModality') };
@@ -513,7 +560,7 @@ export default function ValidacaoDiariaPage() {
             if (validacao.professorNomeEfetivo) professorExibicao.nome = validacao.professorNomeEfetivo;
             if (validacao.modalidadeNomeEfetiva) modalidadeExibicao.nome = validacao.modalidadeNomeEfetiva;
             if (validacao.substituicao && validacao.professorId) {
-                const profSub = catalogs.professores.find(p => String(p.id) === String(validacao.professorId));
+                const profSub = professoresPorId.get(String(validacao.professorId));
                 if (profSub) {
                     professorExibicao = { ...profSub, isSubstituto: true };
                     if (validacao.professorNomeEfetivo) professorExibicao.nome = validacao.professorNomeEfetivo;
@@ -547,16 +594,10 @@ export default function ValidacaoDiariaPage() {
         });
       });
 
-      const auloesDoDia = validacoesDaTela.filter(v => v.isAulao && v.data === dataString);
+      const auloesDoDia = auloesPorDia.get(dataString) || [];
       auloesDoDia.forEach(v => {
-         const unidadeValida = catalogs.unidades.find(u => String(u.id) === String(v.unidadeId));
-         if (!unidadeValida) return;
-         
-         if (filtroUnidade.length > 0 && !filtroUnidade.includes(String(v.unidadeId))) return;
-         if (role === 'admin' || role === 'mentor') {
-            if (filtroEstado.length > 0 && !filtroEstado.includes(unidadeValida.estado)) return;
-            if (filtroMentor.length > 0 && !filtroMentor.includes(unidadeValida.mentorId)) return;
-         }
+         const unidadeValida = unidadesPorId.get(String(v.unidadeId));
+         if (!unidadePassaNoFiltro(unidadeValida, v.unidadeId)) return;
          if (filtroModalidade.length > 0 && !filtroModalidade.includes(String(v.modalidadeId))) return;
 
          let profAulao = { nome: v.professorNomeEfetivo || t('common.unknown.teacher') };

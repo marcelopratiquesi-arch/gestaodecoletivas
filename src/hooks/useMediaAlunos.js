@@ -4,18 +4,45 @@
 // Econômico para a cota gratuita: lê só as 6 validações mais recentes de cada aula que aparece na
 // tela (consulta aulaId == X, ordenada por data, limite 6), guarda em memória enquanto o sistema
 // estiver aberto e nunca busca a mesma aula duas vezes. Teto de aulas buscadas por sessão.
+// Também guarda neste aparelho até o fim do dia: recarregar a página (F5) ou voltar à tela não lê de novo.
+// (A média só usa aulas de dias anteriores, então o que foi lido de manhã continua certo o dia todo.)
 // Precisa do índice (aulaId ↑, data ↓) de firestore.indexes.json; sem ele, só não há sugestão.
 import { useEffect, useState } from 'react';
 import { collection, getDocs, limit, orderBy, query, where } from 'firebase/firestore';
 import { db } from '../services/firebase';
+import { hojeLocal } from '../utils/validacoes';
 
 const AMOSTRAS = 4;            // média das últimas 4 aulas realizadas
 const LEITURA_POR_AULA = 6;    // lê 6 para sobrar margem para canceladas
 const TETO_AULAS_SESSAO = 80;  // no máximo 80 aulas diferentes por sessão (≈ 480 leituras)
+const CHAVE_APARELHO = 'mediaAlunos.v1';
 
 const cache = new Map();       // aulaId -> lista de { data, alunos } (mais recente primeiro) | null (sem dados)
 const emAndamento = new Set();
 let buscadas = 0;
+let semIndice = false;         // o banco disse que falta o índice: não adianta continuar pedindo
+
+// Guardado no aparelho: { dia: "AAAA-MM-DD", aulas: { aulaId: lista | null } }. Dia virou = descarta.
+// Se o navegador não deixar guardar (aba anônima, bloqueio), segue só com a memória.
+const guardados = (() => {
+  try {
+    const salvo = JSON.parse(localStorage.getItem(CHAVE_APARELHO) || 'null');
+    if (salvo?.dia === hojeLocal() && salvo.aulas && typeof salvo.aulas === 'object') return salvo.aulas;
+  } catch { /* sem armazenamento */ }
+  return {};
+})();
+Object.entries(guardados).forEach(([id, lista]) => cache.set(id, Array.isArray(lista) ? lista : null));
+
+let gravarDepois = null;
+const guardarNoAparelho = (id, lista) => {
+  guardados[id] = lista;
+  // Junta várias respostas numa gravação só.
+  if (gravarDepois) return;
+  gravarDepois = setTimeout(() => {
+    gravarDepois = null;
+    try { localStorage.setItem(CHAVE_APARELHO, JSON.stringify({ dia: hojeLocal(), aulas: guardados })); } catch { /* cheio ou bloqueado */ }
+  }, 500);
+};
 
 export function mediaDaAula(historico, dataAula) {
   if (!historico) return null;
@@ -57,7 +84,7 @@ export function useMediaAlunos(aulaIds) {
     if (!chave) return;
     const faltando = chave.split(',').filter(id => id && !cache.has(id) && !emAndamento.has(id));
     for (const id of faltando) {
-      if (buscadas >= TETO_AULAS_SESSAO) break;
+      if (buscadas >= TETO_AULAS_SESSAO || semIndice) break;
       buscadas += 1;
       emAndamento.add(id);
       const q = query(collection(db, 'validacoes'), where('aulaId', '==', id), orderBy('data', 'desc'), limit(LEITURA_POR_AULA));
@@ -66,9 +93,17 @@ export function useMediaAlunos(aulaIds) {
           const lista = snap.docs.map(d => d.data())
             .filter(v => v.status === 'realizada' && typeof v.alunos === 'number' && v.alunos >= 0)
             .map(v => ({ data: v.data, alunos: v.alunos }));
-          cache.set(id, lista.length ? lista : null);
+          const resultado = lista.length ? lista : null;
+          cache.set(id, resultado);
+          guardarNoAparelho(id, resultado);
         })
-        .catch(e => { console.warn('Média de alunos indisponível (índice aulaId/data?):', e?.message); cache.set(id, null); })
+        .catch(e => {
+          // Sem o índice o banco recusa todas: para de tentar nesta sessão. Erro não é guardado no aparelho
+          // (quando o índice for publicado, a média volta a aparecer na próxima abertura).
+          if (e?.code === 'failed-precondition') semIndice = true;
+          console.warn('Média de alunos indisponível (índice aulaId/data?):', e?.message);
+          cache.set(id, null);
+        })
         .finally(() => { emAndamento.delete(id); avisar(); });
     }
   }, [chave]);

@@ -28,14 +28,30 @@ export function useValidacoesDoProfessor(professorId, dataInicio, dataFim) {
 
     const qProprias = query(collection(db, 'validacoes'),
       where('data', '>=', dataInicio), where('data', '<=', dataFim), where('professorId', '==', String(professorId)));
-    // Só igualdade (sem intervalo de datas) para não exigir índice novo; o volume é pequeno (só substituições).
-    const qSubstituidas = query(collection(db, 'validacoes'), where('professorOriginalId', '==', String(professorId)));
-
     const u1 = onSnapshot(qProprias,
       (snap) => gravar({ proprias: snap.docs.map(d => ({ id: d.id, ...d.data() })), prontoP: true }), erro('prontoP'));
-    const u2 = onSnapshot(qSubstituidas,
-      (snap) => gravar({ substituidas: snap.docs.map(d => ({ id: d.id, ...d.data() })), prontoS: true }), erro('prontoS'));
-    return () => { u1(); u2(); };
+
+    // Substituições das aulas dele: só do período (antes lia TODAS as substituições da vida inteira, que só crescem).
+    // Precisa do índice (professorOriginalId, data) de firestore.indexes.json. Enquanto o índice não existir,
+    // o banco recusa com "failed-precondition" e a busca volta sozinha ao jeito antigo (sem data): nada quebra.
+    let ativo = true;
+    let u2 = () => {};
+    const abrirSubstituidas = (comData) => {
+      const filtros = [where('professorOriginalId', '==', String(professorId))];
+      if (comData) filtros.push(where('data', '>=', dataInicio), where('data', '<=', dataFim));
+      u2 = onSnapshot(query(collection(db, 'validacoes'), ...filtros),
+        (snap) => gravar({ substituidas: snap.docs.map(d => ({ id: d.id, ...d.data() })), prontoS: true }),
+        (e) => {
+          if (comData && e?.code === 'failed-precondition') {
+            console.warn('Índice professorOriginalId/data ainda não existe: usando a busca antiga das substituições.');
+            if (ativo) abrirSubstituidas(false);
+            return;
+          }
+          erro('prontoS')(e);
+        });
+    };
+    abrirSubstituidas(true);
+    return () => { ativo = false; u1(); u2(); };
   }, [chave, professorId, dataInicio, dataFim]);
 
   const atual = estado.chave === chave;
