@@ -791,13 +791,8 @@ service cloud.firestore {
     // Professor não grava nada aqui, só cria registros de auditoria (log da validação e do "Sair").
     // (No Firestore, se QUALQUER regra libera, a ação passa; por isso as exceções precisam estar aqui.)
     match /{colecao}/{resto=**} {
-<<<<<<< HEAD
-      allow read: if logado() && !(colecao in ['feriados_propostas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos', 'documentos_ficha', 'documentos_professor', 'contatos_unicos']);
-      allow write: if logado() && !(colecao in ['feriados', 'feriados_propostas', 'usuarios', 'publico', 'validacoes', 'aulas', 'aulas_publicas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'resumos_mensais', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos', 'professores', 'documentos_ficha', 'documentos_professor', 'contatos_unicos', 'unidades', 'configuracoes']) && !souProfessor();
-=======
       allow read: if logado() && !(colecao in ['feriados_propostas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos', 'documentos_ficha', 'documentos_professor', 'contatos_unicos', 'telemetria_leituras']);
-      allow write: if logado() && !(colecao in ['feriados', 'feriados_propostas', 'usuarios', 'publico', 'validacoes', 'aulas', 'aulas_publicas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'resumos_mensais', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos', 'professores', 'documentos_ficha', 'documentos_professor', 'contatos_unicos', 'telemetria_leituras']) && !souProfessor();
->>>>>>> origin/main
+      allow write: if logado() && !(colecao in ['feriados', 'feriados_propostas', 'usuarios', 'publico', 'validacoes', 'aulas', 'aulas_publicas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'resumos_mensais', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos', 'professores', 'documentos_ficha', 'documentos_professor', 'contatos_unicos', 'telemetria_leituras', 'unidades', 'configuracoes']) && !souProfessor();
       allow create: if logado() && colecao in ['auditoria_cronograma', 'auditoria_configuracoes'];
     }
   }
