@@ -1,7 +1,7 @@
 // Comparação de e-mail, telefone e nome (src/utils/repetidos.js).
 // Rodar: npx vitest run tests/unit
 import { describe, it, expect } from 'vitest';
-import { normalizarEmail, emailFormatoValido, emailDeMentira, chaveTelefone, normalizarNome, acharRepetidos } from '../../src/utils/repetidos';
+import { normalizarEmail, emailFormatoValido, emailDeMentira, chaveTelefone, normalizarNome, acharRepetidos, analisarRepetidos, fichasParecidas, limparNome } from '../../src/utils/repetidos';
 
 describe('e-mail', () => {
   it('ignora maiúsculas e espaços, mas não pontos', () => {
@@ -58,6 +58,28 @@ describe('nome', () => {
   });
 });
 
+describe('fichasParecidas (cadastro)', () => {
+  const fichas = [
+    { id: 'a', nome: 'Débora Slayfer', email: 'Debora@X.com', telefone: '(48) 98480-1771', pais: 'BR' },
+    { id: 'b', nome: 'Outra Pessoa', email: 'outra@x.com', telefone: '48 8480-1771', pais: 'BR' },
+    { id: 'c', nome: 'Sem Contato', email: 'naoinformou@gmail.com' },
+  ];
+  it('acha por e-mail (sem maiúsculas), telefone (com/sem 9) e nome (sem acento)', () => {
+    const r = fichasParecidas(fichas, { email: 'debora@x.com', telefone: '+55 48 98480-1771', nome: 'DEBORA SLAYFER' });
+    expect(r.find(x => x.ficha.id === 'a').campos).toEqual(['email', 'telefone', 'nome']);
+    expect(r.find(x => x.ficha.id === 'b').campos).toEqual(['telefone']);
+  });
+  it('ignora a própria ficha ao editar', () => {
+    expect(fichasParecidas(fichas, { email: 'debora@x.com' }, 'a')).toHaveLength(0);
+  });
+  it('e-mail de mentira não bate com ninguém', () => {
+    expect(fichasParecidas(fichas, { email: 'naoinformou@gmail.com' })).toHaveLength(0);
+  });
+  it('limparNome: maiúsculas sem espaço sobrando', () => {
+    expect(limparNome('  débora   slayfer ')).toBe('DÉBORA SLAYFER');
+  });
+});
+
 describe('acharRepetidos', () => {
   it('acha o mesmo e-mail em pessoas diferentes', () => {
     const r = acharRepetidos([
@@ -92,5 +114,36 @@ describe('acharRepetidos', () => {
     expect(r.email).toHaveLength(0);
     expect(r.problemas.emailDeMentira).toHaveLength(2);
     expect(r.problemas.telefoneInvalido).toHaveLength(1);
+  });
+});
+
+describe('analisarRepetidos', () => {
+  const ana = (id, extra = {}) => ({ origem: 'professor', id, nome: 'Ana Paula', email: 'ana@x.com', telefone: '11987654321', ...extra });
+  it('mesma pessoa em unidades diferentes: sugestão de juntar, sem alarme', () => {
+    const r = analisarRepetidos([ana('p1'), ana('p2', { nome: 'ANA PAULA' }), ana('p3', { email: 'outro@x.com' })]);
+    expect(r.mesmaPessoa).toHaveLength(1);
+    expect(r.mesmaPessoa[0].itens).toHaveLength(3);
+    expect(r.outraPessoa).toHaveLength(0);
+    expect(r.selos.get('professor:p1').mesma).toHaveLength(2);
+  });
+  it('ficha ligada ao crachá é uma pessoa só', () => {
+    const r = analisarRepetidos([ana('p1', { uidLogin: 'u1' }), { origem: 'cracha', id: 'u1', nome: 'Ana Paula', email: 'ana@x.com', telefone: '11987654321' }]);
+    expect(r.mesmaPessoa).toHaveLength(0);
+  });
+  it('mesmo telefone com nome e e-mail diferentes: alarme de outra pessoa', () => {
+    const r = analisarRepetidos([ana('p1'), { origem: 'professor', id: 'p2', nome: 'Carlos Lima', email: 'c@x.com', telefone: '11987654321' }]);
+    expect(r.outraPessoa).toHaveLength(1);
+    expect(r.selos.get('professor:p2').outra).toHaveLength(1);
+    expect(r.mesmaPessoa).toHaveLength(0);
+  });
+  it('só o nome igual (maiúscula/acento diferente) vira homônimo, sem selo', () => {
+    const r = analisarRepetidos([
+      { origem: 'professor', id: 'p1', nome: 'María Silva', email: 'a@x.com' },
+      { origem: 'professor', id: 'p2', nome: 'MARIA SILVA', email: 'b@x.com' },
+    ]);
+    expect(r.soNome).toHaveLength(1);
+    expect(r.mesmaPessoa).toHaveLength(0);
+    expect(r.outraPessoa).toHaveLength(0);
+    expect(r.selos.size).toBe(0);
   });
 });

@@ -27,6 +27,8 @@ import { CabecalhoDoModal } from "../ui/CabecalhoDoModal";
 import { BotaoDeLinha } from "../ui/BotaoDeLinha";
 import { CabecalhoDaAba, CaixaDeNumeros, BotaoPrincipal, BotaoSecundario } from "../ui/CabecalhoDaAba";
 import { useFiltroCascata } from "../ui/useFiltroCascata";
+import SeloRepetido from "../ui/SeloRepetido";
+import { useSelosRepetidos } from "../ui/useSelosRepetidos";
 
 // 🌍 PADRÃO OURO INTERNACIONAL — cada país com sua cor de identidade
 const PAIS_CONFIG = {
@@ -235,6 +237,12 @@ export function MentoresTab() {
       textoBusca: (m) => [m.nome, m.email, m.telefone],
       extra: soDoStatus,
   });
+
+  // Selo "possível repetido" (mesmo telefone de outra pessoa): compara os mentores que a tela já carregou.
+  const registrosRepetidos = useMemo(() => mentores.map(m => ({
+      origem: 'cracha', id: String(m.id), nome: m.nome, email: m.email, telefone: m.telefone, pais: m.pais || PAIS_DEFAULT,
+  })), [mentores]);
+  const selosRepetidos = useSelosRepetidos(registrosRepetidos);
 
   const mentoresProcessados = useMemo(() => {
       return [...filtro.resultado].sort((a, b) => {
@@ -532,6 +540,7 @@ export function MentoresTab() {
                     {/* NOME E EMAIL */}
                     <td className="p-4">
                       <LinkCentral tipo="mentor" alvo={m} className="font-black text-slate-800 dark:text-white text-base">{m.nome}</LinkCentral>
+                      <SeloRepetido selo={selosRepetidos.get(`cracha:${m.id}`)} detalheDe={(o) => o.email || ""} />
                       <div className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5 flex items-center gap-1">
                           <Mail className="w-3 h-3"/> {m.email}
                       </div>

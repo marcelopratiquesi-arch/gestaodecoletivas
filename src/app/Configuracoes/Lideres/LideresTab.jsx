@@ -29,6 +29,8 @@ import { CabecalhoDoModal } from "../ui/CabecalhoDoModal";
 import { BotaoDeLinha } from "../ui/BotaoDeLinha";
 import { CabecalhoDaAba, CaixaDeNumeros, BotaoPrincipal, BotaoSecundario } from "../ui/CabecalhoDaAba";
 import { useFiltroCascata } from "../ui/useFiltroCascata";
+import SeloRepetido from "../ui/SeloRepetido";
+import { useSelosRepetidos } from "../ui/useSelosRepetidos";
 import { BotaoDocumento, DocumentoModal, BuscaDocumento, AvisoDocumento } from "../Documento/DocumentoModal";
 import i18n from "../../../i18n";
 import CampoDocumento from "../../../components/acesso/CampoDocumento";
@@ -80,6 +82,18 @@ export function LideresTab() {
     const todas = catalogs?.unidades || [];
     return role === "admin" ? todas : todas.filter((u) => u.mentorId === userId);
   }, [catalogs?.unidades, role, userId]);
+
+  // Selo "possível repetido" (mesmo telefone de outra pessoa): compara os líderes das unidades que a tela já tem.
+  const registrosRepetidos = useMemo(() => {
+    const vistos = new Map();
+    for (const u of minhasUnidades) {
+      const pais = u.pais || "BR";
+      if (u.liderUid && !vistos.has(u.liderUid)) vistos.set(u.liderUid, { origem: "cracha", id: u.liderUid, nome: u.liderNome, email: u.liderEmail, telefone: u.liderTelefone, pais });
+      if (u.lider2Uid && !vistos.has(u.lider2Uid)) vistos.set(u.lider2Uid, { origem: "cracha", id: u.lider2Uid, nome: u.lider2Nome, email: u.lider2Email, telefone: u.lider2Telefone, pais });
+    }
+    return [...vistos.values()];
+  }, [minhasUnidades]);
+  const selosRepetidos = useSelosRepetidos(registrosRepetidos);
 
   // Filtro padrão (busca + país → estado → mentor), no navegador sobre as unidades já carregadas.
   // A situação (com/sem líder/a conferir) continua sendo o seletor próprio desta aba.
@@ -413,6 +427,7 @@ export function LideresTab() {
                           <div className="space-y-0.5">
                             <p className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 flex-wrap">
                               <LinkCentral tipo="lider" alvo={u}>{u.liderNome || "-"}</LinkCentral>
+                              <SeloRepetido selo={selosRepetidos.get(`cracha:${u.liderUid}`)} detalheDe={(o) => o.email || ""} />
                               {u.liderAConferir === true && (
                                 <span className="px-1.5 py-0.5 rounded-md border text-[9px] font-black uppercase bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-700">{t("leadersTab.toCheck")}</span>
                               )}
@@ -423,6 +438,7 @@ export function LideresTab() {
                               <div className="mt-2 pt-2 border-t border-dashed border-slate-200 dark:border-slate-700 space-y-0.5">
                                 <p className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 flex-wrap">
                                   <LinkCentral tipo="lider2" alvo={u}>{u.lider2Nome || "-"}</LinkCentral>
+                                  <SeloRepetido selo={selosRepetidos.get(`cracha:${u.lider2Uid}`)} detalheDe={(o) => o.email || ""} />
                                   <span className="px-1.5 py-0.5 rounded-md border text-[9px] font-black uppercase bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-900/20 dark:text-violet-300 dark:border-violet-800">{t("leadersTab.second.badge")}</span>
                                   <button onClick={() => setDocAlvo({ id: u.lider2Uid, nome: u.lider2Nome, email: u.lider2Email })} title={t("document.modal.edit")}
                                     className="p-1 rounded-md text-slate-400 hover:bg-blue-50 hover:text-blue-600"><IdCard className="w-3.5 h-3.5" /></button>

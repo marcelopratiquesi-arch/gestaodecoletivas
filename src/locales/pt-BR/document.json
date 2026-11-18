@@ -85,7 +85,12 @@
     "deleteLeaderHint": "Tira a pessoa das unidades, remove o acesso e libera o documento. Ela pode pedir acesso de novo na hora. As aulas e validações antigas continuam no histórico.",
     "confirmDeleteLeader": "Excluir o cadastro de {{name}}? Ela sai das unidades, perde o acesso e o documento fica livre.",
     "auditDeleteLeader": "Cadastro de líder excluído e documento liberado.",
-    "deleteLeaderError": "Não foi possível excluir tudo. Confira a lista de unidades da pessoa e tente de novo; se continuar, peça ao administrador.",
+    "openInSchedule": "Ver na grade de professores",
+    "deleteTeacher": "Excluir acesso e liberar documento",
+    "deleteTeacherHint": "Apaga o acesso (login) e libera o documento, para a pessoa pedir acesso de novo com o e-mail certo. A ficha da grade, as aulas e o histórico continuam.",
+    "confirmDeleteTeacher": "Excluir o acesso de {{name}} e liberar o documento? A ficha da grade e as aulas continuam; ela poderá pedir acesso de novo.",
+    "auditDeleteTeacher": "Acesso de professor excluído e documento liberado.",
+    "deleteLeaderError":"Não foi possível excluir tudo. Confira a lista de unidades da pessoa e tente de novo; se continuar, peça ao administrador.",
     "cannot": {
       "staff": "Esta pessoa é admin ou mentor: o acesso dela só se remove na aba Mentores. Aqui você pode corrigir o documento.",
       "professor": "Esta pessoa é professora: o cadastro dela se remove na aba Professores. Aqui você pode corrigir o documento.",
