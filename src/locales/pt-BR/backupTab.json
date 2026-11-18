@@ -38,7 +38,7 @@
   "restoreSelected": "Restaurar selecionadas",
   "duplicates": {
     "title": "Relatório de repetidos",
-    "desc": "Mostra quem aparece com o mesmo e-mail, telefone ou nome entre professores da grade, crachás e pedidos de acesso. Só lê, não grava nada. Lê os crachás e pedidos uma vez (umas poucas centenas de leituras).",
+    "desc": "Mostra quem aparece repetido entre professores da grade, crachás e pedidos de acesso. Separa a mesma pessoa com várias fichas (sugere juntar), pessoas diferentes com o mesmo telefone (alerta) e nomes iguais sem mais nada em comum (só informação). Só lê, não grava nada. Lê os crachás e pedidos uma vez (umas poucas centenas de leituras).",
     "generate": "Gerar relatório",
     "regenerate": "Gerar de novo",
     "download": "Baixar planilha",
@@ -54,7 +54,10 @@
       "emailDeMentira": "E-mail de mentira",
       "emailInvalido": "E-mail inválido",
       "telefoneInvalido": "Telefone inválido",
-      "loginAntigo": "Logins antigos (fora da conta)"
+      "loginAntigo": "Logins antigos (fora da conta)",
+      "mesma": "Mesma pessoa em várias fichas (juntar)",
+      "outra": "Mesmo telefone, pessoas diferentes",
+      "soNome": "Só o nome é igual (talvez homônimo)"
     },
     "origin": {
       "professor": "Professor da grade",
@@ -79,7 +82,9 @@
       "detail": "Papel / situação",
       "unit": "Unidade",
       "id": "Id"
-    }
+    },
+    "cards_one": "{{count}} ficha",
+    "cards_other": "{{count}} fichas"
   },
   "merge": {
     "button": "Juntar fichas ({{count}})",
@@ -101,6 +106,14 @@
     "sumSummaries": "Fechamento do mês refeito na próxima abertura dos relatórios: {{list}}",
     "sumFill": "Dados que faltavam e serão completados: {{list}}",
     "sumDelete": "Fichas apagadas depois de mover tudo: {{count}}",
+    "keepField": {
+      "nome": "Nome que fica",
+      "email": "E-mail que fica",
+      "telefone": "Telefone que fica"
+    },
+    "keeps": "Fica assim: {{name}} · {{email}} · {{phone}}",
+    "sumDocument": "O documento (CPF/DNI/SSN) passa para a ficha que fica",
+    "documentConflict": "Estas fichas têm documentos DIFERENTES: são pessoas diferentes e não podem ser juntadas.",
     "cost": "Leituras feitas agora: {{reads}} · gravações ao juntar: {{writes}}",
     "done": "Pronto! As fichas foram juntadas na de {{name}}.",
     "readError": "Não foi possível conferir (cota esgotada ou sem conexão). Tente de novo mais tarde.",
@@ -116,6 +129,24 @@
     "recordHasOther": "Esta ficha está ligada a outro login (provavelmente o login antigo). Ao ligar, ela passa a usar este crachá.",
     "confirm": "Ligar",
     "done": "Pronto! A ficha de {{name}} está ligada ao crachá.",
-    "error": "Não foi possível ligar (cota esgotada ou sem conexão). Tente de novo."
+    "error": "Não foi possível ligar (cota esgotada ou sem conexão). Tente de novo.",
+    "documentConflict": "A ficha e o crachá têm documentos (CPF) DIFERENTES: são pessoas diferentes. Não liguei.",
+    "copiedDocument": "O CPF do login foi copiado para a ficha.",
+    "keepField": {
+      "nome": "Nome que fica",
+      "email": "E-mail que fica",
+      "telefone": "Telefone que fica"
+    },
+    "whatHappens": "Ao ligar: a ficha passa a usar este login (o login antigo, se houver, deixa de valer para ela), o crachá passa a apontar para a ficha e o CPF do login vai para a ficha. Aulas, unidades, validações e nome continuam como estão.",
+    "leaderEffect": "Este crachá é de líder/mentor. Ligado à ficha, a pessoa vira 'líder que também é professor(a)': se um dia sair da liderança, continua com acesso de professor(a). Ligue só se ela dá (ou deu) aulas com esta ficha."
+  },
+  "dupBadge": {
+    "other_one": "Mesmo telefone de outra pessoa",
+    "other_other": "Mesmo telefone de {{count}} outras pessoas",
+    "same_one": "Mesma pessoa em {{count}} fichas",
+    "same_other": "Mesma pessoa em {{count}} fichas",
+    "otherHint": "Confira: pode ser digitação errada ou família. Não são a mesma pessoa.",
+    "sameHint": "Parece ser a mesma pessoa em várias fichas:",
+    "merge": "Juntar fichas"
   }
 }

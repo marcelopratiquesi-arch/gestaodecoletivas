@@ -51,5 +51,83 @@
     "cidade_other": "Ciudad: {{value}} ({{count}} sedes)",
     "unidades_one": "{{count}} sede",
     "unidades_other": "{{count}} sedes"
+  },
+  "proposals": {
+    "mentorDesc": "Proponés el feriado para tus unidades y el administrador decide. Solo vale una vez aprobado.",
+    "formTitle": "Proponer Receso o Feriado",
+    "send": "Enviar propuesta",
+    "confirmSend": "¿Enviar la propuesta de feriado para {{scope}} entre {{start}} y {{end}}?\n\nNinguna clase cambia hasta que el administrador apruebe.",
+    "sent": "¡Propuesta enviada! Solo vale cuando el administrador la apruebe.",
+    "sendError": "Error al enviar la propuesta.",
+    "pendingTitle": "Propuestas de mentores ({{count}})",
+    "mineTitle": "Mis propuestas",
+    "none": "Ninguna propuesta.",
+    "status": {
+      "pendente": "En espera",
+      "aprovada": "Aprobada",
+      "recusada": "Rechazada"
+    },
+    "by": "Propuesto por {{name}}",
+    "reason": "Motivo: {{reason}}",
+    "approve": "Aprobar",
+    "refuse": "Rechazar",
+    "withdraw": "Desistir",
+    "confirmApprove": "¿Aprobar \"{{name}}\"?\n\nLas clases de {{scope}} entre {{start}} y {{end}} aparecerán como canceladas (feriado).",
+    "approvedMsg": "¡Feriado aprobado! Las clases de {{scope}} en ese período aparecen como canceladas.",
+    "refuseReason": "Motivo del rechazo de \"{{name}}\" (opcional):",
+    "confirmWithdraw": "¿Desistir de la propuesta \"{{name}}\"?",
+    "decideError": "No se pudo completar. Intentá de nuevo."
+  },
+  "impact": "Esto afecta a {{units}} unidad(es) y {{classes}} clase(s) en el período.",
+  "pastWarn": "⚠️ La fecha de inicio ya pasó: las clases de este período que nadie validó pasan a aparecer como feriado y sus pendientes desaparecen. Las validaciones ya hechas siguen valiendo.",
+  "duplicateWarn": "⚠️ Ya existe un feriado en el mismo período para unidades en común: {{names}}. Revisá que no esté repetido.",
+  "edit": {
+    "title": "Editar feriado",
+    "save": "Guardar cambios",
+    "cancel": "Cancelar edición",
+    "tooltip": "Editar",
+    "confirmSave": "¿Guardar los cambios de \"{{name}}\"?\n\nLas clases de {{scope}} entre {{start}} y {{end}} aparecerán como canceladas (feriado).",
+    "saved": "¡Feriado actualizado!",
+    "error": "Error al actualizar el feriado."
+  },
+  "except": {
+    "title": "Excepto estas unidades (opcional)",
+    "hint": "Marcá las unidades que NO descansan en este feriado.",
+    "label_one": "excepto {{count}} unidad",
+    "label_other": "excepto {{count}} unidades"
+  },
+  "filters": {
+    "proximos": "Próximos",
+    "passados": "Pasados",
+    "todos": "Todos",
+    "allYears": "Todos los años",
+    "allScopes": "Todos los alcances",
+    "search": "Buscar feriado...",
+    "none": "Ningún feriado en este filtro."
+  },
+  "suggested": {
+    "title": "Calendario sugerido",
+    "pending": "{{count}} por decidir",
+    "desc": "Feriados nacionales calculados para el país y el año. No se aplica nada solo: aplicás lo que quieras y descartás el resto. Los marcados \"Revisar\" dependen de decretos del gobierno y pueden cambiar.",
+    "showDismissed": "Mostrar descartados",
+    "applySelected": "Aplicar seleccionados ({{count}})",
+    "apply": "Aplicar",
+    "dismiss": "Descartar",
+    "restore": "Volver a la lista",
+    "check": "Revisar",
+    "past": "Ya pasó",
+    "applied_badge": "Aplicado",
+    "empty": "Nada para mostrar.",
+    "warnAR": "En Argentina el gobierno decreta feriados puente todos los años. Revisá el calendario oficial antes de aplicar.",
+    "confirmApply": "¿Aplicar {{count}} feriado(s) a nivel país?\n\nEsto afecta {{classes}} clase(s) en total.",
+    "andMore": "… y {{count}} más",
+    "applied": "{{count}} feriado(s) aplicado(s).",
+    "error": "Error al aplicar los feriados."
+  },
+  "cityActions": {
+    "refresh": "Agregar las unidades de la ciudad",
+    "upToDate": "Ya están todas las unidades de esta ciudad.",
+    "confirmAdd": "¿Agregar {{count}} unidad(es) de {{city}} a este feriado?\n\n{{names}}",
+    "done": "{{count}} unidad(es) agregada(s)."
   }
 }

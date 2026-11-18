@@ -33,6 +33,7 @@ beforeEach(async () => {
     await setDoc(doc(db, 'usuarios/liderB'), { role: 'lider', unidadeId: 'uniB', nome: 'Líder B' });
     await setDoc(doc(db, 'usuarios/prof1'), { role: 'professor', professorId: 'p1', nome: 'Prof', loginGoogle: true });
     await setDoc(doc(db, 'aulas/aula1'), { unidadeId: 'uniA' });
+    await setDoc(doc(db, 'aulas_publicas/aula1'), { unidadeId: 'uniA' });
     await setDoc(doc(db, 'publico/vitrine'), { unidades: { uniA: { nome: 'Unidade A' } }, professores: { p1: 'Prof' } });
   });
 });
@@ -140,10 +141,10 @@ describe('favoritos do Pratique Play', () => {
 });
 
 describe('página pública de horários (vitrine)', () => {
-  it('sem login: lê a vitrine, as aulas e as modalidades', async () => {
+  it('sem login: lê a vitrine, a cópia pública das aulas (sem valor) e as modalidades', async () => {
     const db = anonimo();
     await assertSucceeds(getDoc(doc(db, 'publico/vitrine')));
-    await assertSucceeds(getDoc(doc(db, 'aulas/aula1')));
+    await assertSucceeds(getDoc(doc(db, 'aulas_publicas/aula1')));
     await assertSucceeds(getDoc(doc(db, 'modalidades/m1')));
   });
   it('sem login: NÃO lê os cadastros completos (e-mail, telefone) de unidades e professores', async () => {
@@ -165,9 +166,10 @@ describe('página pública de horários (vitrine)', () => {
 });
 
 describe('o resto do sistema não mudou', () => {
-  it('sem login: lê aulas (página de horários), não lê usuarios nem validações', async () => {
+  it('sem login: lê a cópia pública das aulas (página de horários), não lê aulas (têm o valor), usuarios nem validações', async () => {
     const db = anonimo();
-    await assertSucceeds(getDoc(doc(db, 'aulas/aula1')));
+    await assertSucceeds(getDoc(doc(db, 'aulas_publicas/aula1')));
+    await assertFails(getDoc(doc(db, 'aulas/aula1')));
     await assertFails(getDoc(doc(db, 'usuarios/admin1')));
     await assertFails(getDoc(doc(db, 'validacoes/v1')));
   });
@@ -440,7 +442,7 @@ describe('crachá obrigatório para todo tipo de login', () => {
   });
   it('a página pública de horários continua aberta sem login', async () => {
     await assertSucceeds(getDoc(doc(anonimo(), 'publico/vitrine')));
-    await assertSucceeds(getDoc(doc(anonimo(), 'aulas/aula1')));
+    await assertSucceeds(getDoc(doc(anonimo(), 'aulas_publicas/aula1')));
   });
 });
 
