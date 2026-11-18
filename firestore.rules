@@ -242,7 +242,8 @@ service cloud.firestore {
     // - professor: só aulas em que é TITULAR, do mês atual até hoje; não muda o valor da aula,
     //   não lança aulão, não mexe em aula cancelada e não apaga nada;
     // - líder (unidade): só a própria unidade, até 60 dias para trás; mês já fechado exige justificativa;
-    // - mentor: só as unidades dele; mês já fechado exige justificativa;
+    // - mentor: só as unidades dele, sem limite de dias para trás, nunca data futura; mês já fechado exige
+    //   justificativa; aula da grade tem que ser daquela unidade e não muda o valor da aula (igual ao líder);
     // - admin: tudo (inclusive restaurar backup).
     // Datas no fuso do Brasil/Argentina (UTC-3).
     function agoraLocal() { return request.time - duration.value(3, 'h'); }
@@ -313,7 +314,10 @@ service cloud.firestore {
       return meuPapel() == 'mentor'
         && get(/databases/$(database)/documents/unidades/$(d.unidadeId)).data.get('mentorId', '') == request.auth.uid
         && idCerto(vid, d) && mesmaAulaEDia(d)
-        && (diaDa(d.data) >= inicioDoMes() || justificada(d));
+        && diaDa(d.data) <= hojeLocal()
+        && (diaDa(d.data) >= inicioDoMes() || justificada(d))
+        && (d.get('isAulao', false) == true || aulaDa(d.aulaId).unidadeId == d.unidadeId)
+        && (d.get('isAulao', false) == true || valorOk(d, aulaDa(d.aulaId)));
     }
 
     function podeGravarValidacao(vid) {

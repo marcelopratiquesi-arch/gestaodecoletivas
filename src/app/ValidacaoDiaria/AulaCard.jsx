@@ -34,7 +34,7 @@ export const StatusBadge = ({ status }) => {
 
 // variante "pilha": dentro de uma pilha o cabeçalho já mostra horário, modalidade, unidade e professor,
 // então o cartão mostra só o DIA em destaque (bem mais curto).
-export function AulaCard({ item, onValidar, onCancelar, onValidarRapido, salvando, ocultarProfessor, verificarFuturo, variante }) {
+export function AulaCard({ item, onValidar, onCancelar, onValidarRapido, onValidarNoFeriado, salvando, ocultarProfessor, verificarFuturo, variante }) {
     const { t } = useTranslation();
     const isFuture = verificarFuturo(item.data);
     const status = item.status;
@@ -136,6 +136,13 @@ export function AulaCard({ item, onValidar, onCancelar, onValidarRapido, salvand
                         </button>
                     </div>
                 </div>
+            )}
+
+            {/* Feriado, mas a unidade abriu: admin, mentor e líder podem validar mesmo assim */}
+            {item.podeValidarNoFeriado && onValidarNoFeriado && !isFuture && (
+                <button type="button" onClick={() => onValidarNoFeriado(item)} className="w-full mb-2 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 hover:bg-emerald-600 flex items-center justify-center gap-2 transition-all">
+                    <CircleCheck className="w-4 h-4"/> {t('dailyValidation.card.validateOnHoliday')}
+                </button>
             )}
 
             {/* Botões de Ação (editar / detalhes / validar pela janela) */}
