@@ -95,7 +95,8 @@
   },
   "alerts": {
     "noPhone": "⚠️ ¡TELÉFONO NO REGISTRADO!",
-    "copied": "¡TEXTO COPIADO CON ÉXITO!"
+    "copied": "¡TEXTO COPIADO CON ÉXITO!",
+    "copyFailed": "No se pudo copiar. Copiá el texto manualmente."
   },
   "csv": {
     "unit": "SEDE",

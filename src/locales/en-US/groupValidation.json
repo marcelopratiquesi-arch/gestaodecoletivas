@@ -95,7 +95,8 @@
   },
   "alerts": {
     "noPhone": "⚠️ NO PHONE NUMBER REGISTERED!",
-    "copied": "TEXT COPIED SUCCESSFULLY!"
+    "copied": "TEXT COPIED SUCCESSFULLY!",
+    "copyFailed": "Could not copy. Please copy the text manually."
   },
   "csv": {
     "unit": "UNIT",

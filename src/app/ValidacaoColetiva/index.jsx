@@ -3,19 +3,33 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useCatalogs } from '../../contexts/CatalogContext'; 
 import { db } from '../../services/firebase';
 // 🟢 Importamos o addDoc e serverTimestamp para o X-9 da LGPD
-import { collection, query, where, onSnapshot, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, getDoc, doc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { ShieldCheck, LayoutDashboard, Download, MapPin, UserCog, Building2, Lock, Calendar, CheckCircle2, AlertCircle, Trophy, List, MessageSquare } from 'lucide-react';
 
-import { KPICard, MultiSelectDropdown, getTodayStr, normalizeDate, getDatesInRange, formatHeaderPeriodo, formatDateShort, filterPendingDates, getFirstLast, getEmojiByPercent } from './components';
+import { KPICard, MultiSelectDropdown, getTodayStr, normalizeDate, getDatesInRange, formatHeaderPeriodo, formatPendencias, getFirstLast, getEmojiByPercent } from './components';
 import { RankingTab, StatusTab, CobrancaTab } from './Tabs';
 import { getDiaSemana, toDate, formatDate, formatTime } from '../../utils/formatters';
 import { deduplicarValidacoes } from '../../utils/validacoes';
-import { feriadoNoDia, ehCancelamentoAutomaticoDeFeriado } from '../../utils/feriados';
+// Regra única de "quais aulas existem no dia" e "em que situação estão" (a mesma da Página de Início e da Validação Diária).
+import { aulaNaGradeDoDia, situacaoDaAula, SITUACAO } from '../../utils/agendaAulas';
 import { useTranslation } from 'react-i18next';
 import { emBlocos } from '../../services/resumosMensais';
 
-// Usuários guardados entre aberturas da tela (ver efeito abaixo).
-let cacheUsuarios = { uid: null, quando: 0, lista: [] };
+// Nomes de quem validou (e que não são mentor nem professor do catálogo), buscados um a um e guardados
+// entre aberturas da tela. Antes a tela baixava a coleção "usuarios" inteira (~700 leituras) a cada abertura.
+const cacheNomes = new Map();
+const CHAVE_FILTROS = 'coletiva_filtros';
+const lerFiltrosSalvos = (userId) => {
+  const vazio = { estado: [], mentor: [], unidade: [], aba: 'ranking' };
+  if (!userId) return vazio;
+  try {
+    const x = JSON.parse(localStorage.getItem(`${CHAVE_FILTROS}_${userId}`) || 'null');
+    if (!x) return vazio;
+    const lista = (v) => (Array.isArray(v) ? v.filter(i => typeof i === 'string') : []);
+    return { estado: lista(x.estado), mentor: lista(x.mentor), unidade: lista(x.unidade), aba: ['ranking', 'status', 'cobranca'].includes(x.aba) ? x.aba : 'ranking' };
+  } catch { return vazio; }
+};
+const ESPERA_FILTRO_MS = 600;
 
 export default function ValidacaoColetiva() {
   const { userData } = useAuth();
@@ -28,54 +42,66 @@ export default function ValidacaoColetiva() {
   const [loadingRealtime, setLoadingRealtime] = useState(true);
   // Erro ao buscar as validações (ex.: cota do banco esgotada): sem isso tudo apareceria como ATRASADO.
   const [erroEscuta, setErroEscuta] = useState(false);
-  const [usuariosBase, setUsuariosBase] = useState([]);
+  const [nomesExtras, setNomesExtras] = useState(() => [...cacheNomes.values()].filter(Boolean));
   const [validacoesBase, setValidacoesBase] = useState([]);
   
   const [modoFiltro, setModoFiltro] = useState('dia'); 
   const [dataInicio, setDataInicio] = useState(getTodayStr());
   const [dataFim, setDataFim] = useState(getTodayStr());
   
-  const [estadoFiltro, setEstadoFiltro] = useState([]);
-  const [mentorFiltro, setMentorFiltro] = useState([]);
-  const [unidadeFiltro, setUnidadeFiltro] = useState([]);
+  // Os filtros ficam lembrados neste aparelho (por pessoa); se der erro ao ler, começa vazio como antes.
+  const salvos = useMemo(() => lerFiltrosSalvos(userId), [userId]);
+  const [estadoSel, setEstadoFiltro] = useState(salvos.estado);
+  const [mentorSel, setMentorFiltro] = useState(salvos.mentor);
+  const [unidadeSel, setUnidadeFiltro] = useState(salvos.unidade);
 
-  const [activeTab, setActiveTab] = useState('ranking'); 
+  const [activeTab, setActiveTab] = useState(salvos.aba);
   const [expandedUnitId, setExpandedUnitId] = useState(null);
   const [showOnlyIssues, setShowOnlyIssues] = useState(false);
   const [sortConfig, setSortConfig] = useState({ key: 'percentual', direction: 'descending' });
   const [itensVisiveisStatus, setItensVisiveisStatus] = useState(12);
 
-  const isCofreGlobalFechado = role === 'admin' ? (estadoFiltro.length === 0 && mentorFiltro.length === 0 && unidadeFiltro.length === 0) : role === 'mentor' ? (estadoFiltro.length === 0 && unidadeFiltro.length === 0) : false;
+  useEffect(() => {
+    if (!userId) return;
+    try { localStorage.setItem(`${CHAVE_FILTROS}_${userId}`, JSON.stringify({ estado: estadoSel, mentor: mentorSel, unidade: unidadeSel, aba: activeTab })); } catch { /* sem armazenamento: tudo bem */ }
+  }, [userId, estadoSel, mentorSel, unidadeSel, activeTab]);
 
   const [now, setNow] = useState(new Date());
+  // O relógio só precisa andar quando o período inclui hoje (aula de hoje que acabou de começar).
+  // Mês/dia que já passou não muda com o tempo: não refaz a conta toda a cada minuto.
   useEffect(() => {
+    if (dataFim < getTodayStr()) return;
     const interval = setInterval(() => setNow(new Date()), 60000);
     return () => clearInterval(interval);
-  }, []);
+  }, [dataFim]);
 
   useEffect(() => { if (dataInicio > dataFim) setDataFim(dataInicio); }, [dataInicio, dataFim]);
 
-  // Lista de usuários (nomes de quem validou e dos mentores): ~700 leituras, então fica guardada por 30 min
-  // em vez de ser baixada a cada abertura da tela.
-  useEffect(() => {
-      if (!userId) return;
-      if (cacheUsuarios.uid === userId && Date.now() - cacheUsuarios.quando < 30 * 60 * 1000) {
-          setUsuariosBase(cacheUsuarios.lista);
-          return;
-      }
-      getDocs(collection(db, 'usuarios')).then(snap => {
-          const lista = snap.docs.map(d => ({id: d.id, ...d.data()}));
-          cacheUsuarios = { uid: userId, quando: Date.now(), lista };
-          setUsuariosBase(lista);
-      }).catch(e => console.error(e));
-  }, [userId]);
+  // Quem aparece com nome: mentores e professores já vêm no catálogo (0 leituras extras);
+  // os demais validadores (admin, líder) são buscados só quando aparecem numa validação (ver efeito mais abaixo).
+  const usuariosBase = useMemo(() => {
+      const lista = [...(catalogs?.mentores || [])];
+      (catalogs?.professores || []).forEach(p => { if (p.uidLogin) lista.push({ id: p.uidLogin, nome: p.nome, role: 'professor', telefone: p.telefone }); });
+      return lista.concat(nomesExtras);
+  }, [catalogs?.mentores, catalogs?.professores, nomesExtras]);
 
   const unidadesBase = useMemo(() => {
       if (!catalogs?.unidades) return [];
-      return isMentor ? catalogs.unidades.filter(u => u.mentorId === userId) : catalogs.unidades;
+      // Unidade inativa não entra: não tem aula esperada, não tem o que cobrar (e deixa de gastar leitura).
+      const ativas = catalogs.unidades.filter(u => !u.status || u.status === 'ativa');
+      return isMentor ? ativas.filter(u => u.mentorId === userId) : ativas;
   }, [catalogs?.unidades, isMentor, userId]);
 
   const estadosOptions = useMemo(() => [...new Set(unidadesBase.map(u => u.estado).filter(Boolean))].sort().map(e => ({ value: e, label: e })), [unidadesBase]);
+  // Filtro lembrado de unidade/mentor/estado que não existe mais (unidade desativada, mentor trocado...) é ignorado,
+  // senão a tela abriria vazia sem a pessoa entender por quê.
+  const estadoFiltro = useMemo(() => loadingCatalogs ? estadoSel : estadoSel.filter(e => unidadesBase.some(u => u.estado === e)), [estadoSel, unidadesBase, loadingCatalogs]);
+  const mentorFiltro = useMemo(() => loadingCatalogs ? mentorSel : mentorSel.filter(id => unidadesBase.some(u => u.mentorId === id)), [mentorSel, unidadesBase, loadingCatalogs]);
+  const unidadeFiltro = useMemo(() => loadingCatalogs ? unidadeSel : unidadeSel.filter(id => unidadesBase.some(u => u.id === id)), [unidadeSel, unidadesBase, loadingCatalogs]);
+
+  // Admin precisa escolher algo antes (a rede inteira pesa). O mentor abre já com as unidades DELE (poucas).
+  const isCofreGlobalFechado = role === 'admin' && estadoFiltro.length === 0 && mentorFiltro.length === 0 && unidadeFiltro.length === 0;
+
   const unidadesFiltradasEstado = useMemo(() => estadoFiltro.length === 0 ? unidadesBase : unidadesBase.filter(u => estadoFiltro.includes(u.estado)), [unidadesBase, estadoFiltro]);
   
   const mentoresOptions = useMemo(() => {
@@ -90,9 +116,16 @@ export default function ValidacaoColetiva() {
       return u.map(x => ({ value: x.id, label: x.nome })).sort((a,b) => a.label.localeCompare(b.label));
   }, [unidadesFiltradasEstado, mentorFiltro]);
 
-  const modalidadesBase = catalogs?.modalidades || [];
-  const professoresBase = catalogs?.professores || [];
-  const aulasBase = catalogs?.aulas || [];
+  // Grade agrupada por unidade, uma vez só (antes cada unidade varria a lista inteira de aulas a cada recálculo).
+  const gradePorUnidade = useMemo(() => {
+      const mapa = new Map();
+      (catalogs?.aulas || []).forEach(a => {
+          const k = String(a.unidadeId);
+          if (!mapa.has(k)) mapa.set(k, []);
+          mapa.get(k).push(a);
+      });
+      return mapa;
+  }, [catalogs?.aulas]);
 
   // ECONOMIA DE COTA: escuta só as validações das unidades filtradas (antes: a rede inteira, e o filtro
   // era aplicado depois de baixar). Várias consultas de até 30 unidades, juntadas aqui.
@@ -103,10 +136,23 @@ export default function ValidacaoColetiva() {
       return JSON.stringify(u.map(x => x.id).sort());
   }, [unidadesFiltradasEstado, mentorFiltro, unidadeFiltro]);
 
+  // ECONOMIA DE COTA: quem marca 5 unidades uma por uma não paga 5 leituras do período. A busca só sai
+  // depois que a pessoa para de mexer no filtro por um instante.
+  const chaveBusca = JSON.stringify([dataInicio, dataFim, JSON.parse(escopoUnidades)]);
+  const [chaveAplicada, setChaveAplicada] = useState(chaveBusca);
+  useEffect(() => {
+    if (chaveBusca === chaveAplicada) return;
+    // Primeira busca (ainda sem unidades escolhidas/carregadas) sai na hora; só as trocas seguintes esperam.
+    const semBuscaAnterior = JSON.parse(chaveAplicada)[2].length === 0;
+    const espera = setTimeout(() => setChaveAplicada(chaveBusca), semBuscaAnterior ? 0 : ESPERA_FILTRO_MS);
+    return () => clearTimeout(espera);
+  }, [chaveBusca, chaveAplicada]);
+  const aguardandoFiltro = chaveBusca !== chaveAplicada;
+
   useEffect(() => {
     if (!userId || loadingCatalogs) return;
     if (isCofreGlobalFechado) { setValidacoesBase([]); setLoadingRealtime(false); return; }
-    const ids = JSON.parse(escopoUnidades);
+    const [dataInicio, dataFim, ids] = JSON.parse(chaveAplicada);
     if (ids.length === 0) { setValidacoesBase([]); setLoadingRealtime(false); return; }
     setLoadingRealtime(true);
     setErroEscuta(false);
@@ -121,7 +167,21 @@ export default function ValidacaoColetiva() {
         e => { console.error(e); setErroEscuta(true); setLoadingRealtime(false); }
     ));
     return () => cancelar.forEach(unsub => unsub());
-  }, [dataInicio, dataFim, userId, isCofreGlobalFechado, loadingCatalogs, escopoUnidades]); 
+  }, [chaveAplicada, userId, isCofreGlobalFechado, loadingCatalogs]);
+
+  // Nomes de quem validou e não está no catálogo (admin, líder...): 1 leitura por pessoa, guardada na memória.
+  useEffect(() => {
+    const conhecidos = new Set(usuariosBase.flatMap(u => [u.id, u.uid, u.uidLogin]).filter(Boolean));
+    const faltam = [...new Set(validacoesBase.map(v => v.userId || v.validadoPor || v.user_id || v.uid).filter(Boolean))]
+        .filter(id => !conhecidos.has(id) && !cacheNomes.has(id));
+    if (faltam.length === 0) return;
+    let cancelado = false;
+    Promise.all(faltam.slice(0, 60).map(id => getDoc(doc(db, 'usuarios', id))
+        .then(s => cacheNomes.set(id, s.exists() ? { id, ...s.data() } : null))
+        .catch(() => {})))
+      .then(() => { if (!cancelado) setNomesExtras([...cacheNomes.values()].filter(Boolean)); });
+    return () => { cancelado = true; };
+  }, [validacoesBase, usuariosBase]);
 
   const dadosProcessados = useMemo(() => {
     if (unidadesBase.length === 0 || isCofreGlobalFechado) return { mentores: [], unidades: [], kpis: { totalAulas: 0, unidadesValidadas: 0, unidadesPendentes: 0 } };
@@ -138,8 +198,15 @@ export default function ValidacaoColetiva() {
     const profMap = {}; (catalogs.professores || []).forEach(p => profMap[p.id] = p.nome);
     const datas = getDatesInRange(dataInicio, dataFim);
     const todayStr = getTodayStr();
+    const agoraHHMM = now.toTimeString().slice(0, 5);
     const vIndex = {};
-    validacoesBase.forEach(v => { const key = `${v.unidadeId}_${normalizeDate(v.data)}`; if(!vIndex[key]) vIndex[key] = []; vIndex[key].push(v); });
+    const ultimaPorUnidade = {};
+    validacoesBase.forEach(v => {
+        const key = `${v.unidadeId}_${normalizeDate(v.data)}`; if(!vIndex[key]) vIndex[key] = []; vIndex[key].push(v);
+        // Última validação de cada unidade (índice único; antes filtrava e ordenava a lista inteira por unidade).
+        const k = String(v.unidadeId);
+        if (!ultimaPorUnidade[k] || (v.timestamp?.seconds || 0) > (ultimaPorUnidade[k].timestamp?.seconds || 0)) ultimaPorUnidade[k] = v;
+    });
 
     let uAtivas = unidadesBase;
     if (estadoFiltro.length > 0) uAtivas = uAtivas.filter(u => estadoFiltro.includes(u.estado));
@@ -147,94 +214,88 @@ export default function ValidacaoColetiva() {
 
     const statusUnidades = uAtivas.filter(u => unidadeFiltro.length === 0 ? true : unidadeFiltro.includes(u.id)).map(unidade => {
         let totalEsp = 0, totalVal = 0, pends = [], hist = [];
-        const grade = aulasBase.filter(a => String(a.unidadeId) === String(unidade.id));
+        const grade = gradePorUnidade.get(String(unidade.id)) || [];
         const temCronograma = grade.length > 0;
-        
+        const feriados = catalogs?.feriados || [];
+
         datas.forEach(dStr => {
             if (dStr > todayStr) return;
             const diaSem = getDiaSemana(dStr);
-            
-            const aulasDia = grade.filter(a => {
-                if (!a.dias?.includes(diaSem)) return false;
-                const inicioValido = a.dataInicio ? dStr >= normalizeDate(a.dataInicio) : true;
-                const fimValido = a.dataFim ? dStr <= normalizeDate(a.dataFim) : true;
-                return inicioValido && fimValido;
-            });
-            
-            aulasDia.forEach(aula => {
-                const [h, m] = aula.hora.split(':');
-                const dHa = toDate(dStr); dHa.setHours(parseInt(h), parseInt(m), 59);
-                if (dStr < todayStr || (dStr === todayStr && dHa < now)) {
-                    
-                    const pool = [...(vIndex[`${unidade.id}_${dStr}`] || [])];
-                    // Mesma regra da Validação Diária e da Página de Início: só vale a validação DESTA aula.
-                    // (Antes casava também pelo horário: um aulão das 19h "validava" a aula normal das 19h.)
-                    let fIdx = pool.findIndex(v => !v.isAulao && String(v.aulaId) === String(aula.id));
 
-                    // Regra única de feriado (src/utils/feriados.js): sem validação de pessoa, dia de feriado não entra
-                    // no total esperado nem vira pendência; aparece no histórico como FERIADO.
-                    const validacaoAchada = fIdx !== -1 ? pool[fIdx] : null;
-                    const feriadoDoDia = feriadoNoDia(dStr, unidade, catalogs?.feriados || []);
-                    if ((!validacaoAchada && feriadoDoDia) || ehCancelamentoAutomaticoDeFeriado(validacaoAchada)) {
-                        hist.push({ key: aula.id + dStr, data: formatDate(dStr), dia: diaSem, horaAula: aula.hora, modalidade: modMap[aula.modalidadeId] || t('common.unknown.general'), professor: profMap[aula.professorId] || t('common.unknown.noTeacher'), status: 'FERIADO', responsavelNome: t('common.roles.system'), timestampOrdenacao: dHa });
-                        return;
+            grade.forEach(aula => {
+                if (!aulaNaGradeDoDia(aula, dStr, diaSem)) return;
+
+                const pool = vIndex[`${unidade.id}_${dStr}`] || [];
+                // Só vale a validação DESTA aula (um aulão no mesmo horário não conta por ela).
+                const v = pool.find(x => !x.isAulao && String(x.aulaId) === String(aula.id)) || null;
+                const situacao = situacaoDaAula({ aula, unidade, dataStr: dStr, validacao: v, feriados, hoje: todayStr, agoraHHMM });
+                if (situacao === SITUACAO.MAIS_TARDE) return; // hoje, ainda não começou: não é atraso
+
+                const [h, m] = String(aula.hora || '00:00').split(':');
+                const dHa = toDate(dStr); dHa.setHours(parseInt(h) || 0, parseInt(m) || 0, 59);
+                // Se houve substituição ou ajuste de nome na validação, o histórico mostra quem deu a aula de fato.
+                const nomeProfessor = (v?.professorNomeEfetivo) || (v?.substituicao && profMap[v.professorId]) || profMap[aula.professorId] || t('common.unknown.noTeacher');
+                const nomeModalidade = (v?.modalidadeNomeEfetiva) || modMap[aula.modalidadeId] || t('common.unknown.general');
+
+                // Feriado (src/utils/feriados.js): não entra no total esperado nem vira pendência.
+                if (situacao === SITUACAO.FERIADO) {
+                    hist.push({ key: aula.id + dStr, data: formatDate(dStr), dia: diaSem, horaAula: aula.hora, modalidade: nomeModalidade, professor: nomeProfessor, status: 'FERIADO', responsavelNome: t('common.roles.system'), timestampOrdenacao: dHa });
+                    return;
+                }
+                totalEsp++;
+
+                if (situacao === SITUACAO.RESOLVIDA) {
+                    totalVal++;
+                    const validadoPorUid = v.userId || v.validadoPor || v.user_id || v.uid;
+                    const uL = usuariosMap[validadoPorUid];
+
+                    let dataValidacao = '-';
+                    let horaValidacao = '-';
+                    let diffDays = 0;
+                    const campoData = v.validadoEm || v.timestamp || v.createdAt || v.data_validacao;
+
+                    if (campoData && campoData.seconds) {
+                        const dateVal = new Date(campoData.seconds * 1000);
+                        horaValidacao = formatTime(dateVal);
+                        dataValidacao = formatDate(dateVal);
+                        const dateAula = new Date(dStr + 'T00:00:00');
+                        const dateValidacaoTime = new Date(dateVal);
+                        dateAula.setHours(0,0,0,0);
+                        dateValidacaoTime.setHours(0,0,0,0);
+                        diffDays = Math.round((dateValidacaoTime - dateAula) / (1000 * 60 * 60 * 24));
+                    } else {
+                        dataValidacao = formatDate(v.data);
+                        horaValidacao = v.hora || '-';
                     }
-                    totalEsp++;
-                    
-                    if (fIdx !== -1) {
-                        totalVal++;
-                        const v = pool[fIdx];
-                        const validadoPorUid = v.userId || v.validadoPor || v.user_id || v.uid;
-                        const uL = usuariosMap[validadoPorUid];
-                        
-                        let dataValidacao = '-';
-                        let horaValidacao = '-';
-                        let diffDays = 0;
-                        const campoData = v.validadoEm || v.timestamp || v.createdAt || v.data_validacao;
-                        
-                        if (campoData && campoData.seconds) {
-                            const dateVal = new Date(campoData.seconds * 1000);
-                            horaValidacao = formatTime(dateVal);
-                            dataValidacao = formatDate(dateVal);
-                            const dateAula = new Date(dStr + 'T00:00:00');
-                            const dateValidacaoTime = new Date(dateVal);
-                            dateAula.setHours(0,0,0,0);
-                            dateValidacaoTime.setHours(0,0,0,0);
-                            diffDays = Math.floor((dateValidacaoTime - dateAula) / (1000 * 60 * 60 * 24));
-                        } else {
-                            dataValidacao = formatDate(v.data); 
-                            horaValidacao = v.hora || '-';
-                        }
 
-                        const extractedName = uL?.nome || v.userName || v.validadoPorNome || v.nome_usuario || t('common.unknown.reception');
+                    const extractedName = uL?.nome || v.userName || v.validadoPorNome || v.nome_usuario || t('common.unknown.reception');
 
-                        hist.push({ 
-                            key: aula.id + dStr, 
-                            data: formatDate(dStr), 
-                            dia: diaSem, 
-                            horaAula: aula.hora, 
-                            modalidade: modMap[aula.modalidadeId] || t('common.unknown.general'), 
-                            professor: profMap[aula.professorId] || t('common.unknown.noTeacher'), 
-                            status: String(v.status || 'REALIZADA').toUpperCase(), 
-                            alunos: v.alunos || v.fluxo || v.quantidadeAlunos || 0,
-                            responsavelNome: extractedName, 
-                            dataValidacao: dataValidacao, 
-                            horaValidacao: horaValidacao, 
-                            diffDays: diffDays,
-                            timestampOrdenacao: dHa 
-                        });
-                    } else { 
-                        pends.push({data: dStr, dia: diaSem, info: aula.hora}); 
-                        hist.push({ key: aula.id + dStr, data: formatDate(dStr), dia: diaSem, horaAula: aula.hora, modalidade: modMap[aula.modalidadeId] || t('common.unknown.general'), professor: profMap[aula.professorId] || t('common.unknown.noTeacher'), status: 'ATRASADO', alunos: 0, responsavelNome: '-', timestampOrdenacao: dHa }); 
-                    }
+                    hist.push({
+                        key: aula.id + dStr,
+                        data: formatDate(dStr),
+                        dia: diaSem,
+                        horaAula: aula.hora,
+                        modalidade: nomeModalidade,
+                        professor: nomeProfessor,
+                        status: String(v.status || 'REALIZADA').toUpperCase(),
+                        alunos: v.alunos || v.fluxo || v.quantidadeAlunos || 0,
+                        responsavelNome: extractedName,
+                        dataValidacao: dataValidacao,
+                        horaValidacao: horaValidacao,
+                        diffDays: diffDays,
+                        timestampOrdenacao: dHa
+                    });
+                } else {
+                    pends.push({data: dStr, dia: diaSem, info: aula.hora});
+                    hist.push({ key: aula.id + dStr, data: formatDate(dStr), dia: diaSem, horaAula: aula.hora, modalidade: nomeModalidade, professor: nomeProfessor, status: 'ATRASADO', alunos: 0, responsavelNome: '-', timestampOrdenacao: dHa });
                 }
             });
         });
-        
+
         hist.sort((a,b) => b.timestampOrdenacao - a.timestampOrdenacao);
         const pct = totalEsp > 0 ? Math.round((totalVal / totalEsp) * 100) : 100;
         
-        const lastV = validacoesBase.filter(v => String(v.unidadeId) === String(unidade.id)).sort((a,b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0))[0];
+        const lastV = ultimaPorUnidade[String(unidade.id)];
         
         let responsavelInfo = { responsavelNome: '-', responsavelRole: '-', data: '-', horaValidacao: '-' };
         if (lastV) {
@@ -251,7 +312,7 @@ export default function ValidacaoColetiva() {
         }
 
         return { 
-            id: unidade.id, nome: unidade.nome, telefone: unidade.telefone, mentorId: unidade.mentorId, 
+            id: unidade.id, nome: unidade.nome, telefone: unidade.telefone, pais: unidade.pais, mentorId: unidade.mentorId, 
             mentorNome: usuariosMap[unidade.mentorId]?.nome || t('common.unknown.noMentor'), totalEsperado: totalEsp, totalValidado: totalVal, 
             percentual: pct, pendencias: pends, statusTexto: totalEsp === 0 ? 'AGUARDANDO' : pct === 100 ? 'PARABÉNS!' : 'EM ANDAMENTO', 
             temCronograma: temCronograma,
@@ -272,26 +333,30 @@ export default function ValidacaoColetiva() {
                 id: u.mentorId, 
                 nome: u.mentorNome, 
                 telefone: mentorData?.telefone || "", 
+                pais: u.pais, 
                 totalUnidades: 0, 
+                unidadesComAulas: 0, 
                 somaPercentuais: 0, 
                 totalPendencias: 0, 
                 unidadesList: [] 
             };
         }
         acc[u.mentorId].totalUnidades++; 
-        acc[u.mentorId].somaPercentuais += u.percentual; 
+        // Unidade sem aula esperada (sem cronograma, só feriado...) não puxa a média do mentor para cima.
+        if (u.totalEsperado > 0) { acc[u.mentorId].unidadesComAulas++; acc[u.mentorId].somaPercentuais += u.percentual; }
         acc[u.mentorId].totalPendencias += u.pendencias.length; 
         acc[u.mentorId].unidadesList.push(u);
         return acc;
-    }, {})).map(m => ({ ...m, mediaGeral: Math.round(m.somaPercentuais / m.totalUnidades) }))
+    }, {})).map(m => ({ ...m, mediaGeral: m.unidadesComAulas > 0 ? Math.round(m.somaPercentuais / m.unidadesComAulas) : 100 }))
     .sort((a, b) => {
+        if ((b.unidadesComAulas > 0) !== (a.unidadesComAulas > 0)) return (b.unidadesComAulas > 0) ? 1 : -1;
         if (b.mediaGeral !== a.mediaGeral) return b.mediaGeral - a.mediaGeral;
         if (a.totalPendencias !== b.totalPendencias) return a.totalPendencias - b.totalPendencias;
         return a.nome.localeCompare(b.nome);
     });
 
     return { mentores: rankingMentores, unidades: statusUnidades, kpis: { totalAulas: statusUnidades.reduce((acc, u) => acc + u.totalEsperado, 0), unidadesValidadas: statusUnidades.filter(u => u.percentual === 100 && u.totalEsperado > 0).length, unidadesPendentes: statusUnidades.filter(u => u.percentual < 100).length } };
-  }, [unidadesBase, usuariosBase, catalogs, validacoesBase, dataInicio, dataFim, now, estadoFiltro, mentorFiltro, unidadeFiltro, isCofreGlobalFechado, t]);
+  }, [unidadesBase, usuariosBase, catalogs, gradePorUnidade, validacoesBase, dataInicio, dataFim, now, estadoFiltro, mentorFiltro, unidadeFiltro, isCofreGlobalFechado, t]);
 
   const rankingUnidades = useMemo(() => {
       let filtered = [...dadosProcessados.unidades];
@@ -299,6 +364,7 @@ export default function ValidacaoColetiva() {
       if (unidadeFiltro.length > 0) filtered = filtered.filter(u => unidadeFiltro.includes(u.id));
       
       return filtered.sort((a, b) => {
+          if ((b.totalEsperado > 0) !== (a.totalEsperado > 0)) return (b.totalEsperado > 0) ? 1 : -1;
           if (b.percentual !== a.percentual) return b.percentual - a.percentual;
           if (a.pendencias.length !== b.pendencias.length) return a.pendencias.length - b.pendencias.length;
           return a.nome.localeCompare(b.nome);
@@ -308,18 +374,8 @@ export default function ValidacaoColetiva() {
   const mentoresRelGeral = useMemo(() => {
       let mentores = dadosProcessados.mentores;
       if (mentorFiltro.length > 0) mentores = mentores.filter(m => mentorFiltro.includes(m.id));
-      if (unidadeFiltro.length > 0) {
-          mentores = mentores.map(m => {
-              const filtradas = m.unidadesList.filter(u => unidadeFiltro.includes(u.id));
-              const totalUnidades = filtradas.length;
-              const somaPercentuais = filtradas.reduce((acc, u) => acc + u.percentual, 0);
-              const totalPendencias = filtradas.reduce((acc, u) => acc + u.pendencias.length, 0);
-              const mediaGeral = totalUnidades > 0 ? Math.round(somaPercentuais / totalUnidades) : 0;
-              return { ...m, unidadesList: filtradas, totalUnidades, somaPercentuais, totalPendencias, mediaGeral };
-          }).filter(m => m.totalUnidades > 0);
-      }
       return mentores;
-  }, [dadosProcessados.mentores, mentorFiltro, unidadeFiltro]);
+  }, [dadosProcessados.mentores, mentorFiltro]);
 
   const unidadesRelGeral = useMemo(() => {
       let unidades = dadosProcessados.unidades;
@@ -372,10 +428,12 @@ export default function ValidacaoColetiva() {
   // 🟢 NOVA FUNÇÃO EXPORTAR CSV BLINDADA (X-9)
   const exportarCSV = async () => {
     // 1. Lógica original de criação e download do CSV
-    const headers = ['unit', 'mentor', 'done', 'expected', 'status', 'progress', 'pendencies'].map(k => t(`groupValidation.csv.${k}`)).join(',') + "\n";
-    const rows = sortedUnidades.map(u => `${u.nome.toUpperCase()},${u.mentorNome.toUpperCase()},${u.totalValidado},${u.totalEsperado},${traduzirStatus(u.statusTexto).toUpperCase()},${u.percentual}%,${u.pendencias.length}`).join("\n");
+    const headers = ['unit', 'mentor', 'done', 'expected', 'status', 'progress', 'pendencies'].map(k => t(`groupValidation.csv.${k}`)).join(';') + "\r\n";
+    // Campo entre aspas (nome com ; ou , não quebra a coluna) e sem "=" no começo (Excel trataria como fórmula).
+    const campo = (x) => { let v = String(x ?? ''); if (/^[=+\-@]/.test(v)) v = "'" + v; return '"' + v.replace(/"/g, '""') + '"'; };
+    const rows = sortedUnidades.map(u => [u.nome, u.mentorNome, u.totalValidado, u.totalEsperado, traduzirStatus(u.statusTexto), u.percentual + '%', u.pendencias.length].map(campo).join(';')).join("\r\n");
     const link = document.createElement('a');
-    link.href = URL.createObjectURL(new Blob([headers + rows], { type: 'text/csv;charset=utf-8;' }));
+    link.href = URL.createObjectURL(new Blob(['\uFEFF' + headers + rows], { type: 'text/csv;charset=utf-8;' }));
     link.setAttribute('download', `validacao_coletiva_${dataInicio}.csv`);
     document.body.appendChild(link);
     link.click();
@@ -406,7 +464,7 @@ export default function ValidacaoColetiva() {
   const msgAdminToMentor = (m) => {
       const u100 = m.unidadesList.filter(u => u.percentual === 100).map(u => `✅ *${u.nome.toUpperCase()}*`);
       const uPendentes = m.unidadesList.filter(u => u.percentual < 100).map(u => {
-          const datas = filterPendingDates(u.pendencias).map(d => formatDateShort(d)).join(', ');
+          const datas = formatPendencias(u.pendencias);
           return t('groupValidation.messages.adminToMentor.pendingLine', { unit: u.nome.toUpperCase(), count: u.pendencias.length, dates: datas });
       });
 
@@ -428,7 +486,7 @@ export default function ValidacaoColetiva() {
   };
 
   const msgMentorToUnit = (u) => {
-      const datas = filterPendingDates(u.pendencias).map(d => formatDateShort(d)).join(', ');
+      const datas = formatPendencias(u.pendencias);
       return t('groupValidation.messages.mentorToUnit', { unit: u.nome.toUpperCase(), dates: datas });
   };
 
@@ -439,7 +497,7 @@ export default function ValidacaoColetiva() {
   if (loadingCatalogs) return <div className="h-screen flex items-center justify-center text-slate-400 font-black uppercase animate-pulse">{t('groupValidation.syncing')}</div>;
 
   return (
-    <div className="p-6 md:p-8 max-w-[1920px] mx-auto animate-fade-in space-y-8 uppercase">
+    <div className="p-6 md:p-8 max-w-[1920px] mx-auto animate-fade-in space-y-8">
       
       {/* HEADER E PAINEL DE CONTROLE UNIFICADO */}
       <div className="flex flex-col gap-5 border-b border-slate-200 dark:border-slate-700 pb-6">
@@ -513,7 +571,7 @@ export default function ValidacaoColetiva() {
               <h3 className="text-xl font-black text-rose-700 dark:text-rose-300 mb-2">{t('groupValidation.error.title')}</h3>
               <p className="text-rose-600 dark:text-rose-300 text-sm font-medium max-w-lg mx-auto leading-relaxed">{t('groupValidation.error.desc')}</p>
           </div>
-      ) : loadingRealtime ? (
+      ) : (loadingRealtime || aguardandoFiltro) ? (
           <div className="py-24 text-center text-slate-400 font-black tracking-widest animate-pulse">{t('groupValidation.syncing')}</div>
       ) : (
           <>
