@@ -4,12 +4,17 @@
 // Só grava os campos que fazem sentido para a abrangência escolhida.
 export function montarFeriado(form) {
   const base = { nome: String(form.nome || '').trim(), dataInicio: form.dataInicio, dataFim: form.dataFim, tipo: form.tipo, escopo: form.escopo };
-  if (form.escopo === 'pais') return { ...base, pais: form.pais };
-  if (form.escopo === 'estado') return { ...base, estado: form.estado };
+  // "Exceto estas unidades": só em rede, país e estado (em cidade e unidades basta não marcar a unidade).
+  const excecao = Array.isArray(form.unidadesExcecao) && form.unidadesExcecao.length > 0 ? { unidadesExcecao: form.unidadesExcecao.map(String) } : {};
+  if (form.escopo === 'pais') return { ...base, pais: form.pais, ...excecao };
+  if (form.escopo === 'estado') return { ...base, estado: form.estado, ...excecao };
   if (form.escopo === 'cidade') return { ...base, cidade: String(form.cidade || '').trim(), unidadeIds: form.unidadeIds || [] };
   if (form.escopo === 'unidades') return { ...base, unidadeIds: form.unidadeIds || [] };
-  return base;
+  return { ...base, ...excecao };
 }
+
+// Campos de abrangência que um feriado pode ter: os que não servem mais após uma edição são apagados do documento.
+export const CAMPOS_DE_ABRANGENCIA = ['pais', 'estado', 'cidade', 'unidadeIds', 'unidadesExcecao'];
 
 // Escopos que o mentor pode propor: só onde ele escolhe as unidades dele.
 export const ESCOPOS_DO_MENTOR = ['cidade', 'unidades'];
