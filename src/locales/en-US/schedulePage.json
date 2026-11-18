@@ -17,8 +17,6 @@
     "selectMyUnit": "Select your unit..."
   },
   "buttons": {
-    "showHistory": "View Finished",
-    "hideHistory": "Hide Finished",
     "add": "Add"
   },
   "placeholders": {
@@ -26,7 +24,7 @@
     "startSearchDesc": "Select a Unit to view the calendar or type a Modality to search all.",
     "resultsFor": "Results for",
     "noClassesFound": "No classes found with this name.",
-    "emptyGrid": "The current grid is empty. Try clicking 'View Finished'.",
+    "emptyGrid": "The current grid is empty. Classes that already ended are in the History tab.",
     "noClassesInUnit": "No classes registered in this unit.",
     "createFirstClass": "Create first class",
     "selectMyUnitTitle": "Select your unit",
@@ -81,5 +79,38 @@
   },
   "unknownModality": "Unknown",
   "unknownUnit": "Unknown Unit",
-  "startsOnBadge": "Starts on {{data}}"
+  "startsOnBadge": "Starts on {{data}}",
+  "views": {
+    "grid": "Grid",
+    "history": "History"
+  },
+  "history": {
+    "title": "Class history",
+    "count_one": "{{count}} ended class",
+    "count_other": "{{count}} ended classes",
+    "teacher": "Teacher",
+    "modality": "Modality",
+    "allTeachers": "All teachers",
+    "allModalities": "All modalities",
+    "endedFrom": "Ended from",
+    "endedUntil": "to",
+    "daysTime": "Days and time",
+    "value": "Value",
+    "period": "Period",
+    "outcome": "Status",
+    "empty": "No ended classes found with these filters.",
+    "deleted": "Deleted",
+    "newPhase": "New phase",
+    "endedNoNext": "Ended",
+    "continuedBy": "Continued with {{professor}} from {{data}}",
+    "changedLabel": "changed",
+    "open": "Open class",
+    "loadMore": "Load more ({{shown}} of {{total}})",
+    "changed": {
+      "professor": "teacher",
+      "valor": "value",
+      "hora": "time",
+      "dias": "days"
+    }
+  }
 }

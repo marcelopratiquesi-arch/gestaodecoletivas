@@ -17,8 +17,6 @@
     "selectMyUnit": "Selecciona tu unidad..."
   },
   "buttons": {
-    "showHistory": "Ver Finalizadas",
-    "hideHistory": "Ocultar Finalizadas",
     "add": "Agregar"
   },
   "placeholders": {
@@ -26,7 +24,7 @@
     "startSearchDesc": "Selecciona una Unidad para ver el calendario o escribe una Modalidad para buscar en todas.",
     "resultsFor": "Resultados para",
     "noClassesFound": "No se encontró ninguna clase con este nombre.",
-    "emptyGrid": "La grilla actual está vacía. Intenta hacer clic en 'Ver Finalizadas'.",
+    "emptyGrid": "La grilla actual está vacía. Las clases que ya terminaron están en la pestaña Historial.",
     "noClassesInUnit": "No hay clases registradas en esta unidad.",
     "createFirstClass": "Crear primera clase",
     "selectMyUnitTitle": "Selecciona tu unidad",
@@ -81,5 +79,38 @@
   },
   "unknownModality": "Desconocida",
   "unknownUnit": "Sede Desconocida",
-  "startsOnBadge": "Comienza el {{data}}"
+  "startsOnBadge": "Comienza el {{data}}",
+  "views": {
+    "grid": "Grilla",
+    "history": "Historial"
+  },
+  "history": {
+    "title": "Historial de clases",
+    "count_one": "{{count}} clase finalizada",
+    "count_other": "{{count}} clases finalizadas",
+    "teacher": "Profesor",
+    "modality": "Modalidad",
+    "allTeachers": "Todos los profesores",
+    "allModalities": "Todas las modalidades",
+    "endedFrom": "Finalizada desde",
+    "endedUntil": "hasta",
+    "daysTime": "Días y horario",
+    "value": "Valor",
+    "period": "Período",
+    "outcome": "Situación",
+    "empty": "No hay clases finalizadas con estos filtros.",
+    "deleted": "Eliminada",
+    "newPhase": "Nueva fase",
+    "endedNoNext": "Finalizada",
+    "continuedBy": "Continuó con {{professor}} desde {{data}}",
+    "changedLabel": "cambió",
+    "open": "Abrir clase",
+    "loadMore": "Cargar más ({{shown}} de {{total}})",
+    "changed": {
+      "professor": "profesor",
+      "valor": "valor",
+      "hora": "horario",
+      "dias": "días"
+    }
+  }
 }

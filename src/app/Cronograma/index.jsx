@@ -3,7 +3,7 @@ import {
   Calendar, Clock, Plus, Filter, 
   Search, Trash2, Edit2, X, Check, 
   MapPin, Loader2, AlertTriangle, Users,
-  DollarSign, Globe, ChevronRight, List, ChevronDown, User, CalendarDays, EyeOff, History, ArrowRightLeft 
+  DollarSign, Globe, ChevronRight, List, ChevronDown, User, CalendarDays, History, ArrowRightLeft 
 } from 'lucide-react';
 
 import { useAuth } from '../../contexts/AuthContext'; 
@@ -19,6 +19,8 @@ import { ehLider, unidadesDoLider } from '../../permissions';
 import { valorDaAulaValido, aulaRepetida, validarCorteNovaFase, diaAnterior, professorPodeReceberAula } from '../../utils/cronogramaRegras';
 import { ehCancelamentoAutomaticoDeFeriado } from '../../utils/feriados';
 import { espelharAula, espelharMudanca, removerAulaPublica } from '../../services/aulasPublicas';
+import { podeVerHistorico, aulasDoHistorico } from '../../utils/historicoAulas';
+import HistoricoAulas from './HistoricoAulas';
 
 // --- FUNÇÕES UTILITÁRIAS ---
 const getTodayStr = () => new Date().toLocaleDateString('en-CA');
@@ -174,7 +176,9 @@ export default function CronogramaPage() {
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   
   // --- ESTADOS DO MODAL E VISUALIZAÇÃO ---
-  const [mostrarEncerradas, setMostrarEncerradas] = useState(false); 
+  // 'grade' = o que vale hoje; 'historico' = aulas encerradas (só admin, mentor e líder).
+  const [visao, setVisao] = useState('grade');
+ 
   const [showModal, setShowModal] = useState(false);
   const [editingClass, setEditingClass] = useState(null);
 
@@ -270,15 +274,18 @@ export default function CronogramaPage() {
         classes = classes.filter(c => allowedIds.includes(String(c.unidadeId)));
     }
 
-    if (!mostrarEncerradas) {
-        const today = getTodayStr();
-        classes = classes.filter(c => !(c.dataFim && c.dataFim < today));
-    }
+    // A grade só mostra o que vale hoje; o que já terminou fica na aba Histórico.
+    const today = getTodayStr();
+    classes = classes.filter(c => !(c.dataFim && c.dataFim < today));
+
+    const modPorId = new Map(catalogs.modalidades.map(m => [String(m.id), m]));
+    const profPorId = new Map(catalogs.professores.map(p => [String(p.id), p]));
+    const uniPorId = new Map(catalogs.unidades.map(u => [String(u.id), u]));
 
     return classes.map(c => {
-      const mod = catalogs.modalidades.find(m => String(m.id) === String(c.modalidadeId));
-      const prof = catalogs.professores.find(p => String(p.id) === String(c.professorId));
-      const uni = catalogs.unidades.find(u => String(u.id) === String(c.unidadeId));
+      const mod = modPorId.get(String(c.modalidadeId));
+      const prof = profPorId.get(String(c.professorId));
+      const uni = uniPorId.get(String(c.unidadeId));
       
       return {
         ...c,
@@ -292,7 +299,7 @@ export default function CronogramaPage() {
       const term = debouncedSearchTerm.toLowerCase();
       return (c.modalidadeNome.toLowerCase().includes(term) || c.professorNome.toLowerCase().includes(term));
     });
-  }, [selectedUnit, debouncedSearchTerm, aulas, catalogs, availableUnits, mostrarEncerradas, t]);
+  }, [selectedUnit, debouncedSearchTerm, aulas, catalogs, availableUnits, t]);
 
   const visibleDays = useMemo(() => {
     const defaultDays = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta']; 
@@ -315,6 +322,16 @@ export default function CronogramaPage() {
       return Object.values(groups).sort((a,b) => a.unidadeNome.localeCompare(b.unidadeNome));
   }, [filteredClasses, selectedUnit]);
 
+  const aulasPorCelula = useMemo(() => {
+    const mapa = new Map();
+    filteredClasses.forEach(c => (c.dias || []).forEach(d => {
+      const k = d + '|' + c.hora;
+      if (!mapa.has(k)) mapa.set(k, []);
+      mapa.get(k).push(c);
+    }));
+    return mapa;
+  }, [filteredClasses]);
+
   const activeTimeSlots = useMemo(() => {
     const times = new Set(filteredClasses.map(c => c.hora));
     return Array.from(times).sort();
@@ -327,6 +344,16 @@ export default function CronogramaPage() {
 
 
   // 🟢 DESCOBRIR MOEDA DA UNIDADE SELECIONADA NO MODAL
+  // HISTÓRICO: professor nunca; líder/mentor só das unidades deles (availableUnits já vem filtrada); admin vê tudo.
+  const podeHistorico = podeVerHistorico(role, ehLider(role));
+  const emHistorico = podeHistorico && visao === 'historico';
+  const aulasBrutas = useMemo(() => (catalogosGlobais.aulasTodas?.length ? catalogosGlobais.aulasTodas : (catalogosGlobais.aulas || [])), [catalogosGlobais.aulasTodas, catalogosGlobais.aulas]);
+  const linhasHistorico = useMemo(() => {
+      if (!emHistorico) return [];
+      const unidadesPermitidas = (selectedState ? availableUnits.filter(u => u.estado === selectedState) : availableUnits).map(u => String(u.id));
+      return aulasDoHistorico({ aulasTodas: aulasBrutas, unidadesPermitidas, unidadeId: selectedUnit, ehAdmin: role === 'admin', hoje: getTodayStr() });
+  }, [emHistorico, aulasBrutas, availableUnits, selectedState, selectedUnit, role]);
+
   const modalCurrencySymbol = useMemo(() => {
       const unit = catalogs.unidades.find(u => String(u.id) === String(formData.unidadeId));
       return getCurrencySymbol(unit?.pais);
@@ -688,7 +715,7 @@ export default function CronogramaPage() {
             </div>
           </div>
 
-          {!isReadOnly && <div className="flex-1 w-full space-y-2">
+          {!isReadOnly && !emHistorico && <div className="flex-1 w-full space-y-2">
             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
               <Search className="w-3 h-3" /> {selectedUnit ? t('schedulePage.filters.searchInGrid', "Filtrar nesta grade") : t('schedulePage.filters.searchEverywhere', "Buscar Modalidade em todas as unidades")}
             </label>
@@ -704,18 +731,18 @@ export default function CronogramaPage() {
             </div>
           </div>}
 
-          {!isReadOnly && <button
-              onClick={() => setMostrarEncerradas(!mostrarEncerradas)}
-              className={`h-12 px-4 rounded-xl font-bold text-[11px] uppercase flex items-center gap-2 shadow-sm transition-all whitespace-nowrap
-              ${mostrarEncerradas 
-                  ? 'bg-slate-800 text-white border border-slate-900 dark:bg-slate-700' 
-                  : 'bg-white dark:bg-slate-900 text-slate-500 border border-slate-200 dark:border-slate-600 hover:bg-slate-50'}`}
-          >
-              {mostrarEncerradas ? <EyeOff className="w-4 h-4"/> : <History className="w-4 h-4"/>}
-              <span className="hidden sm:inline">{mostrarEncerradas ? t('schedulePage.buttons.hideHistory', "Ocultar Encerradas") : t('schedulePage.buttons.showHistory', "Ver Encerradas")}</span>
-          </button>}
+          {podeHistorico && (
+            <div className="h-12 p-1 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 flex items-center gap-1 shrink-0" role="tablist">
+              {[{ chave: 'grade', icone: Calendar, rotulo: 'schedulePage.views.grid' }, { chave: 'historico', icone: History, rotulo: 'schedulePage.views.history' }].map((aba) => (
+                <button key={aba.chave} type="button" role="tab" aria-selected={visao === aba.chave} onClick={() => setVisao(aba.chave)}
+                  className={`h-full px-4 rounded-lg font-bold text-[11px] uppercase flex items-center gap-2 transition-colors whitespace-nowrap ${visao === aba.chave ? 'bg-white dark:bg-slate-700 text-red-600 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>
+                  <aba.icone className="w-4 h-4" /> {t(aba.rotulo)}
+                </button>
+              ))}
+            </div>
+          )}
 
-          {!isReadOnly && (
+          {!isReadOnly && !emHistorico && (
             <button 
                 onClick={openNewModal}
                 disabled={!selectedUnit}
@@ -735,7 +762,11 @@ export default function CronogramaPage() {
       {/* ÁREA DE CONTEÚDO */}
       <div className="min-h-[500px] relative">
         
-        {!selectedUnit && !debouncedSearchTerm && (
+        {emHistorico && (
+          <HistoricoAulas linhas={linhasHistorico} aulasTodas={aulasBrutas} catalogs={catalogs} mostrarUnidade={!selectedUnit} onEdit={openEditModal} t={t} />
+        )}
+
+        {!emHistorico && !selectedUnit && !debouncedSearchTerm && (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 bg-slate-50/50 dark:bg-slate-900/50 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-700">
             <Globe className="w-16 h-16 mb-4 text-slate-300 dark:text-slate-600" />
             {isReadOnly ? (
@@ -759,7 +790,7 @@ export default function CronogramaPage() {
           </div>
         )}
 
-        {!selectedUnit && debouncedSearchTerm && (
+        {!emHistorico && !selectedUnit && debouncedSearchTerm && (
             <div className="space-y-6">
                 <h3 className="text-lg font-bold text-slate-600 flex items-center gap-2">
                     <List className="w-5 h-5"/> {t('schedulePage.placeholders.resultsFor', 'Resultados para')} "{debouncedSearchTerm}"
@@ -783,12 +814,12 @@ export default function CronogramaPage() {
             </div>
         )}
 
-        {selectedUnit && (
+        {!emHistorico && selectedUnit && (
             <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
                 {filteredClasses.length === 0 && !debouncedSearchTerm ? (
                     <div className="py-20 flex flex-col items-center justify-center text-slate-400 dark:text-slate-500">
                         <Calendar className="w-12 h-12 mb-3 opacity-20" />
-                        <p>{(mostrarEncerradas || isReadOnly) ? t('schedulePage.placeholders.noClassesInUnit', "Nenhuma aula cadastrada nesta unidade.") : t('schedulePage.placeholders.emptyGrid', "A grade atual está vazia. Tente clicar em 'Ver Encerradas'.")}</p>
+                        <p>{isReadOnly ? t('schedulePage.placeholders.noClassesInUnit', "Nenhuma aula cadastrada nesta unidade.") : t('schedulePage.placeholders.emptyGrid')}</p>
                         {!isReadOnly && <button onClick={openNewModal} className="mt-2 text-red-600 hover:underline font-bold text-sm">{t('schedulePage.placeholders.createFirstClass', 'Criar nova aula')}</button>}
                     </div>
                 ) : (
@@ -811,7 +842,7 @@ export default function CronogramaPage() {
                                 <React.Fragment key={time}>
                                     <div className="bg-slate-50 dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 p-4 text-right text-xs font-bold text-slate-500 dark:text-slate-400 flex items-start justify-end pt-5 sticky left-0 z-10">{time}</div>
                                     {visibleDays.map(day => {
-                                        const classesInSlot = filteredClasses.filter(c => c.dias.includes(day) && c.hora === time);
+                                        const classesInSlot = aulasPorCelula.get(day + '|' + time) || [];
                                         return (
                                             <div key={`${day}-${time}`} className="bg-white dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700 border-l border-slate-100 dark:border-slate-700 p-2 min-h-[110px] h-auto hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition-colors flex flex-col gap-1">
                                                 {classesInSlot.map(cls => <ClassCard key={cls.id} data={cls} onClick={() => openEditModal(cls)} isReadOnly={isReadOnly} defaultTeacher={t('publicSchedule.defaultTeacher', 'Instrutor')} t={t} />)}

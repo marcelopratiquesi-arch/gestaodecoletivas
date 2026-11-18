@@ -17,8 +17,6 @@
     "selectMyUnit": "Selecione sua unidade..."
   },
   "buttons": {
-    "showHistory": "Ver Encerradas",
-    "hideHistory": "Ocultar Encerradas",
     "add": "Adicionar"
   },
   "placeholders": {
@@ -26,7 +24,7 @@
     "startSearchDesc": "Selecione uma Unidade para ver o calendário ou digite uma Modalidade para buscar em todas.",
     "resultsFor": "Resultados para",
     "noClassesFound": "Nenhuma aula encontrada com este nome.",
-    "emptyGrid": "A grade atual está vazia. Tente clicar em 'Ver Encerradas'.",
+    "emptyGrid": "A grade atual está vazia. As aulas que já terminaram ficam na aba Histórico.",
     "noClassesInUnit": "Nenhuma aula cadastrada nesta unidade.",
     "createFirstClass": "Criar primeira aula",
     "selectMyUnitTitle": "Selecione sua unidade",
@@ -81,5 +79,38 @@
   },
   "unknownModality": "Desconhecido",
   "unknownUnit": "Unidade Desconhecida",
-  "startsOnBadge": "Começa em {{data}}"
+  "startsOnBadge": "Começa em {{data}}",
+  "views": {
+    "grid": "Grade",
+    "history": "Histórico"
+  },
+  "history": {
+    "title": "Histórico de aulas",
+    "count_one": "{{count}} aula encerrada",
+    "count_other": "{{count}} aulas encerradas",
+    "teacher": "Professor",
+    "modality": "Modalidade",
+    "allTeachers": "Todos os professores",
+    "allModalities": "Todas as modalidades",
+    "endedFrom": "Encerrada de",
+    "endedUntil": "até",
+    "daysTime": "Dias e horário",
+    "value": "Valor",
+    "period": "Período",
+    "outcome": "Situação",
+    "empty": "Nenhuma aula encerrada encontrada com estes filtros.",
+    "deleted": "Excluída",
+    "newPhase": "Nova fase",
+    "endedNoNext": "Encerrada",
+    "continuedBy": "Continuou com {{professor}} desde {{data}}",
+    "changedLabel": "mudou",
+    "open": "Abrir aula",
+    "loadMore": "Carregar mais ({{shown}} de {{total}})",
+    "changed": {
+      "professor": "professor",
+      "valor": "valor",
+      "hora": "horário",
+      "dias": "dias"
+    }
+  }
 }
