@@ -85,5 +85,28 @@
     "typeSpecial": "Aulão",
     "typeSubstitute": "Substituto",
     "typeHolder": "Titular"
+  },
+  "earnings": {
+    "tab": "Ganhos por professor",
+    "title": "Ganhos por professor",
+    "hint": "Mesmo período, filtros e totais do Resumo da Folha. Clique no professor para ver por unidade e modalidade.",
+    "grandTotal": "Total do período",
+    "substitutions": "SUBSTITUIÇÕES",
+    "didSub": "deu {{count}} como substituto",
+    "wasSubbed": "substituído em {{count}}",
+    "unit": "Unidade",
+    "loadMore": "Carregar mais ({{shown}} de {{total}})",
+    "export": {
+      "teacher": "Professor",
+      "unit": "Unidade",
+      "modality": "Modalidade",
+      "currency": "Moeda",
+      "completed": "Realizadas",
+      "canceled": "Canceladas",
+      "substitutions": "Substituições feitas",
+      "toReceive": "A receber",
+      "sheetDetail": "Detalhe",
+      "sheetTotals": "Totais"
+    }
   }
 }

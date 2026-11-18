@@ -85,5 +85,28 @@
     "typeSpecial": "Special Class",
     "typeSubstitute": "Substitute",
     "typeHolder": "Main Teacher"
+  },
+  "earnings": {
+    "tab": "Earnings by teacher",
+    "title": "Earnings by teacher",
+    "hint": "Same period, filters and totals as the Payroll Summary. Click a teacher to see by unit and modality.",
+    "grandTotal": "Period total",
+    "substitutions": "SUBSTITUTIONS",
+    "didSub": "covered {{count}} as substitute",
+    "wasSubbed": "was substituted in {{count}}",
+    "unit": "Unit",
+    "loadMore": "Load more ({{shown}} of {{total}})",
+    "export": {
+      "teacher": "Teacher",
+      "unit": "Unit",
+      "modality": "Modality",
+      "currency": "Currency",
+      "completed": "Completed",
+      "canceled": "Canceled",
+      "substitutions": "Substitutions made",
+      "toReceive": "To receive",
+      "sheetDetail": "Detail",
+      "sheetTotals": "Totals"
+    }
   }
 }

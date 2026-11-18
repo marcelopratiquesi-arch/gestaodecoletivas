@@ -85,5 +85,28 @@
     "typeSpecial": "Clase Especial",
     "typeSubstitute": "Suplente",
     "typeHolder": "Titular"
+  },
+  "earnings": {
+    "tab": "Ganancias por profesor",
+    "title": "Ganancias por profesor",
+    "hint": "Mismo período, filtros y totales del Resumen de Nómina. Hacé clic en el profesor para ver por unidad y modalidad.",
+    "grandTotal": "Total del período",
+    "substitutions": "SUPLENCIAS",
+    "didSub": "dio {{count}} como suplente",
+    "wasSubbed": "suplido en {{count}}",
+    "unit": "Unidad",
+    "loadMore": "Cargar más ({{shown}} de {{total}})",
+    "export": {
+      "teacher": "Profesor",
+      "unit": "Unidad",
+      "modality": "Modalidad",
+      "currency": "Moneda",
+      "completed": "Realizadas",
+      "canceled": "Canceladas",
+      "substitutions": "Suplencias hechas",
+      "toReceive": "A cobrar",
+      "sheetDetail": "Detalle",
+      "sheetTotals": "Totales"
+    }
   }
 }

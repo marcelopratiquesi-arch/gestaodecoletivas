@@ -10,6 +10,8 @@ import { deduplicarValidacoes } from '../../utils/validacoes';
 import { feriadoNoDia, normalizarPais } from '../../utils/feriados';
 import { valorDaValidacao } from '../../utils/valores';
 import { ganhosDasValidacoes } from '../../utils/ganhos';
+import { extratoPorProfessor, linhasDeExportacao } from '../../utils/extratoGanhos';
+import GanhosPorProfessor from './GanhosPorProfessor';
 import { somarPorMoeda, juntarTotais, dividirPorMoeda, moedasEmOrdem, moedaDoPais, formatarMoeda, textoPorMoeda } from '../../utils/moedas';
 import { DIAS_SEMANA as diasSemanaMap, getDiaSemana, formatCurrency, formatDate, formatWeekday, formatCancelReason } from '../../utils/formatters';
 
@@ -583,6 +585,7 @@ export default function RelatorioPage() {
             unidadeNome: (unidade.nome || '').toUpperCase(),
             unidadeEstado: (unidade.estado || '').toUpperCase(),
             unidadePais: unidade.pais, // já padronizado (BR/AR/US)
+            professorId: String(professorId),
             professorNome: (professor?.nome || t('common.unknown.noTeacher')).toUpperCase(),
             tipoLinha: item.tipo,
             modalidadeNome: (modalidade?.nome || t('common.unknown.modality')).toUpperCase(),
@@ -624,6 +627,8 @@ export default function RelatorioPage() {
         return 0;
       });
   }, [processamentoBase, viewMode, sortConfig]);
+
+  const extrato = useMemo(() => extratoPorProfessor(processamentoBase), [processamentoBase]);
 
   const relatorioVisivel = useMemo(() => (relatorioFinal || []).slice(0, itensVisiveis), [relatorioFinal, itensVisiveis]);
 
@@ -739,8 +744,39 @@ return { totalPorMoeda, totalRealizadas, totalCanceladas, mediaAlunos, custoMedi
   };
   const toggleRow = (id) => setExpandedRowId(prev => prev === id ? null : id);
 
+  // Extrato "Ganhos por professor": uma linha por professor + unidade + modalidade (valor sempre na moeda da unidade).
+  const exportarExtrato = (type) => {
+    const headers = ['teacher', 'unit', 'modality', 'currency', 'completed', 'canceled', 'toReceive'].map(k => t(`reports.earnings.export.${k}`));
+    const planas = linhasDeExportacao(extrato);
+    if (type === 'excel') {
+        const ws = XLSX.utils.aoa_to_sheet([headers, ...planas.map(l => [l.professor, l.unidade, l.modalidade, l.moeda, l.realizadas, l.canceladas, l.valor])]);
+        ws['!cols'] = headers.map((_, i) => ({ wch: i === 0 || i === 1 ? 30 : 14 }));
+        const totaisHeaders = ['teacher', 'currency', 'completed', 'canceled', 'substitutions', 'toReceive'].map(k => t(`reports.earnings.export.${k}`));
+        const totaisLinhas = extrato.flatMap(p => moedasEmOrdem(p.totais).map(m => [p.professorNome, m, p.realizadas, p.canceladas, p.substituicoesFeitas, p.totais[m]]));
+        const ws2 = XLSX.utils.aoa_to_sheet([totaisHeaders, ...totaisLinhas]);
+        ws2['!cols'] = totaisHeaders.map((_, i) => ({ wch: i === 0 ? 30 : 14 }));
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, t('reports.earnings.export.sheetDetail'));
+        XLSX.utils.book_append_sheet(wb, ws2, t('reports.earnings.export.sheetTotals'));
+        XLSX.writeFile(wb, `ganhos_por_professor_${period.start}.xlsx`);
+        return;
+    }
+    const aspas = (v) => `"${String(v).replace(/"/g, '""')}"`;
+    const csvContent = [headers.map(aspas).join(';'), ...planas.map(l => [l.professor, l.unidade, l.modalidade, l.moeda, l.realizadas, l.canceladas, String(l.valor).replace('.', ',')].map(aspas).join(';'))].join('\n');
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `ganhos_por_professor_${period.start}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
+
   const handleExport = (type) => {
     setShowExportMenu(false);
+    if (viewMode === 'ganhos') { exportarExtrato(type); return; }
     const headers = ['country', 'state', 'unit', 'modality', 'time', 'teacher', 'type', 'completed', 'canceled', 'avgStudents', 'occupancy', 'classValue', 'toReceive'].map(k => t(`reports.export.${k}`));
     const rows = relatorioFinal.map(r => {
         return [ r.unidadePais||"-", r.unidadeEstado||"-", r.unidadeNome, r.modalidadeNome, r.horario === 'VÁRIOS HORÁRIOS' ? t('reports.table.multipleTimes') : r.horario, r.professorNome, t(`reports.export.${r.isGroup ? 'typeGrouped' : r.tipoLinha === 'aulao' ? 'typeSpecial' : r.tipoLinha === 'substituto' ? 'typeSubstitute' : 'typeHolder'}`), r.aulasRealizadas, r.aulasCanceladas, r.mediaAlunos, `${(r.ocupacao || 0).toFixed(1)}%`, formatSmartCurrency(r.valorHora, r.unidadePais), formatSmartCurrency(r.totalReceber, r.unidadePais) ];
@@ -1024,9 +1060,18 @@ return { totalPorMoeda, totalRealizadas, totalCanceladas, mediaAlunos, custoMedi
                       >
                           <AlignJustify className="w-4 h-4"/> {t('reports.table.detailed', 'Detalhado')}
                       </button>
+                      <button
+                          onClick={() => { setViewMode('ganhos'); setExpandedRowId(null); }}
+                          className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-xs font-bold uppercase transition-all ${viewMode === 'ganhos' ? 'bg-slate-100 dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-700'}`}
+                      >
+                          <Users className="w-4 h-4"/> {t('reports.earnings.tab')}
+                      </button>
                   </div>
               </div>
 
+              {viewMode === 'ganhos' ? (
+                <GanhosPorProfessor extrato={extrato} t={t} />
+              ) : (<>
               {/* 🟢 TABELA DE DADOS COM CORES CONDICIONAIS */}
               <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
                 <div className="overflow-x-auto">
@@ -1235,6 +1280,7 @@ return { totalPorMoeda, totalRealizadas, totalCanceladas, mediaAlunos, custoMedi
                       </button>
                   </div>
               )}
+              </>)}
           </div>
         </>
       )}
