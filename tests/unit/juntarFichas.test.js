@@ -60,6 +60,25 @@ describe('montarPlanoJuncao', () => {
     const p = montarPlanoJuncao({ principal: { ...principal, status: 'inativo' }, outras: [outra] });
     expect(p.completar.status).toBe('ativo');
   });
+  it('documento da ficha que some passa para a que fica', () => {
+    const p = montarPlanoJuncao({ principal, outras: [outra], documentos: { S: { tipo: 'cpf', numero: '52998224725' } } });
+    expect(p.conflitoDocumento).toBe(false);
+    expect(p.documento).toEqual({ deId: 'S', tipo: 'cpf', numero: '52998224725' });
+    expect(p.completar.documentoOk).toBe(true);
+  });
+  it('documentos diferentes = pessoas diferentes: não junta', () => {
+    const p = montarPlanoJuncao({
+      principal, outras: [outra],
+      documentos: { P: { tipo: 'cpf', numero: '52998224725' }, S: { tipo: 'cpf', numero: '11144477735' } },
+    });
+    expect(p.conflitoDocumento).toBe(true);
+    expect(p.documento).toBeNull();
+  });
+  it('documento só na principal: nada a mover', () => {
+    const p = montarPlanoJuncao({ principal, outras: [outra], documentos: { P: { tipo: 'cpf', numero: '52998224725' } } });
+    expect(p.documento).toBeNull();
+    expect(p.conflitoDocumento).toBe(false);
+  });
   it('nunca apaga a própria ficha principal', () => {
     const p = montarPlanoJuncao({ principal, outras: [principal, outra] });
     expect(p.idsApagar).toEqual(['S']);

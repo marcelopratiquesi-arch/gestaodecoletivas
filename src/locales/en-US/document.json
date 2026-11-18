@@ -85,7 +85,12 @@
     "deleteLeaderHint": "Removes the person from the units, removes access and frees the document. They can request access again right away. Old classes and validations stay in the history.",
     "confirmDeleteLeader": "Delete the record of {{name}}? They leave the units, lose access and the document is freed.",
     "auditDeleteLeader": "Leader record deleted and document freed.",
-    "deleteLeaderError": "Could not delete everything. Check the person's units and try again; if it persists, ask the administrator.",
+    "openInSchedule": "View in the teacher schedule",
+    "deleteTeacher": "Delete access and release ID",
+    "deleteTeacherHint": "Deletes the access (login) and releases the ID, so the person can request access again with the right email. The schedule record, classes and history remain.",
+    "confirmDeleteTeacher": "Delete {{name}}'s access and release the ID? The schedule record and classes remain; they can request access again.",
+    "auditDeleteTeacher": "Teacher access deleted and ID released.",
+    "deleteLeaderError":"Could not delete everything. Check the person's units and try again; if it persists, ask the administrator.",
     "cannot": {
       "staff": "This person is an admin or mentor: their access is only removed on the Mentors tab. Here you can fix the document.",
       "professor": "This person is a teacher: their record is removed on the Teachers tab. Here you can fix the document.",

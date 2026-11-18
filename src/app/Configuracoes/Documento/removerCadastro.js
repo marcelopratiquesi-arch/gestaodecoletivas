@@ -19,7 +19,8 @@ import { apagarDocumentoNoLote } from "../../../services/documentoService";
 export function avaliarRemocao(cracha, uid, professores = [], { souAdmin = false, minhasUnidades = [] } = {}) {
   const papel = String(cracha?.role || "").trim().toLowerCase();
   if (liderMantemAcesso(papel)) return { pode: false, motivo: "staff" };
-  if (papel === "professor") return { pode: false, motivo: "professor" };
+  // Professor: só o admin exclui o ACESSO por aqui (a ficha da grade, as aulas e o histórico ficam).
+  if (papel === "professor") return souAdmin ? { pode: true, professor: true } : { pode: false, motivo: "professor" };
   if (!ehLider(papel)) return { pode: false, motivo: "outro" };
   if (professorDoLogin(uid, cracha, professores)) return { pode: false, motivo: "liderEProfessor" };
   if (!souAdmin) {
@@ -27,6 +28,21 @@ export function avaliarRemocao(cracha, uid, professores = [], { souAdmin = false
     if (!listaDoCracha(cracha).every((id) => minhas.has(String(id)))) return { pode: false, motivo: "outroMentor" };
   }
   return { pode: true };
+}
+
+/**
+ * Só admin: exclui o ACESSO de um professor (crachá, pedido e documento do login) para ele pedir de novo
+ * (ex.: entrou com o e-mail errado). A ficha da grade continua, com aulas e histórico; só deixa de apontar
+ * para esse login.
+ */
+export async function removerProfessorELiberarDocumento({ uid, documento, professores = [] }) {
+  const batch = writeBatch(db);
+  batch.delete(doc(db, "usuarios", uid));
+  batch.delete(doc(db, "solicitacoes_acesso", uid));
+  if (documento) apagarDocumentoNoLote(batch, uid, documento);
+  professores.filter((p) => p.uidLogin === uid)
+    .forEach((p) => batch.update(doc(db, "professores", String(p.id)), { uidLogin: "", updatedAt: serverTimestamp() }));
+  await batch.commit();
 }
 
 export async function removerLiderELiberarDocumento({ uid, cracha, documento, unidades, souAdmin, motivo, quemId, quemNome }) {

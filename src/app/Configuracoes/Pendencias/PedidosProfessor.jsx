@@ -1,10 +1,10 @@
 // Pedidos de acesso de PROFESSORES (login pessoal pelo Google), no topo da aba Professores.
 // - O professor escolhe UMA unidade ao pedir. Quem aprova: o líder dessa unidade, o mentor dela ou o admin.
-// - Aprovar só cria o crachá de professor (role "professor", unidadeId, modalidades) e fecha o pedido.
-//   NÃO liga o professor a nenhum nome da grade nem a aulas: isso o líder faz depois, pelo cadastro de
-//   professores como sempre foi (o cronograma não é mexido aqui).
+// - Aprovar cria o crachá de professor (role "professor", unidadeId, modalidades) e fecha o pedido.
+//   Antes de aprovar, quem aprova vê as fichas da grade que parecem ser a mesma pessoa (documento, e-mail, telefone)
+//   e pode LIGAR uma delas ao novo login. Sem ligar, nada da grade é mexido (o líder liga depois, como sempre foi).
 import { useState } from "react";
-import { doc, serverTimestamp, updateDoc, writeBatch } from "firebase/firestore";
+import { doc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { useTranslation } from "react-i18next";
 import { Check, X, Loader2, Building2, Phone, Mail, User, Clock, Dumbbell, Info } from "lucide-react";
 import { db } from "../../../services/firebase";
@@ -13,6 +13,9 @@ import { liberarDocumentoDoPedido } from "../../../services/documentoService";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useCatalogs } from "../../../contexts/CatalogContext";
 import { usePedidosProfessor } from "./usePedidosProfessor";
+import FichaDoPedido from "./FichaDoPedido";
+import { aprovarProfessorPedido } from "../../../services/aprovarProfessorService";
+import { normalizarPais } from "../../../utils/feriados";
 
 const formatarData = (ts, idioma) => {
   const d = ts?.toDate?.();
@@ -25,6 +28,9 @@ export default function PedidosProfessor() {
   const { catalogs } = useCatalogs();
   const { pedidos, carregando } = usePedidosProfessor();
   const [processando, setProcessando] = useState(null);
+  const [fichasEscolhidas, setFichasEscolhidas] = useState({}); // pedidoId -> { candidatas, documento, fichaId, carregando }
+  const role = String(userData?.role || "").trim().toLowerCase();
+  const podeVerDocumento = role === "admin" || role === "mentor"; // o número do pedido é privado para o líder
   const userId = userData?.id || userData?.uid;
   const meuNome = userData?.nome || userData?.email || "-";
 
@@ -33,28 +39,28 @@ export default function PedidosProfessor() {
   async function aprovar(p) {
     const unidade = unidadeDe(p);
     if (!unidade) return alert(t("pendingTab.unitNotFound"));
-    if (!window.confirm(t("pendingTab.teacher.approveConfirm", { name: p.nome, unit: unidade.nome }))) return;
+    const escolha = fichasEscolhidas[p.id] || {};
+    if (escolha.carregando) return;
+    const ficha = escolha.fichaId ? (catalogs?.professores || []).find((f) => String(f.id) === escolha.fichaId) : null;
+    const pergunta = ficha
+      ? t("pendingTab.teacher.link.approveConfirm", { name: p.nome, unit: unidade.nome, record: ficha.nome })
+      : t("pendingTab.teacher.approveConfirm", { name: p.nome, unit: unidade.nome });
+    if (!window.confirm(pergunta)) return;
     setProcessando(p.id);
+    let levouDocumento = false;
     try {
-      const batch = writeBatch(db);
-      batch.set(doc(db, "usuarios", p.id), {
-        nome: p.nome, email: p.email, telefone: p.telefone,
-        role: "professor", unidadeId: String(unidade.id), status: "ativo", loginGoogle: true,
-        ...(p.modalidades ? { modalidades: p.modalidades } : {}),
-        criadoPor: userId, criadoEm: serverTimestamp(),
-      });
-      batch.update(doc(db, "solicitacoes_acesso", p.id), {
-        status: "aprovado", analisadoPor: userId, analisadoPorNome: meuNome, analisadoEm: serverTimestamp(),
-      });
-      await batch.commit();
+      ({ levouDocumento } = await aprovarProfessorPedido({
+        pedido: p, unidade, ficha, documento: escolha.documento, podeLevarDocumento: podeVerDocumento,
+        quem: { id: userId, nome: meuNome },
+      }));
       try {
         await registrarAuditoriaAcesso({
-          tipoAcao: "NOVA", descricao: "Professor aprovado (login pelo Google).", detalhes: p.modalidades ? `Modalidades: ${p.modalidades}` : "",
+          tipoAcao: "NOVA", descricao: "Professor aprovado (login pelo Google).", detalhes: [p.modalidades ? `Modalidades: ${p.modalidades}` : "", ficha ? `Ligado à ficha da grade: ${ficha.nome} [${ficha.id}]${levouDocumento ? " (documento passou para a ficha)" : ""}` : ""].filter(Boolean).join(". "),
           unidadeNome: unidade.nome, papelNovo: "professor", quem: userData,
           alvo: { id: p.id, nome: p.nome, email: p.email, emailGoogle: p.email },
         });
       } catch (e) { console.error("Falha ao gravar auditoria", e); }
-      alert(t("pendingTab.teacher.approved", { name: p.nome }));
+      alert(ficha ? t("pendingTab.teacher.link.approvedLinked", { name: p.nome, record: ficha.nome }) : t("pendingTab.teacher.approved", { name: p.nome }));
     } catch (e) {
       console.error(e);
       alert(t("pendingTab.approveError") + " " + (e.message || ""));
@@ -116,11 +122,13 @@ export default function PedidosProfessor() {
                 </p>
                 <p className="text-xs text-emerald-600 dark:text-emerald-400 font-bold ml-6">{t("pendingTab.teacher.documentOk")}</p>
               </div>
+              <FichaDoPedido pedido={p} fichas={catalogs?.professores || []} pais={normalizarPais(unidade?.pais)} podeVerDocumento={podeVerDocumento}
+                ocupado={ocupado} onMudar={(e) => setFichasEscolhidas((prev) => ({ ...prev, [p.id]: e }))} />
               <div className="flex justify-end gap-2">
                 <button onClick={() => recusar(p)} disabled={ocupado} className="px-4 py-2 rounded-lg text-xs font-black uppercase bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200 hover:bg-slate-200 flex items-center gap-1.5 disabled:opacity-50">
                   <X className="w-3.5 h-3.5" /> {t("pendingTab.refuse")}
                 </button>
-                <button onClick={() => aprovar(p)} disabled={ocupado || !unidade} className="px-4 py-2 rounded-lg text-xs font-black uppercase bg-emerald-500 hover:bg-emerald-600 text-white flex items-center gap-1.5 disabled:opacity-50">
+                <button onClick={() => aprovar(p)} disabled={ocupado || !unidade || fichasEscolhidas[p.id]?.carregando} className="px-4 py-2 rounded-lg text-xs font-black uppercase bg-emerald-500 hover:bg-emerald-600 text-white flex items-center gap-1.5 disabled:opacity-50">
                   {ocupado ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />} {t("pendingTab.approve")}
                 </button>
               </div>

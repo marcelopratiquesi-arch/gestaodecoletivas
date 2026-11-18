@@ -18,7 +18,7 @@ const mesDe = (data) => String(data || '').slice(0, 7);
  * @param {object[]} p.crachas     crachás com professorId de alguma das outras
  * @param {object}   p.crachaDoLogin  { [uid]: crachá | null } dos uidLogin das fichas
  */
-export function montarPlanoJuncao({ principal, outras, aulas = [], vinculos = [], validacoes = [], crachas = [], crachaDoLogin = {} }) {
+export function montarPlanoJuncao({ principal, outras, aulas = [], vinculos = [], validacoes = [], crachas = [], crachaDoLogin = {}, documentos = {}, manter = {} }) {
   const idPrincipal = String(principal.id);
   const idsOutras = new Set(outras.map(o => String(o.id)));
   idsOutras.delete(idPrincipal);
@@ -61,10 +61,25 @@ export function montarPlanoJuncao({ principal, outras, aulas = [], vinculos = []
       if (achado) completar[campo] = achado;
     }
   }
+  // Nome, e-mail e telefone escolhidos na tela (podem vir de qualquer uma das fichas).
+  for (const campo of ['nome', 'email', 'telefone']) {
+    if (manter[campo] && manter[campo] !== principal[campo]) completar[campo] = manter[campo];
+  }
   if (principal.status !== 'ativo' && outras.some(o => o.status === 'ativo')) completar.status = 'ativo';
   if (uidLogin && uidLogin !== String(principal.uidLogin || '')) completar.uidLogin = uidLogin;
 
+  // Documento (CPF/DNI/SSN): cada ficha tem no máximo um. Dois documentos diferentes = duas pessoas: não junta.
+  const comDocumento = [idPrincipal, ...idsOutras].filter(id => documentos[id]);
+  const conflitoDocumento = comDocumento.length > 1;
+  const idDoDono = comDocumento[0];
+  const documento = !conflitoDocumento && idDoDono && idDoDono !== idPrincipal
+    ? { deId: idDoDono, tipo: documentos[idDoDono].tipo, numero: documentos[idDoDono].numero }
+    : null;
+  if (documento) completar.documentoOk = true;
+
   return {
+    conflitoDocumento,
+    documento,
     idPrincipal,
     idsApagar: [...idsOutras],
     aulas: aulas.filter(a => idsOutras.has(String(a.professorId))).map(a => a.id),
@@ -80,4 +95,4 @@ export function montarPlanoJuncao({ principal, outras, aulas = [], vinculos = []
 // Total de gravações do plano (para mostrar antes de gravar).
 export const gravacoesDoPlano = (plano) =>
   plano.aulas.length + plano.vinculosMover.length + plano.vinculosApagar.length + plano.validacoes.length
-  + plano.crachas.length + plano.mesesResumo.length + plano.idsApagar.length + 1;
+  + plano.crachas.length + plano.mesesResumo.length + plano.idsApagar.length + 1 + (plano.documento ? 3 : 0);

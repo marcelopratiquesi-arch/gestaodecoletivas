@@ -123,8 +123,9 @@ describe('quem vê o documento', () => {
   it('admin lê a reserva; o mentor só a de quem é das unidades dele (busca por documento)', async () => {
     await assertSucceeds(getDoc(doc(como('admin1'), `documentos_unicos/cpf_${CPF}`)));
     await assertSucceeds(getDoc(doc(como('mentor1'), `documentos_unicos/cpf_${CPF}`)));
-    await assertFails(getDoc(doc(como('mentor2'), `documentos_unicos/cpf_${CPF}`)));
-    await assertFails(getDoc(doc(como('liderA'), `documentos_unicos/cpf_${CPF}`)));
+    // Conferir UM documento digitado (ligar a pessoa à ficha da grade): líder e mentor de qualquer unidade.
+    await assertSucceeds(getDoc(doc(como('mentor2'), `documentos_unicos/cpf_${CPF}`)));
+    await assertSucceeds(getDoc(doc(como('liderA'), `documentos_unicos/cpf_${CPF}`)));
   });
 });
 
@@ -241,14 +242,15 @@ describe('achar e liberar o documento de um pedido de acesso (entrou com o e-mai
   it('mentor também acha o documento de um líder com crachá das unidades dele', async () => {
     await assertSucceeds(getDoc(doc(como('mentor1'), 'documentos_unicos', `cpf_${CPF}`)));
   });
-  it('NÃO acha o de gente de outra unidade, nem documento que não existe', async () => {
-    await assertFails(getDoc(doc(como('mentor2'), 'documentos_unicos', `cpf_${CPF2}`)));
-    await assertFails(getDoc(doc(como('mentor2'), 'documentos_unicos', `cpf_${CPF}`)));
-    await assertFails(getDoc(doc(como('mentor1'), 'documentos_unicos', 'cpf_00000000000')));
+  it('mentor de outra unidade confere UM documento digitado, mas não lista', async () => {
+    await assertSucceeds(getDoc(doc(como('mentor2'), 'documentos_unicos', `cpf_${CPF2}`)));
+    await assertSucceeds(getDoc(doc(como('mentor1'), 'documentos_unicos', 'cpf_00000000000')));
+    await assertFails(getDocs(collection(como('mentor2'), 'documentos_unicos')));
   });
-  it('líder e quem não tem crachá NÃO acham documentos', async () => {
-    await assertFails(getDoc(doc(como('liderA'), 'documentos_unicos', `cpf_${CPF2}`)));
+  it('líder confere um documento digitado; quem não tem crachá NÃO', async () => {
+    await assertSucceeds(getDoc(doc(como('liderA'), 'documentos_unicos', `cpf_${CPF2}`)));
     await assertFails(getDoc(doc(como('forasteiro'), 'documentos_unicos', `cpf_${CPF2}`)));
+    await assertFails(getDocs(collection(como('liderA'), 'documentos_unicos')));
   });
   it('mentor NÃO lista a coleção inteira', async () => {
     await assertFails(getDocs(collection(como('mentor1'), 'documentos_unicos')));
@@ -322,7 +324,6 @@ describe('mentor exclui líder que tem várias unidades dele (uma por vez)', () 
   });
   it('o mentor acha o documento mesmo com mais de 5 unidades', async () => {
     await assertSucceeds(getDoc(doc(como('mentor1'), 'documentos_unicos', `cpf_${CPF}`)));
-    await assertFails(getDoc(doc(como('mentor2'), 'documentos_unicos', `cpf_${CPF}`)));
   });
   it('tira de 6 unidades, uma por vez, e na última apaga o cadastro e libera o documento', async () => {
     const db = como('mentor1');

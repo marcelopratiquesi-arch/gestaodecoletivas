@@ -4,7 +4,48 @@
   "stats": {
     "total": "TOTAL",
     "active": "ATIVOS",
-    "inactive": "INATIVOS"
+    "inactive": "INATIVOS",
+    "noDocument": "SEM DOCUMENTO"
+  },
+  "cpf": {
+    "step": {
+      "documento": "Digite o documento do professor (CPF, DNI ou SSN). É assim que o sistema reconhece a pessoa.",
+      "contato": "Documento novo. Agora o e-mail e o WhatsApp, para conferir se ele já está na grade.",
+      "parecidas": "Achamos fichas parecidas. Confira se é a mesma pessoa.",
+      "achado": "Professor encontrado. Escolha a unidade para vincular."
+    },
+    "search": "Procurar",
+    "continue": "Continuar",
+    "back": "Voltar ao documento",
+    "notFoundByDocument": "Nenhuma ficha com este documento.",
+    "similarIntro": "Estas fichas antigas ainda não têm documento e batem com o que você digitou. Se for a mesma pessoa, o documento é gravado nela e ninguém fica duplicado.",
+    "matched": "Bateu: {{fields}}",
+    "isThis": "Sim, é esta pessoa",
+    "noneOfThem": "Não é nenhuma delas: cadastrar novo",
+    "willSaveDocument": "O documento será gravado nesta ficha.",
+    "orphan": "Este documento está reservado para uma ficha que não existe mais. Peça ao administrador para liberar.",
+    "searchError": "Não foi possível procurar agora (sem conexão ou cota esgotada). Tente de novo.",
+    "emailInvalid": "E-mail inválido. Confira se está completo (ex.: nome@gmail.com).",
+    "emailFake": "Este e-mail parece de mentira (ex.: naoinformou@, teste@). Peça o e-mail real do professor.",
+    "phoneInvalid": "WhatsApp inválido: digite com DDD e sem números todos iguais.",
+    "emailOfOther": "Este e-mail já é da ficha de {{name}}, que tem outro documento. Confira o e-mail.",
+    "emailTaken": "Este e-mail já está na ficha de {{name}}. Se não é a mesma pessoa, corrija o e-mail daquela ficha antes.",
+    "inUse": "Este documento já está cadastrado para outra pessoa. Confira os números; se for engano, fale com o mentor.",
+    "alsoIn": "{{fields}} igual ao da ficha de {{name}}.",
+    "fields": {
+      "email": "E-mail",
+      "telefone": "WhatsApp",
+      "nome": "Nome"
+    },
+    "badge": "DOC",
+    "hasDocument": "Documento informado",
+    "checked": "documento conferido",
+    "loading": "Documento informado (carregando…)",
+    "onlyStaffSees": "Documento informado. Só o admin e o mentor veem e corrigem o número.",
+    "optionalHint": "Opcional por enquanto: preencha para completar a ficha. Fica em área protegida (só admin e mentor veem).",
+    "fixHint": "Corrija só se o número estiver errado.",
+    "replacesOldLogin": "Esta ficha está ligada a outro login (quase sempre o antigo, da senha). Confirmando, ela passa a usar o login novo desta pessoa.",
+    "fromLogin":"Este documento é do acesso (login) de {{name}} ({{email}}). Ligando à ficha da grade, ela não fica duplicada."
   },
   "newLinkBtn": "+ NOVO VÍNCULO",
   "fixEmailsBtn": "CORRIGIR E-MAILS",
@@ -46,7 +87,7 @@
     "editTitle": "Editar Professor",
     "newTitle": "Novo Professor",
     "desc": "Preencha os dados e clique em salvar.",
-    "loginEmail": "E-MAIL (LOGIN FIXO)",
+    "loginEmail": "E-MAIL",
     "fullName": "NOME COMPLETO",
     "namePlaceholder": "Nome do Professor",
     "country": "PAÍS",

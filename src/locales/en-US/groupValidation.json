@@ -1,5 +1,6 @@
 {
   "syncing": "Syncing system...",
+  "error": { "title": "Could not load the validations", "desc": "The numbers were hidden so nobody is blamed by mistake. This usually happens when the daily database limit is reached or the connection drops. Wait a bit and reload the page." },
   "title": "Group Validation",
   "subtitle": "Real-time adherence monitoring and auditing",
   "exportCsv": "Export CSV",
@@ -94,7 +95,8 @@
   },
   "alerts": {
     "noPhone": "⚠️ NO PHONE NUMBER REGISTERED!",
-    "copied": "TEXT COPIED SUCCESSFULLY!"
+    "copied": "TEXT COPIED SUCCESSFULLY!",
+    "copyFailed": "Could not copy. Please copy the text manually."
   },
   "csv": {
     "unit": "UNIT",

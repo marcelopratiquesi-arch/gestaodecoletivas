@@ -59,7 +59,27 @@
     "approved": "{{name}} aprobado(a). Ahora vinculá sus clases en el cadastro de profesores.",
     "modalities": "Modalidades",
     "noModalities": "sin informar",
-    "documentOk": "✓ Documento informado (guardado en lugar protegido)"
+    "documentOk": "✓ Documento informado (guardado en lugar protegido)",
+    "link": {
+      "searching": "Buscando a esta persona en la grilla...",
+      "error": "No se pudo buscar la ficha en la grilla. Podés aprobar sin vincular y vincular después.",
+      "none": "Ninguna ficha de la grilla parece ser esta persona. Se creará solo el acceso.",
+      "title": "¿Esta persona ya tiene ficha en la grilla?",
+      "matches": "Coincide en",
+      "field": {
+        "documento": "documento",
+        "email": "e-mail",
+        "telefone": "teléfono",
+        "nome": "nombre"
+      },
+      "blocked": {
+        "outroDocumento": "Esta ficha tiene otro documento: es otra persona. No se puede vincular.",
+        "documentoNaoConferido": "Esta ficha ya tiene documento y solo el mentor o el admin verifican si es la misma persona."
+      },
+      "noneOfThem": "Ninguna: crear solo el acceso (sin vincular la ficha)",
+      "approveConfirm": "¿Aprobar a {{name}} como profesor(a) de la unidad {{unit}} y VINCULAR a la ficha \"{{record}}\" de la grilla?",
+      "approvedLinked": "{{name}} aprobado(a) y vinculado(a) a la ficha \"{{record}}\". Las clases de esa ficha ya aparecen para esta persona."
+    }
   },
   "optSecond": "2º líder (aspirante): quedan los dos",
   "optReplace": "Reemplazar al líder actual (pierde el acceso)",
