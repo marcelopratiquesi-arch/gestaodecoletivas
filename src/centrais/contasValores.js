@@ -8,8 +8,7 @@
 //   - validação de aula que não existe mais no cadastro de aulas fica de fora (como no Relatório);
 //   - quem recebe é o professor QUE DEU a aula (na substituição, o substituto);
 //   - real, peso e dólar nunca se somam: totais são separados por moeda.
-import { deduplicarValidacoes } from '../utils/validacoes';
-import { valorDaValidacao } from '../utils/valores';
+import { ganhosDasValidacoes } from '../utils/ganhos';
 import { getCurrencyCode } from '../utils/formatters';
 
 const doisDigitos = (n) => String(n).padStart(2, '0');
@@ -31,21 +30,7 @@ export function mesesDoTrimestre(mes) {
 // Validações realizadas "que contam", já com a aula e o valor de cada uma.
 function realizadasComValor(validacoes = [], aulasTodas = [], inicio = '', fim = '9999') {
   const aulaPorId = new Map(aulasTodas.map((a) => [String(a.id), a]));
-  const lista = [];
-  deduplicarValidacoes(validacoes.filter((v) => v && v.data >= inicio && v.data <= fim)).forEach((v) => {
-    if (v.status !== 'realizada') return;
-    const aula = v.isAulao ? null : aulaPorId.get(String(v.aulaId));
-    if (!v.isAulao && !aula) return;
-    lista.push({
-      v,
-      aula,
-      valor: valorDaValidacao(v, aula),
-      alunos: Number(v.alunos) || 0,
-      unidadeId: String(v.unidadeId ?? aula?.unidadeId ?? ''),
-      professorId: String(v.professorId || aula?.professorId || ''),
-    });
-  });
-  return lista;
+  return ganhosDasValidacoes({ validacoes, aulaPorId, inicio, fim }); // a conta mora em src/utils/ganhos.js
 }
 
 const somar = (lista) => {

@@ -9,6 +9,7 @@ import { useLocation, useSearchParams } from 'react-router-dom';
 import { deduplicarValidacoes } from '../../utils/validacoes';
 import { feriadoNoDia, normalizarPais } from '../../utils/feriados';
 import { valorDaValidacao } from '../../utils/valores';
+import { ganhosDasValidacoes } from '../../utils/ganhos';
 import { somarPorMoeda, juntarTotais, dividirPorMoeda, moedasEmOrdem, moedaDoPais, formatarMoeda, textoPorMoeda } from '../../utils/moedas';
 import { DIAS_SEMANA as diasSemanaMap, getDiaSemana, formatCurrency, formatDate, formatWeekday, formatCancelReason } from '../../utils/formatters';
 
@@ -688,13 +689,13 @@ export default function RelatorioPage() {
             const mesFormatado = String(idx + 1).padStart(2, '0');
             const prefix = `${currentYear}-${mesFormatado}`;
 
-            const valsMes = (validacoesYTD || []).filter(v => v.data && v.data.startsWith(prefix) && v.status === 'realizada');
-            valsMes.forEach(v => {
-                // Aulões não têm aula na grade: usam os próprios dados da validação.
-                // Aula excluída depois: usa os dados gravados na própria validação (o passado continua valendo).
-                const aula = mapas.aulas.get(String(v.aulaId))
-                    || { unidadeId: v.unidadeId, modalidadeId: v.modalidadeId, professorId: v.professorId, hora: v.hora };
-
+// Mesma conta das Centrais (src/utils/ganhos.js). Aula excluída/aulão: usa os dados gravados na própria
+            // validação (o passado continua valendo); por isso incluirSemAula.
+            const ganhosMes = ganhosDasValidacoes({
+                validacoes: validacoesYTD, aulaPorId: mapas.aulas, inicio: `${prefix}-01`, fim: `${prefix}-31`,
+                incluirSemAula: true, jaDeduplicadas: true,
+            });
+            ganhosMes.forEach(({ v, aulaEfetiva: aula, valor: valorDaAula }) => {
                 const u = mapas.unidades.get(String(aula.unidadeId));
                 if (!u) return;
                 if (paisesFiltro.length > 0 && !paisesFiltro.includes(u.pais)) return;
@@ -709,7 +710,7 @@ export default function RelatorioPage() {
                 if (turnosFiltro.length > 0 && !checkTurno(aula.hora, turnosFiltro)) return;
 
                 const moeda = moedaDoPais(u.pais);
-                valor[moeda] = (valor[moeda] || 0) + valorDaValidacao(v, aula);
+                valor[moeda] = (valor[moeda] || 0) + valorDaAula;
             });
             status = 'fechado';
 
