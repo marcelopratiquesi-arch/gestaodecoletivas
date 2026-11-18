@@ -95,5 +95,39 @@
     "hint": "Check the units that do NOT take this holiday off.",
     "label_one": "except {{count}} unit",
     "label_other": "except {{count}} units"
+  },
+  "filters": {
+    "proximos": "Upcoming",
+    "passados": "Past",
+    "todos": "All",
+    "allYears": "All years",
+    "allScopes": "All scopes",
+    "search": "Search holiday...",
+    "none": "No holidays in this filter."
+  },
+  "suggested": {
+    "title": "Suggested calendar",
+    "pending": "{{count}} to decide",
+    "desc": "National holidays calculated for the country and year. Nothing is applied automatically: apply what you want and dismiss the rest. Items marked \"Check\" depend on government decrees and may change.",
+    "showDismissed": "Show dismissed",
+    "applySelected": "Apply selected ({{count}})",
+    "apply": "Apply",
+    "dismiss": "Dismiss",
+    "restore": "Back to the list",
+    "check": "Check",
+    "past": "Past",
+    "applied_badge": "Applied",
+    "empty": "Nothing to show.",
+    "warnAR": "In Argentina the government decrees bridge holidays every year. Check the official calendar before applying.",
+    "confirmApply": "Apply {{count}} holiday(s) at country level?\n\nThis affects {{classes}} class(es) in total.",
+    "andMore": "… and {{count}} more",
+    "applied": "{{count}} holiday(s) applied.",
+    "error": "Error applying the holidays."
+  },
+  "cityActions": {
+    "refresh": "Add the city units",
+    "upToDate": "All units of this city are already included.",
+    "confirmAdd": "Add {{count}} unit(s) in {{city}} to this holiday?\n\n{{names}}",
+    "done": "{{count}} unit(s) added."
   }
 }
