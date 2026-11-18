@@ -144,5 +144,29 @@
     "turnOffError": "Could not turn off.",
     "bannerTitle": "{{count}} location(s) already have a leader but the old login is still on",
     "bannerDesc": "Now that the leader signs in with Google, the old location login (@pratique.com e-mail and password) can be turned off."
+  },
+  "modalities": {
+    "column": "Modalities",
+    "countEnabled": "{{count}} enabled",
+    "countDisabled": "{{count}} disabled",
+    "notSet": "All (not configured)",
+    "manage": "Manage the unit's modalities",
+    "title": "Unit modalities",
+    "search": "Search modality...",
+    "basicGroup": "Basic modalities",
+    "extraGroup": "Additional modalities",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "activeClasses": "{{count}} active class(es)",
+    "futureClasses": "{{count}} upcoming",
+    "noClasses": "No classes",
+    "inactiveInCatalog": "inactive in catalog",
+    "blocked": "This modality has active or upcoming classes in this unit. Check the Schedule before disabling it.",
+    "notConfiguredNote": "This unit has not been configured yet: the Schedule shows all modalities.",
+    "startFromClasses": "Configure with the modalities that already have classes",
+    "readOnly": "Only the administrator can change the unit's modalities.",
+    "saveError": "Error saving. Please try again.",
+    "close": "Close",
+    "none": "No modality found."
   }
 }

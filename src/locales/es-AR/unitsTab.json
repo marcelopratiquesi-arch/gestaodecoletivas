@@ -144,5 +144,29 @@
     "turnOffError": "No se pudo desactivar.",
     "bannerTitle": "{{count}} sede(s) ya tienen líder y todavía tienen el usuario antiguo activo",
     "bannerDesc": "Ahora que el líder ingresa con Google, el usuario antiguo de la sede (correo @pratique.com y contraseña) se puede desactivar."
+  },
+  "modalities": {
+    "column": "Modalidades",
+    "countEnabled": "{{count}} habilitadas",
+    "countDisabled": "{{count}} deshabilitadas",
+    "notSet": "Todas (sin configurar)",
+    "manage": "Administrar las modalidades de la unidad",
+    "title": "Modalidades de la unidad",
+    "search": "Buscar modalidad...",
+    "basicGroup": "Modalidades básicas",
+    "extraGroup": "Modalidades adicionales",
+    "enabled": "Habilitada",
+    "disabled": "Deshabilitada",
+    "activeClasses": "{{count}} clase(s) activa(s)",
+    "futureClasses": "{{count}} futura(s)",
+    "noClasses": "Sin clases",
+    "inactiveInCatalog": "inactiva en el catálogo",
+    "blocked": "Esta modalidad tiene clases activas o futuras en esta unidad. Revisá el Cronograma antes de desactivarla.",
+    "notConfiguredNote": "Esta unidad todavía no fue configurada: en el Cronograma aparecen todas las modalidades.",
+    "startFromClasses": "Configurar con las modalidades que ya tienen clases",
+    "readOnly": "Solo el administrador cambia las modalidades de la unidad.",
+    "saveError": "Error al guardar. Intentá de nuevo.",
+    "close": "Cerrar",
+    "none": "No se encontró ninguna modalidad."
   }
 }

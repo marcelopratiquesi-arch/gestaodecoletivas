@@ -6,10 +6,14 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   getDocs,
   serverTimestamp,
+  setDoc,
   updateDoc,
 } from "firebase/firestore";
+import { useCatalogs } from "../../../contexts/CatalogContext";
+import { modalidadeEmUso } from "../../../utils/modalidadesPorUnidade";
 import { db } from "../../../services/firebase";
 import { CabecalhoDaAba, BotaoPrincipal } from "../ui/CabecalhoDaAba";
 import { BotaoDeLinha } from "../ui/BotaoDeLinha";
@@ -18,7 +22,7 @@ import { useFiltroCascata } from "../ui/useFiltroCascata";
 import { 
   Dumbbell, Plus, Edit2, Trash2, Power, 
   CheckCircle2, AlertTriangle, Loader2, Palette, Maximize,
-  X, Check, GripHorizontal
+  X, Check, GripHorizontal, Star
 } from "lucide-react";
 
 // ==========================================
@@ -121,6 +125,9 @@ const ResizableModal = ({ isOpen, onClose, title, icon: Icon, pos, setPos, size,
 export function ModalidadesTab() {
   const { userData } = useAuth();
   const { t } = useTranslation();
+  const { catalogs } = useCatalogs();
+  // Modalidades básicas da rede: já vêm marcadas nas unidades novas (configuracoes/modalidadesBasicas).
+  const [basicasIds, setBasicasIds] = useState([]);
 
   const role = useMemo(() => String(userData?.role || "").trim().toLowerCase(), [userData?.role]);
   const userId = useMemo(() => userData?.id || userData?.uid || null, [userData?.id, userData?.uid]);
@@ -187,6 +194,10 @@ export function ModalidadesTab() {
       });
 
       setModalidades(lista);
+      try {
+        const b = await getDoc(doc(db, "configuracoes", "modalidadesBasicas"));
+        setBasicasIds(b.exists() && Array.isArray(b.data().ids) ? b.data().ids.map(String) : []);
+      } catch (e2) { console.warn("Lista básica de modalidades não lida", e2); }
     } catch (e) { setErro(t('modalitiesTab.messages.loadError')); } finally { setLoading(false); }
   }
 
@@ -267,7 +278,23 @@ export function ModalidadesTab() {
     } catch (e) { alert(t('modalitiesTab.messages.statusError')); }
   }
 
+  // Marca/desmarca como básica da rede (só afeta unidades NOVAS; as existentes não mudam).
+  async function alternarBasica(m) {
+    if (!podeEditar) return;
+    const id = String(m.id);
+    const eraBasica = basicasIds.includes(id);
+    const novos = eraBasica ? basicasIds.filter(x => x !== id) : [...basicasIds, id];
+    try {
+      await setDoc(doc(db, "configuracoes", "modalidadesBasicas"), { ids: novos, atualizadoEm: serverTimestamp(), atualizadoPor: userId });
+      await registrarLogAuditoria('ALTERADA', eraBasica ? 'Deixou de ser básica da rede.' : 'Marcada como básica da rede.', m.nome, 'Vale só para unidades novas.');
+      setBasicasIds(novos);
+    } catch { alert(t('modalitiesTab.messages.saveError')); }
+  }
+
   async function excluir(m) {
+    // Não apaga modalidade que alguma unidade habilita ou que tem aula (nem aula já excluída da grade conta como livre).
+    const uso = modalidadeEmUso(m.id, catalogs.unidades, catalogs.aulasTodas);
+    if (uso.emUso) return alert(t('modalitiesTab.messages.inUse'));
     if (!podeEditar || !window.confirm(t('modalitiesTab.messages.deleteConfirm', { name: m.nome }))) return;
     try {
       await deleteDoc(doc(db, "modalidades", m.id));
@@ -311,6 +338,7 @@ export function ModalidadesTab() {
                 <div className="flex flex-col">
                     <h3 className="font-black text-slate-800 dark:text-white text-base uppercase tracking-tight truncate pr-2">
                         {m.nome}
+                        {basicasIds.includes(String(m.id)) && <span className="ml-2 align-middle px-2 py-0.5 rounded-md text-[9px] font-black tracking-widest bg-amber-50 text-amber-700 border border-amber-200">{t('modalitiesTab.basicBadge')}</span>}
                     </h3>
                     <div className="flex items-center gap-4 mt-1">
                         <span className="text-xs text-slate-400 font-mono font-bold uppercase tracking-wider">{m.cor || '#EC1C24'}</span>
@@ -352,6 +380,7 @@ export function ModalidadesTab() {
 
                   {podeEditar && (
                     <div className="flex items-center gap-1.5 md:border-l border-slate-200 dark:border-slate-700 md:pl-5 opacity-50 group-hover:opacity-100 transition-opacity">
+                        <BotaoDeLinha abaId="modalidades" icone={Star} onClick={() => alternarBasica(m)} title={basicasIds.includes(String(m.id)) ? t('modalitiesTab.unmakeBasic') : t('modalitiesTab.makeBasic')} />
                         <BotaoDeLinha abaId="modalidades" icone={Edit2} onClick={() => abrirEditar(m)} title={t('modalitiesTab.editFull')} />
                         <BotaoDeLinha abaId="modalidades" tipo={m.status === 'ativa' ? "desativar" : "ativar"} icone={Power} onClick={() => alternarStatus(m)}
                           title={m.status === 'ativa' ? t('modalitiesTab.deactivate') : t('modalitiesTab.activate')} />

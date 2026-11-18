@@ -167,9 +167,29 @@ service cloud.firestore {
       allow read: if true;
       allow write: if logado() && !souProfessor();
     }
+    // Modalidades habilitadas na unidade: campo "modalidadesIds" (e os dois de controle). Só o ADMIN altera numa
+    // unidade que já existe. Ao criar a unidade, mentor só pode começar com modalidades da lista básica da rede
+    // (configuracoes/modalidadesBasicas). Unidade sem o campo continua valendo (ainda não migrada).
+    // A coleção está na lista de exceções da regra-curinga lá embaixo; esta é a única regra que libera gravar nela.
+    function camposDeModalidadeDaUnidade() { return ['modalidadesIds', 'modalidadesAtualizadoEm', 'modalidadesAtualizadoPor']; }
+    function modalidadesIniciaisPermitidas() {
+      let ids = request.resource.data.get('modalidadesIds', null);
+      return ids == null
+        || (ids is list
+            && exists(/databases/$(database)/documents/configuracoes/modalidadesBasicas)
+            && ids.toSet().difference(get(/databases/$(database)/documents/configuracoes/modalidadesBasicas).data.get('ids', []).toSet()).size() == 0);
+    }
     match /unidades/{document=**} {
       allow read: if logado();
-      allow write: if logado() && !souProfessor();
+      allow create: if logado() && !souProfessor() && (souAdmin() || modalidadesIniciaisPermitidas());
+      allow update: if logado() && !souProfessor()
+        && (souAdmin() || !camposAlterados().hasAny(camposDeModalidadeDaUnidade()));
+      allow delete: if logado() && !souProfessor();
+    }
+    // Lista básica de modalidades da rede (usada nas unidades novas). Todos os logados leem; só o admin grava.
+    match /configuracoes/{docId} {
+      allow read: if logado();
+      allow write: if souAdmin();
     }
     match /professores/{professorId} {
       allow read: if logado();
@@ -741,7 +761,7 @@ service cloud.firestore {
     // (No Firestore, se QUALQUER regra libera, a ação passa; por isso as exceções precisam estar aqui.)
     match /{colecao}/{resto=**} {
       allow read: if logado() && !(colecao in ['feriados_propostas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos', 'documentos_ficha', 'documentos_professor', 'contatos_unicos']);
-      allow write: if logado() && !(colecao in ['feriados', 'feriados_propostas', 'usuarios', 'publico', 'validacoes', 'aulas', 'aulas_publicas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'resumos_mensais', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos', 'professores', 'documentos_ficha', 'documentos_professor', 'contatos_unicos']) && !souProfessor();
+      allow write: if logado() && !(colecao in ['feriados', 'feriados_propostas', 'usuarios', 'publico', 'validacoes', 'aulas', 'aulas_publicas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'resumos_mensais', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos', 'professores', 'documentos_ficha', 'documentos_professor', 'contatos_unicos', 'unidades', 'configuracoes']) && !souProfessor();
       allow create: if logado() && colecao in ['auditoria_cronograma', 'auditoria_configuracoes'];
     }
   }
