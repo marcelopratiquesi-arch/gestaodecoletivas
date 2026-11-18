@@ -1,5 +1,6 @@
 {
   "accessDisabled": "Your access to the system is disabled. Contact the administrator.",
+  "teacherOldLogin": "Teacher login with email and password has ended. Sign in with Google, on the first-access tab, and request access: your unit leader or mentor will approve it.",
   "subtitle": "Group Classes Management",
   "emailLabel": "Username / Email",
   "emailPlaceholder": "your@email.com",
@@ -15,5 +16,14 @@
     "or": "or with username and password",
     "popupBlocked": "Your browser blocked the Google window. Allow pop-ups for this site and try again.",
     "notEnabled": "Google sign-in is not enabled yet. Please contact support."
+  },
+  "tabs": {
+    "enter": "Sign in",
+    "first": "First access"
+  },
+  "firstCall": {
+    "title": "Is this your first time here?",
+    "desc": "Register as a leader or mentor.",
+    "button": "Register"
   }
 }

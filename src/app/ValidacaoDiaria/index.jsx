@@ -3,7 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useCatalogs } from '../../contexts/CatalogContext'; 
 import { db } from '../../services/firebase';
 import { 
-  collection, query, where, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, deleteDoc, setDoc 
+  collection, query, where, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, deleteDoc, setDoc, deleteField, getDoc
 } from 'firebase/firestore';
 import { 
   Calendar, CircleCheck, CircleX, TriangleAlert, 
@@ -16,18 +16,18 @@ import { PilhaAulas } from './PilhaAulas';
 import { ListaAulas } from './ListaAulas';
 import { ValidationModal } from './ValidationModal';
 import { useLocation } from 'react-router-dom';
-import { getDiaSemana, formatCurrency, formatPeriod } from '../../utils/formatters';
+import { getDiaSemana, formatCurrency, formatPeriod, formatCancelReason } from '../../utils/formatters';
 import {
   idValidacao, deduplicarValidacoes, regraDePrazo, hojeLocal, mesLocal, dataLocal,
   alunosValidos, LIMITE_ALUNOS, MIN_JUSTIFICATIVA, DIAS_RETROATIVOS_LIDER, pendenciasDoProfessor
 } from '../../utils/validacoes';
-import { feriadoNoDia } from '../../utils/feriados';
-import { aulaNaGradeDoDia, datasEntre } from '../../utils/agendaAulas';
+import { feriadoNoDia, ehCancelamentoAutomaticoDeFeriado } from '../../utils/feriados';
+import { aulaNaGradeDoDia, datasEntre, somarDias } from '../../utils/agendaAulas';
 import { invalidarCacheInicio } from '../../services/cacheInicio';
 import { useValidacoesDoProfessor, meuProfessorId } from '../../hooks/useValidacoesDoProfessor';
 import { useMediaAlunos, numeroEstranho } from '../../hooks/useMediaAlunos';
 import { useTranslation } from 'react-i18next';
-import { ehLider } from '../../permissions';
+import { ehLider, unidadesDoLider } from '../../permissions';
 
 // --- HELPERS ---
 const getTodayStr = hojeLocal;
@@ -40,6 +40,26 @@ const getMonthDates = (year, month) => {
     date.setDate(date.getDate() + 1);
   }
   return dates;
+};
+
+// Teto de alunos de um aulão (a aula da grade usa LIMITE_ALUNOS).
+const LIMITE_ALUNOS_AULAO = 1000;
+
+// Valores de "unidadeId" a procurar nas validações destas unidades, em blocos de 30 (limite do filtro "in").
+// A validação copia o unidadeId da aula; em aula antiga ele pode estar gravado como número,
+// então procura também o número, senão aquela validação sumiria e a aula apareceria como pendente.
+const blocosDeUnidades = (idsUnidades, aulas = []) => {
+  const alvo = new Set(idsUnidades.map(String));
+  const valores = new Map([...alvo].map(id => [`s:${id}`, id]));
+  aulas.forEach(a => {
+    if (a.unidadeId != null && typeof a.unidadeId !== 'string' && alvo.has(String(a.unidadeId))) {
+      valores.set(`${typeof a.unidadeId}:${a.unidadeId}`, a.unidadeId);
+    }
+  });
+  const lista = [...valores.values()];
+  const blocos = [];
+  for (let i = 0; i < lista.length; i += 30) blocos.push(lista.slice(i, i + 30));
+  return blocos;
 };
 
 const getFirstLast = (fullName) => {
@@ -145,7 +165,9 @@ export default function ValidacaoDiariaPage() {
   // --- PERMISSÕES ---
   const role = useMemo(() => String(userData?.role || "").trim().toLowerCase(), [userData?.role]);
   const userId = useMemo(() => userData?.id || userData?.uid, [userData]);
-  const userUnidadeId = useMemo(() => userData?.unidadeId, [userData]);
+  // Líder pode comandar mais de uma unidade: lista em texto ("id1,id2") para servir de dependência estável.
+  const unidadesLiderKey = useMemo(() => unidadesDoLider(userData).join(","), [userData]);
+  const liderDeVarias = ehLider(role) && unidadesLiderKey.includes(",");
   const isMaster = useMemo(() => ['admin', 'mentor'].includes(role), [role]);
 
   // Vindo do "Resolver agora" da Página de Início: abre já no período das pendências, nas unidades
@@ -175,6 +197,7 @@ export default function ValidacaoDiariaPage() {
   const [validacoesRealtime, setValidacoesRealtime] = useState([]);
   const [gradeGerada, setGradeGerada] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [erroRealtime, setErroRealtime] = useState(false);
   const [processando, setProcessando] = useState(false);
   const [itensVisiveis, setItensVisiveis] = useState(12);
 
@@ -200,7 +223,8 @@ export default function ValidacaoDiariaPage() {
     if (role === 'mentor') {
       unitsData = unitsData.filter(u => u.mentorId === userId);
     } else if (ehLider(role)) {
-      unitsData = unitsData.filter(u => String(u.id) === String(userUnidadeId));
+      const minhas = new Set(unidadesLiderKey.split(","));
+      unitsData = unitsData.filter(u => minhas.has(String(u.id)));
     } else if (role === 'professor') {
       const meuId = meuProfessorId(userData, globalCatalogs.professores);
       if (meuId) {
@@ -213,7 +237,7 @@ export default function ValidacaoDiariaPage() {
     }
 
     return { ...globalCatalogs, unidades: unitsData };
-  }, [globalCatalogs, loadingCatalogs, role, userId, userUnidadeId, userData]);
+  }, [globalCatalogs, loadingCatalogs, role, userId, unidadesLiderKey, userData]);
 
   // --- PERÍODO NA TELA E VALIDAÇÕES DO PROFESSOR ---
   const periodo = useMemo(() => {
@@ -230,26 +254,41 @@ export default function ValidacaoDiariaPage() {
     [isProfessor, userData, catalogs.professores]
   );
 
-  // O professor sempre carrega o mês atual inteiro (para o aviso de pendências), mais o período escolhido.
+  // Professor: duas buscas que não se repetem.
+  // 1) Mês atual até hoje (aviso de pendências). É a MESMA busca do selo do menu, e o Firebase
+  //    divide a mesma busca entre os dois (sem ler em dobro).
+  // 2) Só se ele olhar algo de meses anteriores: aquele pedaço, até o último dia do mês passado.
+  //    (Antes carregava do mês escolhido até hoje: olhar janeiro em novembro lia 11 meses.)
+  //    Dia futuro não tem validação, então nada depois de hoje é buscado.
   const inicioMesAtual = `${mesLocal()}-01`;
   const hoje = hojeLocal();
-  const faixaProfessor = {
-    inicio: periodo.inicio < inicioMesAtual ? periodo.inicio : inicioMesAtual,
-    fim: periodo.fim > hoje ? periodo.fim : hoje,
-  };
-  const { validacoes: validacoesProfessor, carregando: carregandoProfessor } =
-    useValidacoesDoProfessor(meuProfId, faixaProfessor.inicio, faixaProfessor.fim);
+  const fimDoMesPassado = somarDias(inicioMesAtual, -1);
+  const extraInicio = periodo.inicio < inicioMesAtual ? periodo.inicio : null;
+  const extraFim = extraInicio ? [periodo.fim, hoje, fimDoMesPassado].sort()[0] : null;
+  const mesAtualProf = useValidacoesDoProfessor(meuProfId, inicioMesAtual, hoje);
+  const anterioresProf = useValidacoesDoProfessor(extraInicio && extraFim >= extraInicio ? meuProfId : null, extraInicio, extraFim);
+
+  const carregandoProfessor = mesAtualProf.carregando || anterioresProf.carregando;
+  const erroProfessor = mesAtualProf.erro || anterioresProf.erro;
+  const validacoesProfessor = useMemo(() => {
+      const porId = new Map();
+      [...mesAtualProf.validacoes, ...anterioresProf.validacoes].forEach(v => porId.set(v.id, v));
+      return deduplicarValidacoes([...porId.values()]);
+  }, [mesAtualProf.validacoes, anterioresProf.validacoes]);
 
   const validacoesDaTela = isProfessor ? validacoesProfessor : validacoesRealtime;
-  const carregandoValidacoes = isProfessor ? carregandoProfessor : loading;
+  // O banco recusou a leitura: a tela NÃO mostra a lista (senão tudo pareceria pendente e alguém validaria em dobro).
+  const erroValidacoes = isProfessor ? erroProfessor : erroRealtime;
+  // Líder/mentor/professor sem nenhuma unidade (admin sempre enxerga a rede).
+  const semUnidade = !loadingCatalogs && role !== 'admin' && catalogs.unidades.length === 0;
 
   const pendentesDoMes = useMemo(() => {
-    if (!isProfessor || loadingCatalogs || carregandoProfessor) return [];
+    if (!isProfessor || loadingCatalogs || mesAtualProf.carregando) return [];
     return pendenciasDoProfessor({
       aulas: catalogs.aulas, unidades: catalogs.unidades, feriados: catalogs.feriados,
-      validacoes: validacoesProfessor, professorId: meuProfId, getDiaSemana, feriadoNoDia,
+      validacoes: mesAtualProf.validacoes, professorId: meuProfId, getDiaSemana, feriadoNoDia,
     });
-  }, [isProfessor, loadingCatalogs, carregandoProfessor, catalogs, validacoesProfessor, meuProfId]);
+  }, [isProfessor, loadingCatalogs, mesAtualProf.carregando, catalogs, mesAtualProf.validacoes, meuProfId]);
 
   const verPendentesDoMes = () => {
       setModoFiltro('mes'); setMesFiltro(mesLocal()); setFiltroStatus('pendente'); setItensVisiveis(12);
@@ -257,10 +296,10 @@ export default function ValidacaoDiariaPage() {
 
   // Se for unidade, auto-seleciona
   useEffect(() => {
-      if (ehLider(role) && userUnidadeId) {
-          setFiltroUnidade([userUnidadeId]);
+      if (ehLider(role) && unidadesLiderKey && !unidadesLiderKey.includes(",")) {
+          setFiltroUnidade([unidadesLiderKey]);
       }
-  }, [role, userUnidadeId]);
+  }, [role, unidadesLiderKey]);
 
   // 🟢 CASCATA DE FILTROS: Limpa as opções "filhas" quando o "pai" muda
   const handleEstadoChange = (v) => {
@@ -340,12 +379,44 @@ export default function ValidacaoDiariaPage() {
   // ==========================================
   // 2. MOTOR DE TEMPO REAL BLINDADO E OTIMIZADO
   // ==========================================
+  // Unidades cujas validações a tela vai pedir ao banco (nunca a rede inteira):
+  // - líder: as dele (só as escolhidas no filtro, se ele tiver mais de uma);
+  // - admin/mentor com unidades marcadas: essas;
+  // - admin só com Estado e/ou Mentor: as unidades daquele Estado/Mentor.
+  // Vira texto para a escuta só reabrir quando o conjunto mudar de verdade.
+  const blocosAlvoKey = useMemo(() => {
+      let ids;
+      if (ehLider(role)) {
+          const minhas = unidadesLiderKey.split(",").filter(Boolean);
+          const escolhidas = filtroUnidade.filter(id => minhas.includes(String(id)));
+          ids = escolhidas.length > 0 ? escolhidas : minhas;
+      } else if (filtroUnidade.length > 0) {
+          ids = filtroUnidade;
+      } else {
+          ids = unidadesFiltradasSelect.map(u => u.id);
+      }
+      return JSON.stringify(blocosDeUnidades(ids, globalCatalogs?.aulas || []));
+  }, [role, unidadesLiderKey, filtroUnidade, unidadesFiltradasSelect, globalCatalogs?.aulas]);
+
+  // Quem marca várias unidades uma a uma não abre uma busca nova a cada clique: a busca espera
+  // a pessoa parar de mexer no filtro por um instante (na primeira vez vai direto).
+  const [blocosEscutados, setBlocosEscutados] = useState(blocosAlvoKey);
+  useEffect(() => {
+      if (blocosEscutados === blocosAlvoKey) return undefined;
+      const espera = setTimeout(() => setBlocosEscutados(blocosAlvoKey), blocosEscutados === '[]' ? 0 : 700);
+      return () => clearTimeout(espera);
+  }, [blocosAlvoKey, blocosEscutados]);
+  // Enquanto espera, a tela fica em "carregando" (senão a unidade recém-marcada pareceria toda pendente).
+  const filtroMudando = !isProfessor && blocosEscutados !== blocosAlvoKey;
+  const carregandoValidacoes = isProfessor ? carregandoProfessor : (loading || filtroMudando);
+
   useEffect(() => {
     // Professor: as validações vêm do useValidacoesDoProfessor (as dele + as das aulas dele substituídas).
     if (role === 'professor') return;
-    if (loadingCatalogs || (catalogs.unidades.length === 0 && role !== 'admin')) return;
+    if (loadingCatalogs) return;
+    setErroRealtime(false);
 
-    if (isCofreFechado) {
+    if (isCofreFechado || (catalogs.unidades.length === 0 && role !== 'admin')) {
         setValidacoesRealtime([]);
         setLoading(false);
         return;
@@ -367,41 +438,40 @@ export default function ValidacaoDiariaPage() {
     const ref = collection(db, 'validacoes');
     const periodo = [where('data', '>=', dataInicio), where('data', '<=', dataFim)];
 
-    // Cada consulta escuta o banco ao vivo; a lista final junta todas (sem repetir) e tira duplicatas antigas.
+    // Uma consulta por bloco de até 30 unidades, cada uma escutando o banco ao vivo; a lista final junta
+    // todas (sem repetir) e tira duplicatas antigas. Nenhum caminho lê a rede inteira.
     // (O professor não passa por aqui: as validações dele vêm do useValidacoesDoProfessor.)
-    const consultas = [];
-    if (ehLider(role)) {
-        consultas.push({ q: query(ref, ...periodo, where('unidadeId', '==', userUnidadeId)) });
-    } else if (filtroUnidade.length > 0 && filtroUnidade.length <= 30) {
-        // Admin/mentor com unidades escolhidas: busca só essas unidades, e não a rede inteira (poupa a cota gratuita).
-        consultas.push({ q: query(ref, ...periodo, where('unidadeId', 'in', filtroUnidade)) });
-    } else {
-        consultas.push({ q: query(ref, ...periodo) });
+    const consultas = JSON.parse(blocosEscutados).map(bloco => query(ref, ...periodo, where('unidadeId', 'in', bloco)));
+    if (consultas.length === 0) {
+        setValidacoesRealtime([]);
+        setLoading(false);
+        return;
     }
 
     const resultados = consultas.map(() => null);
+    let falhou = false;
     const atualizar = () => {
         if (resultados.some(r => r === null)) return; // espera todas responderem
         const porId = new Map();
         resultados.flat().forEach(v => porId.set(v.id, v));
         setValidacoesRealtime(deduplicarValidacoes([...porId.values()]));
+        setErroRealtime(falhou);
         setLoading(false);
     };
 
-    const cancelar = consultas.map(({ q, filtro }, i) => onSnapshot(q, (snap) => {
-        const lista = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        resultados[i] = filtro ? lista.filter(filtro) : lista;
+    const cancelar = consultas.map((q, i) => onSnapshot(q, (snap) => {
+        resultados[i] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         atualizar();
     }, (error) => {
         console.error('Erro ao escutar validações:', error);
+        falhou = true;
         resultados[i] = [];
         atualizar();
     }));
 
     return () => cancelar.forEach(unsub => unsub());
-    // filtroUnidade entra como texto para não reabrir a escuta quando só a referência da lista muda
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [modoFiltro, dataFiltro, mesFiltro, periodoFiltro, filtroUnidade.join(','), catalogs.unidades.length, catalogs.professores, role, userId, userUnidadeId, isCofreFechado, loadingCatalogs]);
+  // (Não depende mais do catálogo de professores: editar um professor em qualquer lugar reabria a busca e relia tudo.)
+  }, [modoFiltro, dataFiltro, mesFiltro, periodoFiltro, blocosEscutados, catalogs.unidades.length, role, isCofreFechado, loadingCatalogs]);
 
   // ==========================================
   // 3. PROCESSADOR DE GRADE VISUAL
@@ -411,6 +481,8 @@ export default function ValidacaoDiariaPage() {
       if (isProfessor && !loadingCatalogs && catalogs.unidades.length === 0) setGradeGerada([]);
       return;
     }
+    // Sem as validações não dá para saber o que está pendente: não monta nada (os contadores ficam zerados).
+    if (erroValidacoes) { setGradeGerada([]); return; }
 
     let datasParaVerificar = [];
     if (modoFiltro === 'dia') datasParaVerificar = [new Date(dataFiltro + 'T12:00:00')];
@@ -422,6 +494,38 @@ export default function ValidacaoDiariaPage() {
 
     const meuProfessorId = meuProfId;
 
+    // Fichários em memória: cada busca vira consulta direta, em vez de varrer as listas inteiras
+    // para cada aula de cada dia (no mês de muitas unidades eram milhões de comparações e a tela travava).
+    const porId = (lista) => new Map((lista || []).map(x => [String(x.id), x]));
+    const unidadesPorId = porId(catalogs.unidades);
+    const professoresPorId = porId(catalogs.professores);
+    const modalidadesPorId = porId(catalogs.modalidades);
+    const validacaoPorAulaDia = new Map();
+    const auloesPorDia = new Map();
+    validacoesDaTela.forEach(v => {
+        if (v.isAulao) {
+            if (!auloesPorDia.has(v.data)) auloesPorDia.set(v.data, []);
+            auloesPorDia.get(v.data).push(v);
+        }
+        const chave = `${v.aulaId}|${v.data}`;
+        if (!validacaoPorAulaDia.has(chave)) validacaoPorAulaDia.set(chave, v); // a 1ª, como antes
+    });
+    const unidadesEscolhidas = new Set(filtroUnidade.map(String));
+    const filtraPorRede = role === 'admin' || role === 'mentor';
+    // Filtro de unidade/estado/mentor/modalidade não depende do dia: aplicado uma vez só.
+    const unidadePassaNoFiltro = (unidade, idBruto) => {
+        if (!unidade) return false;
+        if (unidadesEscolhidas.size > 0 && !unidadesEscolhidas.has(String(idBruto))) return false;
+        if (filtraPorRede) {
+            if (filtroEstado.length > 0 && !filtroEstado.includes(unidade.estado)) return false;
+            if (filtroMentor.length > 0 && !filtroMentor.includes(unidade.mentorId)) return false;
+        }
+        return true;
+    };
+    const aulasCandidatas = catalogs.aulas.filter(aula =>
+        unidadePassaNoFiltro(unidadesPorId.get(String(aula.unidadeId)), aula.unidadeId)
+        && !(filtroModalidade.length > 0 && !filtroModalidade.includes(String(aula.modalidadeId))));
+
     let gradeFinal = [];
 
     datasParaVerificar.forEach(dataObj => {
@@ -429,21 +533,12 @@ export default function ValidacaoDiariaPage() {
       const diaSemanaNome = getDiaSemana(dataObj);
 
       // Regra única (src/utils/agendaAulas.js): dia da semana + vigência da aula. A Página de Início usa a mesma.
-      const aulasDoDia = catalogs.aulas.filter(aula => aulaNaGradeDoDia(aula, dataString, diaSemanaNome));
+      const aulasDoDia = aulasCandidatas.filter(aula => aulaNaGradeDoDia(aula, dataString, diaSemanaNome));
 
       aulasDoDia.forEach(aula => {
-        const unidadeValida = catalogs.unidades.find(u => String(u.id) === String(aula.unidadeId));
-        if (!unidadeValida) return; 
+        const unidadeValida = unidadesPorId.get(String(aula.unidadeId));
 
-        // 🟢 A CASCATA PROTEGENDO O LAÇO DE REPETIÇÃO
-        if (filtroUnidade.length > 0 && !filtroUnidade.includes(String(aula.unidadeId))) return;
-        if (role === 'admin' || role === 'mentor') {
-            if (filtroEstado.length > 0 && !filtroEstado.includes(unidadeValida.estado)) return;
-            if (filtroMentor.length > 0 && !filtroMentor.includes(unidadeValida.mentorId)) return;
-        }
-        if (filtroModalidade.length > 0 && !filtroModalidade.includes(String(aula.modalidadeId))) return;
-
-        const validacao = validacoesDaTela.find(v => String(v.aulaId) === String(aula.id) && v.data === dataString);
+        const validacao = validacaoPorAulaDia.get(`${aula.id}|${dataString}`);
 
         // Professor vê as aulas em que é titular e também as que ele deu como SUBSTITUTO
         // (essas só para consulta: quem valida/edita é o titular, a unidade ou o mentor).
@@ -455,8 +550,8 @@ export default function ValidacaoDiariaPage() {
             somenteLeitura = !souTitular;
         }
         
-        const profDoCatalogo = catalogs.professores.find(p => String(p.id) === String(aula.professorId));
-        const modDoCatalogo = catalogs.modalidades.find(m => String(m.id) === String(aula.modalidadeId));
+        const profDoCatalogo = professoresPorId.get(String(aula.professorId));
+        const modDoCatalogo = modalidadesPorId.get(String(aula.modalidadeId));
 
         let professorExibicao = profDoCatalogo ? { ...profDoCatalogo } : { nome: t('common.unknown.deletedTeacher') }; 
         let modalidadeExibicao = modDoCatalogo ? { ...modDoCatalogo } : { nome: t('common.unknown.deletedModality') };
@@ -465,7 +560,7 @@ export default function ValidacaoDiariaPage() {
             if (validacao.professorNomeEfetivo) professorExibicao.nome = validacao.professorNomeEfetivo;
             if (validacao.modalidadeNomeEfetiva) modalidadeExibicao.nome = validacao.modalidadeNomeEfetiva;
             if (validacao.substituicao && validacao.professorId) {
-                const profSub = catalogs.professores.find(p => String(p.id) === String(validacao.professorId));
+                const profSub = professoresPorId.get(String(validacao.professorId));
                 if (profSub) {
                     professorExibicao = { ...profSub, isSubstituto: true };
                     if (validacao.professorNomeEfetivo) professorExibicao.nome = validacao.professorNomeEfetivo;
@@ -480,6 +575,9 @@ export default function ValidacaoDiariaPage() {
 
         let status = 'pendente';
         let dadosValidacao = validacao;
+        // Cancelada só por ser feriado (sem ninguém ter decidido): a de agora, calculada na hora, ou um registro
+        // antigo gravado pelo sistema (validadoPor SISTEMA_FERIADO).
+        let feriadoAutomatico = ehCancelamentoAutomaticoDeFeriado(validacao);
 
         if (validacao) {
             status = validacao.status;
@@ -487,28 +585,27 @@ export default function ValidacaoDiariaPage() {
             // Regra única de feriado (src/utils/feriados.js): só a unidade dentro da abrangência do feriado.
             status = 'cancelada';
             dadosValidacao = { motivoCancelamento: 'Recesso/Feriado', status: 'cancelada' };
+            feriadoAutomatico = true;
         }
 
+        const prazo = regraDePrazo(role, dataString);
         gradeFinal.push({
           key: `${aula.id}-${dataString}`,
           data: dataString, diaSemana: diaSemanaNome, aulaBase: aula,
           professor: professorExibicao, professorTitular: profDoCatalogo,
           unidade: unidadeValida, modalidade: modalidadeExibicao,
           validacao: dadosValidacao || null, status: status,
-          somenteLeitura, prazo: regraDePrazo(role, dataString)
+          somenteLeitura, prazo,
+          // A unidade abriu no feriado e a aula aconteceu: admin, mentor e líder podem validar mesmo assim.
+          podeValidarNoFeriado: feriadoAutomatico && status === 'cancelada' && !somenteLeitura && prazo.pode
+            && (role === 'admin' || role === 'mentor' || ehLider(role)),
         });
       });
 
-      const auloesDoDia = validacoesDaTela.filter(v => v.isAulao && v.data === dataString);
+      const auloesDoDia = auloesPorDia.get(dataString) || [];
       auloesDoDia.forEach(v => {
-         const unidadeValida = catalogs.unidades.find(u => String(u.id) === String(v.unidadeId));
-         if (!unidadeValida) return;
-         
-         if (filtroUnidade.length > 0 && !filtroUnidade.includes(String(v.unidadeId))) return;
-         if (role === 'admin' || role === 'mentor') {
-            if (filtroEstado.length > 0 && !filtroEstado.includes(unidadeValida.estado)) return;
-            if (filtroMentor.length > 0 && !filtroMentor.includes(unidadeValida.mentorId)) return;
-         }
+         const unidadeValida = unidadesPorId.get(String(v.unidadeId));
+         if (!unidadePassaNoFiltro(unidadeValida, v.unidadeId)) return;
          if (filtroModalidade.length > 0 && !filtroModalidade.includes(String(v.modalidadeId))) return;
 
          let profAulao = { nome: v.professorNomeEfetivo || t('common.unknown.teacher') };
@@ -537,7 +634,7 @@ export default function ValidacaoDiariaPage() {
 
     setGradeGerada(gradeFinal);
 
-  }, [validacoesDaTela, carregandoValidacoes, loadingCatalogs, catalogs, filtroUnidade, filtroModalidade, filtroProfessor, filtroEstado, filtroMentor, dataFiltro, mesFiltro, modoFiltro, periodoFiltro, role, isProfessor, meuProfId, isCofreFechado, t]);
+  }, [validacoesDaTela, carregandoValidacoes, erroValidacoes, loadingCatalogs, catalogs, filtroUnidade, filtroModalidade, filtroProfessor, filtroEstado, filtroMentor, dataFiltro, mesFiltro, modoFiltro, periodoFiltro, role, isProfessor, meuProfId, isCofreFechado, t]);
 
   // CONTADORES E PAGINAÇÃO
   const counts = useMemo(() => {
@@ -647,9 +744,19 @@ export default function ValidacaoDiariaPage() {
     setAcaoAtual({ tipo, item }); setModalOpen(true);
   };
 
+  // Aula cancelada só por ser feriado, mas a unidade abriu: admin, mentor e líder validam normalmente.
+  // A janela abre como aula pendente; ao gravar, o registro do dia (ID fixo aulaId_data) vira a validação
+  // de verdade. Registro antigo do sistema com outro ID perde para a validação feita por pessoa.
+  const validarNoFeriado = (item) => {
+    if (!item?.podeValidarNoFeriado) return;
+    if (!window.confirm(t('dailyValidation.alerts.confirmHolidayValidation'))) return;
+    abrirModal('validar', { ...item, status: 'pendente', validacao: null, validadoNoFeriado: true });
+  };
+
   const handleReverterCancelamento = async () => {
+      if (!acaoAtual?.item) return;
       if (!acaoAtual.item.validacao?.id && acaoAtual.item.validacao?.motivoCancelamento === 'Recesso/Feriado') return alert(t('dailyValidation.alerts.autoHolidayRevert'));
-      if (!acaoAtual || !acaoAtual.item.validacao?.id) return;
+      if (!acaoAtual.item.validacao?.id) return;
       const prazo = regraDePrazo(role, acaoAtual.item.data);
       if (!prazo.pode) return alert(mensagemPrazo(prazo.motivo));
       let justificativa = '';
@@ -660,6 +767,15 @@ export default function ValidacaoDiariaPage() {
 
       setProcessando(true);
       try {
+          if (acaoAtual.item.isAulao) {
+              // Aulão: apagar o registro apagaria o próprio aulão. Volta a "realizada" com os alunos que já tinha.
+              const mudancas = { status: 'realizada', motivoCancelamento: deleteField(), validadoPor: userId, timestamp: serverTimestamp() };
+              if (prazo.precisaJustificativa) mudancas.justificativa = justificativa;
+              await updateDoc(doc(db, 'validacoes', acaoAtual.item.validacao.id), mudancas);
+              await registrarLogAuditoria('ALTERADA', `Cancelamento de Aulão Especial revertido.`, acaoAtual.item,
+                  `Cancelamento por motivo de "${acaoAtual.item.validacao?.motivoCancelamento}" desfeito.` + (justificativa ? ` | Justificativa (mês fechado): ${justificativa}` : ''));
+              return;
+          }
           await deleteDoc(doc(db, 'validacoes', acaoAtual.item.validacao.id));
           await registrarLogAuditoria('EXCLUÍDA', `Cancelamento revertido.`, acaoAtual.item,
               `Cancelamento por motivo de "${acaoAtual.item.validacao?.motivoCancelamento}" desfeito.` + (justificativa ? ` | Justificativa (mês fechado): ${justificativa}` : ''));
@@ -699,14 +815,15 @@ export default function ValidacaoDiariaPage() {
 
     // Número de alunos: inteiro, sem negativo e sem valor absurdo.
     if (acao.tipo === 'validar') {
-        if (!alunosValidos(inputValor)) return alert(t('dailyValidation.deadline.invalidStudents', { max: LIMITE_ALUNOS }));
+        const teto = acao.item?.isAulao ? LIMITE_ALUNOS_AULAO : LIMITE_ALUNOS;
+        if (!alunosValidos(inputValor, teto)) return alert(t('dailyValidation.deadline.invalidStudents', { max: teto }));
         const n = parseInt(inputValor, 10);
         if (n === 0 && !window.confirm(t('dailyValidation.deadline.confirmZeroStudents'))) return;
         // Número fora do normal para esta aula (ex.: 80 quando a média é 18): pede confirmação.
         const mediaInfo = acao.item?.mediaAlunos;
         if (n > 0 && numeroEstranho(n, mediaInfo) && !window.confirm(t('dailyValidation.quick.confirmUnusual', { n, media: mediaInfo.media, amostras: mediaInfo.amostras }))) return;
     }
-    if (acao.tipo === 'aulao' && !alunosValidos(inputValor, 1000)) return alert(t('dailyValidation.deadline.invalidStudents', { max: 1000 }));
+    if (acao.tipo === 'aulao' && !alunosValidos(inputValor, LIMITE_ALUNOS_AULAO)) return alert(t('dailyValidation.deadline.invalidStudents', { max: LIMITE_ALUNOS_AULAO }));
 
     // Prazo (mês fechado / 60 dias do líder) e justificativa.
     const prazo = regraDePrazo(role, acao.tipo === 'aulao' ? aulaoData : acao.item.data);
@@ -731,7 +848,25 @@ export default function ValidacaoDiariaPage() {
       const textoJustificativa = prazo.precisaJustificativa ? ` | Justificativa (mês fechado): ${justificativa}` : '';
       if (prazo.precisaJustificativa) payload.justificativa = justificativa;
 
-      if (tipo === 'aulao') {
+      if (item?.isAulao && item.validacao?.id) {
+          // EDITAR OU CANCELAR UM AULÃO JÁ LANÇADO: mexe só no número de alunos ou no cancelamento.
+          // Aulão não tem aula da grade: não ganha aulaId, e professor, unidade, valor e data ficam como foram lançados
+          // (antes ganhava o próprio id como aulaId e o banco recusava a edição do líder e do mentor).
+          const mudancas = { validadoPor: userId, timestamp: serverTimestamp() };
+          if (prazo.precisaJustificativa) mudancas.justificativa = justificativa;
+          let detalhe;
+          if (tipo === 'validar') {
+              mudancas.status = 'realizada';
+              mudancas.alunos = parseInt(inputValor, 10);
+              detalhe = `Alunos: de ${item.validacao.alunos ?? '-'} para ${mudancas.alunos}`;
+          } else {
+              mudancas.status = 'cancelada';
+              mudancas.motivoCancelamento = inputValor === 'Outros' ? inputObs : inputValor;
+              detalhe = `Cancelamento: ${mudancas.motivoCancelamento}`;
+          }
+          await updateDoc(doc(db, 'validacoes', item.validacao.id), mudancas);
+          await registrarLogAuditoria('ALTERADA', tipo === 'validar' ? `Aulão Especial editado.` : `Aulão Especial cancelado.`, item, detalhe + textoJustificativa);
+      } else if (tipo === 'aulao') {
           payload.status = 'realizada'; payload.isAulao = true; payload.unidadeId = item.unidade.id;
           payload.professorId = substitutoId; payload.modalidadeId = aulaoModalidadeId;
           payload.hora = aulaoHora; payload.alunos = parseInt(inputValor);
@@ -757,16 +892,33 @@ export default function ValidacaoDiariaPage() {
             payload.motivoCancelamento = inputValor === 'Outros' ? inputObs : inputValor; payload.substituicao = false;
             diffLog.push(`Cancelamento: ${payload.motivoCancelamento}`);
           }
+          if (item.validadoNoFeriado) diffLog.push('Unidade abriu no feriado');
 
           if (item.validacao?.id) {
             // Editar uma validação não muda o valor da época: mantém o valor gravado quando a aula foi validada.
             if (item.validacao.valorEfetivo !== undefined && item.validacao.valorEfetivo !== null) payload.valorEfetivo = item.validacao.valorEfetivo;
             if (tipo === 'validar' && item.validacao.alunos !== payload.alunos) diffLog.push(`Edição Alunos: de ${item.validacao.alunos} para ${payload.alunos}`);
-            await updateDoc(doc(db, 'validacoes', item.validacao.id), payload);
+            // A edição junta com o que já estava gravado: tira o que não vale mais, para não sobrar resto
+            // (ex.: aula realizada que vira cancelada continuava com o número de alunos e o substituto).
+            const limpeza = tipo === 'validar'
+                ? { motivoCancelamento: deleteField() }
+                : { alunos: deleteField(), professorOriginalId: deleteField(), motivoSubstituicao: deleteField() };
+            await updateDoc(doc(db, 'validacoes', item.validacao.id), { ...payload, ...limpeza });
             await registrarLogAuditoria('ALTERADA', tipo === 'validar' ? `Validação editada.` : `Cancelamento editado.`, item, diffLog.join(' | ') + textoJustificativa);
           } else {
             // ID fixo por aula/dia: se outra pessoa validar ao mesmo tempo, atualiza o mesmo registro (sem duplicar).
-            await setDoc(doc(db, 'validacoes', idValidacao(payload.aulaId, payload.data)), payload);
+            const refDia = doc(db, 'validacoes', idValidacao(payload.aulaId, payload.data));
+            // A tela pode estar atrasada (sem internet, banco lento): confere no banco antes de gravar por cima
+            // do que outra pessoa já registrou. O cancelamento automático de feriado pode ser substituído sem aviso.
+            const existente = await getDoc(refDia);
+            if (existente.exists() && !ehCancelamentoAutomaticoDeFeriado(existente.data())) {
+                const atual = existente.data();
+                const comoEsta = atual.status === 'cancelada'
+                    ? t('dailyValidation.alerts.alreadyCanceled', { motivo: formatCancelReason(atual.motivoCancelamento) || '-' })
+                    : t('dailyValidation.alerts.alreadyValidated', { count: atual.alunos ?? 0 });
+                if (!window.confirm(t('dailyValidation.alerts.confirmOverwrite', { comoEsta }))) return;
+            }
+            await setDoc(refDia, payload);
             await registrarLogAuditoria('NOVA', tipo === 'validar' ? `Aula validada.` : `Aula cancelada.`, item, diffLog.join(' | ') + textoJustificativa);
           }
       }
@@ -844,7 +996,7 @@ export default function ValidacaoDiariaPage() {
                     </>
                 )}
                 
-                {!ehLider(role) && (
+                {(!ehLider(role) || liderDeVarias) && (
                     <FilterMultiSelect options={unidadesFiltradasSelect} selected={filtroUnidade} onChange={setFiltroUnidade} placeholder={t('dailyValidation.filters.units')} icon={MapPin} searchable={true} />
                 )}
 
@@ -867,7 +1019,7 @@ export default function ValidacaoDiariaPage() {
       </div>
 
       {/* AVISO DO PROFESSOR: o que ficou para trás no mês (some quando tudo estiver validado) */}
-      {isProfessor && pendentesDoMes.length > 0 && !(modoFiltro === 'mes' && mesFiltro === mesLocal() && filtroStatus === 'pendente') && (
+      {isProfessor && !erroProfessor && pendentesDoMes.length > 0 && !(modoFiltro === 'mes' && mesFiltro === mesLocal() && filtroStatus === 'pendente') && (
           <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-2xl border border-amber-200 dark:border-amber-900/40 bg-amber-50 dark:bg-amber-900/10 animate-fade-in">
               <TriangleAlert className="w-6 h-6 text-amber-500 shrink-0"/>
               <div className="flex-1">
@@ -880,7 +1032,15 @@ export default function ValidacaoDiariaPage() {
           </div>
       )}
 
-      {isCofreFechado ? (
+      {semUnidade ? (
+          <div className="py-24 text-center bg-white dark:bg-slate-800 rounded-3xl border border-dashed border-slate-300 dark:border-slate-700 shadow-sm animate-fade-in">
+            <div className="bg-slate-50 dark:bg-slate-900 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-100 dark:border-slate-800 shadow-inner">
+              <MapPin className="w-8 h-8 text-slate-300"/>
+            </div>
+            <h3 className="text-xl font-black text-slate-700 dark:text-white mb-2 uppercase">{t('dailyValidation.empty.noLinkedUnitTitle')}</h3>
+            <p className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-widest max-w-md mx-auto">{t('dailyValidation.empty.noLinkedUnitDesc')}</p>
+          </div>
+      ) : isCofreFechado ? (
           <div className="py-24 text-center bg-white dark:bg-slate-800 rounded-3xl border border-dashed border-slate-300 dark:border-slate-700 shadow-sm animate-fade-in">
             <div className="bg-slate-50 dark:bg-slate-900 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-100 dark:border-slate-800 shadow-inner">
               <MapPin className="w-8 h-8 text-emerald-500 animate-bounce"/>
@@ -896,6 +1056,12 @@ export default function ValidacaoDiariaPage() {
         <div className="h-64 flex flex-col items-center justify-center text-slate-400">
           <Loader2 className="w-8 h-8 animate-spin mb-2 text-emerald-500"/>
           <p className="text-xs font-bold uppercase tracking-widest">{t('dailyValidation.empty.loading')}</p>
+        </div>
+      ) : erroValidacoes ? (
+        <div role="alert" className="py-16 px-6 text-center bg-rose-50 dark:bg-rose-900/10 rounded-3xl border border-rose-200 dark:border-rose-900/40 animate-fade-in">
+          <TriangleAlert className="w-10 h-10 text-rose-500 mx-auto mb-3"/>
+          <h3 className="text-lg font-black text-rose-700 dark:text-rose-400 uppercase tracking-tight">{t('dailyValidation.empty.loadErrorTitle')}</h3>
+          <p className="text-rose-600/80 dark:text-rose-400/80 text-sm font-medium mt-2 max-w-lg mx-auto">{t('dailyValidation.empty.loadErrorDesc')}</p>
         </div>
       ) : listaFiltradaTotal.length === 0 ? (
         <div className="py-24 text-center bg-white dark:bg-slate-800 rounded-3xl border border-dashed border-slate-300 dark:border-slate-700 animate-fade-in">
@@ -941,6 +1107,7 @@ export default function ValidacaoDiariaPage() {
                     onValidar={(i) => abrirModal('validar', i)}
                     onCancelar={(i) => abrirModal('cancelar', i)}
                     onValidarRapido={validarRapido}
+                    onValidarNoFeriado={validarNoFeriado}
                     salvando={processando}
                 />
             ) : (
@@ -959,6 +1126,7 @@ export default function ValidacaoDiariaPage() {
                                 onValidar={(i) => abrirModal('validar', i)}
                                 onCancelar={(i) => abrirModal('cancelar', i)}
                                 onValidarRapido={validarRapido}
+                                onValidarNoFeriado={validarNoFeriado}
                                 salvando={processando}
                                 ocultarProfessor={isProfessor && !item.professor?.isSubstituto && !item.somenteLeitura}
                                 verificarFuturo={verificarFuturo}

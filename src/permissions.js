@@ -22,6 +22,14 @@ export function ehLider(role) {
   return PAPEIS_LIDER.includes(String(role || "").trim().toLowerCase());
 }
 
+// Unidades que o líder comanda (pode ser mais de uma). O crachá guarda a principal em "unidadeId"
+// e todas em "unidadeIds"; crachás antigos só têm "unidadeId". Sempre devolve ids em texto, sem repetir.
+export function unidadesDoLider(cracha) {
+  const lista = Array.isArray(cracha?.unidadeIds) ? cracha.unidadeIds : [];
+  const todas = [cracha?.unidadeId, ...lista].filter(Boolean).map(String);
+  return [...new Set(todas)];
+}
+
 // Admin ou mentor que também é líder de uma unidade: ao ser trocado ou removido como líder,
 // sai só da unidade. O crachá (acesso de admin/mentor) NUNCA é apagado por esse caminho.
 export function liderMantemAcesso(role) {
@@ -50,3 +58,12 @@ export function crachaSemAcesso(cracha) {
 }
 // Recado para a tela de entrada mostrar "seu acesso está desativado" depois que o sistema desconecta.
 export const AVISO_SEM_ACESSO = "pratique_aviso_sem_acesso";
+
+// Professor só tem acesso depois de PEDIR e ser aprovado (login pelo Google). Crachá de professor sem
+// "loginGoogle: true" é o login antigo (e-mail e senha criado no cadastro): não vale mais, a pessoa precisa
+// pedir acesso. Mesma regra de crachaAtivo() no firestore.rules.
+export function professorDeLoginAntigo(cracha) {
+  return String(cracha?.role || "").trim().toLowerCase() === "professor" && cracha?.loginGoogle !== true;
+}
+// Recado para a tela de entrada explicar que o professor agora entra pelo Google e pede acesso.
+export const AVISO_PROFESSOR_LOGIN_ANTIGO = "pratique_aviso_professor_login_antigo";

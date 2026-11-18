@@ -1,9 +1,9 @@
 {
   "title": "Pedidos de acesso",
-  "subtitle": "Pessoas que entraram com o Google e pediram para ser líder de uma unidade. Ao aprovar, a pessoa passa a acessar o sistema como líder daquela unidade.",
+  "subtitle": "Pessoas que entraram com o Google e pediram acesso como líder ou mentor. Pedido de mentor só o administrador aprova.",
   "empty": "Nenhum pedido aguardando aprovação.",
   "leaderOf": "Quer ser líder de: {{unit}}",
-  "hasLeader": "Esta unidade já tem líder: {{name}}. Aprovar substitui o líder atual.",
+  "hasLeader": "Esta unidade já tem líder: {{name}}. Como a pessoa entra?",
   "approve": "Aprovar",
   "replace": "Substituir líder",
   "refuse": "Recusar",
@@ -14,5 +14,74 @@
   "unitNotFound": "Unidade não encontrada (pode ter sido excluída).",
   "notYourUnit": "Esta unidade não é sua.",
   "approveError": "Não foi possível aprovar.",
-  "refuseError": "Não foi possível recusar."
+  "refuseError": "Não foi possível recusar.",
+  "secondConfirm": "A unidade {{unit}} já tem o líder {{current}}.\n\nAdicionar {{name}} como 2º LÍDER (os dois ficam)?\n\nOK = 2º líder · Cancelar = ver a opção de substituir",
+  "roleLeader": "Líder",
+  "roleMentor": "Mentor",
+  "leaderOfUnits": "Quer ser líder de:",
+  "mentorOf": "Unidades que vai acompanhar (mentor atual):",
+  "otherMentor": "outro mentor",
+  "otherMentorUnit": "Unidade de outro mentor: ele aprova esta parte.",
+  "alsoTeacher": "Disse que também dá aulas",
+  "leftOut": "Estas unidades ficaram de fora: {{units}}.\n\nO mentor de cada uma pode incluir a pessoa depois pela aba Líderes.",
+  "approveMentorConfirm": "Aprovar {{name}} como MENTOR?",
+  "moveUnitsConfirm": "Passar também estas unidades para o mentor {{name}}?\n\n{{units}}\n\nOK = passar · Cancelar = aprovar sem mexer nas unidades",
+  "extra": {
+    "title": "Pedidos de outra unidade",
+    "subtitle": "Líderes que pediram para liderar mais uma unidade. Cada mentor aprova as unidades dele.",
+    "wants": "Quer liderar também:",
+    "alreadyLeads": "Já lidera: {{units}}",
+    "refusePrompt": "Recusar o pedido de {{name}} para liderar {{unit}}?\n\nSe quiser, escreva o motivo:",
+    "alreadyLeader": "Esta pessoa já era líder de {{unit}}. O pedido foi fechado."
+  },
+  "exits": {
+    "exitsTitle": "Saídas de acesso",
+    "exitsSubtitle": "Pessoas que disseram que não fazem mais parte. O acesso delas já foi desligado. Se foi engano, desfaça.",
+    "leaderLeft": "Saiu da liderança",
+    "mentorLeft": "Saiu da função de mentor",
+    "keptProfessor": "Continua como professor",
+    "blocked": "Acesso desligado",
+    "undo": "Desfazer",
+    "ack": "Ciente",
+    "undoConfirm": "Desfazer a saída de {{name}}? A pessoa volta a ter o acesso de antes.",
+    "undoMentorOnlyAdmin": "Só o administrador desfaz a saída de um mentor.",
+    "undone": "Saída desfeita.",
+    "undoneBusy": "Saída desfeita, mas estas unidades já têm outros líderes e ficaram de fora: {{units}}. Inclua a pessoa depois pela aba Líderes.",
+    "undoError": "Não foi possível desfazer.",
+    "ackError": "Não foi possível dar ciência.",
+    "onlyAdmin": "Só o administrador trata a saída de mentor.",
+    "mentorUnits": "Unidades dele (precisam de novo mentor):"
+  },
+  "teacher": {
+    "title": "Pedidos de professores",
+    "subtitle": "Aprovar libera o login do professor. As aulas dele você liga depois, pelo cadastro de professores.",
+    "approveConfirm": "Aprovar {{name}} como professor(a) da unidade {{unit}}?",
+    "approved": "{{name}} aprovado(a). Agora ligue as aulas dele(a) pelo cadastro de professores.",
+    "modalities": "Modalidades",
+    "noModalities": "não informadas",
+    "documentOk": "✓ Documento informado (guardado em local protegido)",
+    "link": {
+      "searching": "Procurando esta pessoa na grade...",
+      "error": "Não deu para procurar a ficha na grade. Você pode aprovar sem ligar e ligar depois.",
+      "none": "Nenhuma ficha da grade parece ser esta pessoa. Será criado só o acesso.",
+      "title": "Esta pessoa já tem ficha na grade?",
+      "matches": "Bate em",
+      "field": {
+        "documento": "documento",
+        "email": "e-mail",
+        "telefone": "telefone",
+        "nome": "nome"
+      },
+      "blocked": {
+        "outroDocumento": "Esta ficha tem outro documento: é outra pessoa. Não dá para ligar.",
+        "documentoNaoConferido": "Esta ficha já tem documento e só o mentor ou o admin conferem se é a mesma pessoa."
+      },
+      "noneOfThem": "Nenhuma dessas: criar só o acesso (sem ligar a ficha)",
+      "approveConfirm": "Aprovar {{name}} como professor(a) da unidade {{unit}} e LIGAR à ficha \"{{record}}\" da grade?",
+      "approvedLinked": "{{name}} aprovado(a) e ligado(a) à ficha \"{{record}}\". As aulas dessa ficha já aparecem para ele(a)."
+    }
+  },
+  "optSecond": "2º líder (aspirante): os dois ficam",
+  "optReplace": "Substituir o líder atual (ele perde o acesso)",
+  "onlyReplace": "A unidade já tem 2 líderes: aprovar substitui o 1º líder."
 }

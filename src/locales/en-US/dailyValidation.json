@@ -25,7 +25,11 @@
     "allValidatedDesc": "Congratulations, there is nothing pending on this date.",
     "noCancellationsTitle": "No cancellations",
     "noClassesTitle": "No classes found",
-    "adjustFiltersDesc": "Try adjusting the filters or the selected date."
+    "adjustFiltersDesc": "Try adjusting the filters or the selected date.",
+    "loadErrorTitle": "Could not load validations",
+    "loadErrorDesc": "The database refused the request (no connection or daily limit reached). To avoid validating anything twice, the list is hidden. Please try again later.",
+    "noLinkedUnitTitle": "No linked unit",
+    "noLinkedUnitDesc": "Your access has no unit yet. Ask your mentor to link you to a unit."
   },
   "card": {
     "unit": "Unit",
@@ -36,7 +40,8 @@
     "edit": "Edit",
     "cancel": "Cancel",
     "details": "Details",
-    "waitForDate": "Wait for the date"
+    "waitForDate": "Wait for the date",
+    "validateOnHoliday": "Open on the holiday? Validate"
   },
   "modal": {
     "validateTitle": "Validate Class",
@@ -91,7 +96,11 @@
     "selectModality": "Select the modality.",
     "selectDate": "Select the date.",
     "informStudentCount": "Enter the number of students.",
-    "confirmSubstitute": "Please search for and confirm the substitute teacher by e-mail."
+    "confirmSubstitute": "Please search for and confirm the substitute teacher by e-mail.",
+    "confirmHolidayValidation": "This day is a holiday at this unit. Confirm the unit was open and the class happened?",
+    "alreadyValidated": "validated with {{count}} student(s)",
+    "alreadyCanceled": "canceled ({{motivo}})",
+    "confirmOverwrite": "Someone else already recorded this class: {{comoEsta}}. Your screen was out of date.\n\nSave your record over it?"
   },
   "deadline": {
     "closedMonthTeacher": "This month is already closed. Anything left behind can no longer be validated or changed by the teacher. If something needs fixing, talk to the unit leader.",

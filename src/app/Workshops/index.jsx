@@ -11,7 +11,7 @@ import {
   X, LayoutDashboard, CreditCard, Package, MapPin, Trash2, Edit, Paperclip, Table, Plus, Shirt, FileText, Filter
 } from 'lucide-react';
 
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast'; // o <Toaster /> agora fica no AppLayout (um só para o sistema inteiro)
 
 import PainelResumo from './PainelResumo';
 import TabelaEstoque from './TabelaEstoque';
@@ -294,8 +294,7 @@ export default function WorkshopsTab() {
 
   return (
     <div className="p-6 md:p-8 max-w-[1920px] mx-auto animate-fade-in space-y-6">
-      
-      <Toaster position="bottom-right" reverseOrder={false} />
+
 
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-slate-200 dark:border-slate-700 pb-6 gap-4">
         <div>

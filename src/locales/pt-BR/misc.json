@@ -52,7 +52,9 @@
       "noEmail": "Este usuário não tem um e-mail de login válido cadastrado.",
       "confirmReset": "Enviar link de redefinição de senha para o e-mail: {{email}}?",
       "resetSent": "✅ Link de recuperação enviado para {{email}}!",
-      "resetError": "Erro ao enviar e-mail. Verifique se o e-mail está correto no Firebase Auth."
-    }
+      "resetError": "Erro ao enviar e-mail. Verifique se o e-mail está correto no Firebase Auth.",
+      "useLeadersTab": "Para tornar {{name}} líder, use Configurações › Líderes › \"Escolher líder já cadastrado\". Lá você escolhe a unidade e ele continua sendo professor."
+    },
+    "leaderNoUnit": "Líder sem unidade: não consegue validar. Corrija em Configurações › Líderes › Escolher líder já cadastrado."
   }
 }

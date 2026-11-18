@@ -1,10 +1,11 @@
-import { ehLider } from '../../permissions';
+import { ehLider, unidadesDoLider } from '../../permissions';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../services/firebase';
 import { collection, getDocs, onSnapshot, query, where, documentId, orderBy } from 'firebase/firestore';
 import { useTranslation } from "react-i18next"; // 🟢 MOTOR DE IDIOMAS ACIONADO
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { deduplicarValidacoes } from '../../utils/validacoes';
 import { feriadoNoDia, normalizarPais } from '../../utils/feriados';
 import { valorDaValidacao } from '../../utils/valores';
@@ -13,7 +14,7 @@ import { DIAS_SEMANA as diasSemanaMap, getDiaSemana, formatCurrency, formatDate,
 import {
   BarChart2, Filter, DollarSign, Users, Calendar,
   CheckCircle2, XCircle, Clock, ChevronRight, ChevronDown,
-  LayoutDashboard, Map, Globe, UserCheck, AlertTriangle,
+  LayoutDashboard, Globe, UserCheck, AlertTriangle,
   Download, FileSpreadsheet, FileText, X, User, MousePointerClick, ArrowRightLeft,
   ArrowDown, DownloadCloud, Star, AlignJustify, Layers, Lock, PieChart, Activity, TrendingUp, Search, CheckSquare, Square
 } from 'lucide-react';
@@ -206,6 +207,8 @@ export default function RelatorioPage() {
   const { t } = useTranslation(); // 🟢 MOTOR DE IDIOMAS ACIONADO
 
   const role = String(userData?.role || "").toLowerCase();
+  // Líder pode comandar mais de uma unidade ("id1,id2"; ver unidadesDoLider em permissions.js).
+  const unidadesLiderKey = unidadesDoLider(userData).join(',');
   const userId = userData?.id || userData?.uid;
 
   const [loading, setLoading] = useState(true);
@@ -252,7 +255,7 @@ export default function RelatorioPage() {
 
   const clearFilters = () => {
       setPaisesFiltro([]); setEstadosFiltro([]); setMentoresFiltro([]);
-      setUnidadesFiltro(ehLider(role) ? [userData.unidadeId] : []);
+      setUnidadesFiltro(ehLider(role) ? unidadesLiderKey.split(',') : []);
       setModalidadesFiltro([]); setProfessoresFiltro([]); setTurnosFiltro([]); setFiltroKPI(null);
   };
 
@@ -273,7 +276,7 @@ export default function RelatorioPage() {
       try {
         let qUnidades = query(collection(db, 'unidades'), orderBy('nome'));
         if (role === 'mentor') qUnidades = query(collection(db, 'unidades'), where('mentorId', '==', userId));
-        else if (ehLider(role)) qUnidades = query(collection(db, 'unidades'), where(documentId(), '==', userData.unidadeId));
+        else if (ehLider(role)) qUnidades = query(collection(db, 'unidades'), where(documentId(), 'in', unidadesLiderKey.split(',').slice(0, LIMITE_IN)));
 
         const usersQuery = query(collection(db, 'usuarios'), where('role', '==', 'mentor'));
 
@@ -295,13 +298,13 @@ export default function RelatorioPage() {
           feriados: feriadosSnap.docs.map(d => ({ id: d.id, ...d.data() }))
         });
 
-        if (ehLider(role)) setUnidadesFiltro([userData.unidadeId]);
+        if (ehLider(role)) setUnidadesFiltro(unidadesLiderKey.split(','));
 
       } catch (e) { console.error("Erro loading catálogos:", e); }
       finally { setLoading(false); }
     };
     loadCatalogs();
-  }, [role, userId, userData?.unidadeId]);
+  }, [role, userId, unidadesLiderKey]);
 
   // Listas Dinâmicas de Filtros (país e estado já vêm padronizados do carregamento)
   const listasFiltros = useMemo(() => {
@@ -326,6 +329,28 @@ export default function RelatorioPage() {
     return { paises, estados, mentores, unidadesFiltradas: units };
   }, [catalogs, paisesFiltro, estadosFiltro, mentoresFiltro, t]);
 
+  // Abrir já filtrado numa unidade (e num mês): /app/relatorio-gerencial?unidade=ID&mes=AAAA-MM
+  // (atalho da Central da Unidade e do Radar). Só vale para unidade que a pessoa pode ver (a lista de
+  // unidades já vem recortada pelo perfil); aplicado uma vez por chegada, depois os filtros são livres.
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const unidadePedida = searchParams.get('unidade');
+  const chavePedido = unidadePedida ? `${location.key}|${unidadePedida}` : null;
+  const [pedidoAplicado, setPedidoAplicado] = useState(null);
+  if (chavePedido && pedidoAplicado !== chavePedido && !ehLider(role) && role !== 'professor') {
+      const unidadeDoPedido = catalogs.unidades.find(u => String(u.id) === unidadePedida);
+      if (unidadeDoPedido) {
+          setPedidoAplicado(chavePedido);
+          setPaisesFiltro([]); setEstadosFiltro([]); setMentoresFiltro([]);
+          setUnidadesFiltro([unidadeDoPedido.id]);
+          const mesPedido = searchParams.get('mes');
+          if (/^\d{4}-\d{2}$/.test(mesPedido || '') && mesPedido <= getTodayStr().slice(0, 7)) {
+              setModoFiltro('mes');
+              setMesFiltro(mesPedido);
+          }
+      }
+  }
+
   // Quais unidades buscar no banco. Até 30 unidades -> busca só elas (muito mais rápido e gasta menos
   // da cota gratuita). Mais que isso -> busca tudo e filtra na tela, como antes.
   //   ''        = sem restrição por unidade
@@ -345,7 +370,7 @@ export default function RelatorioPage() {
 
   // Aplica o recorte do usuário (unidade / professor / unidades filtradas) numa consulta.
   const recortarConsulta = (q, ids) => {
-      if (ehLider(role)) return query(q, where('unidadeId', '==', userData.unidadeId));
+      if (ehLider(role)) return query(q, where('unidadeId', 'in', unidadesLiderKey.split(',').slice(0, LIMITE_IN)));
       if (role === 'professor') return meuProfessorId ? query(q, where('professorId', '==', meuProfessorId)) : q;
       if (ids) return query(q, where('unidadeId', 'in', ids));
       return q;
@@ -795,7 +820,7 @@ export default function RelatorioPage() {
                         <MultiSelectDropdown label={t('reports.filters.mentor', 'Mentor')} options={(listasFiltros.mentores || []).map(m => ({id: m.id, label: m.nome}))} selected={mentoresFiltro} onChange={setMentoresFiltro} placeholder={t('common.multiSelect.all')} />
                     </>
                 )}
-                {!ehLider(role) && (
+                {(!ehLider(role) || unidadesLiderKey.includes(',')) && (
                     <MultiSelectDropdown label={t('reports.filters.unit', 'Unidade')} options={(listasFiltros.unidadesFiltradas || []).map(u => ({id: u.id, label: u.nome.toUpperCase()}))} selected={unidadesFiltro} onChange={setUnidadesFiltro} placeholder={t('common.multiSelect.all')} />
                 )}
                 <MultiSelectDropdown label={t('reports.filters.modality', 'Modalidade')} options={(catalogs.modalidades || []).map(m => ({id: m.id, label: m.nome.toUpperCase()}))} selected={modalidadesFiltro} onChange={setModalidadesFiltro} placeholder={t('common.multiSelect.all')} />

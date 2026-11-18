@@ -4,7 +4,7 @@
   "loadingUnits": "Loading locations...",
   "noUnits": "Could not load the list of locations. Please talk to your mentor.",
   "fields": {
-    "name": "Your full name",
+    "name": "Full name",
     "namePlaceholder": "E.g. Mary Smith",
     "phone": "WhatsApp",
     "phonePlaceholder": "E.g. +1 (305) 000-0000",
@@ -12,17 +12,24 @@
     "unitLeader": "Location you lead",
     "unitSearch": "Search location...",
     "unitSelect": "Select the location...",
-    "role": "Role"
+    "role": "Role",
+    "units": "Units",
+    "unitsLeader": "Units you lead",
+    "unitsMentor": "Units you support",
+    "alsoTeacher": "Do you also teach at these units?",
+    "unitTeacher": "Your unit",
+    "modalities": "Class types you teach",
+    "modalitiesPlaceholder": "E.g.: Zumba, Pilates"
   },
   "form": {
-    "title": "Request access",
-    "desc": "First time here? Fill in your details. Your mentor will approve the request and then you can use the system.",
-    "send": "Send request",
+    "title": "Your details",
+    "desc": "Check and complete them. This is how the team will reach you.",
+    "send": "Send access request",
     "cancelEdit": "Cancel changes"
   },
   "waiting": {
-    "title": "Request sent!",
-    "desc": "Now just wait for your mentor to approve it. Once approved, this screen opens the system automatically.",
+    "title": "Request sent",
+    "desc": "As soon as it is approved, this screen opens the system by itself.",
     "edit": "Fix my details"
   },
   "refused": {
@@ -33,8 +40,10 @@
   "errors": {
     "name": "Enter your full name.",
     "phone": "Enter a valid WhatsApp number.",
-    "unit": "Choose the location.",
-    "send": "Could not send the request. Please try again."
+    "unit": "Choose at least one unit.",
+    "send": "Could not send the request. Please try again.",
+    "modalities": "Too many class types chosen. Remove some.",
+    "modalitiesRequired": "Choose at least one class type you teach."
   },
   "invite": {
     "title": "Hi, {{name}}!",
@@ -42,5 +51,22 @@
     "role": "Mentor",
     "enter": "Sign in as mentor",
     "error": "Could not finish signing in. Try again or contact the administrator."
+  },
+  "andTeacher": "and teacher",
+  "connectedAs": "Signed in as {{email}}",
+  "alsoTeacherYes": "Yes, I also teach",
+  "alsoTeacherNo": "No",
+  "hints": {
+    "leaderUnits": "You can choose up to {{max}} units.",
+    "mentorUnits": "You can choose up to {{max}} units. The administrator checks them on approval.",
+    "teacherUnit": "Pick your main unit. The leader can add other units later.",
+    "modalities": "Tap the class types you teach. Only the class types registered in the system appear.",
+    "modalitiesLoading": "Loading class types...",
+    "modalitiesNone": "No class types available right now. Try again shortly."
+  },
+  "approver": {
+    "lider": "Who approves: the unit's mentor or the administrator.",
+    "mentor": "Who approves: the administrator.",
+    "professor": "Approved by: your unit leader, the mentor or the administrator."
   }
 }

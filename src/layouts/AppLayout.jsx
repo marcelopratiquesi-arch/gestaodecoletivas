@@ -7,6 +7,9 @@ import { Menu, X, ChevronLeft, ChevronRight } from "lucide-react";
 import PlayerGlobal from "../components/PlayerGlobal"; 
 import VigiaNoturno from "../components/VigiaNoturno"; 
 import { useTranslation } from "react-i18next";
+// Centrais (fichas que abrem por cima de qualquer tela) e os avisos de canto de tela do sistema
+import CentraisHost from "../centrais/CentraisHost";
+import { Toaster } from "react-hot-toast";
 
 export default function AppLayout() {
   const { t } = useTranslation();
@@ -66,6 +69,12 @@ export default function AppLayout() {
         {/* 🟢 O PLAYER GLOBAL FICA FORA DO VIGIA: Se a tela apagar, a música continua rolando! */}
         <PlayerGlobal />
       </div>
+
+      {/* Centrais: montadas uma vez só; qualquer tela abre com abrirCentralUnidade(...) */}
+      <CentraisHost />
+
+      {/* Avisos de canto de tela (um só para o sistema inteiro; antes ficava só na Loja) */}
+      <Toaster position="bottom-right" reverseOrder={false} />
 
       {mobileOpen && (
         <div 

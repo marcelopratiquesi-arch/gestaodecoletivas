@@ -3,21 +3,23 @@
 // A página pública é aberta sem login. Antes ela lia os cadastros completos de unidades e professores,
 // expondo na internet e-mails, telefones e IDs de login. Agora ela lê UM documento (publico/vitrine)
 // que contém só o que aparece na tela:
-//   unidades:    { [id]: { nome, cidade, estado, enderecoCompleto, linkGoogleMaps, localizacao } }
+//   unidades:    { [id]: { nome, cidade, estado, enderecoCompleto, linkGoogleMaps, localizacao, mentorNome } }
+//   (mentorNome: só o nome do mentor responsável, para a caixa de dúvidas do primeiro acesso)
 //   professores: { [id]: nome }
 // Bônus: 1 leitura por visita em vez de (nº de unidades + nº de professores).
 //
 // As telas de cadastro chamam as funções abaixo depois de salvar. Se alguma falhar, o cadastro
 // continua salvo normalmente e o admin pode usar "Atualizar página pública" (reconstruirVitrine).
 // Enquanto a vitrine não for montada pela primeira vez, essas funções não fazem nada (só avisam no console).
-import { doc, getDoc, getDocs, collection, setDoc, updateDoc, deleteField, serverTimestamp, FieldPath } from 'firebase/firestore';
+import { doc, getDoc, getDocs, collection, query, where, setDoc, updateDoc, deleteField, serverTimestamp, FieldPath } from 'firebase/firestore';
 import { db } from './firebase';
+import { reconstruirAulasPublicas } from './aulasPublicas';
 
 export const VITRINE_CAMINHO = ['publico', 'vitrine'];
 const refVitrine = () => doc(db, ...VITRINE_CAMINHO);
 
 // Únicos campos da unidade que a página pública usa.
-const CAMPOS_PUBLICOS_UNIDADE = ['nome', 'cidade', 'estado', 'enderecoCompleto', 'linkGoogleMaps', 'localizacao'];
+const CAMPOS_PUBLICOS_UNIDADE = ['nome', 'cidade', 'estado', 'enderecoCompleto', 'linkGoogleMaps', 'localizacao', 'mentorNome'];
 
 export const ehCampoPublicoUnidade = (campo) => CAMPOS_PUBLICOS_UNIDADE.includes(campo);
 
@@ -67,18 +69,21 @@ const LIMITE_BYTES = 900 * 1024;
 
 /**
  * Remonta a vitrine inteira a partir dos cadastros (só admin, precisa de login).
- * Custa 1 leitura por unidade + 1 por professor, e 1 gravação. Retorna os totais.
+ * Custa 1 leitura por unidade + 1 por professor (+ as aulas, ver aulasPublicas.js), e 1 gravação. Retorna os totais.
  */
 export async function reconstruirVitrine() {
-    const [uSnap, pSnap] = await Promise.all([
+    const [uSnap, pSnap, mSnap] = await Promise.all([
         getDocs(collection(db, 'unidades')),
         getDocs(collection(db, 'professores')),
+        // Nome do mentor responsável de cada unidade (mentores e admins que cuidam de unidades).
+        getDocs(query(collection(db, 'usuarios'), where('role', 'in', ['mentor', 'admin', 'Admin']))),
     ]);
+    const nomeMentor = new Map(mSnap.docs.map(d => [d.id, String(d.data().nome || '')]));
     const unidades = {};
     uSnap.forEach(d => {
         const dados = d.data();
         // A página antiga usava orderBy('nome'), que ignora unidades sem nome; mantemos igual.
-        if (typeof dados.nome === 'string') unidades[d.id] = dadosPublicosUnidade(dados);
+        if (typeof dados.nome === 'string') unidades[d.id] = dadosPublicosUnidade({ ...dados, mentorNome: nomeMentor.get(dados.mentorId) || '' });
     });
     const professores = {};
     pSnap.forEach(d => { professores[d.id] = String(d.data().nome || ''); });
@@ -87,7 +92,9 @@ export async function reconstruirVitrine() {
     if (tamanho > LIMITE_BYTES) throw new Error(`Vitrine grande demais (${Math.round(tamanho / 1024)} KB).`);
 
     await setDoc(refVitrine(), { unidades, professores, atualizadoEm: serverTimestamp() });
-    return { unidades: Object.keys(unidades).length, professores: Object.keys(professores).length, tamanhoKb: Math.round(tamanho / 1024) };
+    // A grade pública (aulas sem o valor) é refeita junto: custa 1 leitura por aula.
+    const grade = await reconstruirAulasPublicas();
+    return { unidades: Object.keys(unidades).length, professores: Object.keys(professores).length, aulas: grade.aulas, tamanhoKb: Math.round(tamanho / 1024) };
 }
 
 /** Leitura usada pela página pública. Retorna null se a vitrine ainda não foi montada. */

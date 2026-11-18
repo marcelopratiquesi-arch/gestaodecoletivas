@@ -15,7 +15,8 @@
     "name": "Your full name",
     "namePlaceholder": "E.g. Maria Silva",
     "phone": "WhatsApp",
-    "phonePlaceholder": "E.g. +55 31 99999-0000"
+    "phonePlaceholder": "E.g. +55 31 99999-0000",
+    "unitsLeader": "Units you lead"
   },
   "blocked": {
     "hasLeaderTitle": "This login is no longer used",
@@ -30,5 +31,99 @@
     "googleInUse": "This Google account is already in use in the system. Choose another Google account or talk to your mentor.",
     "notEnabled": "Google sign-in is not enabled yet. Contact support.",
     "save": "Could not finish. Please try again."
+  },
+  "steps": {
+    "role": "Role",
+    "data": "Your details",
+    "google": "Google",
+    "done": "Done"
+  },
+  "notice": {
+    "title": "Your access is now personal",
+    "desc": "You signed in with the old login. Updating takes 1 minute.",
+    "oldLogin": "Old login",
+    "changesTitle": "What changes",
+    "change1": "You will sign in with your Google account.",
+    "change2": "The old login and password stop working.",
+    "change3": "The team keeps your correct name and WhatsApp.",
+    "start": "Start"
+  },
+  "role": {
+    "desc": "Choose the option that fits you.",
+    "unit": {
+      "question": "Who is using the login of unit {{unit}}?",
+      "segue": "I am this unit's leader",
+      "segueDesc": "This login becomes your personal leader login.",
+      "professor": "I teach at this unit",
+      "professorDesc": "You can now sign in as a teacher with your own Google account.",
+      "saiu": "I'm no longer at this unit",
+      "saiuDesc": "You do not continue with this login."
+    },
+    "leader": {
+      "question": "Are you still the leader of unit {{unit}}?",
+      "segue": "Yes, I'm still the leader",
+      "segueDesc": "Your details are updated and you carry on as usual.",
+      "professor": "No, now I only teach",
+      "professorDesc": "Your mentor changes your access to teacher.",
+      "saiu": "I no longer work at this unit",
+      "saiuDesc": "You do not continue with this login."
+    },
+    "mentor": {
+      "question": "Are you still a mentor?",
+      "segue": "Yes, I'm still a mentor",
+      "segueDesc": "Your details are updated and you carry on as usual.",
+      "saiu": "I'm no longer a mentor",
+      "saiuDesc": "You do not continue with this login."
+    },
+    "stop": {
+      "professor": "Do not continue with this login. Sign out and choose \"First access\" → \"Group class teacher\" with your Google account. The unit leader approves.",
+      "saiuTeacher": "Do not continue with this login. Tell your unit leader: they will adjust your access."
+    },
+    "teacher": {
+      "question": "Are you still a teacher?",
+      "segue": "Yes, I am still a teacher",
+      "segueDesc": "Your details are updated and you carry on as usual.",
+      "saiu": "I no longer teach at the unit",
+      "saiuDesc": "You do not continue with this login."
+    }
+  },
+  "data": {
+    "title": "Check your details",
+    "desc": "We filled in what the system has. Fix anything that is wrong.",
+    "unitNameHint": "This used to show the unit's name. Now it is your name.",
+    "moreUnitsLabel": "Do you lead another unit too? (optional)",
+    "moreUnitsHint": "Each unit you pick becomes a request: its mentor approves it. Your mentor can also add you later."
+  },
+  "google": {
+    "title": "Connect your Google account",
+    "desc": "It will be your login from now on.",
+    "warning": "After this step, the login {{login}} and the old password stop working.",
+    "hint": "Choose YOUR Google account, personal or work. Do not use a unit account that other people also use."
+  },
+  "done": {
+    "title": "Profile updated",
+    "desc": "From now on, sign in with the \"Sign in with Google\" button.",
+    "login": "Login",
+    "enter": "Enter the system",
+    "extraRequested": "Your requests for the other units were sent. When each unit's mentor approves, they will show up for you.",
+    "mentorChecks": "Your mentor will confirm that you are the leader of unit {{unit}}."
+  },
+  "exit": {
+    "leaderTitle": "Leave leadership",
+    "leaderWarn": "When you confirm, your access is turned off right away. The unit is left without a leader and your mentor is notified. If this was a mistake, they can undo it.",
+    "manyUnits": "You leave every unit you lead: {{units}}.",
+    "professorQ": "You are also a teacher. What do you prefer?",
+    "keepProfessor": "Leave leadership and keep going as a teacher",
+    "keepProfessorDesc": "You stop being a leader, but you can still sign in to see your classes.",
+    "leaveAll": "Leave everything",
+    "leaveAllDesc": "You lose all access to the system.",
+    "mentorTitle": "Leave the mentor role",
+    "mentorWarn": "When you confirm, your mentor access is turned off right away and the Group Classes Manager (administrator) is notified. They will reassign your units. If this was a mistake, they can undo it.",
+    "confirm": "Confirm exit",
+    "error": "Could not record the exit. Try again.",
+    "doneTitle": "Exit recorded",
+    "doneBlocked": "Your access has been turned off. Thank you for your work!",
+    "doneProfessor": "You left leadership and continue as a teacher.",
+    "doneButton": "Continue"
   }
 }

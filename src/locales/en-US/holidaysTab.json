@@ -51,5 +51,83 @@
     "cidade_other": "City: {{value}} ({{count}} units)",
     "unidades_one": "{{count}} unit",
     "unidades_other": "{{count}} units"
+  },
+  "proposals": {
+    "mentorDesc": "You propose the holiday for your units and the administrator decides. It only applies once approved.",
+    "formTitle": "Propose Recess or Holiday",
+    "send": "Send proposal",
+    "confirmSend": "Send the holiday proposal for {{scope}} from {{start}} to {{end}}?\n\nNo class changes until the administrator approves.",
+    "sent": "Proposal sent! It only applies once the administrator approves it.",
+    "sendError": "Error sending the proposal.",
+    "pendingTitle": "Mentor proposals ({{count}})",
+    "mineTitle": "My proposals",
+    "none": "No proposals.",
+    "status": {
+      "pendente": "Pending",
+      "aprovada": "Approved",
+      "recusada": "Refused"
+    },
+    "by": "Proposed by {{name}}",
+    "reason": "Reason: {{reason}}",
+    "approve": "Approve",
+    "refuse": "Refuse",
+    "withdraw": "Withdraw",
+    "confirmApprove": "Approve \"{{name}}\"?\n\nClasses of {{scope}} from {{start}} to {{end}} will show as cancelled (holiday).",
+    "approvedMsg": "Holiday approved! Classes of {{scope}} in that period show as cancelled.",
+    "refuseReason": "Reason for refusing \"{{name}}\" (optional):",
+    "confirmWithdraw": "Withdraw the proposal \"{{name}}\"?",
+    "decideError": "Could not complete. Please try again."
+  },
+  "impact": "This affects {{units}} unit(s) and {{classes}} class(es) in the period.",
+  "pastWarn": "⚠️ The start date has already passed: classes in this period that nobody validated will show as holiday and their pending items disappear. Validations already made stay valid.",
+  "duplicateWarn": "⚠️ A holiday already exists in the same period for shared units: {{names}}. Check it is not a duplicate.",
+  "edit": {
+    "title": "Edit holiday",
+    "save": "Save changes",
+    "cancel": "Cancel editing",
+    "tooltip": "Edit",
+    "confirmSave": "Save the changes to \"{{name}}\"?\n\nClasses of {{scope}} from {{start}} to {{end}} will show as cancelled (holiday).",
+    "saved": "Holiday updated!",
+    "error": "Error updating the holiday."
+  },
+  "except": {
+    "title": "Except these units (optional)",
+    "hint": "Check the units that do NOT take this holiday off.",
+    "label_one": "except {{count}} unit",
+    "label_other": "except {{count}} units"
+  },
+  "filters": {
+    "proximos": "Upcoming",
+    "passados": "Past",
+    "todos": "All",
+    "allYears": "All years",
+    "allScopes": "All scopes",
+    "search": "Search holiday...",
+    "none": "No holidays in this filter."
+  },
+  "suggested": {
+    "title": "Suggested calendar",
+    "pending": "{{count}} to decide",
+    "desc": "National holidays calculated for the country and year. Nothing is applied automatically: apply what you want and dismiss the rest. Items marked \"Check\" depend on government decrees and may change.",
+    "showDismissed": "Show dismissed",
+    "applySelected": "Apply selected ({{count}})",
+    "apply": "Apply",
+    "dismiss": "Dismiss",
+    "restore": "Back to the list",
+    "check": "Check",
+    "past": "Past",
+    "applied_badge": "Applied",
+    "empty": "Nothing to show.",
+    "warnAR": "In Argentina the government decrees bridge holidays every year. Check the official calendar before applying.",
+    "confirmApply": "Apply {{count}} holiday(s) at country level?\n\nThis affects {{classes}} class(es) in total.",
+    "andMore": "… and {{count}} more",
+    "applied": "{{count}} holiday(s) applied.",
+    "error": "Error applying the holidays."
+  },
+  "cityActions": {
+    "refresh": "Add the city units",
+    "upToDate": "All units of this city are already included.",
+    "confirmAdd": "Add {{count}} unit(s) in {{city}} to this holiday?\n\n{{names}}",
+    "done": "{{count}} unit(s) added."
   }
 }

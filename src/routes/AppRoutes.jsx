@@ -7,6 +7,7 @@ import AppLayout from "../layouts/AppLayout";
 import Login from "../pages/login";
 import SolicitarAcesso from "../pages/SolicitarAcesso";
 import AtualizarCadastro from "../pages/AtualizarCadastro";
+import InformarDocumento from "../pages/InformarDocumento";
 import Home from "../pages/home";
 import ConfiguracoesPage from "../app/Configuracoes"; 
 import ValidacaoDiaria from "../app/ValidacaoDiaria"; 
@@ -38,6 +39,9 @@ export default function AppRoutes() {
 
         {/* Login antigo de líder/unidade/mentor: atualização de cadastro obrigatória + conectar o Google */}
         <Route path="/atualizar-cadastro" element={<AtualizarCadastro />} />
+
+        {/* Já com cadastro atualizado, mas sem o documento de identificação: tela obrigatória */}
+        <Route path="/informar-documento" element={<InformarDocumento />} />
 
         {/* Rota do Cronograma Público (Happy Zone) */}
         <Route path="/horarios" element={<PublicSchedule />} />

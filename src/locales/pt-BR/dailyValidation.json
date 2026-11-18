@@ -25,7 +25,11 @@
     "allValidatedDesc": "Parabéns, não há pendências nesta data.",
     "noCancellationsTitle": "Nenhum cancelamento",
     "noClassesTitle": "Nenhuma aula encontrada",
-    "adjustFiltersDesc": "Tente ajustar os filtros ou a data selecionada."
+    "adjustFiltersDesc": "Tente ajustar os filtros ou a data selecionada.",
+    "loadErrorTitle": "Não foi possível carregar as validações",
+    "loadErrorDesc": "O banco recusou a consulta (sem conexão ou limite do dia atingido). Para não validar nada em dobro, a lista fica escondida. Tente de novo mais tarde.",
+    "noLinkedUnitTitle": "Nenhuma unidade vinculada",
+    "noLinkedUnitDesc": "Seu acesso ainda não tem unidade. Peça ao seu mentor para vincular você a uma unidade."
   },
   "card": {
     "unit": "Unidade",
@@ -36,7 +40,8 @@
     "edit": "Editar",
     "cancel": "Cancelar",
     "details": "Detalhes",
-    "waitForDate": "Aguarde a data"
+    "waitForDate": "Aguarde a data",
+    "validateOnHoliday": "Abriu no feriado? Validar"
   },
   "modal": {
     "validateTitle": "Validar Aula",
@@ -91,7 +96,11 @@
     "selectModality": "Selecione a modalidade.",
     "selectDate": "Selecione a data.",
     "informStudentCount": "Informe a quantidade de alunos.",
-    "confirmSubstitute": "Por favor, busque e confirme o professor substituto pelo e-mail."
+    "confirmSubstitute": "Por favor, busque e confirme o professor substituto pelo e-mail.",
+    "confirmHolidayValidation": "Este dia é feriado nesta unidade. Confirma que a unidade abriu e a aula aconteceu?",
+    "alreadyValidated": "validada com {{count}} aluno(s)",
+    "alreadyCanceled": "cancelada ({{motivo}})",
+    "confirmOverwrite": "Outra pessoa já registrou esta aula: {{comoEsta}}. Sua tela estava desatualizada.\n\nGravar o seu registro por cima?"
   },
   "deadline": {
     "closedMonthTeacher": "Este mês já foi fechado. O que ficou para trás não pode mais ser validado ou alterado pelo professor. Se precisar corrigir, fale com o líder da unidade.",

@@ -1,0 +1,106 @@
+{
+  "label": "ID document",
+  "typeLabel": "Document type",
+  "types": {
+    "cpf": "CPF (Brazil)",
+    "dni": "DNI (Argentina)",
+    "ssn": "SSN (United States)"
+  },
+  "short": {
+    "cpf": "CPF",
+    "dni": "DNI",
+    "ssn": "SSN"
+  },
+  "placeholder": {
+    "cpf": "000.000.000-00",
+    "dni": "00.000.000",
+    "ssn": "000-00-0000"
+  },
+  "hint": "Required. It is kept in a protected area: only you, the administrator and your unit mentor can see it.",
+  "errors": {
+    "invalid": "Invalid document. Please check the numbers.",
+    "inUse": "This document is already registered for someone else. If this is a mistake, talk to your mentor.",
+    "save": "Could not save the document. Please try again."
+  },
+  "gate": {
+    "title": "Only your ID document is missing",
+    "desc": "To keep records accurate, we need your ID document (CPF in Brazil, DNI in Argentina, SSN in the United States). After you save, the system opens normally.",
+    "save": "Save and enter",
+    "checking": "Checking your record...",
+    "logout": "Sign out ({{email}})"
+  },
+  "modal": {
+    "title": "Document of {{name}}",
+    "current": "Current document",
+    "none": "Not provided yet",
+    "noAccess": "You do not have permission to see this document.",
+    "save": "Save document",
+    "saved": "Document saved.",
+    "edit": "Document",
+    "cancel": "Close",
+    "auditNew": "ID document provided.",
+    "auditChange": "ID document corrected.",
+    "auditType": "Type: {{type}}"
+  },
+  "search": {
+    "title": "Find a record by document",
+    "placeholder": "Type the document",
+    "button": "Search",
+    "notFound": "No record with this document.",
+    "found": "Record: {{name}}",
+    "unknownName": "Person without a name in the system",
+    "notFoundMentor": "I could not find this document among the people of your units.",
+    "role": {
+      "lider": "Leader",
+      "unidade": "Leader",
+      "mentor": "Mentor",
+      "professor": "Teacher",
+      "admin": "Administrator",
+      "bloqueado": "Blocked"
+    },
+    "request": {
+      "pendente": "Access request pending",
+      "recusado": "Access request refused",
+      "aprovado": "Request approved"
+    },
+    "orphan": "Stuck document, no record or request",
+    "fix": "Fix document",
+    "deleteRequest": "Delete request and free document",
+    "freeDoc": "Free document",
+    "hasBadgeHint": "This person already has access. Fix the document here; to remove access, use the remove button on their tab.",
+    "deleteHint": "Use when the person signed in with the wrong e-mail: the request is removed, the document is freed and they request access again with the right e-mail.",
+    "confirmDelete": "Delete the access request of {{name}} and free the document? The person will be able to request access again.",
+    "confirmFree": "Free this document (record of {{name}})? No person stays linked to it.",
+    "freed": "Done: the document is free to be registered again.",
+    "deleteError": "Could not delete. Try again.",
+    "auditDelete": "Access request deleted and document freed.",
+    "auditFree": "Stuck document freed.",
+    "useAsLeader": "Use this person as leader",
+    "free": "Document is free: you can register.",
+    "alreadyUsed": "This document is already registered:",
+    "orphanMentorHint": "This document is stuck without a record. Ask the administrator to free it.",
+    "registerLeader": "Register as leader",
+    "goToRequest": "Go to the request",
+    "deleteLeader": "Delete record and free document",
+    "deleteLeaderHint": "Removes the person from the units, removes access and frees the document. They can request access again right away. Old classes and validations stay in the history.",
+    "confirmDeleteLeader": "Delete the record of {{name}}? They leave the units, lose access and the document is freed.",
+    "auditDeleteLeader": "Leader record deleted and document freed.",
+    "openInSchedule": "View in the teacher schedule",
+    "deleteTeacher": "Delete access and release ID",
+    "deleteTeacherHint": "Deletes the access (login) and releases the ID, so the person can request access again with the right email. The schedule record, classes and history remain.",
+    "confirmDeleteTeacher": "Delete {{name}}'s access and release the ID? The schedule record and classes remain; they can request access again.",
+    "auditDeleteTeacher": "Teacher access deleted and ID released.",
+    "deleteLeaderError":"Could not delete everything. Check the person's units and try again; if it persists, ask the administrator.",
+    "cannot": {
+      "staff": "This person is an admin or mentor: their access is only removed on the Mentors tab. Here you can fix the document.",
+      "professor": "This person is a teacher: their record is removed on the Teachers tab. Here you can fix the document.",
+      "liderEProfessor": "This person is also a teacher; so they do not lose teacher access, remove only the leader role on the unit (Leaders tab). Here you can fix the document.",
+      "outro": "This person has another kind of access. Here you can fix the document.",
+      "outroMentor": "This person also leads units of another mentor. Here you can fix the document; to delete the record, ask the administrator."
+    }
+  },
+  "invite": {
+    "label": "Document (optional)",
+    "hint": "If you know it, fill it in now. Otherwise the person fills it in at first access."
+  }
+}

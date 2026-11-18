@@ -1,13 +1,12 @@
 {
   "title": "Líderes",
-  "subtitle": "Cada unidade tem 1 líder, que é quem entra no sistema por ela. O líder pede acesso entrando com o Google (os pedidos aparecem aqui em cima) ou você cadastra na mão com e-mail e senha.",
+  "subtitle": "Cada unidade tem até 2 líderes, que entram no sistema por ela, e uma pessoa pode ser líder de várias unidades. O líder pede acesso entrando com o Google (os pedidos aparecem aqui em cima), você escolhe alguém que já tem acesso ou cadastra na mão com e-mail e senha.",
   "new": "Cadastrar líder",
   "register": "Cadastrar",
   "edit": "Editar contato",
   "replace": "Trocar líder",
   "remove": "Remover líder",
   "search": "Buscar unidade, líder, e-mail ou telefone...",
-  "onlyWithout": "Só sem líder",
   "empty": "Nenhuma unidade encontrada.",
   "noLeader": "Sem líder",
   "howTo": "Trocar ou remover o líder tira o acesso dele na hora. Unidades com \"login antigo\" ainda entram com o e-mail da unidade: no próximo acesso o sistema obriga a pessoa a atualizar o cadastro e conectar a conta Google dela, e ela aparece aqui como líder \"a conferir\".",
@@ -49,7 +48,9 @@
     "password": "Senha inicial",
     "passwordHint": "Mínimo de {{min}} caracteres. Passe a senha para o líder.",
     "cancel": "Cancelar",
-    "save": "Salvar"
+    "save": "Salvar",
+    "sectionPerson": "Pessoa e unidade",
+    "sectionAccess": "Documento e acesso"
   },
   "errors": {
     "unit": "Escolha a unidade.",
@@ -57,7 +58,7 @@
     "phone": "Digite o WhatsApp do líder.",
     "email": "E-mail inválido.",
     "password": "A senha precisa ter pelo menos {{min}} caracteres.",
-    "emailInUse": "Este e-mail já tem login no sistema. Use outro e-mail, ou peça para a pessoa entrar com o Google e aprove o pedido.",
+    "emailInUse": "Este e-mail já tem login no sistema (provavelmente a pessoa já entrou com o Google). Peça para ela entrar com o Google com esse e-mail e pedir acesso: o pedido aparece em cima e você aprova. Ou use outro e-mail.",
     "save": "Não foi possível salvar.",
     "remove": "Não foi possível remover o líder.",
     "confirm": "Não foi possível confirmar o líder.",
@@ -69,5 +70,72 @@
   "checkBanner": "{{count}} unidade(s) com líder novo a conferir: a pessoa entrou com o login antigo da unidade e assumiu como líder com a conta Google dela. Confira se é a pessoa certa: confirme ou remova.",
   "assume": "Eu sou o líder",
   "assumeQuestion": "Marcar você como líder da unidade {{unit}}?\n\nSeu acesso continua o mesmo; a unidade só passa a mostrar você como líder.",
-  "assumeReplaceQuestion": "A unidade {{unit}} já tem o líder {{current}}.\n\nMarcar você como líder no lugar? O líder atual perde o acesso."
+  "assumeReplaceQuestion": "A unidade {{unit}} já tem o líder {{current}}.\n\nMarcar você como líder no lugar? O líder atual perde o acesso.",
+  "kpiFilter": "Clique para filtrar a lista",
+  "kpiGoToRequests": "Clique para ver os pedidos",
+  "filter": {
+    "all": "Todas",
+    "with": "Com líder",
+    "without": "Sem líder",
+    "toCheck": "A conferir",
+    "country": "País",
+    "state": "Estado",
+    "mentor": "Mentor",
+    "allCountries": "Todos os países",
+    "allStates": "Todos os estados",
+    "allMentors": "Todos os mentores",
+    "noMentor": "Sem mentor",
+    "clear": "Limpar filtros",
+    "showing": "Mostrando {{count}} de {{total}}"
+  },
+  "promote": {
+    "button": "Escolher líder já cadastrado",
+    "title": "Escolher líder já cadastrado",
+    "help": "Escolha quem já entra no sistema: professor, líder de outra unidade ou mentor. O professor continua professor; o líder de outra unidade passa a cuidar das duas; o mentor/admin continua com o acesso dele.",
+    "person": "Pessoa",
+    "search": "Buscar por nome, e-mail ou CPF...",
+    "reading": "Conferindo o acesso atual...",
+    "now": {
+      "teacher": "hoje é professor.",
+      "leaderNoUnit": "hoje está como líder SEM unidade (não consegue validar). Salvar aqui corrige.",
+      "leaderOf": "hoje é líder de {{unit}}. Continua lá e passa a cuidar também desta unidade.",
+      "sameUnit": "já é líder desta unidade.",
+      "manager": "é admin ou mentor: o acesso dele não muda, a unidade só passa a mostrar essa pessoa como líder."
+    },
+    "confirm": "Tornar {{name}} líder da unidade {{unit}}?",
+    "confirmReplaces": "{{current}} sai desta vaga (se também for professor, volta a ser só professor; se for líder de outras unidades, continua nelas).",
+    "done": "{{name}} agora é líder da unidade {{unit}}.",
+    "save": "Tornar líder",
+    "errors": {
+      "read": "Não foi possível conferir o acesso desta pessoa.",
+      "noLogin": "esse professor não tem login no sistema. Crie o login na aba Professores primeiro.",
+      "blocked": "está com o acesso bloqueado. Desbloqueie em Controle de Acessos antes.",
+      "otherRole": "tem um nível de acesso diferente ({{role}}). Ajuste em Controle de Acessos antes.",
+      "save": "Não foi possível tornar líder.",
+      "noTeacherLink": "não foi possível achar o cadastro de professor desta pessoa."
+    },
+    "pick": "Já cadastrado",
+    "titleSecond": "Adicionar 2º líder",
+    "helpSecond": "O 2º líder tem os mesmos poderes do 1º. Escolha quem já entra no sistema: professor, líder de outra unidade ou mentor. O líder de outra unidade passa a cuidar das duas.",
+    "noPeople": "Ninguém encontrado.",
+    "tag": {
+      "teacher": "Professor",
+      "leader": "Líder",
+      "mentor": "Mentor"
+    },
+    "confirmSecond": "Adicionar {{name}} como 2º líder da unidade {{unit}}?",
+    "replaceWarning": "Esta vaga já é de {{name}}. Ao salvar, ele sai e a pessoa escolhida entra.",
+    "doneSecond": "{{name}} agora é o 2º líder da unidade {{unit}}.",
+    "tagAll": "Todos",
+    "registerNew": "Cadastrar novo",
+    "docSearching": "Procurando este documento...",
+    "docNoAccess": "Este documento existe, mas a pessoa ainda não tem acesso ao sistema (só um pedido ou cadastro incompleto). Use a busca por documento para excluir ou cadastrar.",
+    "docFree": "Nenhuma pessoa com este documento. Use \"Cadastrar novo\" para cadastrá-la."
+  },
+  "second": {
+    "badge": "2º líder",
+    "add": "2º líder",
+    "addHint": "Adicionar um 2º líder nesta unidade (alguém que já tem acesso)",
+    "remove": "Remover o 2º líder"
+  }
 }

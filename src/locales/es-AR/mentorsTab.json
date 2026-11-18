@@ -13,6 +13,8 @@
   "emptyState": "No se encontró ningún mentor.",
   "restricted": "Acceso Restringido: Solo Administradores.",
   "table": {
+    "access": "Acceso",
+    "neverSeen": "Sin registro",
     "name": "Mentor",
     "email": "Correo",
     "phone": "WhatsApp",
@@ -84,5 +86,24 @@
     "pendingHelp": "Mentores que ya registraste. Apenas cada uno entre con Google usando el correo de abajo, aparece en la lista de mentores.",
     "googleEmail": "Correo de Google del mentor",
     "googleEmailHelp": "Sin contraseña: el mentor entra con el botón \"Entrar con Google\" usando exactamente este correo. Tu registro ya es la aprobación."
+  },
+  "linked": {
+    "column": "Unidades",
+    "manage": "Gestionar unidades de este mentor",
+    "title": "Unidades de {{name}}",
+    "help": "Quitar o agregar aquí vale igual en la pestaña Unidades: es el mismo vínculo.",
+    "current": "Vinculadas ({{count}})",
+    "none": "Ninguna unidad vinculada.",
+    "remove": "Quitar",
+    "chooseNew": "¿A qué mentor pasa?",
+    "confirmMove": "Confirmar",
+    "add": "Agregar unidad",
+    "search": "Buscar unidad o provincia...",
+    "addButton": "Vincular",
+    "ofMentor": "hoy de {{name}}",
+    "noMentor": "sin mentor",
+    "noResults": "Ninguna unidad encontrada.",
+    "confirmTake": "La unidad {{unit}} hoy es de {{from}}. ¿Pasar a {{to}}?",
+    "saveError": "No se pudo guardar."
   }
 }

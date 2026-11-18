@@ -1,0 +1,416 @@
+{
+  "voltar": "Volver",
+  "voltarPara": "Volver a {{destino}}",
+  "copiar": "Copiar",
+  "copiado": "¡Copiado!",
+  "whatsapp": "Abrir en WhatsApp",
+  "emBreve": "Próximamente",
+  "abrirTelaCompleta": "Abrir la pantalla completa",
+  "carregando": "Cargando...",
+  "naoCarregou": "No se cargó. Cerrá y abrí la ficha de nuevo.",
+  "comparacao": "Comparado con las mismas fechas del mes pasado",
+  "periodo": "Período",
+  "naoInformado": "No informado",
+  "infoPrincipais": "Información principal",
+  "situacao": "Situación",
+  "ativo": "Activo",
+  "inativo": "Inactivo",
+  "verTudo": "Ver todo",
+  "pendencias": "Pendientes",
+  "aValidar7dias": "A validar (7 días)",
+  "aulasAValidar": "{{n}} clase(s) a validar",
+  "aulasNaSemana": "Clases por semana",
+  "horariosNaGrade": "{{n}} horarios en la grilla",
+  "semAulaNaGrade": "Ninguna clase en la grilla",
+  "semAulaNoPeriodo": "Ninguna clase validada en el período",
+  "ultimoAcesso": "Último acceso:",
+  "ultimoAcessoRotulo": "Último acceso",
+  "acessoSenha": "Entra con e-mail y contraseña",
+  "acessoGoogle": "Entra con Google",
+  "desde": "desde {{data}}",
+  "aguardandoConferencia": "Esperando verificación",
+  "editarNasConfiguracoes": "Editar en Configuración",
+  "valores": {
+    "trimestreTitulo": "Evolución del trimestre",
+    "professoresTitulo": "Pago de los profesores en el período",
+    "investidoNoMes": "Valor invertido en el mes",
+    "porAula": "{{valor}} por clase",
+    "realizadasNoMes": "{{n}} clases realizadas en el mes",
+    "aulasEAlunos": "{{aulas}} clases · {{alunos}} alumnos",
+    "detalheProfessor": "{{aulas}} clases dadas · promedio de {{media}} alumnos · {{porAula}} por clase",
+    "detalheUnidade": "{{aulas}} clases realizadas · promedio de {{media}} alumnos · {{porAula}} por clase",
+    "ateHoje": "Hasta hoy"
+  },
+  "abrirFicha": {
+    "unidade": "Abrir la ficha de la sede",
+    "professor": "Abrir la ficha del profesor",
+    "mentor": "Abrir la ficha del mentor",
+    "lider": "Abrir la ficha del líder"
+  },
+  "papel": {
+    "unidade": "Sede",
+    "mentor": "Mentor",
+    "lider": "Líder",
+    "professor": "Profesor"
+  },
+  "selos": {
+    "faltam": "Faltan {{n}}",
+    "tudoEmDia": "Todo al día",
+    "soConsulta": "Solo consulta"
+  },
+  "abas": {
+    "geral": "Visión general",
+    "panorama": "Panorama",
+    "valores": "Valores",
+    "equipe": "Equipo",
+    "unidades": "Sedes",
+    "aulas": "Clases",
+    "cadastro": "Registro"
+  },
+  "cadastro": {
+    "nome": "Nombre",
+    "email": "E-mail",
+    "telefone": "Teléfono",
+    "pais": "País",
+    "acesso": "Acceso al sistema",
+    "cpf": "CPF"
+  },
+  "emDia": {
+    "titulo": "¿Está todo al día?",
+    "ok": "Al día"
+  },
+  "professores": {
+    "titulo": "Profesores",
+    "nome": "Profesor",
+    "contato": "Contacto",
+    "unidades": "Sedes",
+    "aulasSemana": "Clases por semana",
+    "aulasDadas": "Clases dadas en el período",
+    "recebeu": "Cobró en el período",
+    "situacao": "Situación",
+    "semContato": "Sin contacto"
+  },
+  "avisos": {
+    "naoEncontrado": "No encontré ese registro.",
+    "unidadeForaDoEscopo": "Esa sede no está entre las tuyas.",
+    "unidadeSemLider": "Esa sede todavía no tiene líder.",
+    "semAcesso": "No tenés acceso a esa ficha."
+  },
+  "unidade": {
+    "rotulo": "Central de la Sede",
+    "selos": {
+      "ativa": "Activa",
+      "inativa": "Inactiva"
+    },
+    "info": {
+      "mentor": "Mentor: {{nome}}",
+      "lider": "Líder: {{nome}}",
+      "semMentor": "Sin mentor",
+      "semLider": "Sin líder",
+      "semTelefone": "Sede sin teléfono",
+      "liderSemTelefone": "Líder sin teléfono",
+      "mentorSemTelefone": "Mentor sin teléfono"
+    },
+    "acoes": {
+      "cronograma": "Cronograma",
+      "linkAluno": "Link del alumno"
+    },
+    "cartoes": {
+      "professores": {
+        "titulo": "Profesores activos",
+        "frase": "{{n}} vinculados a la sede",
+        "vazio": "Ningún profesor activo"
+      },
+      "alunos": {
+        "titulo": "Alumnos en el mes",
+        "frase": "Promedio de {{media}} por clase · {{n}} clases"
+      },
+      "equipe": "Líder y mentor"
+    },
+    "abas": {
+      "professores": "Profesores",
+      "grade": "Grilla de clases",
+      "equipe": "Mentor y Líder",
+      "config": "Configuración"
+    },
+    "geral": {
+      "local": "Ubicación",
+      "endereco": "Dirección",
+      "metragem": "Sala de colectivas",
+      "m2": "{{n}} m²"
+    },
+    "resumo": {
+      "titulo": "Números del período",
+      "valor": "Valor invertido",
+      "valorFrase": "Pagado en clases realizadas",
+      "custoMedio": "Costo promedio por clase",
+      "custoMedioFrase": "Valor invertido ÷ clases realizadas",
+      "ocupacao": "Tasa de ocupación",
+      "ocupacaoFrase": "Promedio de alumnos ÷ capacidad de la sala",
+      "ocupacaoSemMetragem": "Faltan los metros de la sala",
+      "vacancia": "Tasa de vacancia",
+      "vacanciaFrase": "Horarios libres en la grilla (lun a vie)",
+      "realizadas": "Clases realizadas",
+      "alunos": "Alumnos",
+      "media": "Promedio por clase"
+    },
+    "emDia": {
+      "itens": {
+        "lider": {
+          "titulo": "Líder registrado",
+          "falta": "La sede todavía no tiene líder.",
+          "acao": "Registrar líder"
+        },
+        "liderConferido": {
+          "titulo": "Líder verificado",
+          "falta": "El líder asumió solo y todavía no fue verificado.",
+          "acao": "Verificar líder"
+        },
+        "liderTelefone": {
+          "titulo": "Teléfono del líder",
+          "falta": "El líder no tiene teléfono en el registro.",
+          "acao": "Completar registro"
+        },
+        "mentor": {
+          "titulo": "Mentor definido",
+          "falta": "La sede está sin mentor.",
+          "acao": "Definir mentor"
+        },
+        "telefone": {
+          "titulo": "Teléfono de la sede",
+          "falta": "La sede está sin teléfono.",
+          "acao": "Informar teléfono"
+        },
+        "endereco": {
+          "titulo": "Dirección y mapa",
+          "falta": "Sin dirección: el alumno no ve dónde queda la sede.",
+          "acao": "Informar dirección"
+        },
+        "metragem": {
+          "titulo": "Tamaño de la sala",
+          "falta": "Sin los metros cuadrados no se puede calcular la tasa de ocupación.",
+          "acao": "Informar metros"
+        },
+        "grade": {
+          "titulo": "Grilla de clases",
+          "falta": "La sede no tiene ninguna clase en la grilla.",
+          "acao": "Abrir el cronograma"
+        },
+        "aulasSemProfessor": {
+          "titulo": "Clases con profesor activo",
+          "falta": "{{n}} clase(s) sin profesor o con profesor inactivo.",
+          "acao": "Abrir el cronograma"
+        },
+        "validacoes": {
+          "titulo": "Clases validadas",
+          "falta": "{{n}} clase(s) de los últimos 7 días sin validar.",
+          "acao": "Validar ahora"
+        },
+        "loginAntigo": {
+          "titulo": "Login antiguo apagado",
+          "falta": "El login antiguo de la sede todavía funciona.",
+          "acao": "Apagar login antiguo"
+        }
+      }
+    },
+    "professores": {
+      "titulo": "Profesores de la sede",
+      "vazio": "Ningún profesor vinculado a esta sede."
+    },
+    "grade": {
+      "titulo": "Grilla de clases",
+      "vazio": "Ninguna clase en la grilla de esta sede."
+    },
+    "equipe": {
+      "titulo": "Mentor y Líder"
+    },
+    "config": {
+      "titulo": "Registro de la sede",
+      "estado": "Provincia",
+      "mapa": "Mapa",
+      "abrirMapa": "Abrir en el mapa",
+      "loginAntigo": "Login antiguo de la sede",
+      "loginAntigoNaoTem": "No tiene",
+      "loginAntigoDesligado": "Apagado",
+      "loginAntigoLigado": "Todavía encendido"
+    }
+  },
+  "lider": {
+    "rotulo": "Central del Líder",
+    "abrirUnidade": "Abrir la sede",
+    "liderDesde": "Líder desde",
+    "conferencia": "Verificación",
+    "conferido": "Verificado",
+    "cadastroTitulo": "Registro del líder",
+    "cartoes": {
+      "professores": "Profesores de la sede"
+    },
+    "emDia": {
+      "telefone": {
+        "titulo": "Teléfono del líder",
+        "falta": "El líder no tiene teléfono en el registro.",
+        "acao": "Completar registro"
+      },
+      "conferido": {
+        "titulo": "Registro verificado",
+        "falta": "Asumió solo y todavía no fue verificado por el mentor.",
+        "acao": "Verificar líder"
+      },
+      "loginAntigo": {
+        "titulo": "Login antiguo apagado",
+        "falta": "El login antiguo de la sede todavía funciona.",
+        "acao": "Apagar login antiguo"
+      },
+      "aulasSemProfessor": {
+        "titulo": "Clases con profesor activo",
+        "falta": "{{n}} clase(s) sin profesor o con profesor inactivo.",
+        "acao": "Abrir el cronograma"
+      },
+      "validacoes": {
+        "titulo": "Clases validadas",
+        "falta": "{{n}} clase(s) de los últimos 7 días sin validar.",
+        "acao": "Validar ahora"
+      }
+    },
+    "unidadesQueLidera": "Unidades que lidera",
+    "estaFicha": "En esta ficha",
+    "verNumeros": "Ver números",
+    "lideraN": "Lidera {{n}} unidades"
+  },
+  "mentor": {
+    "rotulo": "Central del Mentor",
+    "nUnidades": "{{n}} sede(s)",
+    "lideresDe": "{{n}} de {{total}} sedes",
+    "unidadesTitulo": "Sedes del mentor",
+    "lideresTitulo": "Líderes de las sedes",
+    "professoresTitulo": "Profesores de las sedes",
+    "cadastroTitulo": "Registro del mentor",
+    "cadastroDaUnidade": "Registro de la sede",
+    "semUnidades": "Ninguna sede con este mentor.",
+    "semLideres": "Ninguna sede tiene líder todavía.",
+    "semProfessores": "Ningún profesor vinculado a las sedes.",
+    "loginAntigo": "Todavía con el login antiguo (e-mail y contraseña)",
+    "gastoPorUnidadeTitulo": "Cuánto gastó cada sede en el mes",
+    "totalDoMes": "Total de las sedes en el mes:",
+    "cartoes": {
+      "gasto": "Gasto en el mes",
+      "gastoAbrir": "Hacé clic para cargar los valores",
+      "gastoFrase": "Suma de sus sedes",
+      "unidadesFrase": "Bajo su responsabilidad",
+      "professores": "Profesores activos",
+      "professoresFrase": "{{n}} vinculados a las sedes",
+      "lideres": "Líderes",
+      "semLider": "{{n}} sede(s) sin líder",
+      "todasComLider": "Todas las sedes tienen líder"
+    },
+    "emDia": {
+      "ativo": {
+        "titulo": "Registro activo",
+        "falta": "El mentor está inactivo en el sistema.",
+        "acao": "Abrir mentores"
+      },
+      "telefone": {
+        "titulo": "Teléfono del mentor",
+        "falta": "El mentor no tiene teléfono en el registro.",
+        "acao": "Informar teléfono"
+      },
+      "loginGoogle": {
+        "titulo": "Login personal (Google)",
+        "falta": "Todavía no cambió el login antiguo por Google. El cambio lo hace él al entrar.",
+        "acao": "Abrir mentores"
+      },
+      "unidades": {
+        "titulo": "Tiene sedes",
+        "falta": "Ninguna sede está con este mentor.",
+        "acao": "Abrir sedes"
+      },
+      "semLider": {
+        "titulo": "Sedes con líder",
+        "falta": "{{n}} sede(s) sin líder.",
+        "acao": "Registrar líderes"
+      },
+      "lideresAConferir": {
+        "titulo": "Líderes verificados",
+        "falta": "{{n}} líder(es) esperando verificación.",
+        "acao": "Verificar líderes"
+      },
+      "validacoes": {
+        "titulo": "Clases validadas",
+        "falta": "{{n}} clase(s) de los últimos 7 días sin validar en sus sedes.",
+        "acao": "Validar ahora"
+      }
+    }
+  },
+  "professor": {
+    "rotulo": "Central del Profesor",
+    "nUnidades": "{{n}} sedes",
+    "semUnidade": "Sin sede vinculada",
+    "semTelefone": "Profesor sin teléfono",
+    "semEmail": "Profesor sin e-mail",
+    "semAulas": "Ninguna clase en la grilla con este profesor.",
+    "semLogin": "Sin login creado",
+    "loginCriado": "Login creado",
+    "vinculo": "Vínculo",
+    "numerosTitulo": "Clases dadas en el período",
+    "aulasDadas": "Clases dadas",
+    "aReceber": "A cobrar",
+    "aReceberFrase": "Suma de las clases que dio",
+    "modalidades": "Modalidades",
+    "porUnidadeTitulo": "Cuánto ganó en cada sede en el período",
+    "ultimasTitulo": "Últimas clases dadas",
+    "semAulaRecente": "Ninguna clase dada desde {{data}}",
+    "data": "Fecha",
+    "modalidade": "Modalidad",
+    "valor": "Valor",
+    "substituicao": "Reemplazo",
+    "aulao": "Clase especial",
+    "cadastradoEm": "Registrado el",
+    "gradeTitulo": "Grilla del profesor",
+    "unidadesTitulo": "Sedes del profesor",
+    "cadastroTitulo": "Registro del profesor",
+    "cartoes": {
+      "aReceber": "A cobrar en el mes",
+      "ultimaAula": "Última clase dada",
+      "aulasNoPeriodo": "{{n}} clase(s) dada(s) en el período",
+      "umaUnidade": "Sede vinculada",
+      "cadastro": "Situación del registro"
+    },
+    "emDia": {
+      "ativo": {
+        "titulo": "Registro activo",
+        "falta": "El profesor está inactivo en el sistema.",
+        "acao": "Abrir profesores"
+      },
+      "telefone": {
+        "titulo": "Teléfono (WhatsApp)",
+        "falta": "Sin teléfono válido en el registro.",
+        "acao": "Informar teléfono"
+      },
+      "email": {
+        "titulo": "E-mail",
+        "falta": "Sin e-mail en el registro.",
+        "acao": "Informar e-mail"
+      },
+      "login": {
+        "titulo": "Login en el sistema",
+        "falta": "Todavía no tiene login para validar sus propias clases.",
+        "acao": "Abrir profesores"
+      },
+      "vinculo": {
+        "titulo": "Vínculo con sede",
+        "falta": "No tiene vínculo activo con ninguna sede.",
+        "acao": "Vincular a una sede"
+      },
+      "grade": {
+        "titulo": "Clases en la grilla",
+        "falta": "No tiene ninguna clase en la grilla.",
+        "acao": "Abrir el cronograma"
+      },
+      "validacoes": {
+        "titulo": "Clases del mes validadas",
+        "falta": "{{n}} clase(s) suyas este mes sin validar.",
+        "acao": "Abrir la validación"
+      }
+    }
+  }
+}

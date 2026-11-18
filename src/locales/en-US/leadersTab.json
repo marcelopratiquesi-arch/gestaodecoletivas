@@ -1,13 +1,12 @@
 {
   "title": "Leaders",
-  "subtitle": "Each location has 1 leader, who is the person that signs in for it. The leader requests access by signing in with Google (requests show up here at the top) or you register them manually with e-mail and password.",
+  "subtitle": "Each unit has up to 2 leaders, who access the system for it, and one person can lead several units. A leader requests access by signing in with Google (requests show up above), you pick someone who already has access, or you register them by hand with e-mail and password.",
   "new": "Register leader",
   "register": "Register",
   "edit": "Edit contact",
   "replace": "Replace leader",
   "remove": "Remove leader",
   "search": "Search location, leader, e-mail or phone...",
-  "onlyWithout": "Only without leader",
   "empty": "No locations found.",
   "noLeader": "No leader",
   "howTo": "Replacing or removing a leader revokes their access immediately. Units with a \"legacy login\" still sign in with the unit e-mail: on the next sign-in the system requires the person to update their profile and connect their Google account, and they show up here as a leader \"to review\".",
@@ -49,7 +48,9 @@
     "password": "Initial password",
     "passwordHint": "At least {{min}} characters. Share the password with the leader.",
     "cancel": "Cancel",
-    "save": "Save"
+    "save": "Save",
+    "sectionPerson": "Person and unit",
+    "sectionAccess": "Document and access"
   },
   "errors": {
     "unit": "Choose the location.",
@@ -57,7 +58,7 @@
     "phone": "Enter the leader's WhatsApp.",
     "email": "Invalid e-mail.",
     "password": "The password must have at least {{min}} characters.",
-    "emailInUse": "This e-mail already has a login. Use another e-mail, or ask the person to sign in with Google and approve the request.",
+    "emailInUse": "This e-mail already has a login (the person probably already signed in with Google). Ask them to sign in with Google using this e-mail and request access: the request shows up on top and you approve it. Or use another e-mail.",
     "save": "Could not save.",
     "remove": "Could not remove the leader.",
     "confirm": "Could not confirm the leader.",
@@ -69,5 +70,72 @@
   "checkBanner": "{{count}} unit(s) with a new leader to review: the person signed in with the old unit login and took over as leader with their Google account. Check that it is the right person: confirm or remove.",
   "assume": "I am the leader",
   "assumeQuestion": "Set yourself as leader of {{unit}}?\n\nYour access stays the same; the unit will just show you as its leader.",
-  "assumeReplaceQuestion": "{{unit}} already has the leader {{current}}.\n\nSet yourself as leader instead? The current leader loses access."
+  "assumeReplaceQuestion": "{{unit}} already has the leader {{current}}.\n\nSet yourself as leader instead? The current leader loses access.",
+  "kpiFilter": "Click to filter the list",
+  "kpiGoToRequests": "Click to see the requests",
+  "filter": {
+    "all": "All",
+    "with": "With leader",
+    "without": "Without leader",
+    "toCheck": "To check",
+    "country": "Country",
+    "state": "State",
+    "mentor": "Mentor",
+    "allCountries": "All countries",
+    "allStates": "All states",
+    "allMentors": "All mentors",
+    "noMentor": "No mentor",
+    "clear": "Clear filters",
+    "showing": "Showing {{count}} of {{total}}"
+  },
+  "promote": {
+    "button": "Pick an existing user as leader",
+    "title": "Pick an existing user as leader",
+    "help": "Pick someone who already uses the system: teacher, leader of another unit or mentor. A teacher stays a teacher; a leader of another unit will lead both; a mentor/admin keeps their access.",
+    "person": "Person",
+    "search": "Search by name, e-mail or document...",
+    "reading": "Checking current access...",
+    "now": {
+      "teacher": "is currently a teacher.",
+      "leaderNoUnit": "is currently a leader WITHOUT a location (cannot validate). Saving here fixes it.",
+      "leaderOf": "currently leads {{unit}}. They stay there and will also lead this unit.",
+      "sameUnit": "already leads this unit.",
+      "manager": "is an admin or mentor: their access doesn't change; the unit just shows them as leader."
+    },
+    "confirm": "Make {{name}} leader of {{unit}}?",
+    "confirmReplaces": "{{current}} leaves this spot (a teacher goes back to being only a teacher; a leader of other units stays there).",
+    "done": "{{name}} now leads {{unit}}.",
+    "save": "Make leader",
+    "errors": {
+      "read": "Could not check this person's access.",
+      "noLogin": "this teacher has no login. Create the login in the Teachers tab first.",
+      "blocked": "has blocked access. Unblock it in Access Control first.",
+      "otherRole": "has a different access level ({{role}}). Adjust it in Access Control first.",
+      "save": "Could not make leader.",
+      "noTeacherLink": "couldn't find this person's teacher record."
+    },
+    "pick": "Existing user",
+    "titleSecond": "Add 2nd leader",
+    "helpSecond": "The 2nd leader has the same permissions as the 1st. Pick someone who already uses the system: teacher, leader of another unit or mentor. A leader of another unit will lead both.",
+    "noPeople": "Nobody found.",
+    "tag": {
+      "teacher": "Teacher",
+      "leader": "Leader",
+      "mentor": "Mentor"
+    },
+    "confirmSecond": "Add {{name}} as 2nd leader of {{unit}}?",
+    "replaceWarning": "This spot belongs to {{name}}. When you save, they leave and the chosen person takes over.",
+    "doneSecond": "{{name}} is now the 2nd leader of {{unit}}.",
+    "tagAll": "All",
+    "registerNew": "Register new",
+    "docSearching": "Looking for this document...",
+    "docNoAccess": "This document exists, but the person has no access yet (only a request or incomplete record). Use the document search to delete or register.",
+    "docFree": "No person with this document. Use \"Register new\" to register them."
+  },
+  "second": {
+    "badge": "2nd leader",
+    "add": "2nd leader",
+    "addHint": "Add a 2nd leader to this unit (someone who already has access)",
+    "remove": "Remove the 2nd leader"
+  }
 }

@@ -35,5 +35,118 @@
   "chooseCollections": "Elegí qué restaurar. El límite gratuito es de 20.000 escrituras por día: restaurá en partes si hace falta.",
   "selectedTotal": "Seleccionado: {{total}} documentos",
   "writeQuotaWarning": "Supera el límite gratuito de {{limit}} escrituras por día: la restauración se va a cortar a la mitad. Desmarcá algunas colecciones y restaurá el resto mañana.",
-  "restoreSelected": "Restaurar seleccionadas"
+  "restoreSelected": "Restaurar seleccionadas",
+  "duplicates": {
+    "title": "Informe de repetidos",
+    "desc": "Muestra quién aparece repetido entre profesores de la grilla, credenciales y pedidos de acceso. Separa la misma persona con varias fichas (sugiere unir), personas distintas con el mismo teléfono (alerta) y nombres iguales sin nada más en común (solo información). Solo lee, no graba nada. Lee las credenciales y pedidos una vez (unos pocos cientos de lecturas).",
+    "generate": "Generar informe",
+    "regenerate": "Generar de nuevo",
+    "download": "Descargar planilla",
+    "error": "No se pudieron leer las credenciales y solicitudes (cuota agotada o sin conexión). Intentá de nuevo más tarde.",
+    "none": "Ningún caso en esta lista.",
+    "readSummary": "{{teachers}} profesores de la grilla (ya cargados, sin lecturas) + {{reads}} credenciales y solicitudes leídas ahora.",
+    "people_one": "{{count}} persona",
+    "people_other": "{{count}} personas",
+    "types": {
+      "email": "Correo repetido",
+      "telefone": "Teléfono repetido",
+      "nome": "Nombre repetido",
+      "emailDeMentira": "Correo falso",
+      "emailInvalido": "Correo inválido",
+      "telefoneInvalido": "Teléfono inválido",
+      "loginAntigo": "Accesos antiguos (no cuentan)",
+      "mesma": "Misma persona en varias fichas (unir)",
+      "outra": "Mismo teléfono, personas distintas",
+      "soNome": "Solo el nombre es igual (quizás homónimo)"
+    },
+    "origin": {
+      "professor": "Profesor de la grilla",
+      "cracha": "Credencial",
+      "pedido": "Solicitud de acceso",
+      "loginAntigo": "Acceso antiguo"
+    },
+    "requestStatus": {
+      "pendente": "pendiente",
+      "aprovado": "aprobada",
+      "recusado": "rechazada"
+    },
+    "sheet": {
+      "duplicates": "Repetidos",
+      "problems": "Datos con problemas",
+      "type": "Tipo",
+      "value": "Valor",
+      "origin": "Origen",
+      "name": "Nombre",
+      "email": "Correo",
+      "phone": "Teléfono",
+      "detail": "Rol / estado",
+      "unit": "Unidad",
+      "id": "Id"
+    },
+    "cards_one": "{{count}} ficha",
+    "cards_other": "{{count}} fichas"
+  },
+  "merge": {
+    "button": "Unir fichas ({{count}})",
+    "title": "Unir fichas de la grilla",
+    "desc": "Marcá las fichas que son la MISMA persona y elegí la que queda. Clases, unidades, validaciones y pagos de las otras pasan a ella, y las otras fichas se borran.",
+    "include": "Incluir en la unión",
+    "keep": "Queda esta",
+    "units": "Unidades: {{list}}",
+    "noUnits": "Sin unidad",
+    "hasLogin": "tiene acceso vinculado",
+    "check": "Revisar qué cambia",
+    "confirm": "Unir ahora",
+    "close": "Cerrar",
+    "summaryTitle": "Todo pasa a la ficha de {{name}}:",
+    "sumClasses": "Clases de la grilla movidas: {{count}}",
+    "sumUnits": "Unidades movidas: {{moved}} (vínculos repetidos quitados: {{dup}})",
+    "sumValidations": "Validaciones y pagos movidos: {{count}}",
+    "sumBadges": "Credenciales revinculadas: {{count}}",
+    "sumSummaries": "Cierre del mes rehecho al abrir los informes: {{list}}",
+    "sumFill": "Datos faltantes que se completarán: {{list}}",
+    "sumDelete": "Fichas borradas después de mover todo: {{count}}",
+    "keepField": {
+      "nome": "Nombre que queda",
+      "email": "Correo que queda",
+      "telefone": "Teléfono que queda"
+    },
+    "keeps": "Queda así: {{name}} · {{email}} · {{phone}}",
+    "sumDocument": "El documento (CPF/DNI/SSN) pasa a la ficha que queda",
+    "documentConflict": "Estas fichas tienen documentos DISTINTOS: son personas distintas y no se pueden unir.",
+    "cost": "Lecturas hechas ahora: {{reads}} · escrituras al unir: {{writes}}",
+    "done": "¡Listo! Las fichas se unieron en la de {{name}}.",
+    "readError": "No se pudo revisar (cuota agotada o sin conexión). Intentá de nuevo más tarde.",
+    "writeError": "La unión se detuvo a mitad (cuota o conexión). No se pierde nada: revisá y uní de nuevo para terminar."
+  },
+  "link": {
+    "button": "Vincular a la credencial",
+    "title": "Vincular ficha a la credencial",
+    "desc": "La misma persona tiene ficha en la grilla y credencial de acceso (ej.: líder que da clases), pero no están vinculadas. Elegí la ficha y su credencial. No se borra nada.",
+    "teacherRecord": "Ficha de la grilla",
+    "badge": "Credencial",
+    "badgeHasOther": "Esta credencial ya está vinculada a otra ficha de la grilla. Uní las fichas primero (botón Unir fichas) y después vinculá.",
+    "recordHasOther": "Esta ficha está vinculada a otro acceso (probablemente el antiguo). Al vincular, pasa a usar esta credencial.",
+    "confirm": "Vincular",
+    "done": "¡Listo! La ficha de {{name}} está vinculada a la credencial.",
+    "error": "No se pudo vincular (cuota agotada o sin conexión). Intentá de nuevo.",
+    "documentConflict": "La ficha y la credencial tienen documentos DISTINTOS: son personas distintas. No se vinculó.",
+    "copiedDocument": "El documento del acceso se copió a la ficha.",
+    "keepField": {
+      "nome": "Nombre que queda",
+      "email": "Correo que queda",
+      "telefone": "Teléfono que queda"
+    },
+    "whatHappens": "Al vincular: la ficha pasa a usar este acceso (el acceso antiguo, si existe, deja de valer para ella), la credencial apunta a la ficha y el documento del acceso va a la ficha. Clases, unidades, validaciones y nombre siguen igual.",
+    "leaderEffect": "Esta credencial es de líder/mentor. Vinculada a la ficha, la persona pasa a ser 'líder que también es profesor(a)': si algún día deja el liderazgo, sigue con acceso de profesor(a). Vinculá solo si da (o dio) clases con esta ficha."
+  },
+  "dupBadge": {
+    "other_one": "Mismo teléfono de otra persona",
+    "other_other": "Mismo teléfono de {{count}} personas más",
+    "same_one": "Misma persona en {{count}} fichas",
+    "same_other": "Misma persona en {{count}} fichas",
+    "otherHint": "Revisá: puede ser un error de tipeo o familia. No son la misma persona.",
+    "sameHint": "Parece ser la misma persona en varias fichas:",
+    "merge": "Unir fichas"
+  }
 }

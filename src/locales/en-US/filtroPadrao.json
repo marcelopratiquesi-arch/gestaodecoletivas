@@ -1,0 +1,16 @@
+{
+  "search": "Search by name, e-mail or phone...",
+  "country": "Country",
+  "state": "State",
+  "mentor": "Mentor",
+  "unit": "Unit",
+  "allUnits": "All units",
+  "leader": "Leader",
+  "allCountries": "All countries",
+  "allStates": "All states",
+  "allMentors": "All mentors",
+  "noMentor": "No mentor",
+  "allLeaders": "All leaders",
+  "clear": "Clear filters",
+  "showing": "Showing {{count}} of {{total}}"
+}
