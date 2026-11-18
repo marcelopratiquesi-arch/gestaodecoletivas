@@ -87,7 +87,8 @@
       "selectDay": "Selecione pelo menos um dia da semana para a aula!",
       "noRetroactive": "ERRO DE INTEGRIDADE: A Data de Início não pode ser retroativa!",
       "saved": "AULA CADASTRADA COM SUCESSO!",
-      "saveError": "Erro ao salvar aula no banco de dados."
+      "saveError": "Erro ao salvar aula no banco de dados.",
+      "valueRequired": "❌ Informe o valor da aula (maior que zero)."
     }
   },
   "floating": {

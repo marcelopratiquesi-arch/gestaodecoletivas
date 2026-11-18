@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 import { Inbox, Check, X, Loader2, Building2, Phone, Mail, User, Clock, ShieldCheck, Dumbbell, UserMinus, Undo2 } from "lucide-react";
 import { db } from "../../../services/firebase";
 import { registrarAuditoriaAcesso } from "../../../services/auditoriaAcessos";
+import { liberarDocumentoDoPedido } from "../../../services/documentoService";
 import { publicarUnidades } from "../../../services/vitrinePublica";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useCatalogs } from "../../../contexts/CatalogContext";
@@ -233,6 +234,7 @@ export function PendenciasTab() {
         status: "recusado", motivo: motivo.trim(),
         analisadoPor: userId, analisadoPorNome: meuNome, analisadoEm: serverTimestamp(),
       });
+      await liberarDocumentoDoPedido(p.id); // libera o CPF: a pessoa pode pedir de novo
       await registrarAuditoria("ALTERADA", "Pedido de acesso recusado.", p.unidadeNome, motivo.trim() ? `Motivo: ${motivo.trim()}` : "", p);
     } catch (e) {
       console.error(e);

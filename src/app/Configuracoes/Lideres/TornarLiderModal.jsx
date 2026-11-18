@@ -4,11 +4,14 @@
 //   se um dia deixar de ser líder, volta a ser só professor;
 // - líder de outra unidade: passa a cuidar das duas (não sai da outra);
 // - mentor ou admin: o acesso dele não muda; a unidade só passa a mostrar essa pessoa como líder.
-import { useMemo, useState } from "react";
-import { doc, getDoc, writeBatch } from "firebase/firestore";
+import { useEffect, useMemo, useState } from "react";
+import { doc, getDoc, serverTimestamp, writeBatch } from "firebase/firestore";
 import { useTranslation } from "react-i18next";
+import { CabecalhoDoModal } from "../ui/CabecalhoDoModal";
 import { X, Check, Loader2, Search, UserCog, UserPlus, AlertTriangle } from "lucide-react";
 import { db } from "../../../services/firebase";
+import { acharDonoDoDocumento } from "../../../services/documentoService";
+import { documentoValido, TIPOS_DOCUMENTO } from "../../../utils/documento";
 import { ehLider, liderMantemAcesso, unidadesDoLider } from "../../../permissions";
 import { professorDoLogin, tirarLiderDaUnidade, crachaAoEntrar, dadosDaVaga, textoDaSaida } from "./saidaDoLider";
 
@@ -22,6 +25,8 @@ export function TornarLiderModal({ unidades, todasUnidades, professores, mentore
   const [lendo, setLendo] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState("");
+  // Digitou um CPF/DNI/SSN válido na busca? Acha o dono do documento (null = nenhum; "buscando" enquanto confere).
+  const [donoDoc, setDonoDoc] = useState(null);
 
   const nomeDaUnidade = (id) => (todasUnidades.find((u) => String(u.id) === String(id))?.nome || id);
 
@@ -50,14 +55,36 @@ export function TornarLiderModal({ unidades, todasUnidades, professores, mentore
     return [...porUid.values()].sort((a, b) => String(a.nome).localeCompare(String(b.nome)));
   }, [professores, todasUnidades, mentores, vaga]);
 
+  useEffect(() => {
+    const texto = busca.trim();
+    const tipos = /^[\d.\-\s]+$/.test(texto) ? TIPOS_DOCUMENTO.filter((tp) => documentoValido(tp, texto)) : [];
+    if (tipos.length === 0) { setDonoDoc(null); return undefined; }
+    let vivo = true;
+    setDonoDoc("buscando");
+    (async () => {
+      try {
+        for (const tp of tipos) {
+          const dono = await acharDonoDoDocumento(tp, texto);
+          if (dono) { if (vivo) setDonoDoc({ uid: dono.uid }); return; }
+        }
+        if (vivo) setDonoDoc({ uid: null });
+      } catch (e) {
+        console.error(e);
+        if (vivo) setDonoDoc(null);
+      }
+    })();
+    return () => { vivo = false; };
+  }, [busca]);
+
   const candidatos = useMemo(() => {
+    if (donoDoc?.uid) return todosCandidatos.filter((c) => c.uid === donoDoc.uid);
     const termo = busca.trim().toLowerCase();
     return todosCandidatos
       .filter((c) => vaga !== 2 || !c.etiquetas.includes("mentor"))
       .filter((c) => tipo === "todos" || c.etiquetas.includes(tipo))
       .filter((c) => !termo || [c.nome, c.email].some((v) => String(v || "").toLowerCase().includes(termo)))
       .slice(0, 60);
-  }, [todosCandidatos, busca, tipo, vaga]);
+  }, [todosCandidatos, busca, tipo, vaga, donoDoc]);
 
   const unidade = unidades.find((u) => u.id === unidadeId);
 
@@ -131,6 +158,11 @@ export function TornarLiderModal({ unidades, todasUnidades, professores, mentore
         uid, nome, email: dados.email || pessoa.email, telefone: dados.telefone || pessoa.telefone,
         tipo: dados.loginGoogle === true ? "google" : "senha",
       }));
+      // Se a pessoa tinha pedido pendente para esta unidade, ele é dado como atendido (some de Pendências).
+      const pedidoUnidade = await getDoc(doc(db, "pedidos_unidade", `${uid}_${unidade.id}`)).catch(() => null);
+      if (pedidoUnidade?.exists() && pedidoUnidade.data().status === "pendente") {
+        batch.update(pedidoUnidade.ref, { status: "aprovado", analisadoPor: quemId, analisadoPorNome: quemNome, analisadoEm: serverTimestamp() });
+      }
       await batch.commit();
 
       const extras = [`${nome} (${dados.email || pessoa.email || "-"}) — era ${papel || "-"}`];
@@ -150,13 +182,11 @@ export function TornarLiderModal({ unidades, todasUnidades, professores, mentore
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => !salvando && onClose()}>
-      <div onClick={(e) => e.stopPropagation()} className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 space-y-4 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-black text-slate-800 dark:text-white flex items-center gap-2">
-            <UserCog className="w-5 h-5 text-amber-600" /> {t(vaga === 2 ? "leadersTab.promote.titleSecond" : "leadersTab.promote.title")}
-          </h3>
-          <button type="button" onClick={onClose} disabled={salvando} className="p-1 text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
-        </div>
+      <div onClick={(e) => e.stopPropagation()} className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-h-[90vh] flex flex-col overflow-hidden">
+        <CabecalhoDoModal abaId="lideres" icone={UserCog}
+          titulo={t(vaga === 2 ? "leadersTab.promote.titleSecond" : "leadersTab.promote.title")}
+          onFechar={onClose} desabilitado={salvando} />
+        <div className="p-6 space-y-4 overflow-y-auto">
         <p className="text-xs text-slate-500 dark:text-slate-400">{t(vaga === 2 ? "leadersTab.promote.helpSecond" : "leadersTab.promote.help")}</p>
 
         <label className="block space-y-1">
@@ -184,14 +214,18 @@ export function TornarLiderModal({ unidades, todasUnidades, professores, mentore
             ))}
             {onCadastrar && (
               <button type="button" onClick={() => onCadastrar(unidade || null, vaga)} disabled={salvando}
-                className="ml-auto px-3 py-1.5 rounded-lg text-[11px] font-black uppercase bg-emerald-500 hover:bg-emerald-600 text-white flex items-center gap-1.5 disabled:opacity-50">
+                className="ml-auto px-3 py-1.5 rounded-lg text-[11px] font-black uppercase bg-teal-600 hover:bg-teal-700 text-white flex items-center gap-1.5 disabled:opacity-50">
                 <UserPlus className="w-3.5 h-3.5" /> {t("leadersTab.promote.registerNew")}
               </button>
             )}
           </div>
           <div className="max-h-56 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-700/50">
             {candidatos.length === 0 ? (
-              <p className="p-3 text-xs text-slate-400 font-bold">{t("leadersTab.promote.noPeople")}</p>
+              <p className="p-3 text-xs text-slate-400 font-bold">{
+                donoDoc === "buscando" ? t("leadersTab.promote.docSearching")
+                  : donoDoc?.uid ? t("leadersTab.promote.docNoAccess")
+                    : donoDoc ? t("leadersTab.promote.docFree")
+                      : t("leadersTab.promote.noPeople")}</p>
             ) : candidatos.map((c) => (
               <button type="button" key={c.uid} onClick={() => escolher(c)} disabled={salvando}
                 className={`w-full text-left p-3 text-sm hover:bg-slate-50 dark:hover:bg-slate-700/30 ${pessoa?.uid === c.uid ? "bg-emerald-50 dark:bg-emerald-900/20" : ""}`}>
@@ -225,6 +259,7 @@ export function TornarLiderModal({ unidades, todasUnidades, professores, mentore
             className="px-5 py-2.5 rounded-xl text-xs font-black uppercase bg-emerald-500 hover:bg-emerald-600 text-white flex items-center gap-1.5 disabled:opacity-50">
             {salvando ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />} {t("leadersTab.promote.save")}
           </button>
+        </div>
         </div>
       </div>
     </div>

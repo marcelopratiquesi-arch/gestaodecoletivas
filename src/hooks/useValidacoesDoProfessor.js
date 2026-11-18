@@ -14,7 +14,7 @@ export function meuProfessorId(userData, professores = []) {
   return userData?.professorId || professores.find(p => p.uidLogin === uid)?.id || null;
 }
 
-const VAZIO = { chave: null, proprias: [], substituidas: [], prontoP: false, prontoS: false };
+const VAZIO = { chave: null, proprias: [], substituidas: [], prontoP: false, prontoS: false, erro: false };
 
 export function useValidacoesDoProfessor(professorId, dataInicio, dataFim) {
   const chave = professorId && dataInicio && dataFim ? `${professorId}|${dataInicio}|${dataFim}` : null;
@@ -24,18 +24,34 @@ export function useValidacoesDoProfessor(professorId, dataInicio, dataFim) {
     if (!chave) return;
     // Cada resposta só vale para a consulta atual (chave); respostas de uma consulta antiga são descartadas.
     const gravar = (campos) => setEstado(prev => ({ ...(prev.chave === chave ? prev : { ...VAZIO, chave }), ...campos }));
-    const erro = (pronto) => (e) => { console.error('Erro ao ler validações do professor:', e); gravar({ [pronto]: true }); };
+    const erro = (pronto) => (e) => { console.error('Erro ao ler validações do professor:', e); gravar({ [pronto]: true, erro: true }); };
 
     const qProprias = query(collection(db, 'validacoes'),
       where('data', '>=', dataInicio), where('data', '<=', dataFim), where('professorId', '==', String(professorId)));
-    // Só igualdade (sem intervalo de datas) para não exigir índice novo; o volume é pequeno (só substituições).
-    const qSubstituidas = query(collection(db, 'validacoes'), where('professorOriginalId', '==', String(professorId)));
-
     const u1 = onSnapshot(qProprias,
       (snap) => gravar({ proprias: snap.docs.map(d => ({ id: d.id, ...d.data() })), prontoP: true }), erro('prontoP'));
-    const u2 = onSnapshot(qSubstituidas,
-      (snap) => gravar({ substituidas: snap.docs.map(d => ({ id: d.id, ...d.data() })), prontoS: true }), erro('prontoS'));
-    return () => { u1(); u2(); };
+
+    // Substituições das aulas dele: só do período (antes lia TODAS as substituições da vida inteira, que só crescem).
+    // Precisa do índice (professorOriginalId, data) de firestore.indexes.json. Enquanto o índice não existir,
+    // o banco recusa com "failed-precondition" e a busca volta sozinha ao jeito antigo (sem data): nada quebra.
+    let ativo = true;
+    let u2 = () => {};
+    const abrirSubstituidas = (comData) => {
+      const filtros = [where('professorOriginalId', '==', String(professorId))];
+      if (comData) filtros.push(where('data', '>=', dataInicio), where('data', '<=', dataFim));
+      u2 = onSnapshot(query(collection(db, 'validacoes'), ...filtros),
+        (snap) => gravar({ substituidas: snap.docs.map(d => ({ id: d.id, ...d.data() })), prontoS: true }),
+        (e) => {
+          if (comData && e?.code === 'failed-precondition') {
+            console.warn('Índice professorOriginalId/data ainda não existe: usando a busca antiga das substituições.');
+            if (ativo) abrirSubstituidas(false);
+            return;
+          }
+          erro('prontoS')(e);
+        });
+    };
+    abrirSubstituidas(true);
+    return () => { ativo = false; u1(); u2(); };
   }, [chave, professorId, dataInicio, dataFim]);
 
   const atual = estado.chave === chave;
@@ -49,5 +65,8 @@ export function useValidacoesDoProfessor(professorId, dataInicio, dataFim) {
     return deduplicarValidacoes([...porId.values()]);
   }, [chave, atual, estado, dataInicio, dataFim]);
 
-  return { validacoes, carregando };
+  // erro: o banco recusou (sem conexão, limite do dia...). Lista vazia aqui NÃO quer dizer "nada validado".
+  const erro = !!chave && atual && estado.erro;
+
+  return { validacoes, carregando, erro };
 }

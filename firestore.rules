@@ -12,9 +12,13 @@ service cloud.firestore {
     function autenticado() { return request.auth != null; }
     function temCracha() { return exists(/databases/$(database)/documents/usuarios/$(request.auth.uid)); }
     // Mentor com status "inativo" (aba Mentores) também fica sem acesso. Sem leitura extra: é o mesmo crachá.
+    // Professor só tem acesso pelo login do Google aprovado (loginGoogle == true). Crachá de professor do login
+    // antigo (e-mail e senha) não vale: a pessoa apaga o crachá antigo e pede acesso de novo.
     function crachaAtivo(c) {
-      return c.get('role', '').lower() != 'bloqueado'
-        && !(c.get('role', '').lower() == 'mentor' && c.get('status', '') == 'inativo');
+      let r = c.get('role', '').lower();
+      return r != 'bloqueado'
+        && !(r == 'mentor' && c.get('status', '') == 'inativo')
+        && !(r == 'professor' && c.get('loginGoogle', false) != true);
     }
     function logado() {
       return autenticado() && temCracha()
@@ -47,7 +51,7 @@ service cloud.firestore {
 
     // Mentor de alguma das unidades (até 5) de uma lista.
     function mentorDeAlguma(ids) {
-      return ids is list && ids.size() >= 1 && ids.size() <= 5
+      return ids is list && ids.size() >= 1
         && (mentorDaUnidadeId(ids[0])
           || (ids.size() > 1 && mentorDaUnidadeId(ids[1]))
           || (ids.size() > 2 && mentorDaUnidadeId(ids[2]))
@@ -125,15 +129,39 @@ service cloud.firestore {
 
     // ===================== PÁGINA PÚBLICA DE HORÁRIOS =====================
     // Sem login, a página de horários lê só: a "vitrine" (nome/endereço das unidades e nome dos
-    // professores), as aulas e as modalidades. Os cadastros completos de unidades e professores
+    // professores), a cópia pública das aulas (aulas_publicas, sem o valor) e as modalidades. Os cadastros completos de unidades e professores
     // (com e-mail, telefone e login) exigem login.
     match /publico/{docId} {
       allow read: if true;
       allow write: if logado() && meuPapel() in ['admin', 'administrador', 'master', 'mentor', 'lider', 'unidade'];
     }
-    match /aulas/{document=**} {
+    // Aulas: cada um grava só as da própria unidade (admin: todas). Ninguém além do admin apaga de verdade
+    // (a tela "exclui" marcando excluido:true). Esta regra é a única que libera gravar em aulas: a coleção está na
+    // lista de exceções da regra-curinga lá embaixo.
+    function podeGravarAulaDa(unidadeId) {
+      return souAdmin()
+        || (unidadeId is string && unidadeId != '' && logado()
+            && ((meuPapel() == 'mentor' && mentorDaUnidadeId(unidadeId))
+                || (meuPapel() in papeisLider()
+                    && (unidadeId == meuUsuario().get('unidadeId', '') || unidadeId in meuUsuario().get('unidadeIds', [])))));
+    }
+    match /aulas/{aulaId} {
+      // Tem o valor que cada professor recebe: só quem está logado. A página pública lê aulas_publicas (sem valor).
+      allow read: if logado();
+      allow create: if podeGravarAulaDa(request.resource.data.get('unidadeId', ''));
+      // Editar: a unidade de antes E a de depois têm que ser dele (senão dava para "jogar" aula na unidade dos outros).
+      allow update: if podeGravarAulaDa(resource.data.get('unidadeId', ''))
+        && podeGravarAulaDa(request.resource.data.get('unidadeId', ''));
+      allow delete: if souAdmin();
+    }
+    // Cópia pública da grade (sem o valor da aula), lida pela página de horários sem login.
+    // Gravada junto com a aula (mesma operação) por quem pode gravar a aula daquela unidade. Ver services/aulasPublicas.js.
+    match /aulas_publicas/{aulaId} {
       allow read: if true;
-      allow write: if logado() && !souProfessor();
+      allow create, update: if podeGravarAulaDa(request.resource.data.get('unidadeId', ''))
+        && !('valor' in request.resource.data)
+        && (resource == null || podeGravarAulaDa(resource.data.get('unidadeId', '')));
+      allow delete: if souAdmin() || podeGravarAulaDa(resource.data.get('unidadeId', ''));
     }
     match /modalidades/{document=**} {
       allow read: if true;
@@ -143,9 +171,38 @@ service cloud.firestore {
       allow read: if logado();
       allow write: if logado() && !souProfessor();
     }
-    match /professores/{document=**} {
+    match /professores/{professorId} {
       allow read: if logado();
-      allow write: if logado() && !souProfessor();
+      // "documentoOk" só vale com o documento guardado na gaveta privada da ficha (documentos_ficha).
+      allow create, update: if logado() && !souProfessor()
+        && (request.resource.data.get('documentoOk', false) != true
+            || existsAfter(/databases/$(database)/documents/documentos_ficha/$(professorId)));
+      allow delete: if logado() && !souProfessor();
+    }
+
+    // ===================== FERIADOS =====================
+    // Feriado cancela aula (sem pagamento e sem pendência) em todas as unidades do alcance dele, então só o admin
+    // cria, edita ou apaga. Todo mundo que está logado lê (as telas calculam o feriado na hora). O mentor usa
+    // feriados_propostas (logo abaixo). Esta coleção está na lista de exceções da regra-curinga.
+    match /feriados/{feriadoId} {
+      allow read: if logado();
+      allow write: if souAdmin();
+    }
+
+    // ===================== PROPOSTAS DE FERIADO (mentor propõe, admin decide) =====================
+    // Só o admin cria feriado de verdade (coleção feriados). O mentor PROPÕE aqui: a proposta não afeta aula nenhuma
+    // (nenhuma tela de aulas lê esta coleção); o admin aprova (vira feriado) ou recusa. Cada mentor só enxerga as próprias.
+    match /feriados_propostas/{propostaId} {
+      function souMentor() { return logado() && meuPapel() == 'mentor'; }
+      allow read: if souAdmin() || (souMentor() && resource.data.get('propostoPor', '') == request.auth.uid);
+      allow create: if souMentor()
+        && request.resource.data.get('propostoPor', '') == request.auth.uid
+        && request.resource.data.get('status', '') == 'pendente'
+        && request.resource.data.get('escopo', '') in ['cidade', 'unidades'];
+      allow update: if souAdmin();
+      // O mentor desiste de uma proposta que ainda está pendente.
+      allow delete: if souAdmin() || (souMentor() && resource.data.get('propostoPor', '') == request.auth.uid
+        && resource.data.get('status', '') == 'pendente');
     }
 
     // ===================== VALIDAÇÕES (presença e pagamento) =====================
@@ -329,16 +386,39 @@ service cloud.firestore {
 
       // Mentor só cria crachá de líder/unidade para as unidades DELE (aprovação de pedido de acesso).
       allow create: if souAdmin()
-        || (logado() && meuPapel() == 'mentor' && papelNovo() == 'professor')
+        // Crachá de professor só nasce da APROVAÇÃO de um pedido (login do Google): nunca com e-mail e senha.
+        || (logado() && meuPapel() == 'mentor' && papelNovo() == 'professor' && request.resource.data.get('loginGoogle', false) == true)
         || (logado() && meuPapel() == 'mentor' && papelNovo() in papeisLider()
             && get(/databases/$(database)/documents/unidades/$(request.resource.data.unidadeId)).data.get('mentorId', '') == request.auth.uid
             && request.resource.data.get('unidadeIds', [request.resource.data.unidadeId]) == [request.resource.data.unidadeId])
-        || (logado() && meuPapel() in papeisLider() && papelNovo() == 'professor')
+        || (logado() && meuPapel() in papeisLider() && papelNovo() == 'professor' && request.resource.data.get('loginGoogle', false) == true)
         // Mentor novo convidado pelo admin (aba Mentores): no 1º acesso pelo Google, a própria pessoa cria
         // o crachá dela, SÓ se houver convite pendente para o e-mail Google dela e com os dados do convite.
         || mentorAceitaConvite(uid);
 
-      allow update: if souAdmin()
+      // As condições "da própria pessoa" vêm PRIMEIRO (são baratas: começam comparando o login com o crachá).
+      // O banco limita cada verificação a 1000 operações; esta regra é longa, então a ordem importa.
+      allow update:
+        // "Último acesso": a própria pessoa carimba só esse campo, com a hora do servidor (a aba Mentores mostra).
+        if (request.auth.uid == uid && logado() && camposAlterados().hasOnly(['ultimoAcesso'])
+            && request.resource.data.ultimoAcesso == request.time)
+        // Depois de gravar o documento na gaveta privada, a PRÓPRIA pessoa só marca "documentoOk" no crachá
+        // (o banco confere que o documento existe de verdade, na mesma gravação ou antes).
+        || (request.auth.uid == uid && logado() && camposAlterados().hasOnly(['documentoOk'])
+            && request.resource.data.documentoOk == true && existsAfter(caminhoDocumentoUsuario(uid)))
+        // Atualização de cadastro (troca do login antigo pelo login pessoal do Google): a própria pessoa
+        // atualiza SÓ os dados de contato, e só depois de conectar o Google à conta. O papel não muda,
+        // exceto o login antigo "unidade", que vira "lider". Unidade, status e o resto ficam como estão.
+        || (request.auth.uid == uid && logado()
+            && 'google.com' in request.auth.token.firebase.identities
+            && camposAlterados().hasOnly(['nome', 'telefone', 'email', 'emailAntigo', 'role', 'loginGoogle', 'cadastroAtualizadoEm', 'documentoOk', 'modalidades'])
+            && request.resource.data.get('modalidades', '') is string && request.resource.data.get('modalidades', '').size() <= 300
+            && (!('documentoOk' in request.resource.data) || (request.resource.data.documentoOk == true && existsAfter(caminhoDocumentoUsuario(uid))))
+            && request.resource.data.loginGoogle == true
+            && request.resource.data.nome is string && request.resource.data.nome.size() >= 3 && request.resource.data.nome.size() <= 80
+            && request.resource.data.telefone is string && request.resource.data.telefone.size() >= 6 && request.resource.data.telefone.size() <= 30
+            && (papelNovo() == papelDoAlvo() || (papelDoAlvo() == 'unidade' && papelNovo() == 'lider')))
+        || souAdmin()
         || (logado() && meuPapel() == 'mentor' && papelDoAlvo() in ['lider', 'unidade', 'professor']
             && camposAlterados().hasOnly(['nome', 'email', 'telefone']))
         || (logado() && meuPapel() in papeisLider() && papelDoAlvo() == 'professor'
@@ -347,28 +427,11 @@ service cloud.firestore {
         || (logado() && meuPapel() == 'mentor' && mentorMudaLideranca(uid))
         // Saída da função pela própria pessoa, e o mentor da unidade desfaz (ver saidaDaFuncao acima).
         || (logado() && saidaDaFuncao(uid))
-        // "Último acesso": a própria pessoa carimba só esse campo, com a hora do servidor (a aba Mentores mostra).
-        || (logado() && request.auth.uid == uid && camposAlterados().hasOnly(['ultimoAcesso'])
-            && request.resource.data.ultimoAcesso == request.time)
-        || (logado() && meuPapel() == 'mentor' && mentorDesfazSaida())
-        // Depois de gravar o documento na gaveta privada, a PRÓPRIA pessoa só marca "documentoOk" no crachá
-        // (o banco confere que o documento existe de verdade, na mesma gravação ou antes).
-        || (logado() && request.auth.uid == uid && camposAlterados().hasOnly(['documentoOk'])
-            && request.resource.data.documentoOk == true && existsAfter(caminhoDocumentoUsuario(uid)))
-        // Atualização de cadastro (troca do login antigo pelo login pessoal do Google): a própria pessoa
-        // atualiza SÓ os dados de contato, e só depois de conectar o Google à conta. O papel não muda,
-        // exceto o login antigo "unidade", que vira "lider". Unidade, status e o resto ficam como estão.
-        || (logado() && request.auth.uid == uid
-            && 'google.com' in request.auth.token.firebase.identities
-            && camposAlterados().hasOnly(['nome', 'telefone', 'email', 'emailAntigo', 'role', 'loginGoogle', 'cadastroAtualizadoEm', 'documentoOk', 'modalidades'])
-            && request.resource.data.get('modalidades', '') is string && request.resource.data.get('modalidades', '').size() <= 120
-            && (!('documentoOk' in request.resource.data) || (request.resource.data.documentoOk == true && existsAfter(caminhoDocumentoUsuario(uid))))
-            && request.resource.data.loginGoogle == true
-            && request.resource.data.nome is string && request.resource.data.nome.size() >= 3 && request.resource.data.nome.size() <= 80
-            && request.resource.data.telefone is string && request.resource.data.telefone.size() >= 6 && request.resource.data.telefone.size() <= 30
-            && (papelNovo() == papelDoAlvo() || (papelDoAlvo() == 'unidade' && papelNovo() == 'lider')));
+        || (logado() && meuPapel() == 'mentor' && mentorDesfazSaida());
 
       allow delete: if souAdmin()
+        // Professor do login antigo (sem Google): a própria pessoa apaga o crachá antigo para poder pedir acesso.
+        || (autenticado() && request.auth.uid == uid && papelDoAlvo() == 'professor' && resource.data.get('loginGoogle', false) != true)
         || (logado() && meuPapel() == 'mentor' && papelDoAlvo() in papeisLider()
             && get(/databases/$(database)/documents/unidades/$(resource.data.unidadeId)).data.get('mentorId', '') == request.auth.uid
             && unidadesDoAlvo().size() <= 1);
@@ -399,7 +462,7 @@ service cloud.firestore {
           && d.telefone is string && d.telefone.size() >= 6 && d.telefone.size() <= 30
           && d.get('papel', 'lider') in ['lider', 'mentor', 'professor']
           && (d.get('papel', 'lider') != 'professor' || (ids is list && ids.size() == 1))
-          && d.get('modalidades', '') is string && d.get('modalidades', '').size() <= 120
+          && d.get('modalidades', '') is string && d.get('modalidades', '').size() <= 300
           && d.get('tambemProfessor', false) is bool
           && d.get('unidadeNomes', []) is list && d.get('unidadeNomes', []).size() <= 5
           && ids is list && ids.size() >= 1 && ids.size() <= 5 && ids[0] == d.get('unidadeId', '')
@@ -428,7 +491,8 @@ service cloud.firestore {
       allow read: if (logado() && request.auth.uid == uid) || souAdmin() || mentorDoLider(uid);
       allow create, update: if documentoValido()
         && ((logado() && request.auth.uid == uid) || souAdmin() || mentorDoLider(uid));
-      allow delete: if souAdmin();
+      // Apagar: o admin, e o mentor do líder (ao excluir o cadastro do líder e liberar o documento).
+      allow delete: if souAdmin() || mentorDoLider(uid);
     }
 
     // Documento informado no pedido de acesso (ainda sem crachá). Id = login da pessoa: ela grava; ela, o admin
@@ -438,13 +502,22 @@ service cloud.firestore {
         || (exists(/databases/$(database)/documents/solicitacoes_acesso/$(uid))
             && mentorDoPedido(get(/databases/$(database)/documents/solicitacoes_acesso/$(uid)).data));
       allow create, update: if autenticado() && request.auth.uid == uid && documentoValido();
-      allow delete: if (autenticado() && request.auth.uid == uid) || souAdmin();
+      // O admin e o mentor do pedido também apagam (libera o documento quando o pedido é recusado ou excluído).
+      allow delete: if (autenticado() && request.auth.uid == uid) || souAdmin() || mentorDoLider(uid)
+        || (exists(/databases/$(database)/documents/solicitacoes_acesso/$(uid))
+            && mentorDoPedido(get(/databases/$(database)/documents/solicitacoes_acesso/$(uid)).data));
     }
 
     // ===================== DOCUMENTOS ÚNICOS (um documento = uma pessoa) =====================
     // Reserva do documento: o código é "tipo_numero" e dentro só vai o login dono. Quem tentar gravar um
-    // documento que já existe para OUTRA pessoa é recusado. Só o admin lê (para achar cadastros).
+    // documento que já existe para OUTRA pessoa é recusado. O admin lê qualquer um (para achar cadastros); o mentor
+    // só abre a reserva de quem é das unidades dele (líder com crachá ou pedido de acesso), uma por vez.
     match /documentos_unicos/{id} {
+      // Pedido de acesso (ainda sem crachá) de uma unidade deste mentor.
+      function mentorDoPedidoDe(alvo) {
+        return exists(/databases/$(database)/documents/solicitacoes_acesso/$(alvo))
+          && mentorDoPedido(get(/databases/$(database)/documents/solicitacoes_acesso/$(alvo)).data);
+      }
       function podeMexerNoDe(alvo) {
         return (autenticado() && request.auth.uid == alvo) || souAdmin() || mentorDoLider(alvo);
       }
@@ -454,6 +527,9 @@ service cloud.firestore {
           && getAfter(caminho).data.tipo == request.resource.data.tipo;
       }
       allow read: if souAdmin();
+      // Conferir UM documento digitado (sem listar): líder, mentor e admin descobrem de qual login ele é, para ligar
+      // a pessoa à ficha da grade em vez de cadastrá-la de novo ("Adicionar professor").
+      allow get: if gestorDeCadastro();
       allow create: if request.resource.data.keys().hasOnly(['uid', 'tipo', 'numero'])
         && request.resource.data.uid is string
         && documentoFormatoOk(request.resource.data)
@@ -465,7 +541,51 @@ service cloud.firestore {
                 && declaradoEm(/databases/$(database)/documents/documentos_do_pedido/$(request.auth.uid))));
       // Reescrever igual (mesmo dono, mesmos dados) é aceito; trocar de dono, não.
       allow update: if request.resource.data == resource.data && podeMexerNoDe(resource.data.uid);
-      allow delete: if podeMexerNoDe(resource.data.uid);
+      allow delete: if podeMexerNoDe(resource.data.uid) || mentorDoPedidoDe(resource.data.uid);
+    }
+
+    // ===================== DOCUMENTO DA FICHA DA GRADE (professores/{id}) =====================
+    // A ficha (professores) é lida por todo logado: o número NÃO vai nela, só "documentoOk".
+    // Gaveta documentos_ficha/{professorId}: o número. Leem: admin e mentor. O líder só grava ficha que ainda não tem
+    // documento (cadastro novo ou ficha antiga sendo completada); corrigir e apagar: admin e mentor.
+    function gestorDeCadastro() { return logado() && meuPapel() in ['admin', 'administrador', 'master', 'mentor', 'lider', 'unidade']; }
+    function adminOuMentor() { return souAdmin() || (logado() && meuPapel() == 'mentor'); }
+
+    match /documentos_ficha/{professorId} {
+      // A reserva do mesmo número, apontando para esta ficha, tem que existir ao final da mesma gravação.
+      function reservadoParaEsta() {
+        let d = request.resource.data;
+        let reserva = /databases/$(database)/documents/documentos_professor/$(d.tipo + '_' + d.numero);
+        return existsAfter(reserva) && getAfter(reserva).data.professorId == professorId;
+      }
+      allow read: if adminOuMentor();
+      allow create: if documentoValido() && gestorDeCadastro() && reservadoParaEsta()
+        && existsAfter(/databases/$(database)/documents/professores/$(professorId));
+      allow update: if documentoValido() && adminOuMentor() && reservadoParaEsta();
+      allow delete: if adminOuMentor();
+    }
+
+    // Reserva documentos_professor/{tipo_numero} = { professorId }: um documento = uma ficha (repetido é recusado).
+    // Líder, mentor e admin CONFEREM um documento que digitaram (get); listar, só o admin.
+    // Se o documento já é de alguém com login (documentos_unicos), só vale para a ficha ligada a esse mesmo login.
+    match /documentos_professor/{id} {
+      function reservaValida() {
+        let d = request.resource.data;
+        let ficha = /databases/$(database)/documents/documentos_ficha/$(d.professorId);
+        let unico = /databases/$(database)/documents/documentos_unicos/$(id);
+        return d.keys().hasOnly(['professorId', 'tipo', 'numero'])
+          && d.professorId is string && documentoFormatoOk(d)
+          && id == d.tipo + '_' + d.numero
+          && existsAfter(ficha) && getAfter(ficha).data.numero == d.numero && getAfter(ficha).data.tipo == d.tipo
+          && (!exists(unico)
+              || get(unico).data.uid == getAfter(/databases/$(database)/documents/professores/$(d.professorId)).data.get('uidLogin', ''));
+      }
+      allow get: if gestorDeCadastro();
+      allow list: if souAdmin();
+      allow create: if gestorDeCadastro() && reservaValida();
+      // Trocar de ficha só ao juntar fichas: só o admin (o mentor corrige apagando a reserva antiga e criando a nova).
+      allow update: if souAdmin() && reservaValida();
+      allow delete: if adminOuMentor();
     }
 
     // ===================== AVISOS DE SAÍDA (saidas_acesso) =====================
@@ -597,8 +717,8 @@ service cloud.firestore {
     // Professor não grava nada aqui, só cria registros de auditoria (log da validação e do "Sair").
     // (No Firestore, se QUALQUER regra libera, a ação passa; por isso as exceções precisam estar aqui.)
     match /{colecao}/{resto=**} {
-      allow read: if logado() && !(colecao in ['solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos', 'telemetria_leituras']);
-      allow write: if logado() && !(colecao in ['usuarios', 'publico', 'validacoes', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'resumos_mensais', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos', 'telemetria_leituras']) && !souProfessor();
+      allow read: if logado() && !(colecao in ['feriados_propostas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos', 'documentos_ficha', 'documentos_professor', 'telemetria_leituras']);
+      allow write: if logado() && !(colecao in ['feriados', 'feriados_propostas', 'usuarios', 'publico', 'validacoes', 'aulas', 'aulas_publicas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'resumos_mensais', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos', 'professores', 'documentos_ficha', 'documentos_professor', 'telemetria_leituras']) && !souProfessor();
       allow create: if logado() && colecao in ['auditoria_cronograma', 'auditoria_configuracoes'];
     }
   }

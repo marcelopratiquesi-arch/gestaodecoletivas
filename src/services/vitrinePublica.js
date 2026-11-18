@@ -13,6 +13,7 @@
 // Enquanto a vitrine não for montada pela primeira vez, essas funções não fazem nada (só avisam no console).
 import { doc, getDoc, getDocs, collection, query, where, setDoc, updateDoc, deleteField, serverTimestamp, FieldPath } from 'firebase/firestore';
 import { db } from './firebase';
+import { reconstruirAulasPublicas } from './aulasPublicas';
 
 export const VITRINE_CAMINHO = ['publico', 'vitrine'];
 const refVitrine = () => doc(db, ...VITRINE_CAMINHO);
@@ -68,7 +69,7 @@ const LIMITE_BYTES = 900 * 1024;
 
 /**
  * Remonta a vitrine inteira a partir dos cadastros (só admin, precisa de login).
- * Custa 1 leitura por unidade + 1 por professor, e 1 gravação. Retorna os totais.
+ * Custa 1 leitura por unidade + 1 por professor (+ as aulas, ver aulasPublicas.js), e 1 gravação. Retorna os totais.
  */
 export async function reconstruirVitrine() {
     const [uSnap, pSnap, mSnap] = await Promise.all([
@@ -91,7 +92,9 @@ export async function reconstruirVitrine() {
     if (tamanho > LIMITE_BYTES) throw new Error(`Vitrine grande demais (${Math.round(tamanho / 1024)} KB).`);
 
     await setDoc(refVitrine(), { unidades, professores, atualizadoEm: serverTimestamp() });
-    return { unidades: Object.keys(unidades).length, professores: Object.keys(professores).length, tamanhoKb: Math.round(tamanho / 1024) };
+    // A grade pública (aulas sem o valor) é refeita junto: custa 1 leitura por aula.
+    const grade = await reconstruirAulasPublicas();
+    return { unidades: Object.keys(unidades).length, professores: Object.keys(professores).length, aulas: grade.aulas, tamanhoKb: Math.round(tamanho / 1024) };
 }
 
 /** Leitura usada pela página pública. Retorna null se a vitrine ainda não foi montada. */

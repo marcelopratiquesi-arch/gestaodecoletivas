@@ -7,6 +7,7 @@
 //   estado    -> unidades do estado
 //   cidade    -> unidades confirmadas no cadastro (unidadeIds) daquela cidade
 //   unidades  -> unidades escolhidas (unidadeIds)
+// Em rede, país, estado e cidade o admin pode marcar "exceto estas unidades" (unidadesExcecao): elas não folgam.
 // O feriado é calculado na hora: aula ativa em dia de feriado = cancelada (feriado), sem pagamento e sem pendência.
 // Se uma pessoa validou a aula como realizada, a validação da pessoa vale.
 
@@ -47,8 +48,11 @@ const unidadesDoFeriado = (feriado) => {
   return feriado.unidadeId ? [String(feriado.unidadeId)] : [];
 };
 
+export const unidadesDeExcecao = (feriado) => (Array.isArray(feriado?.unidadesExcecao) ? feriado.unidadesExcecao.map(String) : []);
+
 export function feriadoAplicaNaUnidade(feriado, unidade) {
   if (!feriado) return false;
+  if (unidadesDeExcecao(feriado).includes(String(unidade?.id))) return false;
   switch (escopoDoFeriado(feriado)) {
     case 'pais':
       return normalizarPais(unidade?.pais) === normalizarPais(feriado.pais);

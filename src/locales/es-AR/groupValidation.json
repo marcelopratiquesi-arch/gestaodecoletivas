@@ -1,5 +1,6 @@
 {
   "syncing": "Sincronizando sistema...",
+  "error": { "title": "No se pudieron cargar las validaciones", "desc": "Los números no se muestran para no acusar a nadie por error. Suele pasar cuando se agota el límite diario de la base o falla la conexión. Esperá un momento y recargá la página." },
   "title": "Validación Colectiva",
   "subtitle": "Monitoreo de adhesión y auditoría en tiempo real",
   "exportCsv": "Exportar CSV",
@@ -94,7 +95,8 @@
   },
   "alerts": {
     "noPhone": "⚠️ ¡TELÉFONO NO REGISTRADO!",
-    "copied": "¡TEXTO COPIADO CON ÉXITO!"
+    "copied": "¡TEXTO COPIADO CON ÉXITO!",
+    "copyFailed": "No se pudo copiar. Copiá el texto manualmente."
   },
   "csv": {
     "unit": "SEDE",

@@ -4,6 +4,7 @@ import { Trophy, CheckCircle2, Activity, Construction, CalendarClock, AlertCircl
 import { useTranslation } from 'react-i18next';
 import i18n from '../../i18n';
 import { formatDate, formatPeriod } from '../../utils/formatters';
+import { linkWhatsApp } from '../../centrais/contato';
 export const getTodayStr = () => new Date().toLocaleDateString('en-CA'); 
 
 export const normalizeDate = (d) => {
@@ -40,10 +41,11 @@ export const getFirstLast = (fullName) => {
     return parts.length === 1 ? parts[0] : `${parts[0]} ${parts[parts.length - 1]}`;
 };
 
-export const sendWhatsApp = (telefone, mensagem) => {
-    if (!telefone) { alert(i18n.t('groupValidation.alerts.noPhone')); return; }
-    const numeroLimpo = telefone.replace(/\D/g, '');
-    window.open(`https://api.whatsapp.com/send?phone=${numeroLimpo}&text=${encodeURIComponent(mensagem)}`, '_blank');
+// O número pode estar cadastrado sem o código do país: linkWhatsApp completa com o do país da unidade.
+export const sendWhatsApp = (telefone, mensagem, pais = 'BR') => {
+    const link = linkWhatsApp(telefone, pais);
+    if (!link) { alert(i18n.t('groupValidation.alerts.noPhone')); return; }
+    window.open(`${link}?text=${encodeURIComponent(mensagem)}`, '_blank', 'noopener');
 };
 
 // 🟢 CORREÇÃO: Função exportada corretamente para não dar erro SyntaxError
@@ -63,26 +65,39 @@ export const getColorClassByPercent = (percent) => {
     return 'bg-red-600 shadow-red-600/50 text-white';
 };
 
-export const copyToClipboard = (text) => {
-    navigator.clipboard.writeText(text);
-    alert(i18n.t('groupValidation.alerts.copied'));
+// Só avisa "copiado" quando copiou de verdade (antes avisava mesmo se o navegador recusasse).
+export const copyToClipboard = async (text) => {
+    let ok = false;
+    try { await navigator.clipboard.writeText(text); ok = true; } catch { /* tenta o jeito antigo */ }
+    if (!ok) {
+        try {
+            const area = document.createElement('textarea');
+            area.value = text; area.style.position = 'fixed'; area.style.opacity = '0';
+            document.body.appendChild(area); area.select();
+            ok = document.execCommand('copy');
+            document.body.removeChild(area);
+        } catch { ok = false; }
+    }
+    alert(i18n.t(ok ? 'groupValidation.alerts.copied' : 'groupValidation.alerts.copyFailed'));
 };
 
 export const filterPendingDates = (pendencias) => {
-    const today = getTodayStr(); 
+    const today = getTodayStr();
     return [...new Set(pendencias.map(p => p.data || p).filter(d => d <= today))].sort();
 };
 
+export { formatPendencias } from '../../utils/pendencias';
+
 export const getRowColor = (status, diffDays) => {
-    if (status === 'FERIADO') return 'bg-purple-50/50 hover:bg-purple-50';
-    if (status !== 'REALIZADA' && status !== 'CANCELADA') return 'bg-white hover:bg-slate-50';
-    if (diffDays <= 0) return 'bg-emerald-50/30 hover:bg-emerald-50';
-    if (diffDays === 1) return 'bg-amber-50/30 hover:bg-amber-50';
-    return 'bg-rose-50/30 hover:bg-rose-50';
+    if (status === 'FERIADO') return 'bg-purple-50/50 hover:bg-purple-50 dark:bg-purple-900/10 dark:hover:bg-purple-900/20';
+    if (status !== 'REALIZADA' && status !== 'CANCELADA') return 'bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700';
+    if (diffDays <= 0) return 'bg-emerald-50/30 hover:bg-emerald-50 dark:bg-emerald-900/10 dark:hover:bg-emerald-900/20';
+    if (diffDays === 1) return 'bg-amber-50/30 hover:bg-amber-50 dark:bg-amber-900/10 dark:hover:bg-amber-900/20';
+    return 'bg-rose-50/30 hover:bg-rose-50 dark:bg-rose-900/10 dark:hover:bg-rose-900/20';
 };
 
 export const SortableHeader = ({ label, sortKey, currentSort, onSort, align = 'left' }) => (
-    <th className={`p-4 cursor-pointer hover:bg-slate-100 transition-colors select-none text-[10px] uppercase font-black text-slate-400 tracking-widest ${align === 'center' ? 'text-center' : align === 'right' ? 'text-right' : 'text-left'}`} onClick={() => onSort(sortKey)}>
+    <th className={`p-4 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors select-none text-[10px] uppercase font-black text-slate-400 tracking-widest ${align === 'center' ? 'text-center' : align === 'right' ? 'text-right' : 'text-left'}`} onClick={() => onSort(sortKey)}>
         <div className={`flex items-center gap-1 ${align === 'center' ? 'justify-center' : align === 'right' ? 'justify-end' : 'justify-start'}`}>
             {label} <ArrowUpDown className={`w-3 h-3 ${currentSort.key === sortKey ? 'text-blue-500 opacity-100' : 'opacity-30'}`}/>
         </div>
@@ -90,10 +105,10 @@ export const SortableHeader = ({ label, sortKey, currentSort, onSort, align = 'l
 );
 
 export const KPICard = ({ title, value, icon: Icon, colorClass, iconBg, subTitle }) => (
-  <div className={`bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between transition-all hover:shadow-md ${colorClass || ''}`}>
+  <div className={`bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between transition-all hover:shadow-md ${colorClass || ''}`}>
     <div>
       <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">{title}</p>
-      <h3 className="text-3xl font-black text-slate-800 tracking-tight">{value}</h3>
+      <h3 className="text-3xl font-black text-slate-800 dark:text-white tracking-tight">{value}</h3>
       {subTitle && <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase">{subTitle}</p>}
     </div>
     <div className={`p-3 rounded-xl shadow-inner ${iconBg}`}>
@@ -115,7 +130,7 @@ export const StatusBadge = ({ type }) => {
         'PARABÉNS!': 'bg-emerald-100 text-emerald-700 border-emerald-200',
         'TUDO OK!': 'bg-emerald-100 text-emerald-700 border-emerald-200',
         'EM ANDAMENTO': 'bg-blue-50 text-blue-600 border-blue-100',
-        'EM CONSTRUÇÃO': 'bg-slate-100 text-slate-500 border-slate-200',
+        'EM CONSTRUÇÃO': 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700',
         'AGUARDANDO INÍCIO': 'bg-amber-50 text-amber-600 border-amber-100',
         'AGUARDANDO': 'bg-amber-50 text-amber-600 border-amber-100',
         'VALIDADA': 'bg-emerald-50 text-emerald-700 border-emerald-200',
@@ -124,7 +139,7 @@ export const StatusBadge = ({ type }) => {
         'FERIADO': 'bg-purple-50 text-purple-700 border-purple-200',
         'ATRASADO': 'bg-orange-50 text-orange-700 border-orange-200',
         'PENDENTE': 'bg-rose-50 text-rose-700 border-rose-200',
-        'FUTURO': 'bg-slate-50 text-slate-400 border-slate-200'
+        'FUTURO': 'bg-slate-50 dark:bg-slate-900 text-slate-400 border-slate-200 dark:border-slate-700'
     };
     
     const Icons = {
@@ -181,27 +196,27 @@ export const MultiSelectDropdown = ({ options, selectedValues, onChange, placeho
     return (
         <div className="relative w-full sm:flex-1" ref={dropdownRef}>
             <Icon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 z-10 pointer-events-none"/>
-            <div onClick={() => setIsOpen(!isOpen)} className={`w-full pl-12 pr-8 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-black text-slate-600 cursor-pointer shadow-sm flex items-center justify-between hover:border-blue-400 transition-all ${isOpen ? 'ring-2 ring-blue-500' : ''}`}>
-                <span className="truncate uppercase">{displayText}</span>
+            <div onClick={() => setIsOpen(!isOpen)} className={`w-full pl-12 pr-8 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-black text-slate-600 dark:text-slate-300 cursor-pointer shadow-sm flex items-center justify-between hover:border-blue-400 transition-all ${isOpen ? 'ring-2 ring-blue-500' : ''}`}>
+                <span className="truncate">{displayText}</span>
                 <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}/>
             </div>
             
             {isOpen && (
-                <div className="absolute top-12 left-0 w-full min-w-[250px] bg-white border border-slate-200 shadow-xl rounded-xl z-50 overflow-hidden flex flex-col">
-                    <div className="p-2 border-b border-slate-100 bg-slate-50 flex gap-2">
+                <div className="absolute top-12 left-0 w-full min-w-[250px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl rounded-xl z-50 overflow-hidden flex flex-col">
+                    <div className="p-2 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 flex gap-2">
                         <button onClick={selectAll} className="text-[9px] font-black text-blue-600 px-3 py-1.5 hover:bg-blue-100 rounded-md uppercase transition-colors flex-1">{t('common.multiSelect.all')}</button>
                         <button onClick={clearAll} className="text-[9px] font-black text-rose-600 px-3 py-1.5 hover:bg-rose-100 rounded-md uppercase transition-colors flex-1">{t('common.multiSelect.clear')}</button>
                     </div>
-                    <div className="p-2 bg-slate-50 border-b border-slate-100 relative">
+                    <div className="p-2 bg-slate-50 dark:bg-slate-900 border-b border-slate-100 dark:border-slate-700 relative">
                         <Search className="w-3 h-3 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"/>
-                        <input type="text" placeholder={t('common.multiSelect.search')} value={buscaInterna} onChange={(e) => setBuscaInterna(e.target.value)} className="w-full pl-8 pr-2 py-1.5 text-[10px] font-bold uppercase rounded border border-slate-200 outline-none focus:border-blue-500"/>
+                        <input type="text" placeholder={t('common.multiSelect.search')} value={buscaInterna} onChange={(e) => setBuscaInterna(e.target.value)} className="w-full pl-8 pr-2 py-1.5 text-[10px] font-bold uppercase rounded border border-slate-200 dark:border-slate-700 outline-none focus:border-blue-500"/>
                     </div>
                     <div className="overflow-y-auto max-h-60 p-1 custom-scrollbar">
                         {filteredOptions.length === 0 && <div className="p-3 text-[10px] text-slate-400 text-center font-bold uppercase">{t('common.multiSelect.noResults')}</div>}
                         {filteredOptions.map(o => (
-                            <label key={o.value} className="flex items-center gap-2 p-2.5 hover:bg-slate-50 cursor-pointer rounded-lg transition-colors">
-                                <input type="checkbox" checked={selectedValues.includes(o.value)} onChange={() => toggleOption(o.value)} className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"/>
-                                <span className="text-[10px] font-black uppercase text-slate-700">{o.label}</span>
+                            <label key={o.value} className="flex items-center gap-2 p-2.5 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer rounded-lg transition-colors">
+                                <input type="checkbox" checked={selectedValues.includes(o.value)} onChange={() => toggleOption(o.value)} className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-blue-600 focus:ring-blue-500"/>
+                                <span className="text-[10px] font-black uppercase text-slate-700 dark:text-slate-200">{o.label}</span>
                             </label>
                         ))}
                     </div>

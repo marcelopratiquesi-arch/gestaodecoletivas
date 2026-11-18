@@ -1,5 +1,6 @@
 {
   "accessDisabled": "Seu acesso ao sistema está desativado. Fale com o administrador.",
+  "teacherOldLogin": "O login por e-mail e senha de professor foi encerrado. Entre com o Google, na aba de primeiro acesso, e peça seu acesso: o líder ou o mentor da sua unidade vai aprovar.",
   "subtitle": "Gestão de Coletivas",
   "emailLabel": "Usuário / E-mail",
   "emailPlaceholder": "seu@email.com",

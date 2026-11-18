@@ -59,7 +59,27 @@
     "approved": "{{name}} approved. Now link their classes in the teachers list.",
     "modalities": "Class types",
     "noModalities": "not provided",
-    "documentOk": "✓ ID document provided (stored securely)"
+    "documentOk": "✓ ID document provided (stored securely)",
+    "link": {
+      "searching": "Looking for this person in the grid...",
+      "error": "Could not look up the grid record. You can approve without linking and link later.",
+      "none": "No grid record looks like this person. Only the access will be created.",
+      "title": "Does this person already have a grid record?",
+      "matches": "Matches on",
+      "field": {
+        "documento": "ID document",
+        "email": "e-mail",
+        "telefone": "phone",
+        "nome": "name"
+      },
+      "blocked": {
+        "outroDocumento": "This record has a different ID document: it is another person. Cannot link.",
+        "documentoNaoConferido": "This record already has an ID document and only the mentor or admin can check if it is the same person."
+      },
+      "noneOfThem": "None of these: create only the access (do not link a record)",
+      "approveConfirm": "Approve {{name}} as a teacher at {{unit}} and LINK to the grid record \"{{record}}\"?",
+      "approvedLinked": "{{name}} approved and linked to the record \"{{record}}\". That record's classes now show up for them."
+    }
   },
   "optSecond": "2nd leader (aspirant): both stay",
   "optReplace": "Replace the current leader (they lose access)",

@@ -25,7 +25,11 @@
     "allValidatedDesc": "¡Felicitaciones, no hay pendientes en esta fecha!",
     "noCancellationsTitle": "Ninguna cancelación",
     "noClassesTitle": "No se encontraron clases",
-    "adjustFiltersDesc": "Probá ajustar los filtros o la fecha seleccionada."
+    "adjustFiltersDesc": "Probá ajustar los filtros o la fecha seleccionada.",
+    "loadErrorTitle": "No se pudieron cargar las validaciones",
+    "loadErrorDesc": "La base rechazó la consulta (sin conexión o límite del día alcanzado). Para no validar nada dos veces, la lista queda oculta. Intentá de nuevo más tarde.",
+    "noLinkedUnitTitle": "Ninguna unidad vinculada",
+    "noLinkedUnitDesc": "Tu acceso todavía no tiene unidad. Pedile a tu mentor que te vincule a una unidad."
   },
   "card": {
     "unit": "Sede",

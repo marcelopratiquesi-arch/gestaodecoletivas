@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   CircleCheck, CircleX, Users, ArrowRightLeft,
   ChevronDown, Loader2, Undo2, User, Check, Star, DollarSign, Clock, Calendar, AlertTriangle, FileText
@@ -37,8 +37,14 @@ export function ValidationModal({
     const [aulaoHora, setAulaoHora] = useState("10:00");
     const [aulaoValor, setAulaoValor] = useState("");
 
-    // --- CARREGAR DADOS AO ABRIR ---
+    // Catálogos guardados à parte: eles mudam ao vivo (ex.: um mentor entra no sistema) e, se a janela
+    // dependesse deles, o formulário voltava ao zero no meio da digitação.
+    const catalogsRef = useRef(catalogs);
+    useEffect(() => { catalogsRef.current = catalogs; }, [catalogs]);
+
+    // --- CARREGAR DADOS AO ABRIR (só quando a janela abre para uma aula; nunca no meio da digitação) ---
     useEffect(() => {
+        const catalogs = catalogsRef.current;
         if (isOpen && acaoAtual) {
             const { item } = acaoAtual;
             
@@ -67,8 +73,8 @@ export function ValidationModal({
                 if (item.validacao.substituicao) {
                     setIsSubstituicao(true);
                     setMotivoSubstituicao(item.validacao.motivoSubstituicao || "");
-                    setInputValor(item.validacao.alunos || "");
-                    
+                    setInputValor(String(item.validacao.alunos ?? ""));
+
                     if (catalogs && catalogs.professores) {
                         const profJaSalvo = catalogs.professores.find(p => p.id === item.validacao.professorId);
                         if (profJaSalvo) setProfessorEncontrado(profJaSalvo);
@@ -83,12 +89,12 @@ export function ValidationModal({
                             setInputObs(motivo);
                         }
                     } else {
-                        setInputValor(item.validacao.alunos || "");
+                        setInputValor(String(item.validacao.alunos ?? ""));
                     }
                 }
             }
         }
-    }, [isOpen, acaoAtual, catalogs]);
+    }, [isOpen, acaoAtual]);
 
     // --- LISTA DE PROFESSORES QUE PODEM DAR A AULA ---
     // Só os vinculados (ativos) à unidade da aula. Na substituição, sem o próprio titular.
@@ -312,6 +318,8 @@ export function ValidationModal({
                     <form id="form-validacao" onSubmit={handleSubmit} className="space-y-5">
                         {acaoAtual.tipo === 'validar' ? (
                             <>
+                                {/* Aulão já lançado: só ajusta o número de alunos (não existe titular para substituir). */}
+                                {!acaoAtual.item?.isAulao && (
                                 <div className={`rounded-2xl border-2 transition-all duration-300 overflow-hidden ${isSubstituicao ? 'border-blue-500 bg-blue-50/50' : 'border-slate-100 hover:border-blue-200'}`}>
                                     <label className="flex items-center gap-4 p-4 cursor-pointer select-none">
                                         <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${isSubstituicao ? 'border-blue-500 bg-blue-500' : 'border-slate-300'}`}>
@@ -363,6 +371,7 @@ export function ValidationModal({
                                         </div>
                                     )}
                                 </div>
+                                )}
 
                                 <div>
                                     <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2 ml-1">{t('dailyValidation.modal.numberOfStudents')}</label>
@@ -378,7 +387,7 @@ export function ValidationModal({
                                         }
                                         return (
                                             <p className="text-[10px] text-slate-400 mt-1 ml-1">
-                                                {t('dailyValidation.deadline.studentsHint', { max: LIMITE_ALUNOS })}
+                                                {t('dailyValidation.deadline.studentsHint', { max: acaoAtual.item?.isAulao ? 1000 : LIMITE_ALUNOS })}
                                                 {media && <> {t('dailyValidation.quick.suggestionHint', { media: media.media, amostras: media.amostras })}</>}
                                             </p>
                                         );

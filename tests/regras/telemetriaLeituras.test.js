@@ -23,7 +23,7 @@ beforeEach(async () => {
     const db = ctx.firestore();
     await setDoc(doc(db, 'usuarios/admin1'), { role: 'admin', nome: 'A', email: 'a@x.com' });
     await setDoc(doc(db, 'usuarios/lider1'), { role: 'lider', nome: 'L1', email: 'l1@x.com' });
-    await setDoc(doc(db, 'usuarios/prof1'), { role: 'professor', nome: 'P1', email: 'p1@x.com' });
+    await setDoc(doc(db, 'usuarios/prof1'), { role: 'professor', nome: 'P1', email: 'p1@x.com', loginGoogle: true });
     await setDoc(doc(db, 'telemetria_leituras/2026-11-17_lider1'), { dia: '2026-11-17', uid: 'lider1', papel: 'lider', total: 10, itens: {} });
   });
 });

@@ -12,6 +12,8 @@ function medidorDeLeituras() {
   return {
     name: 'medidor-de-leituras',
     enforce: 'pre',
+    // Nos testes automáticos (vitest, modo "test") o medidor fica desligado: os testes usam o Firebase original.
+    apply: (_config, { mode }) => mode !== 'test',
     resolveId(id, importer) {
       if (id !== 'firebase/firestore' || !importer) return null
       const origem = importer.split('?')[0].replace(/\\/g, '/')

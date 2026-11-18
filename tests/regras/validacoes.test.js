@@ -3,14 +3,14 @@
 import { readFileSync } from 'fs';
 import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest';
 import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing';
-import { doc, setDoc, updateDoc, deleteDoc, collection, addDoc } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, deleteDoc, collection, addDoc, deleteField } from 'firebase/firestore';
 
 let env;
 
 beforeAll(async () => {
   env = await initializeTestEnvironment({
     projectId: 'demo-gestao-pratique',
-    firestore: { rules: readFileSync('firestore.rules', 'utf8'), host: '127.0.0.1', port: 8080 },
+    firestore: { rules: readFileSync('firestore.rules', 'utf8'), host: '127.0.0.1', port: Number(process.env.FIRESTORE_EMULATOR_HOST?.split(':').pop() || 8080) },
   });
 });
 afterAll(async () => { await env?.cleanup(); });
@@ -34,8 +34,8 @@ beforeEach(async () => {
     await setDoc(doc(db, 'usuarios/mentor2'), { role: 'mentor' });
     await setDoc(doc(db, 'usuarios/loginUniA'), { role: 'unidade', unidadeId: 'uniA' });
     await setDoc(doc(db, 'usuarios/liderA'), { role: 'lider', unidadeId: 'uniA' });
-    await setDoc(doc(db, 'usuarios/prof1'), { role: 'professor', professorId: 'p1' });
-    await setDoc(doc(db, 'usuarios/prof2'), { role: 'professor' });
+    await setDoc(doc(db, 'usuarios/prof1'), { role: 'professor', professorId: 'p1', loginGoogle: true });
+    await setDoc(doc(db, 'usuarios/prof2'), { role: 'professor', loginGoogle: true });
     await setDoc(doc(db, 'unidades/uniA'), { nome: 'A', mentorId: 'mentor1' });
     await setDoc(doc(db, 'unidades/uniB'), { nome: 'B', mentorId: 'mentor2' });
     await setDoc(doc(db, 'professores/p1'), { nome: 'P1', uidLogin: 'prof1' });
@@ -191,5 +191,40 @@ describe('líder de duas unidades', () => {
   it('quem só tem a uniA na lista NÃO valida a uniB', async () => {
     await montar();
     await assertFails(validacao('liderSoA', 'aulaB', HOJE, { unidadeId: 'uniB' }));
+  });
+});
+
+// Aulão já lançado: a tela edita/cancela/reverte só os campos do aulão (sem aulaId, sem mexer em valor, professor ou dia).
+describe('editar, cancelar e reverter aulão', () => {
+  const montar = () => env.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), 'validacoes/aulao1'), {
+      isAulao: true, data: HOJE, unidadeId: 'uniA', professorId: 'p1', modalidadeId: 'm1', hora: '10:00',
+      status: 'realizada', alunos: 200, valorPago: 500, valorEfetivo: 500, substituicao: false, validadoPor: 'liderA',
+    });
+  });
+  const ref = (uid) => doc(como(uid), 'validacoes/aulao1');
+
+  it('líder edita o número de alunos (inclusive acima de 150)', async () => {
+    await montar();
+    await assertSucceeds(updateDoc(ref('liderA'), { status: 'realizada', alunos: 220, validadoPor: 'liderA' }));
+  });
+  it('jeito antigo (aulão ganhava o próprio id como aulaId) continua recusado para o líder', async () => {
+    await montar();
+    await assertFails(updateDoc(ref('liderA'), { aulaId: 'aulao1', status: 'realizada', alunos: 220, validadoPor: 'liderA' }));
+  });
+  it('líder e mentor cancelam o aulão', async () => {
+    await montar();
+    await assertSucceeds(updateDoc(ref('liderA'), { status: 'cancelada', motivoCancelamento: 'Chuva/Clima', validadoPor: 'liderA' }));
+    await montar();
+    await assertSucceeds(updateDoc(ref('mentor1'), { status: 'cancelada', motivoCancelamento: 'Chuva/Clima', validadoPor: 'mentor1' }));
+  });
+  it('mentor reverte o cancelamento do aulão (volta a realizada, sem apagar)', async () => {
+    await montar();
+    await assertSucceeds(updateDoc(ref('mentor1'), { status: 'cancelada', motivoCancelamento: 'Chuva/Clima', validadoPor: 'mentor1' }));
+    await assertSucceeds(updateDoc(ref('mentor1'), { status: 'realizada', motivoCancelamento: deleteField(), validadoPor: 'mentor1' }));
+  });
+  it('mentor de outra unidade não mexe no aulão', async () => {
+    await montar();
+    await assertFails(updateDoc(ref('mentor2'), { status: 'cancelada', motivoCancelamento: 'Chuva/Clima', validadoPor: 'mentor2' }));
   });
 });

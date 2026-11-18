@@ -31,8 +31,9 @@ beforeEach(async () => {
     await setDoc(doc(db, 'usuarios/loginUniB'), { role: 'unidade', unidadeId: 'uniB', nome: 'Unidade B' });
     await setDoc(doc(db, 'usuarios/liderA'), { role: 'lider', unidadeId: 'uniA', nome: 'Líder A' });
     await setDoc(doc(db, 'usuarios/liderB'), { role: 'lider', unidadeId: 'uniB', nome: 'Líder B' });
-    await setDoc(doc(db, 'usuarios/prof1'), { role: 'professor', professorId: 'p1', nome: 'Prof' });
+    await setDoc(doc(db, 'usuarios/prof1'), { role: 'professor', professorId: 'p1', nome: 'Prof', loginGoogle: true });
     await setDoc(doc(db, 'aulas/aula1'), { unidadeId: 'uniA' });
+    await setDoc(doc(db, 'aulas_publicas/aula1'), { unidadeId: 'uniA' });
     await setDoc(doc(db, 'publico/vitrine'), { unidades: { uniA: { nome: 'Unidade A' } }, professores: { p1: 'Prof' } });
   });
 });
@@ -75,7 +76,7 @@ describe('mentor: o que as telas dele fazem continua funcionando', () => {
   it('cria login de unidade e de professor', async () => {
     const db = como('mentor1');
     await assertSucceeds(setDoc(doc(db, 'usuarios/novaUni'), { role: 'unidade', unidadeId: 'uniA' }));
-    await assertSucceeds(setDoc(doc(db, 'usuarios/novoProf'), { role: 'professor' }));
+    await assertSucceeds(setDoc(doc(db, 'usuarios/novoProf'), { role: 'professor', loginGoogle: true }));
   });
   it('NÃO cria mentor nem admin', async () => {
     const db = como('mentor1');
@@ -108,7 +109,7 @@ describe('mentor: o que as telas dele fazem continua funcionando', () => {
 describe('unidade: cadastro de professor continua funcionando', () => {
   it('cria login de professor e edita o nome', async () => {
     const db = como('loginUniA');
-    await assertSucceeds(setDoc(doc(db, 'usuarios/profNovo'), { role: 'professor' }));
+    await assertSucceeds(setDoc(doc(db, 'usuarios/profNovo'), { role: 'professor', loginGoogle: true }));
     await assertSucceeds(updateDoc(doc(db, 'usuarios/prof1'), { nome: 'Outro Nome' }));
   });
   it('NÃO cria unidade/mentor/admin e NÃO exclui ninguém', async () => {
@@ -140,10 +141,10 @@ describe('favoritos do Pratique Play', () => {
 });
 
 describe('página pública de horários (vitrine)', () => {
-  it('sem login: lê a vitrine, as aulas e as modalidades', async () => {
+  it('sem login: lê a vitrine, a cópia pública das aulas (sem valor) e as modalidades', async () => {
     const db = anonimo();
     await assertSucceeds(getDoc(doc(db, 'publico/vitrine')));
-    await assertSucceeds(getDoc(doc(db, 'aulas/aula1')));
+    await assertSucceeds(getDoc(doc(db, 'aulas_publicas/aula1')));
     await assertSucceeds(getDoc(doc(db, 'modalidades/m1')));
   });
   it('sem login: NÃO lê os cadastros completos (e-mail, telefone) de unidades e professores', async () => {
@@ -165,9 +166,10 @@ describe('página pública de horários (vitrine)', () => {
 });
 
 describe('o resto do sistema não mudou', () => {
-  it('sem login: lê aulas (página de horários), não lê usuarios nem validações', async () => {
+  it('sem login: lê a cópia pública das aulas (página de horários), não lê aulas (têm o valor), usuarios nem validações', async () => {
     const db = anonimo();
-    await assertSucceeds(getDoc(doc(db, 'aulas/aula1')));
+    await assertSucceeds(getDoc(doc(db, 'aulas_publicas/aula1')));
+    await assertFails(getDoc(doc(db, 'aulas/aula1')));
     await assertFails(getDoc(doc(db, 'usuarios/admin1')));
     await assertFails(getDoc(doc(db, 'validacoes/v1')));
   });
@@ -198,7 +200,7 @@ describe('líder (perfil novo "lider"): mesmas permissões do antigo "unidade"',
   });
   it('cria login de professor e edita o nome', async () => {
     const db = como('liderA');
-    await assertSucceeds(setDoc(doc(db, 'usuarios/profDoLider'), { role: 'professor' }));
+    await assertSucceeds(setDoc(doc(db, 'usuarios/profDoLider'), { role: 'professor', loginGoogle: true }));
     await assertSucceeds(updateDoc(doc(db, 'usuarios/prof1'), { nome: 'Outro Nome' }));
   });
   it('NÃO cria líder/mentor/admin e NÃO exclui ninguém', async () => {
@@ -434,13 +436,13 @@ describe('crachá obrigatório para todo tipo de login', () => {
   });
   it('status "inativo" em outro papel (professor/líder) continua como antes', async () => {
     await env.withSecurityRulesDisabled(async (ctx) => {
-      await setDoc(doc(ctx.firestore(), 'usuarios/profInativo'), { role: 'professor', status: 'inativo', nome: 'Prof' });
+      await setDoc(doc(ctx.firestore(), 'usuarios/profInativo'), { role: 'professor', status: 'inativo', nome: 'Prof', loginGoogle: true });
     });
     await assertSucceeds(getDoc(doc(senha('profInativo'), 'unidades/uniA')));
   });
   it('a página pública de horários continua aberta sem login', async () => {
     await assertSucceeds(getDoc(doc(anonimo(), 'publico/vitrine')));
-    await assertSucceeds(getDoc(doc(anonimo(), 'aulas/aula1')));
+    await assertSucceeds(getDoc(doc(anonimo(), 'aulas_publicas/aula1')));
   });
 });
 

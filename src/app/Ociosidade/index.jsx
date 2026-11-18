@@ -2,7 +2,10 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCatalogs } from '../../contexts/CatalogContext';
 import { db } from '../../services/firebase';
-import { collection, query, where, getDocs, addDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, writeBatch } from 'firebase/firestore';
+import { espelharAula } from '../../services/aulasPublicas';
+import { logDeAulaNova } from '../../services/auditoriaCronograma';
+import { valorDaAulaValido } from '../../utils/cronogramaRegras';
 import { 
   Radar, Filter, Clock, MapPin, Target, AlertTriangle, PlusCircle, 
   Loader2, Flame, LayoutGrid, CalendarDays, Sun, Sunset, Moon, X, 
@@ -546,8 +549,7 @@ export default function RadarDeGrade() {
 
     const handleModalidadeChange = (e) => {
         const mId = e.target.value;
-        const mod = modMap[mId];
-        setFormData(prev => ({ ...prev, modalidadeId: mId, professorId: '', valor: mod?.valorBase || '' }));
+        setFormData(prev => ({ ...prev, modalidadeId: mId, professorId: '' }));
     };
 
     const toggleDia = (dia) => {
@@ -562,15 +564,31 @@ export default function RadarDeGrade() {
         if (!formData.modalidadeId || !formData.professorId || !formData.hora || !formData.dataInicio) return alert(t('radar.newClass.alerts.fillRequired'));
         if (formData.dias.length === 0) return alert(t('radar.newClass.alerts.selectDay'));
         if (formData.dataInicio < getTodayStr()) return alert(t('radar.newClass.alerts.noRetroactive'));
+        // Mesma regra do Cronograma: valor obrigatório (vazio virava R$ 0).
+        if (!valorDaAulaValido(formData.valor)) return alert(t('radar.newClass.alerts.valueRequired'));
 
         setSaving(true);
         try {
-            await addDoc(collection(db, 'aulas'), {
+            // Aula e cópia pública (sem o valor) gravadas juntas.
+            const novaAula = {
                 unidadeId: previewModal.unidadeId, dias: formData.dias, hora: formData.hora,
                 modalidadeId: formData.modalidadeId, professorId: formData.professorId,
-                valor: formData.valor || 0, dataInicio: formData.dataInicio, excluido: false,
+                valor: parseFloat(formData.valor), dataInicio: formData.dataInicio, excluido: false,
                 dataCriacao: new Date().toISOString()
+            };
+            const lote = writeBatch(db);
+            const novaRef = doc(collection(db, 'aulas'));
+            lote.set(novaRef, novaAula);
+            espelharAula(lote, novaRef.id, novaAula);
+            const [logRef, logDados] = logDeAulaNova({
+                usuario: userData, descricao: 'Aula adicionada na grade (Radar de Ociosidade).',
+                unidade: catalogs.unidades?.find(u => u.id === previewModal.unidadeId)?.nome,
+                modalidade: modMap[formData.modalidadeId]?.nome,
+                professor: catalogs.professores?.find(p => p.id === formData.professorId)?.nome,
+                hora: formData.hora, dias: formData.dias, valor: formData.valor, dataInicio: formData.dataInicio,
             });
+            lote.set(logRef, logDados);
+            await lote.commit();
             setAddAulaModal({ ...addAulaModal, isOpen: false });
             alert(t('radar.newClass.alerts.saved'));
         } catch (error) { alert(t('radar.newClass.alerts.saveError')); } 
@@ -931,7 +949,7 @@ export default function RadarDeGrade() {
                         </div>
                         <div className="flex-1">
                             <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1 block">{t('radar.newClass.value', { symbol: getCurrencySymbol(catalogs.unidades?.find(u => String(u.id) === String(previewModal.unidadeId))?.pais) })}</label>
-                            <input required type="number" step="0.01" value={formData.valor} onChange={e => setFormData({...formData, valor: e.target.value})} className="w-full p-3 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-800 dark:text-white outline-none focus:border-blue-500 bg-slate-50 dark:bg-slate-900 uppercase"/>
+                            <input required type="number" step="0.01" min="0.01" value={formData.valor} onChange={e => setFormData({...formData, valor: e.target.value})} className="w-full p-3 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-800 dark:text-white outline-none focus:border-blue-500 bg-slate-50 dark:bg-slate-900 uppercase"/>
                         </div>
                     </div>
                     

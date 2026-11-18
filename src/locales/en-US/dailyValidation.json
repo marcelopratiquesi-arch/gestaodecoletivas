@@ -25,7 +25,11 @@
     "allValidatedDesc": "Congratulations, there is nothing pending on this date.",
     "noCancellationsTitle": "No cancellations",
     "noClassesTitle": "No classes found",
-    "adjustFiltersDesc": "Try adjusting the filters or the selected date."
+    "adjustFiltersDesc": "Try adjusting the filters or the selected date.",
+    "loadErrorTitle": "Could not load validations",
+    "loadErrorDesc": "The database refused the request (no connection or daily limit reached). To avoid validating anything twice, the list is hidden. Please try again later.",
+    "noLinkedUnitTitle": "No linked unit",
+    "noLinkedUnitDesc": "Your access has no unit yet. Ask your mentor to link you to a unit."
   },
   "card": {
     "unit": "Unit",

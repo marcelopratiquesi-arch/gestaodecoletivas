@@ -11,8 +11,12 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import { db } from "../../../services/firebase";
+import { CabecalhoDaAba, BotaoPrincipal } from "../ui/CabecalhoDaAba";
+import { BotaoDeLinha } from "../ui/BotaoDeLinha";
+import { FiltroPadrao } from "../ui/FiltroPadrao";
+import { useFiltroCascata } from "../ui/useFiltroCascata";
 import { 
-  Dumbbell, Plus, Search, Edit2, Trash2, Power, 
+  Dumbbell, Plus, Edit2, Trash2, Power, 
   CheckCircle2, AlertTriangle, Loader2, Palette, Maximize,
   X, Check, GripHorizontal
 } from "lucide-react";
@@ -126,7 +130,6 @@ export function ModalidadesTab() {
 
   const [loading, setLoading] = useState(true);
   const [modalidades, setModalidades] = useState([]);
-  const [busca, setBusca] = useState(""); 
 
   const [erro, setErro] = useState("");
   const [sucesso, setSucesso] = useState("");
@@ -187,10 +190,9 @@ export function ModalidadesTab() {
     } catch (e) { setErro(t('modalitiesTab.messages.loadError')); } finally { setLoading(false); }
   }
 
-  const modalidadesFiltradas = useMemo(() => {
-    const termo = busca.toLowerCase();
-    return modalidades.filter(m => m.nome.toLowerCase().includes(termo));
-  }, [modalidades, busca]);
+  // Só o nome (filtro padrão com busca e contagem, sem seletores).
+  const filtro = useFiltroCascata(modalidades, { textoBusca: (m) => [m.nome] });
+  const modalidadesFiltradas = filtro.resultado;
 
   function abrirNova() {
     if (!podeEditar) return;
@@ -277,38 +279,13 @@ export function ModalidadesTab() {
   if (!podeVer) return <div className="p-8 text-center text-slate-400">{t('modalitiesTab.noAccess')}</div>;
 
   return (
-    <div className="p-6 animate-fade-in max-w-[1200px] mx-auto">
+    <div className="p-6 animate-fade-in max-w-[1200px] mx-auto space-y-6">
       
-      <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 border-b border-slate-200 dark:border-slate-700 pb-6">
-        <div>
-          <h2 className="text-2xl font-black text-slate-800 dark:text-white flex items-center gap-3">
-            <span className="p-2 bg-red-600 text-white rounded-lg shadow-md shadow-red-500/20"><Dumbbell className="w-6 h-6"/></span>
-            {t('modalitiesTab.title')}
-          </h2>
-          <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-2">
-            {t('modalitiesTab.subtitle')}
-          </p>
-        </div>
+      <CabecalhoDaAba abaId="modalidades" icone={Dumbbell} titulo={t('modalitiesTab.title')} subtitulo={t('modalitiesTab.subtitle')}>
+        {podeEditar && <BotaoPrincipal abaId="modalidades" icone={Plus} onClick={abrirNova}>{t('modalitiesTab.new')}</BotaoPrincipal>}
+      </CabecalhoDaAba>
 
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          <div className="relative w-full md:w-72">
-            <Search className="absolute left-4 top-3.5 w-4 h-4 text-slate-400" />
-            <input 
-              type="text" 
-              placeholder={t('modalitiesTab.search')} 
-              className="w-full pl-11 pr-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl text-sm font-bold bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-red-600 focus:border-red-600 outline-none shadow-sm transition-all uppercase"
-              value={busca}
-              onChange={e => setBusca(e.target.value)}
-            />
-          </div>
-          
-          {podeEditar && (
-            <button onClick={abrirNova} className="px-6 py-3 bg-red-600 text-white rounded-xl font-bold uppercase tracking-wide shadow-lg shadow-red-500/20 hover:bg-red-700 text-xs flex items-center gap-2 whitespace-nowrap transition-transform active:scale-95 h-full">
-              <Plus className="w-4 h-4"/> {t('modalitiesTab.new')}
-            </button>
-          )}
-        </div>
-      </div>
+      <FiltroPadrao abaId="modalidades" filtro={filtro} mostrar={[]} placeholder={t('modalitiesTab.search')} />
 
       {erro && <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm font-bold flex items-center gap-2"><AlertTriangle className="w-5 h-5"/>{erro}</div>}
       {sucesso && <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-xl text-green-700 text-sm font-bold flex items-center gap-2"><CheckCircle2 className="w-5 h-5"/>{sucesso}</div>}
@@ -375,15 +352,10 @@ export function ModalidadesTab() {
 
                   {podeEditar && (
                     <div className="flex items-center gap-1.5 md:border-l border-slate-200 dark:border-slate-700 md:pl-5 opacity-50 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => abrirEditar(m)} className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-xl transition-colors" title={t('modalitiesTab.editFull')}>
-                            <Edit2 className="w-4 h-4"/>
-                        </button>
-                        <button onClick={() => alternarStatus(m)} className={`p-2 rounded-xl transition-colors ${m.status === 'ativa' ? 'text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/30' : 'text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30'}`} title={m.status === 'ativa' ? t('modalitiesTab.deactivate') : t('modalitiesTab.activate')}>
-                            <Power className="w-4 h-4"/>
-                        </button>
-                        <button onClick={() => excluir(m)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-xl transition-colors" title={t('modalitiesTab.deleteForever')}>
-                            <Trash2 className="w-4 h-4"/>
-                        </button>
+                        <BotaoDeLinha abaId="modalidades" icone={Edit2} onClick={() => abrirEditar(m)} title={t('modalitiesTab.editFull')} />
+                        <BotaoDeLinha abaId="modalidades" tipo={m.status === 'ativa' ? "desativar" : "ativar"} icone={Power} onClick={() => alternarStatus(m)}
+                          title={m.status === 'ativa' ? t('modalitiesTab.deactivate') : t('modalitiesTab.activate')} />
+                        <BotaoDeLinha abaId="modalidades" tipo="perigo" icone={Trash2} onClick={() => excluir(m)} title={t('modalitiesTab.deleteForever')} />
                     </div>
                   )}
               </div>
@@ -402,7 +374,7 @@ export function ModalidadesTab() {
       {/* 🟢 O MODAL REDIMENSIONÁVEL */}
       <ResizableModal 
           isOpen={modalAberto} onClose={() => setModalAberto(false)} 
-          title={editando ? t('modalitiesTab.editTitle') : t('modalitiesTab.newTitle')} icon={Dumbbell} headerColor="bg-red-50 dark:bg-slate-900 text-red-600 dark:text-red-500 border-red-100 dark:border-slate-800"
+          title={editando ? t('modalitiesTab.editTitle') : t('modalitiesTab.newTitle')} icon={Dumbbell} headerColor="bg-orange-50 dark:bg-slate-900 text-orange-600 dark:text-orange-500 border-orange-100 dark:border-slate-800"
           pos={modalPos} setPos={setModalPos} size={modalSize} setSize={setModalSize} minW={320} minH={450}
       >
         <form onSubmit={salvar} className="p-6 space-y-6 overflow-y-auto custom-scrollbar flex-1 bg-white dark:bg-slate-800">
@@ -410,7 +382,7 @@ export function ModalidadesTab() {
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">{t('modalitiesTab.name')}</label>
             <input
               type="text" value={nome} onChange={(e) => setNome(e.target.value)}
-              className="w-full px-4 py-3.5 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-red-500 outline-none transition-all text-sm font-bold uppercase"
+              className="w-full px-4 py-3.5 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none transition-all text-sm font-bold uppercase"
               placeholder={t('modalitiesTab.namePlaceholder')} autoFocus
             />
           </div>
@@ -423,7 +395,7 @@ export function ModalidadesTab() {
                 <input 
                     type="number" step="0.5" min="1" 
                     value={indiceOcupacao} onChange={(e) => setIndiceOcupacao(e.target.value)} 
-                    className="w-full px-4 py-3.5 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-red-500 outline-none transition-all text-sm font-black" 
+                    className="w-full px-4 py-3.5 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none transition-all text-sm font-black" 
                 />
               </div>
 
@@ -445,7 +417,7 @@ export function ModalidadesTab() {
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">{t('modalitiesTab.initialStatus')}</label>
             <select
               value={status} onChange={(e) => setStatus(e.target.value)}
-              className="w-full px-4 py-3.5 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-red-500 outline-none text-sm font-bold uppercase appearance-none"
+              className="w-full px-4 py-3.5 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none text-sm font-bold uppercase appearance-none"
             >
               <option value="ativa">{t('modalitiesTab.activeVisible')}</option>
               <option value="inativa">{t('modalitiesTab.inactiveHidden')}</option>
@@ -456,7 +428,7 @@ export function ModalidadesTab() {
             <button type="button" onClick={() => setModalAberto(false)} className="flex-1 py-3.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-xs uppercase tracking-widest">
               {t('common.actions.cancel')}
             </button>
-            <button type="submit" disabled={salvando} className="flex-[1.5] py-3.5 rounded-xl bg-red-600 text-white font-black uppercase tracking-widest shadow-lg shadow-red-500/30 hover:bg-red-700 transition-transform active:scale-95 flex items-center justify-center gap-2 text-xs">
+            <button type="submit" disabled={salvando} className="flex-[1.5] py-3.5 rounded-xl bg-orange-600 text-white font-black uppercase tracking-widest shadow-lg shadow-orange-500/30 hover:bg-orange-700 transition-transform active:scale-95 flex items-center justify-center gap-2 text-xs">
               {salvando ? <Loader2 className="w-4 h-4 animate-spin"/> : t('modalitiesTab.save')}
             </button>
           </div>
