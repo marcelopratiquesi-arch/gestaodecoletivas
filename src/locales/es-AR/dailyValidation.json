@@ -40,7 +40,8 @@
     "edit": "Editar",
     "cancel": "Cancelar",
     "details": "Detalles",
-    "waitForDate": "Esperá la fecha"
+    "waitForDate": "Esperá la fecha",
+    "validateOnHoliday": "¿Abrió en el feriado? Validar"
   },
   "modal": {
     "validateTitle": "Validar Clase",
@@ -95,7 +96,11 @@
     "selectModality": "Seleccioná la modalidad.",
     "selectDate": "Seleccioná la fecha.",
     "informStudentCount": "Ingresá la cantidad de alumnos.",
-    "confirmSubstitute": "Por favor, buscá y confirmá al profesor suplente por e-mail."
+    "confirmSubstitute": "Por favor, buscá y confirmá al profesor suplente por e-mail.",
+    "confirmHolidayValidation": "Este día es feriado en esta unidad. ¿Confirmás que la unidad abrió y la clase se dio?",
+    "alreadyValidated": "validada con {{count}} alumno(s)",
+    "alreadyCanceled": "cancelada ({{motivo}})",
+    "confirmOverwrite": "Otra persona ya registró esta clase: {{comoEsta}}. Tu pantalla estaba desactualizada.\n\n¿Guardar tu registro encima?"
   },
   "deadline": {
     "closedMonthTeacher": "Este mes ya fue cerrado. Lo que quedó pendiente ya no puede ser validado ni modificado por el profesor. Si necesitás corregir, hablá con el líder de la unidad.",

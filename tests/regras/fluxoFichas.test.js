@@ -20,7 +20,7 @@ let env, juntar, ligar, fichasDoLogin;
 beforeAll(async () => {
   env = await initializeTestEnvironment({
     projectId: 'demo-gestao-pratique',
-    firestore: { rules: readFileSync('firestore.rules', 'utf8'), host: '127.0.0.1', port: 8080 },
+    firestore: { rules: readFileSync('firestore.rules', 'utf8'), host: '127.0.0.1', port: Number(globalThis.process?.env?.FIRESTORE_EMULATOR_HOST?.split(':').pop() || 8080) },
   });
   ctx.db = env.authenticatedContext('admin1', { firebase: { sign_in_provider: 'google.com', identities: { 'google.com': ['1'] } } }).firestore();
   juntar = await import('../../src/services/juntarFichasService');
