@@ -59,7 +59,27 @@
     "approved": "{{name}} aprovado(a). Agora ligue as aulas dele(a) pelo cadastro de professores.",
     "modalities": "Modalidades",
     "noModalities": "não informadas",
-    "documentOk": "✓ Documento informado (guardado em local protegido)"
+    "documentOk": "✓ Documento informado (guardado em local protegido)",
+    "link": {
+      "searching": "Procurando esta pessoa na grade...",
+      "error": "Não deu para procurar a ficha na grade. Você pode aprovar sem ligar e ligar depois.",
+      "none": "Nenhuma ficha da grade parece ser esta pessoa. Será criado só o acesso.",
+      "title": "Esta pessoa já tem ficha na grade?",
+      "matches": "Bate em",
+      "field": {
+        "documento": "documento",
+        "email": "e-mail",
+        "telefone": "telefone",
+        "nome": "nome"
+      },
+      "blocked": {
+        "outroDocumento": "Esta ficha tem outro documento: é outra pessoa. Não dá para ligar.",
+        "documentoNaoConferido": "Esta ficha já tem documento e só o mentor ou o admin conferem se é a mesma pessoa."
+      },
+      "noneOfThem": "Nenhuma dessas: criar só o acesso (sem ligar a ficha)",
+      "approveConfirm": "Aprovar {{name}} como professor(a) da unidade {{unit}} e LIGAR à ficha \"{{record}}\" da grade?",
+      "approvedLinked": "{{name}} aprovado(a) e ligado(a) à ficha \"{{record}}\". As aulas dessa ficha já aparecem para ele(a)."
+    }
   },
   "optSecond": "2º líder (aspirante): os dois ficam",
   "optReplace": "Substituir o líder atual (ele perde o acesso)",

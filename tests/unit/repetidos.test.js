@@ -1,7 +1,7 @@
 // Comparação de e-mail, telefone e nome (src/utils/repetidos.js).
 // Rodar: npx vitest run tests/unit
 import { describe, it, expect } from 'vitest';
-import { normalizarEmail, emailFormatoValido, emailDeMentira, chaveTelefone, normalizarNome, acharRepetidos, analisarRepetidos, fichasParecidas, limparNome } from '../../src/utils/repetidos';
+import { normalizarEmail, emailFormatoValido, emailDeMentira, chaveTelefone, normalizarNome, acharRepetidos, analisarRepetidos, escolhaInicial, fichasParecidas, limparNome } from '../../src/utils/repetidos';
 
 describe('e-mail', () => {
   it('ignora maiúsculas e espaços, mas não pontos', () => {
@@ -145,5 +145,16 @@ describe('analisarRepetidos', () => {
     expect(r.mesmaPessoa).toHaveLength(0);
     expect(r.outraPessoa).toHaveLength(0);
     expect(r.selos.size).toBe(0);
+  });
+});
+
+describe('escolhaInicial (aprovação de professor)', () => {
+  const c = (id, campos, extra = {}) => ({ ficha: { id }, campos, ...extra });
+  it('documento vence; sem documento, só pré-seleciona se houver UMA ficha por e-mail/telefone', () => {
+    expect(escolhaInicial([c('a', ['email']), c('b', ['documento'])])).toBe('b');
+    expect(escolhaInicial([c('a', ['email'])])).toBe('a');
+    expect(escolhaInicial([c('a', ['email']), c('b', ['telefone'])])).toBe('');
+    expect(escolhaInicial([c('a', ['nome'])])).toBe('');
+    expect(escolhaInicial([c('a', ['documento'], { bloqueada: 'outroDocumento' })])).toBe('');
   });
 });

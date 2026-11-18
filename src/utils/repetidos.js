@@ -268,3 +268,18 @@ export function analisarRepetidos(registros) {
   }
   return { mesmaPessoa, outraPessoa, soNome, selos };
 }
+
+// ---------------- Aprovação de professor: qual ficha da grade é a pessoa do pedido ----------------
+// Força do motivo, para ordenar e pré-selecionar (documento > e-mail > telefone > nome).
+const FORCA = { documento: 3, email: 2, telefone: 1, nome: 0 };
+export const forcaDosCampos = (campos) => Math.max(...campos.map(c => FORCA[c] ?? 0));
+
+/** Escolha inicial: a ficha do documento; ou a única ficha com o mesmo e-mail/telefone. Só nome não pré-seleciona. */
+export function escolhaInicial(candidatas) {
+  const livres = candidatas.filter(c => !c.bloqueada);
+  const porDoc = livres.find(c => c.campos.includes('documento'));
+  if (porDoc) return String(porDoc.ficha.id);
+  const fortes = livres.filter(c => c.campos.includes('email') || c.campos.includes('telefone'));
+  return fortes.length === 1 ? String(fortes[0].ficha.id) : '';
+}
+
