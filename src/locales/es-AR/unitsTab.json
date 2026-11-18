@@ -144,5 +144,48 @@
     "turnOffError": "No se pudo desactivar.",
     "bannerTitle": "{{count}} sede(s) ya tienen líder y todavía tienen el usuario antiguo activo",
     "bannerDesc": "Ahora que el líder ingresa con Google, el usuario antiguo de la sede (correo @pratique.com y contraseña) se puede desactivar."
+  },
+  "modalities": {
+    "column": "Modalidades",
+    "countEnabled": "{{count}} habilitadas",
+    "countDisabled": "{{count}} deshabilitadas",
+    "notSet": "Todas (sin configurar)",
+    "manage": "Administrar las modalidades de la unidad",
+    "title": "Modalidades de la unidad",
+    "search": "Buscar modalidad...",
+    "basicGroup": "Modalidades básicas",
+    "extraGroup": "Modalidades adicionales",
+    "enabled": "Habilitada",
+    "disabled": "Deshabilitada",
+    "activeClasses": "{{count}} clase(s) activa(s)",
+    "futureClasses": "{{count}} futura(s)",
+    "noClasses": "Sin clases",
+    "inactiveInCatalog": "inactiva en el catálogo",
+    "blocked": "Esta modalidad tiene clases activas o futuras en esta unidad. Revisá el Cronograma antes de desactivarla.",
+    "notConfiguredNote": "Esta unidad todavía no fue configurada: en el Cronograma aparecen todas las modalidades.",
+    "startFromClasses": "Configurar con las modalidades que ya tienen clases",
+    "readOnly": "Solo el administrador cambia las modalidades de la unidad.",
+    "saveError": "Error al guardar. Intentá de nuevo.",
+    "close": "Cerrar",
+    "none": "No se encontró ninguna modalidad.",
+    "bulk": {
+      "button": "Configurar modalidades de todas",
+      "hint": "Configura de una vez las unidades que todavía no fueron configuradas",
+      "title": "Configurar modalidades de todas las unidades",
+      "intro": "Cada unidad todavía no configurada recibe las modalidades que tienen clase activa o futura en el Cronograma. Una unidad sin clases activas recibe las modalidades básicas. Las unidades ya configuradas no cambian. No se guarda nada hasta que confirmes.",
+      "toConfigure": "Se configurarán {{count}} unidades",
+      "fromClasses": "{{count}} por el Cronograma",
+      "fromBasics": "{{count}} por las básicas",
+      "alreadyDone": "{{count}} ya configuradas (no cambian)",
+      "noBasics": "{{count}} unidades sin clase activa quedan afuera porque no se marcó la lista básica",
+      "mismatch": "{{count}} clases usan una modalidad que no existe en el catálogo (ignoradas, para revisar)",
+      "origin": {
+        "aulas": "por el Cronograma",
+        "basicas": "básicas"
+      },
+      "apply": "Configurar {{count}} unidades",
+      "done": "¡Listo! {{count}} unidades configuradas.",
+      "error": "Error al guardar. Revisá y probá de nuevo (lo ya guardado no se duplica)."
+    }
   }
 }

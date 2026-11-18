@@ -144,5 +144,48 @@
     "turnOffError": "Não foi possível desligar.",
     "bannerTitle": "{{count}} unidade(s) já têm líder e ainda têm o login antigo ligado",
     "bannerDesc": "Agora que o líder entra com o Google, o login antigo da unidade (e-mail @pratique.com e senha) pode ser desligado."
+  },
+  "modalities": {
+    "column": "Modalidades",
+    "countEnabled": "{{count}} habilitadas",
+    "countDisabled": "{{count}} desabilitadas",
+    "notSet": "Todas (não configurada)",
+    "manage": "Gerenciar modalidades da unidade",
+    "title": "Modalidades da unidade",
+    "search": "Buscar modalidade...",
+    "basicGroup": "Modalidades básicas",
+    "extraGroup": "Modalidades adicionais",
+    "enabled": "Habilitada",
+    "disabled": "Desabilitada",
+    "activeClasses": "{{count}} aula(s) ativa(s)",
+    "futureClasses": "{{count}} futura(s)",
+    "noClasses": "Sem aulas",
+    "inactiveInCatalog": "inativa no catálogo",
+    "blocked": "Esta modalidade possui aulas ativas ou futuras nesta unidade. Verifique o Cronograma antes de desativá-la.",
+    "notConfiguredNote": "Esta unidade ainda não foi configurada: no Cronograma aparecem todas as modalidades.",
+    "startFromClasses": "Configurar com as modalidades que já têm aula",
+    "readOnly": "Somente o administrador altera as modalidades da unidade.",
+    "saveError": "Erro ao salvar. Tente de novo.",
+    "close": "Fechar",
+    "none": "Nenhuma modalidade encontrada.",
+    "bulk": {
+      "button": "Configurar modalidades de todas",
+      "hint": "Configura de uma vez as unidades que ainda não foram configuradas",
+      "title": "Configurar modalidades de todas as unidades",
+      "intro": "Cada unidade ainda não configurada recebe as modalidades que têm aula ativa ou futura no Cronograma. Unidade sem nenhuma aula ativa recebe as modalidades básicas. Unidades já configuradas não mudam. Nada é gravado até você confirmar.",
+      "toConfigure": "{{count}} unidades serão configuradas",
+      "fromClasses": "{{count}} pelo Cronograma",
+      "fromBasics": "{{count}} pelas básicas",
+      "alreadyDone": "{{count}} já configuradas (não mudam)",
+      "noBasics": "{{count}} unidades sem aula ativa ficam de fora porque a lista básica não foi marcada",
+      "mismatch": "{{count}} aulas usam modalidade que não existe no catálogo (ignoradas, para conferência)",
+      "origin": {
+        "aulas": "pelo Cronograma",
+        "basicas": "básicas"
+      },
+      "apply": "Configurar {{count}} unidades",
+      "done": "Pronto! {{count}} unidades configuradas.",
+      "error": "Erro ao gravar. Nada pela metade: confira e tente de novo (o que já foi gravado não duplica)."
+    }
   }
 }

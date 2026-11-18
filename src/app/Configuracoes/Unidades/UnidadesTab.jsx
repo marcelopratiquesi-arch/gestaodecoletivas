@@ -1,7 +1,11 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useAuth } from "../../../contexts/AuthContext";
+import { useCatalogs } from "../../../contexts/CatalogContext";
+import { ModalidadesDaUnidadeModal } from "./ModalidadesDaUnidadeModal";
+import { ConfigurarModalidadesEmMassaModal } from "./ConfigurarModalidadesEmMassaModal";
+import { unidadeTemVinculo, idsHabilitados } from "../../../utils/modalidadesPorUnidade";
 import {
-  collection, addDoc, updateDoc, doc, query, where, serverTimestamp, writeBatch, onSnapshot, getDocs, deleteField
+  collection, addDoc, updateDoc, doc, query, where, serverTimestamp, writeBatch, onSnapshot, getDocs, getDoc, deleteField
 } from "firebase/firestore";
 import { db } from "../../../services/firebase";
 import { tirarLiderDaUnidade } from "../Lideres/saidaDoLider";
@@ -15,7 +19,7 @@ import { useFiltroCascata } from "../ui/useFiltroCascata";
 
 import { 
     Building2, MapPin, Edit2, Trash2, AlertTriangle, CheckCircle2, 
-    Loader2, User, Mail, Lock, Globe, Key, ChevronDown, ChevronUp, Ban, PowerOff, Plus, X, Phone, Check,
+    Dumbbell, Loader2, User, Mail, Lock, Globe, Key, ChevronDown, ChevronUp, Ban, PowerOff, Plus, X, Phone, Check,
     Map as MapIcon, Maximize, GripHorizontal, Upload, FileSpreadsheet, ShieldAlert, UserCheck
 } from "lucide-react";
 
@@ -262,7 +266,18 @@ export function UnidadesTab() {
   const userName = useMemo(() => userData?.nome || t('home.roles.mentor', 'Mentor'), [userData, t]);
   const podeAcessar = role === "admin" || role === "mentor";
 
+  const { catalogs } = useCatalogs();
   const [unidadesBase, setUnidadesBase] = useState([]);
+  // Modalidades habilitadas por unidade: abre o modal da unidade escolhida; a lista básica (unidades novas) é lida uma vez.
+  const [modalidadesUnidadeId, setModalidadesUnidadeId] = useState(null);
+  const [modalidadesEmMassaAberto, setModalidadesEmMassaAberto] = useState(false);
+  const [basicasIds, setBasicasIds] = useState([]);
+  useEffect(() => {
+    if (!podeAcessar) return;
+    getDoc(doc(db, "configuracoes", "modalidadesBasicas"))
+      .then((snap) => setBasicasIds(snap.exists() && Array.isArray(snap.data().ids) ? snap.data().ids.map(String) : []))
+      .catch((e) => console.warn("Lista básica de modalidades não lida", e));
+  }, [podeAcessar]);
   const [mentores, setMentores] = useState([]);
   // Dados da unidade para a vitrine pública, com o nome do mentor responsável (caixa de dúvidas do primeiro acesso).
   const comMentor = (dados) => ({
@@ -709,7 +724,9 @@ export function UnidadesTab() {
           linkGoogleMaps: linkMaps.trim(), 
           metragemSalaColetiva: metragem ? Number(metragem) : null, 
           enderecoCompleto: endereco.trim(),
-          criadoPor: userId, criadoEm: serverTimestamp()
+          criadoPor: userId, criadoEm: serverTimestamp(),
+          // Unidade nova já nasce com as modalidades básicas da rede (se a lista básica já foi definida).
+          ...(basicasIds.length > 0 ? { modalidadesIds: basicasIds } : {})
         });
         await publicarUnidade(unidadeRef.id, comMentor({ mentorId, estado, nome: nome.trim(), linkGoogleMaps: linkMaps.trim(), enderecoCompleto: endereco.trim() }));
 
@@ -779,6 +796,9 @@ export function UnidadesTab() {
             <>
               <input type="file" accept=".csv" ref={fileInputRef} className="hidden" onChange={handleFileUpload} />
               <BotaoSecundario icone={Upload} onClick={() => fileInputRef.current.click()}>Importar Infra (CSV)</BotaoSecundario>
+              <BotaoSecundario icone={Dumbbell} onClick={() => setModalidadesEmMassaAberto(true)} title={t('unitsTab.modalities.bulk.hint')}>
+                {t('unitsTab.modalities.bulk.button')}
+              </BotaoSecundario>
               <BotaoSecundario icone={atualizandoVitrine ? Loader2 : Globe} onClick={atualizarPaginaPublica} disabled={atualizandoVitrine} girar={atualizandoVitrine} title={t('unitsTab.publicPage.hint')}>
                 {t('unitsTab.publicPage.button')}
               </BotaoSecundario>
@@ -837,6 +857,9 @@ export function UnidadesTab() {
                   <th className="px-3 py-2.5 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider w-80">
                       {t('unitsTab.table.location', 'Local')}
                   </th>
+                  <th className="px-3 py-2.5 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                      {t('unitsTab.modalities.column')}
+                  </th>
                   <th className="px-3 py-2.5 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('estado')}>
                       <div className="flex items-center gap-1.5">{t('unitsTab.extra.region')} <SortIcon field="estado"/></div>
                   </th>
@@ -848,9 +871,9 @@ export function UnidadesTab() {
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
                 {loading ? (
-                    <tr><td colSpan="6" className="py-8 text-center"><Loader2 className="w-6 h-6 animate-spin text-red-500 mx-auto mb-2"/><p className="text-slate-400 font-bold text-xs uppercase">{t('unitsTab.extra.syncing')}</p></td></tr>
+                    <tr><td colSpan="7" className="py-8 text-center"><Loader2 className="w-6 h-6 animate-spin text-red-500 mx-auto mb-2"/><p className="text-slate-400 font-bold text-xs uppercase">{t('unitsTab.extra.syncing')}</p></td></tr>
                 ) : unidadesProcessadas.length === 0 ? (
-                    <tr><td colSpan="6" className="py-8 text-center text-slate-400 font-bold text-xs uppercase"><Building2 className="w-6 h-6 mx-auto mb-2 opacity-20"/> {t('unitsTab.emptyState', 'Nenhuma unidade encontrada.')}</td></tr>
+                    <tr><td colSpan="7" className="py-8 text-center text-slate-400 font-bold text-xs uppercase"><Building2 className="w-6 h-6 mx-auto mb-2 opacity-20"/> {t('unitsTab.emptyState', 'Nenhuma unidade encontrada.')}</td></tr>
                 ) : (
                   unidadesProcessadas.map(u => {
                     let paisAtual = u.pais || PAIS_DEFAULT;
@@ -978,6 +1001,14 @@ export function UnidadesTab() {
                       </td>
 
                       <td className="px-3 py-2">
+                        <button type="button" onClick={() => setModalidadesUnidadeId(u.id)} title={t('unitsTab.modalities.manage')}
+                          className="flex items-center whitespace-nowrap gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 hover:border-red-300 px-2 py-1 rounded-md w-fit transition-colors">
+                          <Dumbbell className="w-3 h-3 text-red-500"/>
+                          {unidadeTemVinculo(u) ? t('unitsTab.modalities.countEnabled', { count: idsHabilitados(u).length }) : t('unitsTab.modalities.notSet')}
+                        </button>
+                      </td>
+
+                      <td className="px-3 py-2">
                         <div className="text-xs font-bold text-slate-700 dark:text-slate-200">{u.estado}</div>
                         <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5 flex items-center gap-1">
                             <FlagIcon pais={paisAtual} className="w-3 h-2" /> {PAIS_CONFIG[paisAtual] ? t(`common.countries.${paisAtual}`) : u.pais}
@@ -1007,6 +1038,24 @@ export function UnidadesTab() {
           </div>
         </div>
       </div>
+
+      {modalidadesEmMassaAberto && (
+        <ConfigurarModalidadesEmMassaModal
+          unidades={unidadesBase} modalidades={catalogs.modalidades} aulas={catalogs.aulasTodas} basicasIds={basicasIds}
+          usuario={{ id: userId, nome: userData?.nome || userData?.email }} onClose={() => setModalidadesEmMassaAberto(false)}
+        />
+      )}
+
+      {modalidadesUnidadeId && (() => {
+        const unidadeModal = unidadesBase.find(x => x.id === modalidadesUnidadeId);
+        return unidadeModal ? (
+          <ModalidadesDaUnidadeModal
+            unidade={unidadeModal} modalidades={catalogs.modalidades} aulas={catalogs.aulasTodas}
+            basicasIds={basicasIds} podeEditar={role === 'admin'} usuario={{ id: userId, nome: userData?.nome || userData?.email }}
+            onClose={() => setModalidadesUnidadeId(null)}
+          />
+        ) : null;
+      })()}
 
       {/* === 🟢 MODAL FLUTUANTE DE RECONCILIAÇÃO (COMPARADOR DE CONFLITOS) === */}
       <ResizableModal 

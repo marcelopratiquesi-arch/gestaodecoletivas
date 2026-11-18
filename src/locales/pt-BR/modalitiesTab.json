@@ -33,7 +33,11 @@
     "saveError": "Erro ao salvar.",
     "statusError": "Erro ao mudar status",
     "deleteConfirm": "Excluir {{name}}?",
-    "deleteError": "Erro ao excluir"
+    "deleteError": "Erro ao excluir",
+    "inUse": "Não dá para excluir: esta modalidade está habilitada em alguma unidade ou tem aulas. Desative-a em vez de excluir."
   },
-  "spaceLabel": "Espaço (m²/aluno)"
+  "spaceLabel": "Espaço (m²/aluno)",
+  "basicBadge": "BÁSICA",
+  "makeBasic": "Marcar como básica da rede (unidades novas)",
+  "unmakeBasic": "Tirar de básica da rede"
 }

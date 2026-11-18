@@ -33,7 +33,11 @@
     "saveError": "Error al guardar.",
     "statusError": "Error al cambiar el estado",
     "deleteConfirm": "¿Eliminar {{name}}?",
-    "deleteError": "Error al eliminar"
+    "deleteError": "Error al eliminar",
+    "inUse": "No se puede eliminar: esta modalidad está habilitada en alguna unidad o tiene clases. Desactivala en lugar de eliminarla."
   },
-  "spaceLabel": "Espacio (m²/alumno)"
+  "spaceLabel": "Espacio (m²/alumno)",
+  "basicBadge": "BÁSICA",
+  "makeBasic": "Marcar como básica de la red (unidades nuevas)",
+  "unmakeBasic": "Quitar de básicas de la red"
 }
