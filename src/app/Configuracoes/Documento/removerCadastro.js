@@ -11,6 +11,8 @@ import { db } from "../../../services/firebase";
 import { ehLider, liderMantemAcesso } from "../../../permissions";
 import { camposAoLiberarVaga, listaDoCracha, professorDoLogin } from "../Lideres/saidaDoLider";
 import { apagarDocumentoNoLote } from "../../../services/documentoService";
+import { liberarContatos } from "../../../services/contatoService";
+import { normalizarPais } from "../../../utils/feriados";
 
 /**
  * { pode: true } ou { pode: false, motivo: "staff" | "professor" | "liderEProfessor" | "outroMentor" | "outro" }
@@ -35,7 +37,7 @@ export function avaliarRemocao(cracha, uid, professores = [], { souAdmin = false
  * (ex.: entrou com o e-mail errado). A ficha da grade continua, com aulas e histórico; só deixa de apontar
  * para esse login.
  */
-export async function removerProfessorELiberarDocumento({ uid, documento, professores = [] }) {
+export async function removerProfessorELiberarDocumento({ uid, documento, professores = [], cracha = null }) {
   const batch = writeBatch(db);
   batch.delete(doc(db, "usuarios", uid));
   batch.delete(doc(db, "solicitacoes_acesso", uid));
@@ -43,6 +45,8 @@ export async function removerProfessorELiberarDocumento({ uid, documento, profes
   professores.filter((p) => p.uidLogin === uid)
     .forEach((p) => batch.update(doc(db, "professores", String(p.id)), { uidLogin: "", updatedAt: serverTimestamp() }));
   await batch.commit();
+  // E-mail/telefone do login ficam livres (a parte da ficha da grade continua reservada).
+  if (cracha) await liberarContatos({ uid }, { email: cracha.email, telefone: cracha.telefone, pais: normalizarPais(cracha.pais) });
 }
 
 export async function removerLiderELiberarDocumento({ uid, cracha, documento, unidades, souAdmin, motivo, quemId, quemNome }) {
@@ -79,5 +83,9 @@ export async function removerLiderELiberarDocumento({ uid, cracha, documento, un
   }
   apagarDocumentoNoLote(batch, uid, documento);
   await batch.commit();
+  // O telefone é reservado por país: libera pelo país do crachá e pelo de cada unidade dele (o e-mail não depende de país).
+  const paises = new Set([cracha?.pais, ...todas.map((id) => unidadeDe(id)?.pais)].filter(Boolean).map(normalizarPais));
+  if (!paises.size) paises.add(normalizarPais(undefined));
+  for (const pais of paises) await liberarContatos({ uid }, { email: cracha?.email, telefone: cracha?.telefone, pais });
   return todas.map((id) => unidadeDe(id)?.nome).filter(Boolean);
 }

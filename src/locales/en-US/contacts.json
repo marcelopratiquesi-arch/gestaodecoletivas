@@ -1,0 +1,22 @@
+{
+  "inUse": "Saved. Note: {{fields}} is also on another person's record. Check the Duplicates report (Backup tab).",
+  "fields": {
+    "email": "the e-mail",
+    "tel": "the phone",
+    "both": "the e-mail and the phone"
+  },
+  "reserve": {
+    "button": "Create reservations for current records",
+    "hint": "Saves the e-mail and phone lock for everyone already registered. The conflicts below are the cleanup still needed before blocking duplicates.",
+    "working": "Creating reservations...",
+    "done": "{{created}} reservations created, {{ok}} were already right.",
+    "conflicts": "Conflicts ({{count}}): the same data on different people",
+    "taken": "Already reserved for someone else ({{count}})",
+    "none": "No conflicts.",
+    "error": "Could not create the reservations.",
+    "type": {
+      "email": "E-mail",
+      "tel": "Phone"
+    }
+  }
+}

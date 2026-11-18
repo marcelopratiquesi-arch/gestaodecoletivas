@@ -1,0 +1,22 @@
+{
+  "inUse": "Salvo. Atenção: {{fields}} também está no cadastro de outra pessoa. Confira no Relatório de repetidos (aba Backup).",
+  "fields": {
+    "email": "o e-mail",
+    "tel": "o telefone",
+    "both": "o e-mail e o telefone"
+  },
+  "reserve": {
+    "button": "Criar reservas dos cadastros atuais",
+    "hint": "Grava a trava de e-mail e telefone para quem já está cadastrado. Os conflitos abaixo são a limpeza que falta antes de bloquear repetidos.",
+    "working": "Criando reservas...",
+    "done": "{{created}} reservas criadas, {{ok}} já estavam certas.",
+    "conflicts": "Conflitos ({{count}}): o mesmo dado em pessoas diferentes",
+    "taken": "Já reservados para outra pessoa ({{count}})",
+    "none": "Nenhum conflito.",
+    "error": "Não consegui criar as reservas.",
+    "type": {
+      "email": "E-mail",
+      "tel": "Telefone"
+    }
+  }
+}

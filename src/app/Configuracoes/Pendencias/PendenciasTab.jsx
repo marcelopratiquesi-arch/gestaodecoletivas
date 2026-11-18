@@ -12,6 +12,8 @@ import { Inbox, Check, X, Loader2, Building2, Phone, Mail, User, Clock, ShieldCh
 import { db } from "../../../services/firebase";
 import { registrarAuditoriaAcesso } from "../../../services/auditoriaAcessos";
 import { liberarDocumentoDoPedido } from "../../../services/documentoService";
+import { sincronizarEAvisar } from "../../../services/contatoService";
+import { normalizarPais } from "../../../utils/feriados";
 import { publicarUnidades } from "../../../services/vitrinePublica";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useCatalogs } from "../../../contexts/CatalogContext";
@@ -116,6 +118,8 @@ export function PendenciasTab() {
           p, "lider"
         );
       }
+      // Reserva de e-mail/telefone (F3 parte A): depois de salvo; se já é de outra pessoa, só avisa.
+      await sincronizarEAvisar({ dono: { uid: p.id }, depois: { email: p.email, telefone: p.telefone, pais: normalizarPais(plano[0].unidade.pais) } }, t);
       const naoEntraram = [...deFora, ...minhas.filter((u) => !plano.some((x) => x.unidade.id === u.id))];
       if (naoEntraram.length) alert(t("pendingTab.leftOut", { units: naoEntraram.map((u) => u.nome).join(", ") }));
     } catch (e) {
@@ -147,6 +151,7 @@ export function PendenciasTab() {
       });
       if (passarUnidades) unidades.forEach((u) => batch.update(doc(db, "unidades", u.id), { mentorId: p.id }));
       await batch.commit();
+      await sincronizarEAvisar({ dono: { uid: p.id }, depois: { email: p.email, telefone: p.telefone, pais: normalizarPais(unidades[0]?.pais) } }, t);
       if (passarUnidades) await publicarUnidades(unidades.map((u) => ({ id: u.id, dados: { ...u, mentorNome: p.nome } })));
       await registrarAuditoria(
         "NOVA", "Mentor aprovado (login pelo Google).", "Gestão/Diretoria",

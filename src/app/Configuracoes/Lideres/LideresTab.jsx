@@ -36,6 +36,8 @@ import i18n from "../../../i18n";
 import CampoDocumento from "../../../components/acesso/CampoDocumento";
 import { documentoNoLote, gravarComAviso, ERRO_DOCUMENTO_EM_USO, excluirPedidoELiberar, liberarReserva } from "../../../services/documentoService";
 import { documentoValido, tipoDocumentoPadrao } from "../../../utils/documento";
+import { sincronizarEAvisar } from "../../../services/contatoService";
+import { normalizarPais } from "../../../utils/feriados";
 
 const SENHA_MINIMA = 6;
 // País da unidade em sigla (cadastros antigos guardam o nome por extenso; sem país = Brasil).
@@ -177,6 +179,13 @@ export function LideresTab() {
         batch.update(doc(db, "usuarios", unidade.liderUid), { nome, telefone });
         batch.update(doc(db, "unidades", unidade.id), { liderNome: nome, liderTelefone: telefone });
         await batch.commit();
+        // Reserva do telefone (F3 parte A): depois de salvo; se já é de outra pessoa, só avisa.
+        const pais = normalizarPais(unidade.pais);
+        await sincronizarEAvisar({
+          dono: { uid: unidade.liderUid },
+          antes: { telefone: unidade.liderTelefone, pais },
+          depois: { email: unidade.liderEmail, telefone, pais },
+        }, t);
         await registrarAuditoria("ALTERADA", "Contato do líder atualizado.", unidade.nome,
           `${unidade.liderNome || "-"} ➔ ${nome} | ${unidade.liderTelefone || "-"} ➔ ${telefone}`);
         setModal(null);
@@ -239,6 +248,7 @@ export function LideresTab() {
         throw errBatch;
       }
       await signOut(authSecundario);
+      await sincronizarEAvisar({ dono: { uid: novoUid }, depois: { email, telefone, pais: normalizarPais(unidade.pais) } }, t);
 
       await registrarAuditoria("NOVA", "Líder cadastrado manualmente (e-mail e senha).", unidade.nome,
         `${nome} (${email})${temOutroLider ? ` substituiu ${unidade.liderNome || unidade.liderEmail}` : ""}`);
