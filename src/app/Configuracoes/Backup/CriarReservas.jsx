@@ -5,7 +5,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Loader2, Lock, TriangleAlert } from 'lucide-react';
-import { planejarReservas } from '../../../utils/contatos';
+import { dadosDaReserva, planejarReservas } from '../../../utils/contatos';
 import { gravarReservas, lerTodasAsReservas } from '../../../services/contatoService';
 
 // A reserva já gravada é da mesma pessoa do plano? (mesmo login ou mesma ficha)
@@ -28,11 +28,17 @@ export default function CriarReservas({ registros, rotuloOrigem }) {
         const ja = existentes.get(id);
         if (!ja) gravar.push([id, dados]);
         else if (iguais(ja, dados)) certas++;
-        else if (compartilhaDono(ja, dados)) gravar.push([id, dados]); // mesma pessoa: completa login/ficha
+        else if (compartilhaDono(ja, dados)) {
+          // Mesma pessoa: completa login/ficha SEM perder o que já estava gravado.
+          const junto = dadosDaReserva(dados.tipo, { uid: dados.uid || ja.uid, professorId: dados.professorId || ja.professorId });
+          if (iguais(ja, junto)) certas++; else gravar.push([id, junto]);
+        }
         else tomadas.push({ id, tipo: dados.tipo, itens: [] });
       }
-      await gravarReservas(gravar);
-      setEstado({ trabalhando: false, erro: false, resultado: { criadas: gravar.length, certas, conflitos, tomadas } });
+      const falhas = await gravarReservas(gravar);
+      // O que o banco recusou (ex.: alguém tomou a chave nesse meio-tempo) entra na lista de "já reservados".
+      falhas.forEach((id) => tomadas.push({ id, tipo: id.startsWith('email_') ? 'email' : 'tel', itens: [] }));
+      setEstado({ trabalhando: false, erro: false, resultado: { criadas: gravar.length - falhas.length, certas, conflitos, tomadas } });
     } catch (e) {
       console.error('Criar reservas de e-mail/telefone:', e);
       setEstado({ trabalhando: false, erro: true, resultado: null });

@@ -83,6 +83,9 @@ export async function removerLiderELiberarDocumento({ uid, cracha, documento, un
   }
   apagarDocumentoNoLote(batch, uid, documento);
   await batch.commit();
-  await liberarContatos({ uid }, { email: cracha?.email, telefone: cracha?.telefone, pais: normalizarPais(unidadeDe(todas[0])?.pais) });
+  // O telefone é reservado por país: libera pelo país do crachá e pelo de cada unidade dele (o e-mail não depende de país).
+  const paises = new Set([cracha?.pais, ...todas.map((id) => unidadeDe(id)?.pais)].filter(Boolean).map(normalizarPais));
+  if (!paises.size) paises.add(normalizarPais(undefined));
+  for (const pais of paises) await liberarContatos({ uid }, { email: cracha?.email, telefone: cracha?.telefone, pais });
   return todas.map((id) => unidadeDe(id)?.nome).filter(Boolean);
 }

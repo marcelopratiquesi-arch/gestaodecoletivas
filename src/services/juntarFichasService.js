@@ -139,7 +139,7 @@ export async function executarJuncao({ plano, principal, outras, quem, aoAvancar
   await final.commit();
 
   // Reservas de e-mail/telefone: as fichas apagadas soltam as delas e a que ficou reserva os dados finais.
-  for (const o of outras) await liberarContatos({ professorId: String(o.id) }, { email: o.email, telefone: o.telefone, pais: o.pais });
+  for (const o of outras) await liberarContatos({ professorId: String(o.id) }, { email: o.email, telefone: o.telefone, pais: o.pais }, { soltarTudo: true });
   await sincronizarContatos({
     dono: { professorId: String(plano.idPrincipal), uid: principal.uidLogin },
     antes: { email: principal.email, telefone: principal.telefone, pais: principal.pais },

@@ -23,7 +23,7 @@ import CampoDocumento from "../components/acesso/CampoDocumento";
 import SeletorModalidades from "../components/acesso/SeletorModalidades";
 import { documentoValido, formatarDocumento, tipoDocumentoPadrao } from "../utils/documento";
 import { documentoNoLote, gravarComAviso, lerDocumentoDoPedido, ERRO_DOCUMENTO_EM_USO } from "../services/documentoService";
-import { sincronizarContatos } from "../services/contatoService";
+import { sincronizarEAvisar } from "../services/contatoService";
 import { ICONE_FUNCAO, useUnidadesPublicas, lerPapelPedido, guardarPapelPedido, FUNCOES_PEDIDO, LIMITE_MODALIDADES } from "../components/acesso/acessoDados";
 
 const Carregando = () => (
@@ -93,8 +93,8 @@ export default function SolicitarAcesso() {
       });
       batch.update(doc(db, "convites_acesso", emailGoogle), { status: "usado", usadoPor: uid, usadoEm: serverTimestamp() });
       await batch.commit();
-      // Reserva de e-mail/telefone do novo mentor (F3 parte A). Conflito aparece no relatório do admin, não aqui.
-      await sincronizarContatos({ dono: { uid }, depois: { email: emailGoogle, telefone: convite.telefone, pais: convite.pais || "BR" } });
+      // Reserva de e-mail/telefone do novo mentor (F3 parte A): se já é de outra pessoa, só avisa (a conta já foi criada).
+      await sincronizarEAvisar({ dono: { uid }, depois: { email: emailGoogle, telefone: convite.telefone, pais: convite.pais || "BR" } }, t);
       await registrarAuditoriaAcesso({
         tipoAcao: "NOVA",
         descricao: `Mentor(a) ${convite.nome}: 1º acesso pelo Google (cadastrado pelo admin).`,

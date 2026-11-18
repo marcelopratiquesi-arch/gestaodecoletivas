@@ -621,7 +621,9 @@ service cloud.firestore {
         && request.resource.data.tipo == resource.data.tipo
         && ((resource.data.get('uid', '') != '' && request.resource.data.get('uid', '') == resource.data.get('uid', ''))
             || (resource.data.get('professorId', '') != '' && request.resource.data.get('professorId', '') == resource.data.get('professorId', '')));
-      allow delete: if gestorDeCadastro() || minha();
+      // Apagar a trava: admin, mentor ou a própria pessoa. Líder LER pode (é assim que o aviso de repetido aparece),
+      // mas não apaga a reserva de quem é de outra unidade.
+      allow delete: if souAdmin() || (logado() && meuPapel() == 'mentor') || minha();
     }
 
     // ===================== AVISOS DE SAÍDA (saidas_acesso) =====================

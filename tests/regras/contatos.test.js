@@ -77,6 +77,12 @@ describe('reserva de outra pessoa', () => {
     await assertFails(deleteDoc(doc(como('prof1'), 'contatos_unicos', EMAIL)));
     await assertSucceeds(deleteDoc(doc(como('prof2'), 'contatos_unicos', EMAIL)));
   });
+  it('achado 2: líder não apaga a reserva de outra pessoa; mentor e admin apagam', async () => {
+    await assertFails(deleteDoc(doc(como('liderA'), 'contatos_unicos', EMAIL)));
+    await assertSucceeds(deleteDoc(doc(como('mentor1'), 'contatos_unicos', EMAIL)));
+    await semRegras(db => reservar(db, EMAIL, { tipo: 'email', uid: 'prof2' }));
+    await assertSucceeds(deleteDoc(doc(como('admin1'), 'contatos_unicos', EMAIL)));
+  });
   it('líder e mentor conferem uma; só o admin lista', async () => {
     await assertSucceeds(getDoc(doc(como('liderA'), 'contatos_unicos', EMAIL)));
     await assertFails(getDocs(collection(como('mentor1'), 'contatos_unicos')));
