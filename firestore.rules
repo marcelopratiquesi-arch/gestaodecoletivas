@@ -145,13 +145,25 @@ service cloud.firestore {
                 || (meuPapel() in papeisLider()
                     && (unidadeId == meuUsuario().get('unidadeId', '') || unidadeId in meuUsuario().get('unidadeIds', [])))));
     }
+    // Modalidade da aula tem que estar habilitada na unidade (campo modalidadesIds). Unidade sem o campo = ainda
+    // não configurada: vale qualquer uma. O admin fica de fora (restaurar backup, correções).
+    function modalidadeLiberadaNaUnidade(unidadeId, modalidadeId) {
+      return souAdmin()
+        || get(/databases/$(database)/documents/unidades/$(unidadeId)).data.get('modalidadesIds', null) == null
+        || modalidadeId in get(/databases/$(database)/documents/unidades/$(unidadeId)).data.get('modalidadesIds', []);
+    }
     match /aulas/{aulaId} {
       // Tem o valor que cada professor recebe: só quem está logado. A página pública lê aulas_publicas (sem valor).
       allow read: if logado();
-      allow create: if podeGravarAulaDa(request.resource.data.get('unidadeId', ''));
+      allow create: if podeGravarAulaDa(request.resource.data.get('unidadeId', ''))
+        && modalidadeLiberadaNaUnidade(request.resource.data.get('unidadeId', ''), request.resource.data.get('modalidadeId', ''));
       // Editar: a unidade de antes E a de depois têm que ser dele (senão dava para "jogar" aula na unidade dos outros).
+      // Só confere a modalidade se ela (ou a unidade) mudou: aula antiga continua editável (hora, valor, datas).
       allow update: if podeGravarAulaDa(resource.data.get('unidadeId', ''))
-        && podeGravarAulaDa(request.resource.data.get('unidadeId', ''));
+        && podeGravarAulaDa(request.resource.data.get('unidadeId', ''))
+        && ((request.resource.data.get('modalidadeId', '') == resource.data.get('modalidadeId', '')
+              && request.resource.data.get('unidadeId', '') == resource.data.get('unidadeId', ''))
+            || modalidadeLiberadaNaUnidade(request.resource.data.get('unidadeId', ''), request.resource.data.get('modalidadeId', '')));
       allow delete: if souAdmin();
     }
     // Cópia pública da grade (sem o valor da aula), lida pela página de horários sem login.
