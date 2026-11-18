@@ -180,6 +180,31 @@ service cloud.firestore {
       allow delete: if logado() && !souProfessor();
     }
 
+    // ===================== FERIADOS =====================
+    // Feriado cancela aula (sem pagamento e sem pendência) em todas as unidades do alcance dele, então só o admin
+    // cria, edita ou apaga. Todo mundo que está logado lê (as telas calculam o feriado na hora). O mentor usa
+    // feriados_propostas (logo abaixo). Esta coleção está na lista de exceções da regra-curinga.
+    match /feriados/{feriadoId} {
+      allow read: if logado();
+      allow write: if souAdmin();
+    }
+
+    // ===================== PROPOSTAS DE FERIADO (mentor propõe, admin decide) =====================
+    // Só o admin cria feriado de verdade (coleção feriados). O mentor PROPÕE aqui: a proposta não afeta aula nenhuma
+    // (nenhuma tela de aulas lê esta coleção); o admin aprova (vira feriado) ou recusa. Cada mentor só enxerga as próprias.
+    match /feriados_propostas/{propostaId} {
+      function souMentor() { return logado() && meuPapel() == 'mentor'; }
+      allow read: if souAdmin() || (souMentor() && resource.data.get('propostoPor', '') == request.auth.uid);
+      allow create: if souMentor()
+        && request.resource.data.get('propostoPor', '') == request.auth.uid
+        && request.resource.data.get('status', '') == 'pendente'
+        && request.resource.data.get('escopo', '') in ['cidade', 'unidades'];
+      allow update: if souAdmin();
+      // O mentor desiste de uma proposta que ainda está pendente.
+      allow delete: if souAdmin() || (souMentor() && resource.data.get('propostoPor', '') == request.auth.uid
+        && resource.data.get('status', '') == 'pendente');
+    }
+
     // ===================== VALIDAÇÕES (presença e pagamento) =====================
     // Mesma regra de prazo da tela (src/utils/validacoes.js):
     // - professor: só aulas em que é TITULAR, do mês atual até hoje; não muda o valor da aula,
@@ -677,8 +702,8 @@ service cloud.firestore {
     // Professor não grava nada aqui, só cria registros de auditoria (log da validação e do "Sair").
     // (No Firestore, se QUALQUER regra libera, a ação passa; por isso as exceções precisam estar aqui.)
     match /{colecao}/{resto=**} {
-      allow read: if logado() && !(colecao in ['solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos', 'documentos_ficha', 'documentos_professor']);
-      allow write: if logado() && !(colecao in ['usuarios', 'publico', 'validacoes', 'aulas', 'aulas_publicas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'resumos_mensais', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos', 'professores', 'documentos_ficha', 'documentos_professor']) && !souProfessor();
+      allow read: if logado() && !(colecao in ['feriados_propostas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos', 'documentos_ficha', 'documentos_professor']);
+      allow write: if logado() && !(colecao in ['feriados', 'feriados_propostas', 'usuarios', 'publico', 'validacoes', 'aulas', 'aulas_publicas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'resumos_mensais', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos', 'professores', 'documentos_ficha', 'documentos_professor']) && !souProfessor();
       allow create: if logado() && colecao in ['auditoria_cronograma', 'auditoria_configuracoes'];
     }
   }
