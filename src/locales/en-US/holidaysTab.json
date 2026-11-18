@@ -77,5 +77,23 @@
     "refuseReason": "Reason for refusing \"{{name}}\" (optional):",
     "confirmWithdraw": "Withdraw the proposal \"{{name}}\"?",
     "decideError": "Could not complete. Please try again."
+  },
+  "impact": "This affects {{units}} unit(s) and {{classes}} class(es) in the period.",
+  "pastWarn": "⚠️ The start date has already passed: classes in this period that nobody validated will show as holiday and their pending items disappear. Validations already made stay valid.",
+  "duplicateWarn": "⚠️ A holiday already exists in the same period for shared units: {{names}}. Check it is not a duplicate.",
+  "edit": {
+    "title": "Edit holiday",
+    "save": "Save changes",
+    "cancel": "Cancel editing",
+    "tooltip": "Edit",
+    "confirmSave": "Save the changes to \"{{name}}\"?\n\nClasses of {{scope}} from {{start}} to {{end}} will show as cancelled (holiday).",
+    "saved": "Holiday updated!",
+    "error": "Error updating the holiday."
+  },
+  "except": {
+    "title": "Except these units (optional)",
+    "hint": "Check the units that do NOT take this holiday off.",
+    "label_one": "except {{count}} unit",
+    "label_other": "except {{count}} units"
   }
 }

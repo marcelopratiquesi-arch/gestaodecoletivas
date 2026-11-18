@@ -77,5 +77,23 @@
     "refuseReason": "Motivo del rechazo de \"{{name}}\" (opcional):",
     "confirmWithdraw": "¿Desistir de la propuesta \"{{name}}\"?",
     "decideError": "No se pudo completar. Intentá de nuevo."
+  },
+  "impact": "Esto afecta a {{units}} unidad(es) y {{classes}} clase(s) en el período.",
+  "pastWarn": "⚠️ La fecha de inicio ya pasó: las clases de este período que nadie validó pasan a aparecer como feriado y sus pendientes desaparecen. Las validaciones ya hechas siguen valiendo.",
+  "duplicateWarn": "⚠️ Ya existe un feriado en el mismo período para unidades en común: {{names}}. Revisá que no esté repetido.",
+  "edit": {
+    "title": "Editar feriado",
+    "save": "Guardar cambios",
+    "cancel": "Cancelar edición",
+    "tooltip": "Editar",
+    "confirmSave": "¿Guardar los cambios de \"{{name}}\"?\n\nLas clases de {{scope}} entre {{start}} y {{end}} aparecerán como canceladas (feriado).",
+    "saved": "¡Feriado actualizado!",
+    "error": "Error al actualizar el feriado."
+  },
+  "except": {
+    "title": "Excepto estas unidades (opcional)",
+    "hint": "Marcá las unidades que NO descansan en este feriado.",
+    "label_one": "excepto {{count}} unidad",
+    "label_other": "excepto {{count}} unidades"
   }
 }

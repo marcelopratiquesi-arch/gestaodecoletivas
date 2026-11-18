@@ -3,13 +3,14 @@ import { db } from '../../../services/firebase';
 import { useAuth } from "../../../contexts/AuthContext"; // Importado para Auditoria
 import { useCatalogs } from '../../../contexts/CatalogContext';
 import {
-  collection, addDoc, getDocs, deleteDoc, doc, updateDoc,
+  collection, addDoc, getDocs, deleteDoc, doc, updateDoc, deleteField,
   writeBatch, query, where, serverTimestamp
 } from 'firebase/firestore';
-import { Calendar, Plus, Trash2, Loader2, CalendarDays, MapPin, Search, CheckSquare, Square, Check, X, Inbox } from 'lucide-react';
+import { Calendar, Plus, Trash2, Loader2, CalendarDays, MapPin, Search, CheckSquare, Square, Check, X, Inbox, Pencil } from 'lucide-react';
 import { formatDate as formatarData } from '../../../utils/formatters';
-import { ESCOPOS_FERIADO, escopoDoFeriado, normalizarPais, normalizarTexto, ehCancelamentoAutomaticoDeFeriado } from '../../../utils/feriados';
-import { montarFeriado, feriadoDaProposta, ESCOPOS_DO_MENTOR, STATUS_PROPOSTA } from '../../../utils/feriadosProposta';
+import { ESCOPOS_FERIADO, escopoDoFeriado, normalizarPais, normalizarTexto, ehCancelamentoAutomaticoDeFeriado, feriadoAplicaNaUnidade, unidadesDeExcecao } from '../../../utils/feriados';
+import { impactoDoFeriado, comecaNoPassado, feriadosParecidos } from '../../../utils/feriadosImpacto';
+import { montarFeriado, feriadoDaProposta, ESCOPOS_DO_MENTOR, STATUS_PROPOSTA, CAMPOS_DE_ABRANGENCIA } from '../../../utils/feriadosProposta';
 import { useTranslation } from 'react-i18next';
 import { CabecalhoDaAba } from '../ui/CabecalhoDaAba';
 import { BotaoDeLinha } from '../ui/BotaoDeLinha';
@@ -18,7 +19,7 @@ import { BotaoDeLinha } from '../ui/BotaoDeLinha';
 const TIPOS_FERIADO = { 'Recesso': 'recess', 'Feriado Nacional': 'national', 'Feriado Municipal': 'municipal' };
 const PAISES = ['BR', 'AR', 'US'];
 
-const FORM_INICIAL = { nome: '', dataInicio: '', dataFim: '', tipo: 'Recesso', escopo: 'rede', pais: 'BR', estado: '', cidade: '', unidadeIds: [] };
+const FORM_INICIAL = { nome: '', dataInicio: '', dataFim: '', tipo: 'Recesso', escopo: 'rede', pais: 'BR', estado: '', cidade: '', unidadeIds: [], unidadesExcecao: [] };
 
 export function FeriadosTab() {
   const { userData } = useAuth(); // Pegando dados do Admin para Auditoria
@@ -34,6 +35,8 @@ export function FeriadosTab() {
   const [loading, setLoading] = useState(false);
   const [processando, setProcessando] = useState(false);
   const [buscaUnidade, setBuscaUnidade] = useState('');
+  const [buscaExcecao, setBuscaExcecao] = useState('');
+  const [editandoId, setEditandoId] = useState(null); // feriado que está sendo editado (admin)
 
   const [form, setForm] = useState(ehAdmin ? FORM_INICIAL : { ...FORM_INICIAL, escopo: 'unidades' });
   const formVazio = () => (ehAdmin ? FORM_INICIAL : { ...FORM_INICIAL, escopo: 'unidades' });
@@ -106,11 +109,14 @@ export function FeriadosTab() {
   const descreverAbrangencia = (feriado) => {
       const escopo = escopoDoFeriado(feriado);
       const qtdUnidades = (feriado.unidadeIds || (feriado.unidadeId ? [feriado.unidadeId] : [])).length;
-      if (escopo === 'pais') return t('holidaysTab.scopeLabel.pais', { value: t(`common.countries.${normalizarPais(feriado.pais)}`) });
-      if (escopo === 'estado') return t('holidaysTab.scopeLabel.estado', { value: feriado.estado });
-      if (escopo === 'cidade') return t('holidaysTab.scopeLabel.cidade', { value: feriado.cidade, count: qtdUnidades });
-      if (escopo === 'unidades') return t('holidaysTab.scopeLabel.unidades', { count: qtdUnidades });
-      return t('holidaysTab.scopeLabel.rede');
+      let texto;
+      if (escopo === 'pais') texto = t('holidaysTab.scopeLabel.pais', { value: t(`common.countries.${normalizarPais(feriado.pais)}`) });
+      else if (escopo === 'estado') texto = t('holidaysTab.scopeLabel.estado', { value: feriado.estado });
+      else if (escopo === 'cidade') texto = t('holidaysTab.scopeLabel.cidade', { value: feriado.cidade, count: qtdUnidades });
+      else if (escopo === 'unidades') texto = t('holidaysTab.scopeLabel.unidades', { count: qtdUnidades });
+      else texto = t('holidaysTab.scopeLabel.rede');
+      const excecoes = unidadesDeExcecao(feriado).length;
+      return excecoes > 0 ? `${texto} · ${t('holidaysTab.except.label', { count: excecoes })}` : texto;
   };
 
   // Na abrangência "cidade", sugere as unidades que têm a cidade no cadastro ou no endereço (a pessoa confere e ajusta).
@@ -122,13 +128,29 @@ export function FeriadosTab() {
           .map(u => String(u.id));
   };
 
-  const alterarEscopo = (escopo) => setForm(prev => ({ ...prev, escopo, estado: '', cidade: '', unidadeIds: [] }));
+  const alterarEscopo = (escopo) => setForm(prev => ({ ...prev, escopo, estado: '', cidade: '', unidadeIds: [], unidadesExcecao: [] }));
 
   const alterarCidade = (cidade) => setForm(prev => ({ ...prev, cidade, unidadeIds: sugerirUnidadesDaCidade(cidade) }));
 
   const alternarUnidade = (id) => setForm(prev => ({
       ...prev,
       unidadeIds: prev.unidadeIds.includes(id) ? prev.unidadeIds.filter(x => x !== id) : [...prev.unidadeIds, id]
+  }));
+
+  // "Exceto estas unidades": só em rede, país e estado, e só entre as unidades que o feriado alcançaria.
+  const aceitaExcecao = ehAdmin && ['rede', 'pais', 'estado'].includes(form.escopo);
+  const unidadesDoAlcance = useMemo(() => {
+      if (!aceitaExcecao || (form.escopo === 'estado' && !form.estado)) return [];
+      const alvo = { escopo: form.escopo, pais: form.pais, estado: form.estado };
+      const termo = normalizarTexto(buscaExcecao);
+      return unidades
+          .filter(u => feriadoAplicaNaUnidade(alvo, u))
+          .filter(u => !termo || normalizarTexto(`${u.nome} ${u.estado || ''}`).includes(termo));
+  }, [aceitaExcecao, form.escopo, form.pais, form.estado, unidades, buscaExcecao]);
+
+  const alternarExcecao = (id) => setForm(prev => ({
+      ...prev,
+      unidadesExcecao: prev.unidadesExcecao.includes(id) ? prev.unidadesExcecao.filter(x => x !== id) : [...prev.unidadesExcecao, id]
   }));
 
   const unidadesFiltradas = useMemo(() => {
@@ -152,12 +174,38 @@ export function FeriadosTab() {
 
     if (!ehAdmin) return enviarProposta(novoFeriado, abrangencia);
 
-    if (!window.confirm(t('holidaysTab.messages.confirmCreate', { scope: abrangencia, start: formatDate(form.dataInicio), end: formatDate(form.dataFim) }))) {
-      return;
-    }
+    // Avisos antes de confirmar: quanto afeta, data que já passou e feriado parecido já cadastrado.
+    const impacto = impactoDoFeriado({ feriado: novoFeriado, unidades: catalogs?.unidades || [], aulas: catalogs?.aulas || [] });
+    const parecidos = feriadosParecidos(feriados, novoFeriado, catalogs?.unidades || [], editandoId);
+    const avisos = [
+        t('holidaysTab.impact', { units: impacto.unidades, classes: impacto.aulas }),
+        comecaNoPassado(novoFeriado) ? t('holidaysTab.pastWarn') : null,
+        parecidos.length > 0 ? t('holidaysTab.duplicateWarn', { names: parecidos.slice(0, 3).map(p => p.nome).join(', ') }) : null,
+    ].filter(Boolean).join('\n\n');
+    const pergunta = editandoId
+        ? t('holidaysTab.edit.confirmSave', { name: novoFeriado.nome, scope: abrangencia, start: formatDate(form.dataInicio), end: formatDate(form.dataFim) })
+        : t('holidaysTab.messages.confirmCreate', { scope: abrangencia, start: formatDate(form.dataInicio), end: formatDate(form.dataFim) });
+    if (!window.confirm(`${pergunta}\n\n${avisos}`)) return;
 
     setProcessando(true);
     try {
+      if (editandoId) {
+        const antigo = feriados.find(x => x.id === editandoId) || {};
+        // Campos de abrangência que não servem mais (ex.: trocou de estado para país) saem do documento.
+        const limpar = Object.fromEntries(CAMPOS_DE_ABRANGENCIA.filter(c => !(c in novoFeriado)).map(c => [c, deleteField()]));
+        await updateDoc(doc(db, 'feriados', editandoId), { ...novoFeriado, ...limpar, atualizadoPor: userId || null, atualizadoEm: serverTimestamp() });
+        await registrarLogAuditoria('ALTERADA', `${form.tipo} editado.`, form.nome,
+            `De: ${formatDate(antigo.dataInicio)} até ${formatDate(antigo.dataFim)} | ${descreverAbrangencia(antigo)}  ➔  Para: ${formatDate(form.dataInicio)} até ${formatDate(form.dataFim)} | ${abrangencia}`);
+        setFeriados(prev => prev.map(x => (x.id === editandoId
+            ? { id: x.id, ...Object.fromEntries(Object.entries(x).filter(([k]) => !CAMPOS_DE_ABRANGENCIA.includes(k))), ...novoFeriado }
+            : x)).sort((a, b) => String(a.dataInicio).localeCompare(String(b.dataInicio))));
+        setEditandoId(null);
+        setForm(formVazio());
+        setBuscaUnidade(''); setBuscaExcecao('');
+        alert(t('holidaysTab.edit.saved'));
+        return;
+      }
+
       // O feriado é calculado na hora por todas as telas (src/utils/feriados.js): não grava mais cancelamentos em massa.
       const feriadoDoc = await addDoc(collection(db, "feriados"), { ...novoFeriado, criadoPor: userId || null, criadoEm: serverTimestamp() });
 
@@ -170,15 +218,35 @@ export function FeriadosTab() {
 
       setFeriados(prev => [...prev, { id: feriadoDoc.id, ...novoFeriado }].sort((a, b) => String(a.dataInicio).localeCompare(String(b.dataInicio))));
       setForm(formVazio());
-      setBuscaUnidade('');
+      setBuscaUnidade(''); setBuscaExcecao('');
       alert(t('holidaysTab.messages.created', { scope: abrangencia }));
 
     } catch (e) {
       console.error(e);
-      alert(t('holidaysTab.messages.saveError'));
+      alert(editandoId ? t('holidaysTab.edit.error') : t('holidaysTab.messages.saveError'));
     } finally {
       setProcessando(false);
     }
+  }
+
+  // ADMIN: carrega o feriado no formulário para editar.
+  function iniciarEdicao(feriado) {
+    setEditandoId(feriado.id);
+    setForm({
+      nome: feriado.nome || '', dataInicio: feriado.dataInicio || '', dataFim: feriado.dataFim || feriado.dataInicio || '',
+      tipo: feriado.tipo || 'Recesso', escopo: escopoDoFeriado(feriado), pais: feriado.pais || 'BR', estado: feriado.estado || '',
+      cidade: feriado.cidade || '',
+      unidadeIds: (feriado.unidadeIds || (feriado.unidadeId ? [feriado.unidadeId] : [])).map(String),
+      unidadesExcecao: unidadesDeExcecao(feriado),
+    });
+    setBuscaUnidade(''); setBuscaExcecao('');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function cancelarEdicao() {
+    setEditandoId(null);
+    setForm(formVazio());
+    setBuscaUnidade(''); setBuscaExcecao('');
   }
 
   // MENTOR: envia a proposta. Não afeta nenhuma aula até o admin aprovar.
@@ -277,6 +345,7 @@ export function FeriadosTab() {
       await registrarLogAuditoria('EXCLUÍDA', 'Evento removido do calendário.', feriado.nome, `O recesso/feriado foi deletado do sistema. Cancelamentos automáticos removidos: ${automaticos.length}`);
 
       setFeriados(prev => prev.filter(f => f.id !== feriado.id));
+      if (editandoId === feriado.id) cancelarEdicao();
     } catch (e) {
       console.error(e);
       alert(t('holidaysTab.messages.deleteError'));
@@ -296,7 +365,7 @@ export function FeriadosTab() {
         <div className="absolute top-0 left-0 w-1.5 h-full bg-pink-600"></div>
         <div className="flex items-center gap-2 mb-6">
           <CalendarDays className="w-6 h-6 text-pink-600" />
-          <h3 className="font-bold text-slate-700 dark:text-white uppercase text-sm">{ehAdmin ? t('holidaysTab.title') : t('holidaysTab.proposals.formTitle')}</h3>
+          <h3 className="font-bold text-slate-700 dark:text-white uppercase text-sm">{editandoId ? t('holidaysTab.edit.title') : (ehAdmin ? t('holidaysTab.title') : t('holidaysTab.proposals.formTitle'))}</h3>
         </div>
 
         <form onSubmit={handleSave} className="space-y-5">
@@ -371,6 +440,34 @@ export function FeriadosTab() {
               </div>
             )}
 
+            {aceitaExcecao && unidadesDoAlcance.length + form.unidadesExcecao.length > 0 && (
+              <div>
+                <div className="flex items-center justify-between gap-3 mb-1">
+                  <label className={`${labelClass} mb-0`}>{t('holidaysTab.except.title')}</label>
+                  <span className="text-xs font-bold text-pink-600">{t('holidaysTab.except.label', { count: form.unidadesExcecao.length })}</span>
+                </div>
+                <p className="text-[11px] text-slate-400 mb-2">{t('holidaysTab.except.hint')}</p>
+                <div className="relative mb-2">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"/>
+                  <input className={`${inputClass} pl-9`} value={buscaExcecao} onChange={e => setBuscaExcecao(e.target.value)} placeholder={t('holidaysTab.searchUnits')} />
+                </div>
+                <div className="max-h-48 overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 divide-y divide-slate-100 dark:divide-slate-700">
+                  {unidadesDoAlcance.map(u => {
+                    const marcada = form.unidadesExcecao.includes(String(u.id));
+                    return (
+                      <button key={u.id} type="button" onClick={() => alternarExcecao(String(u.id))} className={`w-full flex items-start gap-3 px-3 py-2 text-left transition-colors ${marcada ? 'bg-amber-50 dark:bg-amber-900/20' : 'hover:bg-slate-50 dark:hover:bg-slate-700/40'}`}>
+                        {marcada ? <CheckSquare className="w-4 h-4 text-amber-600 shrink-0 mt-0.5"/> : <Square className="w-4 h-4 text-slate-300 shrink-0 mt-0.5"/>}
+                        <span className="min-w-0">
+                          <span className="block text-sm font-bold text-slate-700 dark:text-slate-200 truncate">{u.nome}</span>
+                          <span className="block text-[11px] text-slate-400 truncate">{[u.estado, u.enderecoCompleto].filter(Boolean).join(' · ')}</span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {(form.escopo === 'cidade' || form.escopo === 'unidades') && (
               <div>
                 <div className="flex items-center justify-between gap-3 mb-2">
@@ -399,10 +496,13 @@ export function FeriadosTab() {
             )}
           </div>
 
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-3">
+            {editandoId && (
+              <button type="button" onClick={cancelarEdicao} className="px-6 py-3 text-slate-500 dark:text-slate-400 font-bold uppercase text-xs hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">{t('holidaysTab.edit.cancel')}</button>
+            )}
             <button disabled={processando} className="w-full xl:w-auto px-6 py-3 bg-pink-600 hover:bg-pink-700 text-white font-bold rounded-lg text-sm shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50">
               {processando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-              {processando ? t('holidaysTab.processing') : (ehAdmin ? t('holidaysTab.create') : t('holidaysTab.proposals.send'))}
+              {processando ? t('holidaysTab.processing') : (editandoId ? t('holidaysTab.edit.save') : (ehAdmin ? t('holidaysTab.create') : t('holidaysTab.proposals.send')))}
             </button>
           </div>
         </form>
@@ -481,7 +581,12 @@ export function FeriadosTab() {
                         {t('holidaysTab.range', { start: formatDate(f.dataInicio), end: formatDate(f.dataFim) })}
                     </div>
                     </div>
-                    {ehAdmin && <BotaoDeLinha abaId="feriados" tipo="perigo" icone={Trash2} onClick={() => handleDelete(f)} />}
+                    {ehAdmin && (
+                      <div className="flex gap-1.5 shrink-0">
+                        <BotaoDeLinha abaId="feriados" icone={Pencil} title={t('holidaysTab.edit.tooltip')} onClick={() => iniciarEdicao(f)} />
+                        <BotaoDeLinha abaId="feriados" tipo="perigo" icone={Trash2} onClick={() => handleDelete(f)} />
+                      </div>
+                    )}
                 </div>
                 </div>
             ))}
