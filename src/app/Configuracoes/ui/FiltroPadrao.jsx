@@ -9,7 +9,7 @@ const CLASSE_SELECT = "w-full appearance-none pl-3 pr-8 py-2.5 rounded-xl bg-sla
 
 /**
  * @param {{abaId:string, filtro:ReturnType<import("./useFiltroCascata").useFiltroCascata>,
- *   mostrar?:("pais"|"estado"|"mentor"|"lider")[], placeholder?:string,
+ *   mostrar?:("pais"|"estado"|"mentor"|"lider"|"unidade")[], placeholder?:string,
  *   acoes?:React.ReactNode, children?:React.ReactNode, ativoExtra?:boolean, aoLimpar?:()=>void}} props
  * `ativoExtra`/`aoLimpar` = filtro próprio da aba (ex.: situação) que também conta como "filtro ativo" e é zerado no "limpar".
  * `acoes` = botões ao lado da busca (ex.: botão do CPF);  `children` = coisas extras abaixo (ex.: busca por CPF aberta).
@@ -51,6 +51,10 @@ export function FiltroPadrao({ abaId, filtro, mostrar = ["pais", "estado"], plac
           {mostrar.includes("lider") && (
             <Seletor rotulo={t("filtroPadrao.leader")} tema={tema} valor={valores.lider} onChange={mudar.lider}
               todos={t("filtroPadrao.allLeaders")} opcoes={opcoes.lideres} />
+          )}
+          {mostrar.includes("unidade") && (
+            <Seletor rotulo={t("filtroPadrao.unit")} tema={tema} valor={valores.unidade} onChange={mudar.unidade}
+              todos={t("filtroPadrao.allUnits")} opcoes={opcoes.unidades} />
           )}
           {(ativo || ativoExtra) && (
             <button type="button" onClick={() => { limpar(); aoLimpar?.(); }}
