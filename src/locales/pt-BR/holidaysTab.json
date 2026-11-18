@@ -95,5 +95,39 @@
     "hint": "Marque as unidades que NÃO folgam neste feriado.",
     "label_one": "exceto {{count}} unidade",
     "label_other": "exceto {{count}} unidades"
+  },
+  "filters": {
+    "proximos": "Próximos",
+    "passados": "Passados",
+    "todos": "Todos",
+    "allYears": "Todos os anos",
+    "allScopes": "Todas as abrangências",
+    "search": "Buscar feriado...",
+    "none": "Nenhum feriado neste filtro."
+  },
+  "suggested": {
+    "title": "Calendário sugerido",
+    "pending": "{{count}} a decidir",
+    "desc": "Feriados nacionais calculados para o país e o ano. Nada é aplicado sozinho: você aplica o que quiser e dispensa o resto. Os marcados \"Conferir\" dependem de decreto do governo e podem mudar.",
+    "showDismissed": "Mostrar dispensados",
+    "applySelected": "Aplicar selecionados ({{count}})",
+    "apply": "Aplicar",
+    "dismiss": "Dispensar",
+    "restore": "Voltar para a lista",
+    "check": "Conferir",
+    "past": "Já passou",
+    "applied_badge": "Aplicado",
+    "empty": "Nada para mostrar.",
+    "warnAR": "Na Argentina o governo decreta feriados-ponte todo ano. Confira o calendário oficial antes de aplicar.",
+    "confirmApply": "Aplicar {{count}} feriado(s) na abrangência do país?\n\nIsso afeta {{classes}} aula(s) no total.",
+    "andMore": "… e mais {{count}}",
+    "applied": "{{count}} feriado(s) aplicado(s).",
+    "error": "Erro ao aplicar os feriados."
+  },
+  "cityActions": {
+    "refresh": "Acrescentar unidades da cidade",
+    "upToDate": "Já estão todas as unidades dessa cidade.",
+    "confirmAdd": "Acrescentar {{count}} unidade(s) de {{city}} a este feriado?\n\n{{names}}",
+    "done": "{{count}} unidade(s) acrescentada(s)."
   }
 }
