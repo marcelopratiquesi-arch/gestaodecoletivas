@@ -167,6 +167,25 @@
     "readOnly": "Solo el administrador cambia las modalidades de la unidad.",
     "saveError": "Error al guardar. Intentá de nuevo.",
     "close": "Cerrar",
-    "none": "No se encontró ninguna modalidad."
+    "none": "No se encontró ninguna modalidad.",
+    "bulk": {
+      "button": "Configurar modalidades de todas",
+      "hint": "Configura de una vez las unidades que todavía no fueron configuradas",
+      "title": "Configurar modalidades de todas las unidades",
+      "intro": "Cada unidad todavía no configurada recibe las modalidades que tienen clase activa o futura en el Cronograma. Una unidad sin clases activas recibe las modalidades básicas. Las unidades ya configuradas no cambian. No se guarda nada hasta que confirmes.",
+      "toConfigure": "Se configurarán {{count}} unidades",
+      "fromClasses": "{{count}} por el Cronograma",
+      "fromBasics": "{{count}} por las básicas",
+      "alreadyDone": "{{count}} ya configuradas (no cambian)",
+      "noBasics": "{{count}} unidades sin clase activa quedan afuera porque no se marcó la lista básica",
+      "mismatch": "{{count}} clases usan una modalidad que no existe en el catálogo (ignoradas, para revisar)",
+      "origin": {
+        "aulas": "por el Cronograma",
+        "basicas": "básicas"
+      },
+      "apply": "Configurar {{count}} unidades",
+      "done": "¡Listo! {{count}} unidades configuradas.",
+      "error": "Error al guardar. Revisá y probá de nuevo (lo ya guardado no se duplica)."
+    }
   }
 }

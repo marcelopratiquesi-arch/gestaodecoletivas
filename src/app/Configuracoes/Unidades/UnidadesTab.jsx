@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useCatalogs } from "../../../contexts/CatalogContext";
 import { ModalidadesDaUnidadeModal } from "./ModalidadesDaUnidadeModal";
+import { ConfigurarModalidadesEmMassaModal } from "./ConfigurarModalidadesEmMassaModal";
 import { unidadeTemVinculo, idsHabilitados } from "../../../utils/modalidadesPorUnidade";
 import {
   collection, addDoc, updateDoc, doc, query, where, serverTimestamp, writeBatch, onSnapshot, getDocs, getDoc, deleteField
@@ -269,6 +270,7 @@ export function UnidadesTab() {
   const [unidadesBase, setUnidadesBase] = useState([]);
   // Modalidades habilitadas por unidade: abre o modal da unidade escolhida; a lista básica (unidades novas) é lida uma vez.
   const [modalidadesUnidadeId, setModalidadesUnidadeId] = useState(null);
+  const [modalidadesEmMassaAberto, setModalidadesEmMassaAberto] = useState(false);
   const [basicasIds, setBasicasIds] = useState([]);
   useEffect(() => {
     if (!podeAcessar) return;
@@ -794,6 +796,9 @@ export function UnidadesTab() {
             <>
               <input type="file" accept=".csv" ref={fileInputRef} className="hidden" onChange={handleFileUpload} />
               <BotaoSecundario icone={Upload} onClick={() => fileInputRef.current.click()}>Importar Infra (CSV)</BotaoSecundario>
+              <BotaoSecundario icone={Dumbbell} onClick={() => setModalidadesEmMassaAberto(true)} title={t('unitsTab.modalities.bulk.hint')}>
+                {t('unitsTab.modalities.bulk.button')}
+              </BotaoSecundario>
               <BotaoSecundario icone={atualizandoVitrine ? Loader2 : Globe} onClick={atualizarPaginaPublica} disabled={atualizandoVitrine} girar={atualizandoVitrine} title={t('unitsTab.publicPage.hint')}>
                 {t('unitsTab.publicPage.button')}
               </BotaoSecundario>
@@ -1033,6 +1038,13 @@ export function UnidadesTab() {
           </div>
         </div>
       </div>
+
+      {modalidadesEmMassaAberto && (
+        <ConfigurarModalidadesEmMassaModal
+          unidades={unidadesBase} modalidades={catalogs.modalidades} aulas={catalogs.aulasTodas} basicasIds={basicasIds}
+          usuario={{ id: userId, nome: userData?.nome || userData?.email }} onClose={() => setModalidadesEmMassaAberto(false)}
+        />
+      )}
 
       {modalidadesUnidadeId && (() => {
         const unidadeModal = unidadesBase.find(x => x.id === modalidadesUnidadeId);

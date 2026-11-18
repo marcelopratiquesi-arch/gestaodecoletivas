@@ -167,6 +167,25 @@
     "readOnly": "Only the administrator can change the unit's modalities.",
     "saveError": "Error saving. Please try again.",
     "close": "Close",
-    "none": "No modality found."
+    "none": "No modality found.",
+    "bulk": {
+      "button": "Configure all units' modalities",
+      "hint": "Configures all units that are not configured yet, at once",
+      "title": "Configure modalities for all units",
+      "intro": "Each unit not configured yet gets the modalities that have active or upcoming classes in the Schedule. A unit with no active class gets the basic modalities. Units already configured do not change. Nothing is saved until you confirm.",
+      "toConfigure": "{{count}} units will be configured",
+      "fromClasses": "{{count}} from the Schedule",
+      "fromBasics": "{{count}} from the basics",
+      "alreadyDone": "{{count}} already configured (unchanged)",
+      "noBasics": "{{count}} units with no active class are left out because the basic list was not set",
+      "mismatch": "{{count}} classes use a modality that is not in the catalog (ignored, for review)",
+      "origin": {
+        "aulas": "from the Schedule",
+        "basicas": "basics"
+      },
+      "apply": "Configure {{count}} units",
+      "done": "Done! {{count}} units configured.",
+      "error": "Error saving. Check and try again (what was already saved is not duplicated)."
+    }
   }
 }

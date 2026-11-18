@@ -74,3 +74,41 @@ describe('comModalidade / semModalidade', () => {
     expect(semModalidade(['a', 'b'], 'a')).toEqual(['b']);
   });
 });
+
+import { planejarConfiguracaoEmMassa } from '../../src/utils/modalidadesPorUnidade';
+
+describe('planejarConfiguracaoEmMassa', () => {
+  const modalidades = [{ id: 'm1' }, { id: 'm2' }, { id: 'm3' }];
+  const unidades = [
+    { id: 'u1' },                              // tem aulas ativas
+    { id: 'u2', modalidadesIds: ['m3'] },      // já configurada: não mexe
+    { id: 'u3' },                              // sem aula ativa: básicas
+    { id: 'u4' },                              // aula em modalidade que não existe no catálogo
+  ];
+  const aulas = [
+    { unidadeId: 'u1', modalidadeId: 'm1' }, { unidadeId: 'u1', modalidadeId: 'm2' }, { unidadeId: 'u1', modalidadeId: 'm2' },
+    { unidadeId: 'u1', modalidadeId: 'm3', dataFim: '2026-01-01' },   // histórica: fica de fora
+    { unidadeId: 'u3', modalidadeId: 'm1', excluido: true },
+    { unidadeId: 'u4', modalidadeId: 'fantasma' },
+  ];
+  const p = planejarConfiguracaoEmMassa({ unidades, aulas, modalidades, basicasIds: ['m1', 'm9'], hoje: '2026-11-18' });
+  it('só aulas ativas/futuras; histórica fica fora', () => {
+    expect(p.itens.find((i) => i.unidade.id === 'u1')).toMatchObject({ ids: ['m1', 'm2'], origem: 'aulas' });
+  });
+  it('unidade já configurada não entra', () => {
+    expect(p.jaConfiguradas.map((u) => u.id)).toEqual(['u2']);
+    expect(p.itens.some((i) => i.unidade.id === 'u2')).toBe(false);
+  });
+  it('sem aula ativa recebe as básicas que existem no catálogo', () => {
+    expect(p.itens.find((i) => i.unidade.id === 'u3')).toMatchObject({ ids: ['m1'], origem: 'basicas' });
+  });
+  it('modalidade fora do catálogo vira divergência e não entra', () => {
+    expect(p.divergencias).toEqual([{ unidade: unidades[3], modalidadeId: 'fantasma' }]);
+    expect(p.itens.find((i) => i.unidade.id === 'u4').origem).toBe('basicas');
+  });
+  it('sem lista básica, a unidade sem aula fica de fora', () => {
+    const q = planejarConfiguracaoEmMassa({ unidades: [{ id: 'u3' }], aulas: [], modalidades, basicasIds: [], hoje: '2026-11-18' });
+    expect(q.itens).toHaveLength(0);
+    expect(q.semBasicas.map((u) => u.id)).toEqual(['u3']);
+  });
+});

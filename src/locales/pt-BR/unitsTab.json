@@ -167,6 +167,25 @@
     "readOnly": "Somente o administrador altera as modalidades da unidade.",
     "saveError": "Erro ao salvar. Tente de novo.",
     "close": "Fechar",
-    "none": "Nenhuma modalidade encontrada."
+    "none": "Nenhuma modalidade encontrada.",
+    "bulk": {
+      "button": "Configurar modalidades de todas",
+      "hint": "Configura de uma vez as unidades que ainda não foram configuradas",
+      "title": "Configurar modalidades de todas as unidades",
+      "intro": "Cada unidade ainda não configurada recebe as modalidades que têm aula ativa ou futura no Cronograma. Unidade sem nenhuma aula ativa recebe as modalidades básicas. Unidades já configuradas não mudam. Nada é gravado até você confirmar.",
+      "toConfigure": "{{count}} unidades serão configuradas",
+      "fromClasses": "{{count}} pelo Cronograma",
+      "fromBasics": "{{count}} pelas básicas",
+      "alreadyDone": "{{count}} já configuradas (não mudam)",
+      "noBasics": "{{count}} unidades sem aula ativa ficam de fora porque a lista básica não foi marcada",
+      "mismatch": "{{count}} aulas usam modalidade que não existe no catálogo (ignoradas, para conferência)",
+      "origin": {
+        "aulas": "pelo Cronograma",
+        "basicas": "básicas"
+      },
+      "apply": "Configurar {{count}} unidades",
+      "done": "Pronto! {{count}} unidades configuradas.",
+      "error": "Erro ao gravar. Nada pela metade: confira e tente de novo (o que já foi gravado não duplica)."
+    }
   }
 }

@@ -55,3 +55,27 @@ export const comModalidade = (ids, modalidadeId) => {
   return base.includes(id) ? base : [...base, id];
 };
 export const semModalidade = (ids, modalidadeId) => (ids || []).map(String).filter((x) => x !== String(modalidadeId));
+
+// Plano da configuração em massa (nada é gravado aqui). Só entram unidades que AINDA NÃO têm o campo.
+// - ids = modalidades com aula ativa ou futura na unidade (e que existem no catálogo);
+// - unidade sem nenhuma aula ativa/futura recebe as básicas da rede (se a lista básica existir; senão fica de fora);
+// - modalidade que a aula usa mas não existe no catálogo vira "divergência" (não entra, só é relatada).
+export function planejarConfiguracaoEmMassa({ unidades, aulas, modalidades, basicasIds, hoje }) {
+  const noCatalogo = new Set((modalidades || []).map((m) => String(m.id)));
+  const basicas = (basicasIds || []).map(String).filter((id) => noCatalogo.has(id));
+  const itens = [];
+  const jaConfiguradas = [];
+  const semBasicas = [];
+  const divergencias = [];
+  for (const u of unidades || []) {
+    if (unidadeTemVinculo(u)) { jaConfiguradas.push(u); continue; }
+    const cont = contarAulasPorModalidade(aulas, u.id, hoje);
+    const usadas = Object.keys(cont);
+    const ids = usadas.filter((id) => noCatalogo.has(String(id)));
+    usadas.filter((id) => !noCatalogo.has(String(id))).forEach((id) => divergencias.push({ unidade: u, modalidadeId: id }));
+    if (ids.length > 0) itens.push({ unidade: u, ids, origem: 'aulas' });
+    else if (basicas.length > 0) itens.push({ unidade: u, ids: basicas, origem: 'basicas' });
+    else semBasicas.push(u);
+  }
+  return { itens, jaConfiguradas, semBasicas, divergencias };
+}
