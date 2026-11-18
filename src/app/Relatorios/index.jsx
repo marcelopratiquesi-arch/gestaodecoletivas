@@ -9,6 +9,7 @@ import { useLocation, useSearchParams } from 'react-router-dom';
 import { deduplicarValidacoes } from '../../utils/validacoes';
 import { feriadoNoDia, normalizarPais } from '../../utils/feriados';
 import { valorDaValidacao } from '../../utils/valores';
+import { somarPorMoeda, juntarTotais, dividirPorMoeda, moedasEmOrdem, moedaDoPais, formatarMoeda, textoPorMoeda } from '../../utils/moedas';
 import { DIAS_SEMANA as diasSemanaMap, getDiaSemana, formatCurrency, formatDate, formatWeekday, formatCancelReason } from '../../utils/formatters';
 
 import {
@@ -242,6 +243,7 @@ export default function RelatorioPage() {
 
   const [filtroKPI, setFiltroKPI] = useState(null);
   const [sortConfig, setSortConfig] = useState({ field: 'totalReceber', direction: 'desc' });
+  const [moedaGrafico, setMoedaGrafico] = useState('');
   const [expandedRowId, setExpandedRowId] = useState(null);
   const [itensVisiveis, setItensVisiveis] = useState(20);
 
@@ -634,11 +636,13 @@ export default function RelatorioPage() {
 
     const totalRealizadas = baseSegura.reduce((acc, r) => acc + (r.aulasRealizadas || 0), 0);
     const totalCanceladas = baseSegura.reduce((acc, r) => acc + (r.aulasCanceladas || 0), 0);
-    const totalFinanceiro = baseSegura.reduce((acc, r) => acc + (r.totalReceber || 0), 0);
+    // Dinheiro de países diferentes nunca se soma: um total para cada moeda.
+    const totalPorMoeda = somarPorMoeda(baseSegura, r => r.unidadePais, r => r.totalReceber);
     const somaAlunos = baseSegura.reduce((acc, r) => acc + (r.totalAlunos || 0), 0);
     const mediaAlunos = totalRealizadas > 0 ? Math.round(somaAlunos / totalRealizadas) : 0;
     // Valor médio realmente pago por aula realizada no período
-    const custoMedio = totalRealizadas > 0 ? totalFinanceiro / totalRealizadas : 0;
+    const realizadasPorMoeda = somarPorMoeda(baseSegura, r => r.unidadePais, r => r.aulasRealizadas);
+    const custoMedioPorMoeda = dividirPorMoeda(totalPorMoeda, realizadasPorMoeda);
 
     const itensComAulaRealizada = baseSegura.filter(r => r.aulasRealizadas > 0 && r.metragem > 0);
     const mediaOcupacao = itensComAulaRealizada.length > 0 ? itensComAulaRealizada.reduce((acc, r) => acc + (r.ocupacao || 0), 0) / itensComAulaRealizada.length : 0;
@@ -678,7 +682,7 @@ export default function RelatorioPage() {
     const mesesNomes = Array.from({ length: 12 }, (_, idx) => idx); // nome do mês é formatado na tela, no idioma atual
 
     const historicoYTD = mesesNomes.map((nome, idx) => {
-        let valor = 0; let status = 'pendente';
+        let valor = {}; let status = 'pendente';
 
         if (idx < currentMonthIdx) {
             const mesFormatado = String(idx + 1).padStart(2, '0');
@@ -704,24 +708,30 @@ export default function RelatorioPage() {
                 if (professoresFiltro.length > 0 && !professoresFiltro.includes(profDaValidacao)) return;
                 if (turnosFiltro.length > 0 && !checkTurno(aula.hora, turnosFiltro)) return;
 
-                valor += valorDaValidacao(v, aula);
+                const moeda = moedaDoPais(u.pais);
+                valor[moeda] = (valor[moeda] || 0) + valorDaValidacao(v, aula);
             });
             status = 'fechado';
 
         } else if (idx === currentMonthIdx) {
-            valor = totalFinanceiro; status = 'atual';
+            valor = totalPorMoeda; status = 'atual';
         }
 
-        return { mes: nome, valor, status };
+        return { mes: nome, porMoeda: valor, status };
     });
 
-    const maxTrendYTD = Math.max(...historicoYTD.map(h => h.valor)) || 1;
-
-    return { totalFinanceiro, totalRealizadas, totalCanceladas, mediaAlunos, custoMedio, mediaOcupacao, taxaVacancia, historicoYTD, maxTrendYTD };
+return { totalPorMoeda, totalRealizadas, totalCanceladas, mediaAlunos, custoMedioPorMoeda, mediaOcupacao, taxaVacancia, historicoYTD };
   }, [processamentoBase, listasFiltros.unidadesFiltradas, aulasRealtime, mapas, period, turnosFiltro, validacoesYTD, paisesFiltro, estadosFiltro, mentoresFiltro, unidadesFiltro, modalidadesFiltro, professoresFiltro, role, meuProfessorId]);
 
-  // 🟢 DESCOBRIR QUAL A MOEDA DOMINANTE NO KPI GLOBAL
-  const dominantCountry = paisesFiltro.length === 1 ? paisesFiltro[0] : normalizarPais(listasFiltros.unidadesFiltradas[0]?.pais);
+// Moedas presentes no filtro (total do período + meses do ano). O gráfico anual mostra uma moeda por vez.
+  const moedasDoFiltro = useMemo(() => {
+    const todas = (kpis.historicoYTD || []).reduce((acc, h) => juntarTotais(acc, h.porMoeda), { ...kpis.totalPorMoeda });
+    return moedasEmOrdem(todas);
+  }, [kpis]);
+  const moedaGraficoAtiva = moedasDoFiltro.includes(moedaGrafico) ? moedaGrafico : (moedasDoFiltro[0] || 'BRL');
+  const serieYTD = useMemo(() => (kpis.historicoYTD || []).map(h => ({ ...h, valor: h.porMoeda[moedaGraficoAtiva] || 0 })), [kpis, moedaGraficoAtiva]);
+  const maxTrendYTD = Math.max(...serieYTD.map(h => h.valor)) || 1;
+  const moedasTotal = moedasEmOrdem(kpis.totalPorMoeda);
 
   const handleSort = (field) => {
     setSortConfig(prev => ({ field, direction: prev.field === field && prev.direction === 'desc' ? 'asc' : 'desc' }));
@@ -863,25 +873,37 @@ export default function RelatorioPage() {
                               <DollarSign className="w-4 h-4"/> {t('reports.kpis.payrollSummary', 'Resumo de Folha')}
                           </div>
                       </div>
-                      <div className="text-4xl xl:text-5xl font-black tracking-tighter text-white mb-1">
-                          {formatSmartCurrency(kpis.totalFinanceiro, dominantCountry)}
+                      <div className="mb-1">
+                          {(moedasTotal.length > 0 ? moedasTotal : ['BRL']).map(m => (
+                              <div key={m} className={`font-black tracking-tighter text-white ${moedasTotal.length > 1 ? 'text-2xl xl:text-3xl' : 'text-4xl xl:text-5xl'}`}>
+                                  {formatarMoeda(kpis.totalPorMoeda[m] || 0, m)}
+                              </div>
+                          ))}
                       </div>
                       <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-700 pb-4 mb-4">{t('reports.kpis.totalToPay', 'Total a Pagar no Período Filtrado')}</div>
                   </div>
 
                   {/* 🟢 GRÁFICO YTD VERTICAL E DINÂMICO */}
                   <div className="relative z-10 flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-2.5">
-                      {(kpis.historicoYTD || []).map((item, i) => (
+                      {moedasDoFiltro.length > 1 && (
+                          <div className="flex gap-1 pb-1" role="tablist">
+                              {moedasDoFiltro.map(m => (
+                                  <button key={m} type="button" role="tab" aria-selected={m === moedaGraficoAtiva} onClick={() => setMoedaGrafico(m)}
+                                      className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest ${m === moedaGraficoAtiva ? 'bg-emerald-500 text-white' : 'bg-slate-800 text-slate-400 hover:text-slate-200'}`}>{m}</button>
+                              ))}
+                          </div>
+                      )}
+                      {serieYTD.map((item, i) => (
                           <div key={i} className="flex items-center gap-3 group">
                               <span className={`w-8 text-[9px] font-black uppercase tracking-widest ${item.status === 'atual' ? 'text-emerald-400' : item.status === 'fechado' ? 'text-slate-300 group-hover:text-emerald-400 transition-colors' : 'text-slate-600'}`}>{formatDate(new Date(2000, item.mes, 1), { month: 'short' }).replace('.', '')}</span>
                               <div className="flex-1 h-3.5 bg-slate-800/50 rounded-sm overflow-hidden flex items-center relative">
                                   <div
                                       className={`h-full transition-all duration-1000 ${item.status === 'atual' ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]' : item.status === 'fechado' ? 'bg-slate-500 group-hover:bg-emerald-400' : 'bg-transparent'}`}
-                                      style={{ width: `${Math.max(item.valor > 0 ? 5 : 0, (item.valor / (kpis.maxTrendYTD || 1)) * 100)}%` }}
+                                      style={{ width: `${Math.max(item.valor > 0 ? 5 : 0, (item.valor / maxTrendYTD) * 100)}%` }}
                                   ></div>
                               </div>
-                              <span className={`w-16 text-right text-[10px] font-black tracking-tighter ${item.status === 'atual' ? 'text-emerald-400' : item.status === 'fechado' ? 'text-slate-200 group-hover:text-emerald-400 transition-colors' : 'text-slate-600'}`}>
-                                  {item.valor > 0 ? formatSmartCurrency(item.valor, dominantCountry) : '-'}
+                              <span className={`w-24 text-right text-[10px] font-black tracking-tighter ${item.status === 'atual' ? 'text-emerald-400' : item.status === 'fechado' ? 'text-slate-200 group-hover:text-emerald-400 transition-colors' : 'text-slate-600'}`}>
+                                  {item.valor > 0 ? formatarMoeda(item.valor, moedaGraficoAtiva) : '-'}
                               </span>
                           </div>
                       ))}
@@ -927,7 +949,7 @@ export default function RelatorioPage() {
                                       <span className="block text-xs font-black text-slate-700 dark:text-slate-200 uppercase tracking-wide">{t('reports.kpis.avgClassValue', 'Valor Médio P/ Aula')}</span>
                                   </div>
                               </div>
-                              <span className="text-lg font-black text-slate-800 dark:text-white">{formatSmartCurrency(kpis.custoMedio, dominantCountry)}</span>
+                              <span className="text-lg font-black text-slate-800 dark:text-white">{textoPorMoeda(kpis.custoMedioPorMoeda)}</span>
                           </div>
                       </div>
                   </div>

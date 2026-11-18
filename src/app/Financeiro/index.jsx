@@ -14,6 +14,7 @@ import {
 // Bibliotecas Externas
 import * as XLSX from 'xlsx';
 import { formatCurrency, formatPercent } from '../../utils/formatters';
+import { somarPorMoeda, juntarTotais, moedasEmOrdem, formatarMoeda } from '../../utils/moedas';
 import { deduplicarValidacoes } from '../../utils/validacoes';
 import { valorDaValidacao } from '../../utils/valores';
 import { lerResumos, buscarValidacoes } from '../../services/resumosMensais';
@@ -526,14 +527,22 @@ export default function PerformanceFinanceiraPage() {
   };
 
   // --- TOTAIS ---
-  const totais = useMemo(() => {
-      const totalFolha = tabelaDados.reduce((acc, l) => acc + l.folha, 0);
-      const totalColetiva = tabelaDados.reduce((acc, l) => acc + l.custo, 0);
-      const totalColetivaAnt = tabelaDados.reduce((acc, l) => acc + (comparativoAnoAnterior[l.unidade.id] || 0), 0);
-      const percentualGeral = totalFolha > 0 ? (totalColetiva / totalFolha) * 100 : 0;
-      let variacao = 0;
-      if (totalColetivaAnt > 0) variacao = ((totalColetiva - totalColetivaAnt) / totalColetivaAnt) * 100;
-      return { totalFolha, totalColetiva, percentualGeral, variacao: Math.round(variacao) };
+const totais = useMemo(() => {
+      // Dinheiro de países diferentes nunca se soma: um total, um percentual e uma variação para cada moeda.
+      const pais = (l) => l.unidade.pais;
+      const coletiva = somarPorMoeda(tabelaDados, pais, l => l.custo);
+      const folha = somarPorMoeda(tabelaDados, pais, l => l.folha);
+      const anterior = somarPorMoeda(tabelaDados, pais, l => comparativoAnoAnterior[l.unidade.id] || 0);
+      const moedas = moedasEmOrdem(juntarTotais(coletiva, folha)).map(moeda => {
+          const c = coletiva[moeda] || 0; const f = folha[moeda] || 0; const ant = anterior[moeda] || 0;
+          return {
+              moeda, coletiva: c, folha: f,
+              percentual: f > 0 ? (c / f) * 100 : 0,
+              variacao: ant > 0 ? Math.round(((c - ant) / ant) * 100) : 0,
+          };
+      });
+      if (moedas.length === 0) moedas.push({ moeda: 'BRL', coletiva: 0, folha: 0, percentual: 0, variacao: 0 });
+      return { moedas, altoCusto: moedas.some(m => m.percentual > 25) };
   }, [tabelaDados, comparativoAnoAnterior]);
 
   // 🟢 BLOQUEIO DE TELA
@@ -642,12 +651,16 @@ export default function PerformanceFinanceiraPage() {
                 <div className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-start justify-between">
                     <div>
                         <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">{t('finance.kpis.groupCost')}</p>
-                        <h3 className="text-2xl font-black text-slate-800 dark:text-white">{formatCurrency(totais.totalColetiva)}</h3>
-                        <div className="flex items-center gap-2 mt-1">
-                            <span className={`text-[10px] font-black px-1.5 py-0.5 rounded flex items-center gap-1 uppercase ${totais.variacao > 0 ? 'bg-rose-100 text-rose-600' : 'bg-emerald-100 text-emerald-600'}`}>
-                                {totais.variacao > 0 ? <TrendingUp className="w-3 h-3"/> : <TrendingDown className="w-3 h-3"/>}
-                                {t('finance.kpis.vsLastYear', { value: Math.abs(totais.variacao) })}
-                            </span>
+                        <div className="space-y-1">
+                            {totais.moedas.map(m => (
+                                <div key={m.moeda} className="flex items-center gap-2 flex-wrap">
+                                    <h3 className={`font-black text-slate-800 dark:text-white ${totais.moedas.length > 1 ? 'text-lg' : 'text-2xl'}`}>{formatarMoeda(m.coletiva, m.moeda)}</h3>
+                                    <span className={`text-[10px] font-black px-1.5 py-0.5 rounded flex items-center gap-1 uppercase ${m.variacao > 0 ? 'bg-rose-100 text-rose-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                                        {m.variacao > 0 ? <TrendingUp className="w-3 h-3"/> : <TrendingDown className="w-3 h-3"/>}
+                                        {t('finance.kpis.vsLastYear', { value: Math.abs(m.variacao) })}
+                                    </span>
+                                </div>
+                            ))}
                         </div>
                     </div>
                     <div className="p-3 rounded-lg bg-purple-50 text-purple-600 shadow-inner"><BarChart3 className="w-6 h-6" /></div>
@@ -655,7 +668,11 @@ export default function PerformanceFinanceiraPage() {
                 <div className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-start justify-between">
                     <div>
                         <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">{t('finance.kpis.totalPayroll')}</p>
-                        <h3 className="text-2xl font-black text-slate-800 dark:text-white">{formatCurrency(totais.totalFolha)}</h3>
+                        <div className="space-y-1">
+                            {totais.moedas.map(m => (
+                                <h3 key={m.moeda} className={`font-black text-slate-800 dark:text-white ${totais.moedas.length > 1 ? 'text-lg' : 'text-2xl'}`}>{formatarMoeda(m.folha, m.moeda)}</h3>
+                            ))}
+                        </div>
                         <div className="flex items-center gap-2 mt-1"><span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t('finance.kpis.totalDeclared')}</span></div>
                     </div>
                     <div className="p-3 rounded-lg bg-blue-50 text-blue-600 shadow-inner"><Wallet className="w-6 h-6" /></div>
@@ -663,10 +680,16 @@ export default function PerformanceFinanceiraPage() {
                 <div className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-start justify-between">
                     <div>
                         <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">{t('finance.kpis.avgImpact')}</p>
-                        <h3 className="text-2xl font-black text-slate-800 dark:text-white">{formatPercent(totais.percentualGeral)}</h3>
-                        <div className="flex items-center gap-2 mt-1"><span className={`text-[10px] font-black tracking-wider uppercase ${totais.percentualGeral > 25 ? 'text-rose-500' : 'text-emerald-500'}`}>{totais.percentualGeral > 25 ? t('finance.kpis.highCost') : t('finance.kpis.healthy')}</span></div>
+                        <div className="space-y-1">
+                            {totais.moedas.map(m => (
+                                <h3 key={m.moeda} className={`font-black text-slate-800 dark:text-white ${totais.moedas.length > 1 ? 'text-lg' : 'text-2xl'}`}>
+                                    {formatPercent(m.percentual)}{totais.moedas.length > 1 && <span className="ml-2 text-[10px] font-bold text-slate-400">{m.moeda}</span>}
+                                </h3>
+                            ))}
+                        </div>
+                        <div className="flex items-center gap-2 mt-1"><span className={`text-[10px] font-black tracking-wider uppercase ${totais.altoCusto ? 'text-rose-500' : 'text-emerald-500'}`}>{totais.altoCusto ? t('finance.kpis.highCost') : t('finance.kpis.healthy')}</span></div>
                     </div>
-                    <div className={`p-3 rounded-lg shadow-inner ${totais.percentualGeral > 25 ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600'}`}><PieChart className="w-6 h-6" /></div>
+                    <div className={`p-3 rounded-lg shadow-inner ${totais.altoCusto ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600'}`}><PieChart className="w-6 h-6" /></div>
                 </div>
             </div>
 
