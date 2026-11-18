@@ -144,5 +144,48 @@
     "turnOffError": "Could not turn off.",
     "bannerTitle": "{{count}} location(s) already have a leader but the old login is still on",
     "bannerDesc": "Now that the leader signs in with Google, the old location login (@pratique.com e-mail and password) can be turned off."
+  },
+  "modalities": {
+    "column": "Modalities",
+    "countEnabled": "{{count}} enabled",
+    "countDisabled": "{{count}} disabled",
+    "notSet": "All (not configured)",
+    "manage": "Manage the unit's modalities",
+    "title": "Unit modalities",
+    "search": "Search modality...",
+    "basicGroup": "Basic modalities",
+    "extraGroup": "Additional modalities",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "activeClasses": "{{count}} active class(es)",
+    "futureClasses": "{{count}} upcoming",
+    "noClasses": "No classes",
+    "inactiveInCatalog": "inactive in catalog",
+    "blocked": "This modality has active or upcoming classes in this unit. Check the Schedule before disabling it.",
+    "notConfiguredNote": "This unit has not been configured yet: the Schedule shows all modalities.",
+    "startFromClasses": "Configure with the modalities that already have classes",
+    "readOnly": "Only the administrator can change the unit's modalities.",
+    "saveError": "Error saving. Please try again.",
+    "close": "Close",
+    "none": "No modality found.",
+    "bulk": {
+      "button": "Configure all units' modalities",
+      "hint": "Configures all units that are not configured yet, at once",
+      "title": "Configure modalities for all units",
+      "intro": "Each unit not configured yet gets the modalities that have active or upcoming classes in the Schedule. A unit with no active class gets the basic modalities. Units already configured do not change. Nothing is saved until you confirm.",
+      "toConfigure": "{{count}} units will be configured",
+      "fromClasses": "{{count}} from the Schedule",
+      "fromBasics": "{{count}} from the basics",
+      "alreadyDone": "{{count}} already configured (unchanged)",
+      "noBasics": "{{count}} units with no active class are left out because the basic list was not set",
+      "mismatch": "{{count}} classes use a modality that is not in the catalog (ignored, for review)",
+      "origin": {
+        "aulas": "from the Schedule",
+        "basicas": "basics"
+      },
+      "apply": "Configure {{count}} units",
+      "done": "Done! {{count}} units configured.",
+      "error": "Error saving. Check and try again (what was already saved is not duplicated)."
+    }
   }
 }

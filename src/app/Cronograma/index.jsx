@@ -19,6 +19,7 @@ import { ehLider, unidadesDoLider } from '../../permissions';
 import { valorDaAulaValido, aulaRepetida, validarCorteNovaFase, diaAnterior, professorPodeReceberAula } from '../../utils/cronogramaRegras';
 import { ehCancelamentoAutomaticoDeFeriado } from '../../utils/feriados';
 import { espelharAula, espelharMudanca, removerAulaPublica } from '../../services/aulasPublicas';
+import { modalidadeHabilitada } from '../../utils/modalidadesPorUnidade';
 
 // --- FUNÇÕES UTILITÁRIAS ---
 const getTodayStr = () => new Date().toLocaleDateString('en-CA');
@@ -617,6 +618,15 @@ export default function CronogramaPage() {
       setPendingSplit(null);
   }
 
+  // Só as modalidades habilitadas na unidade escolhida (unidade ainda não configurada = todas). Modalidade inativa no
+  // catálogo não entra, a não ser a da aula que está sendo editada (para o campo não ficar vazio).
+  const modalidadesDoModal = useMemo(() => {
+    if (!formData.unidadeId) return [];
+    const unidade = catalogs.unidades.find(u => String(u.id) === String(formData.unidadeId));
+    return catalogs.modalidades.filter(m => String(m.id) === String(editingClass?.modalidadeId)
+      || (m.status !== 'inativa' && modalidadeHabilitada(unidade, m.id)));
+  }, [formData.unidadeId, catalogs.unidades, catalogs.modalidades, editingClass]);
+
   const professoresDoModal = useMemo(() => {
     if (!formData.unidadeId) return [];
     const linksDaUnidade = catalogs.vinculos.filter(v => String(v.unidadeId) === String(formData.unidadeId));
@@ -844,7 +854,11 @@ export default function CronogramaPage() {
                     
                         <div>
                             <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 block">{t('schedulePage.filters.unit', 'Unidade')}</label>
-                            <select className="w-full p-3.5 bg-slate-100 dark:bg-slate-900 border-transparent rounded-xl text-sm font-bold text-slate-600 dark:text-slate-300 outline-none" value={formData.unidadeId} onChange={e => setFormData({...formData, unidadeId: e.target.value, professorId: ''})} disabled={ehLider(userData?.role)}>
+                            <select className="w-full p-3.5 bg-slate-100 dark:bg-slate-900 border-transparent rounded-xl text-sm font-bold text-slate-600 dark:text-slate-300 outline-none" value={formData.unidadeId} onChange={e => {
+                                const novaUnidade = catalogs.unidades.find(u => String(u.id) === String(e.target.value));
+                                const manterModalidade = formData.modalidadeId && (modalidadeHabilitada(novaUnidade, formData.modalidadeId) || (editingClass && String(editingClass.unidadeId) === String(e.target.value) && String(editingClass.modalidadeId) === String(formData.modalidadeId)));
+                                setFormData({...formData, unidadeId: e.target.value, professorId: '', modalidadeId: manterModalidade ? formData.modalidadeId : ''});
+                            }} disabled={ehLider(userData?.role)}>
                                 <option value="">{t('schedulePage.filters.allUnits', 'Selecione...')}</option>
                                 {availableUnits.map(u => <option key={u.id} value={u.id}>{u.nome}</option>)}
                             </select>
@@ -853,9 +867,9 @@ export default function CronogramaPage() {
                         <div className="grid grid-cols-2 gap-5">
                             <div>
                                 <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 block">{t('schedulePage.modal.modality', 'Modalidade')}</label>
-                                <select className="w-full p-3.5 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-700 dark:text-white rounded-xl text-sm focus:border-red-500 outline-none font-bold" value={formData.modalidadeId} onChange={e => setFormData({...formData, modalidadeId: e.target.value})} required>
-                                    <option value="">{t('schedulePage.filters.allUnits', 'Selecione...')}</option>
-                                    {catalogs.modalidades.map(m => <option key={m.id} value={m.id}>{m.nome}</option>)}
+                                <select className="w-full p-3.5 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-700 dark:text-white rounded-xl text-sm focus:border-red-500 outline-none font-bold" value={formData.modalidadeId} onChange={e => setFormData({...formData, modalidadeId: e.target.value})} required disabled={!formData.unidadeId}>
+                                    <option value="">{!formData.unidadeId ? t('schedulePage.modal.selectUnitAlert', "Selecione a unidade") : t('schedulePage.filters.allUnits', 'Selecione...')}</option>
+                                    {modalidadesDoModal.map(m => <option key={m.id} value={m.id}>{m.nome}</option>)}
                                 </select>
                             </div>
                             <div>

@@ -33,7 +33,11 @@
     "saveError": "Error saving.",
     "statusError": "Error changing status",
     "deleteConfirm": "Delete {{name}}?",
-    "deleteError": "Error deleting"
+    "deleteError": "Error deleting",
+    "inUse": "Cannot delete: this modality is enabled in a unit or has classes. Deactivate it instead of deleting."
   },
-  "spaceLabel": "Space (m²/student)"
+  "spaceLabel": "Space (m²/student)",
+  "basicBadge": "BASIC",
+  "makeBasic": "Mark as network basic (new units)",
+  "unmakeBasic": "Remove from network basics"
 }
