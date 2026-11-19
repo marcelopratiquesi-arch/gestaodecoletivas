@@ -24,6 +24,9 @@ import HistoricoAulas from './HistoricoAulas';
 import { modalidadeHabilitada } from '../../utils/modalidadesPorUnidade';
 import { podeVerTabelaPrecos } from '../../utils/tabelaPrecos';
 import TabelaPrecosModal from '../../components/TabelaPrecos/TabelaPrecosModal';
+import SugestaoDeValor from '../../components/TabelaPrecos/SugestaoDeValor';
+import { lerTabelaPrecos } from '../../services/tabelaPrecosService';
+import { sugestaoDoCronograma } from '../../utils/sugestaoCronograma';
 
 // --- FUNÇÕES UTILITÁRIAS ---
 const getTodayStr = () => new Date().toLocaleDateString('en-CA');
@@ -172,6 +175,8 @@ export default function CronogramaPage() {
   // Tabela de preços (valor por aula x pulseira): admin edita; mentor e líder só consultam; professor não vê.
   const podeVerPrecos = podeVerTabelaPrecos(role);
   const [precosAberta, setPrecosAberta] = useState(false);
+  // Valor sugerido na tela de aula: lê a tabela de preços UMA vez, só quando a pessoa abre a janela (e pode ver a tabela).
+  const [tabelaDoSugerido, setTabelaDoSugerido] = useState(null); // null = ainda não leu; false = não deu
 
   // --- DADOS GLOBAIS E DE TELA ---
   const [saving, setSaving] = useState(false);
@@ -360,6 +365,25 @@ export default function CronogramaPage() {
       const unidadesPermitidas = (selectedState ? availableUnits.filter(u => u.estado === selectedState) : availableUnits).map(u => String(u.id));
       return aulasDoHistorico({ aulasTodas: aulasBrutas, unidadesPermitidas, unidadeId: selectedUnit, ehAdmin: role === 'admin', hoje: getTodayStr() });
   }, [emHistorico, aulasBrutas, availableUnits, selectedState, selectedUnit, role]);
+
+  useEffect(() => {
+    if (!showModal || !podeVerPrecos || tabelaDoSugerido !== null) return;
+    let ativo = true;
+    lerTabelaPrecos().then((r) => { if (ativo) setTabelaDoSugerido(r.tabela); }).catch((e) => { console.error(e); if (ativo) setTabelaDoSugerido(false); });
+    return () => { ativo = false; };
+  }, [showModal, podeVerPrecos, tabelaDoSugerido]);
+
+  const sugestaoDeValor = useMemo(() => {
+    if (!podeVerPrecos || !tabelaDoSugerido) return null;
+    const unit = catalogs.unidades.find((u) => String(u.id) === String(formData.unidadeId));
+    if (unit?.pais && unit.pais !== 'BR') return null; // a tabela está em reais
+    return sugestaoDoCronograma({
+      tabela: tabelaDoSugerido,
+      professor: catalogs.professores.find((p) => String(p.id) === String(formData.professorId)),
+      modalidadeNome: catalogs.modalidades.find((m) => String(m.id) === String(formData.modalidadeId))?.nome,
+      unidadeId: formData.unidadeId, hora: formData.hora, dias: formData.dias, hojeISO: getTodayStr(),
+    });
+  }, [podeVerPrecos, tabelaDoSugerido, catalogs.unidades, catalogs.professores, catalogs.modalidades, formData.unidadeId, formData.professorId, formData.modalidadeId, formData.hora, formData.dias]);
 
   const modalCurrencySymbol = useMemo(() => {
       const unit = catalogs.unidades.find(u => String(u.id) === String(formData.unidadeId));
@@ -942,6 +966,10 @@ export default function CronogramaPage() {
                                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">{modalCurrencySymbol}</span>
                                     <input type="number" step="0.01" min={!editingClass || (parseFloat(editingClass.valor) || 0) > 0 ? "0.01" : "0"} required={!editingClass || (parseFloat(editingClass.valor) || 0) > 0} className="w-full p-3.5 pl-14 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 rounded-xl text-sm focus:border-green-500 outline-none font-black text-slate-700 dark:text-white" value={formData.valor} onChange={e => setFormData({...formData, valor: e.target.value})} placeholder="0.00" />
                                 </div>
+                                {podeVerPrecos && formData.unidadeId && formData.modalidadeId && formData.professorId && (
+                                    <SugestaoDeValor sugestao={sugestaoDeValor} carregando={tabelaDoSugerido === null} valorDigitado={formData.valor} frequencia={tabelaDoSugerido ? tabelaDoSugerido.frequenciaPreta : undefined}
+                                        onUsar={(v) => setFormData((f) => ({ ...f, valor: String(v) }))} />
+                                )}
                             </div>
                         </div>
 

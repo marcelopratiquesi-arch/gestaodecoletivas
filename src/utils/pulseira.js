@@ -84,14 +84,18 @@ export const limiteDaPreta = (tabela, turno) => Number(tabela?.frequenciaPreta?.
  * O professor é Saver (acadêmico) nesta aula? Professor: { tipoContrato: 'saver', saverLocais: [{ unidadeId, horarios: [{ dia, ini, fim }] }] }
  * (dia 0 = domingo ... 6 = sábado; "ini" vale, "fim" não: 08:00-10:00 cobre uma aula às 09:59, não às 10:00).
  */
-export function ehHorarioSaver(professor, unidadeId, dataISO, hhmm) {
+export function ehHorarioSaverNoDia(professor, unidadeId, dia, hhmm) {
   if (String(professor?.tipoContrato || '').toLowerCase() !== 'saver') return false;
-  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(dataISO || ''));
   const hora = minutos(hhmm);
-  if (!m || hora === null) return false;
-  const dia = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).getDay();
+  if (hora === null || !Number.isInteger(dia)) return false;
   return (professor.saverLocais || []).some((l) => String(l.unidadeId) === String(unidadeId)
     && (l.horarios || []).some((h) => Number(h.dia) === dia && hora >= minutos(h.ini) && hora < minutos(h.fim)));
+}
+
+export function ehHorarioSaver(professor, unidadeId, dataISO, hhmm) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(dataISO || ''));
+  if (!m) return false;
+  return ehHorarioSaverNoDia(professor, unidadeId, new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).getDay(), hhmm);
 }
 
 const INTERVALO_SEGUIDAS_MIN = 20;
@@ -124,7 +128,7 @@ export function marcarSeguidas(aulasDoDia) {
 
 /**
  * Valor SUGERIDO para uma aula. Devolve null se não há preço (modalidade fora da tabela, como Power Fight, ou escondida).
- *   aula: { modalidade (nome), unidadeId, data 'AAAA-MM-DD', hora 'HH:MM', seguida }
+ *   aula: { modalidade (nome), unidadeId, data 'AAAA-MM-DD', hora 'HH:MM', seguida, dia? (0-6; no Cronograma, onde a aula é toda semana) }
  *   mediaMes: média de alunos do mês fechado (do professor naquela modalidade e turno); sem ela a preta fica pendente.
  * Resultado: { chave, nivel, campo, valor, candidataPreta, pretaPendente, valorPreta, extraPreta, saver, quantidade }
  */
@@ -139,7 +143,9 @@ export function valorSugerido({ tabela, professor, aula, mediaMes = null, modali
   const pretaConfirmada = candidataPreta && mediaMes !== null && turno && Number(mediaMes) > limiteDaPreta(tabela, turno);
   const nivel = pretaConfirmada ? 'preta' : base;
 
-  const saver = ehHorarioSaver(professor, aula.unidadeId, aula.data, aula.hora);
+  const saver = Number.isInteger(aula.dia)
+    ? ehHorarioSaverNoDia(professor, aula.unidadeId, aula.dia, aula.hora)
+    : ehHorarioSaver(professor, aula.unidadeId, aula.data, aula.hora);
   const tipo = MODALIDADES_TABELA[chave].tipo;
   const campo = saver ? 'academico' : tipo === 'seguidas' ? (aula.seguida ? 'seguidas' : 'umaAula') : 'qualquer';
   const valor = tabela.precos[chave][nivel][campo];

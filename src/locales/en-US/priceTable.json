@@ -1,4 +1,23 @@
 {
+  "suggest": {
+    "title": "Value suggested by the table",
+    "use": "Use this value",
+    "band": "{{nivel}} wristband",
+    "why_one": "{{count}} modality with a workshop",
+    "why_other": "{{count}} modalities with a workshop",
+    "whyNone": "without the workshop for this modality",
+    "saver": "Saver: academic rate",
+    "saverDays": "Saver: academic rate on the days the class falls in the internship hours",
+    "both": "R$ {{normal}} (regular) or R$ {{academico}} (academic)",
+    "preta": "Black wristband: the extra R$ {{extra}} per class is added at month end if the average attendance is above {{manha}} (morning) or {{noite}} (evening).",
+    "seguidas": "Back-to-back classes: R$ {{valor}} per class.",
+    "higher": "The typed value is R$ {{dif}} above the suggestion.",
+    "lower": "The typed value is R$ {{dif}} below the suggestion.",
+    "equal": "The typed value matches the table.",
+    "note": "This is only a suggestion: the class value is still the one you type.",
+    "none": "No suggested value for this modality in the table.",
+    "loading": "Loading the table..."
+  },
   "open": "Price table",
   "title": "Price table",
   "subtitle": "Rate per class, by modality and wristband (group classes career plan).",
