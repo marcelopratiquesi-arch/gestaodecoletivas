@@ -147,3 +147,30 @@ describe('corrigir, reenviar e apagar', () => {
     await assertSucceeds(deleteDoc(ref('admin1')));
   });
 });
+
+describe('crachá antigo sem unidade: unidade vem do vínculo', () => {
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      await setDoc(doc(db, 'professores/p1'), { nome: 'Prof Sem', uidLogin: 'profSem' });
+      await setDoc(doc(db, 'professores/p2'), { nome: 'Outro' });
+      await setDoc(doc(db, 'vinculos/v1'), { professorId: 'p1', unidadeId: 'uniA' });
+      await setDoc(doc(db, 'vinculos/v2'), { professorId: 'p2', unidadeId: 'uniA' });
+      await setDoc(doc(db, 'usuarios/profAntigo'), { role: 'professor', professorId: 'p2', nome: 'Antigo', loginGoogle: true });
+    });
+  });
+  it('envia usando vínculo dele (cadastro com uidLogin)', async () => {
+    await assertSucceeds(enviar('profSem', { vinculoId: 'v1' }));
+  });
+  it('envia usando vínculo dele (professorId do crachá)', async () => {
+    await assertSucceeds(enviar('profAntigo', { vinculoId: 'v2' }));
+  });
+  it('NÃO envia com vínculo de outro professor, de outra unidade ou inexistente', async () => {
+    await assertFails(enviar('profSem', { vinculoId: 'v2' }));
+    await assertFails(enviar('profSem', { vinculoId: 'v1', unidadeId: 'uniB' }));
+    await assertFails(enviar('profSem', { vinculoId: 'nao-existe' }));
+  });
+  it('quem já tem unidade no crachá não pode usar vínculo alheio para trocar de unidade', async () => {
+    await assertFails(enviar('profB', { vinculoId: 'v1', unidadeId: 'uniA' }));
+  });
+});

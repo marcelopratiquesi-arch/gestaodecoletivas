@@ -8,6 +8,9 @@
     "workshop": "Nombre del workshop",
     "workshopPlaceholder": "Ej.: Workshop Pratique Pilates 2025",
     "date": "Fecha en que lo hiciste",
+    "unit": "Sede que verifica",
+    "unitPlaceholder": "Elegí la sede",
+    "unitHint": "El líder y el mentor de esta sede van a revisar el certificado.",
     "photo": "Foto del certificado"
   },
   "choosePhoto": "Elegir foto",
@@ -27,6 +30,7 @@
   "delete": "Borrar",
   "deleteConfirm": "¿Borrar el certificado \"{{name}}\"?",
   "errors": {
+    "chooseUnit": "Elegí la sede que va a verificar.",
     "name": "Escribí el nombre del workshop (al menos 3 letras).",
     "date": "Elegí la fecha en que hiciste el workshop (no puede ser futura).",
     "noPhoto": "Elegí la foto del certificado.",

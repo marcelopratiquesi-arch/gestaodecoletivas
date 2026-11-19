@@ -16,10 +16,10 @@ export async function listarMeusCertificados(uid) {
 }
 
 /** Envia um certificado novo (ou reenvia um recusado: passe `id`). */
-export async function enviarCertificado({ uid, id, unidadeId, nome, workshop, dataFeito, foto }) {
+export async function enviarCertificado({ uid, id, unidadeId, vinculoId, nome, workshop, dataFeito, foto }) {
   const cid = id || `${uid}_${codigoCurto()}`;
   await setDoc(doc(db, "certificados_professor", cid), {
-    uid, unidadeId: String(unidadeId), nome, workshop: workshop.trim(), dataFeito, foto, status: "pendente", criadoEm: serverTimestamp(),
+    uid, unidadeId: String(unidadeId), ...(vinculoId ? { vinculoId: String(vinculoId) } : {}), nome, workshop: workshop.trim(), dataFeito, foto, status: "pendente", criadoEm: serverTimestamp(),
   });
   return cid;
 }

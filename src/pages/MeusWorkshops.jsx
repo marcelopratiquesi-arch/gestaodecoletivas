@@ -1,10 +1,11 @@
 // "Meus workshops": o professor informa o workshop que fez, a data e a foto do certificado.
 // A foto é reduzida no aparelho e guardada no próprio documento (ver utils/imagem.js). O líder da unidade,
 // o mentor dela ou o admin verifica (aba Professores). Recusado: o professor corrige e reenvia.
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Award, Camera, CheckCircle2, Clock, Loader2, Trash2, XCircle, AlertTriangle } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
+import { useCatalogs } from "../contexts/CatalogContext";
 import { apagarCertificado, enviarCertificado, listarMeusCertificados } from "../services/certificadoService";
 import { comprimirImagem, dataDoWorkshopValida } from "../utils/imagem";
 
@@ -24,8 +25,22 @@ export default function MeusWorkshops() {
   const { t } = useTranslation();
   const { user, userData } = useAuth();
   const uid = user?.uid;
-  const unidadeId = userData?.unidadeId;
+  const { catalogs } = useCatalogs();
   const arquivoRef = useRef(null);
+
+  // Unidade que verifica: a do crachá; se o crachá é antigo e não tem, vem dos vínculos do professor (sem leitura extra).
+  const opcoesUnidade = useMemo(() => {
+    if (userData?.unidadeId) return [{ unidadeId: String(userData.unidadeId), vinculoId: "" }];
+    const profId = userData?.professorId || (catalogs?.professores || []).find((p) => p.uidLogin === uid)?.id;
+    if (!profId) return [];
+    const vistos = new Map();
+    (catalogs?.vinculos || []).forEach((v) => {
+      if (String(v.professorId) === String(profId) && v.unidadeId && !vistos.has(String(v.unidadeId))) vistos.set(String(v.unidadeId), { unidadeId: String(v.unidadeId), vinculoId: v.id });
+    });
+    return [...vistos.values()].map((o) => ({ ...o, nome: (catalogs?.unidades || []).find((u) => String(u.id) === o.unidadeId)?.nome || o.unidadeId }));
+  }, [userData, uid, catalogs]);
+  const [unidadeEscolhida, setUnidadeEscolhida] = useState("");
+  const destino = opcoesUnidade.find((o) => o.unidadeId === unidadeEscolhida) || (opcoesUnidade.length === 1 ? opcoesUnidade[0] : null);
 
   const [lista, setLista] = useState(null);
   const [workshop, setWorkshop] = useState("");
@@ -63,9 +78,10 @@ export default function MeusWorkshops() {
     if (workshop.trim().length < 3) return setErro(t("certificates.errors.name"));
     if (!dataDoWorkshopValida(dataFeito)) return setErro(t("certificates.errors.date"));
     if (!foto) return setErro(t("certificates.errors.noPhoto"));
+    if (!destino) return setErro(t("certificates.errors.chooseUnit"));
     setProcessando(true);
     try {
-      await enviarCertificado({ uid, id: reenviando, unidadeId, nome: userData?.nome || user?.email || "-", workshop, dataFeito, foto });
+      await enviarCertificado({ uid, id: reenviando, unidadeId: destino.unidadeId, vinculoId: destino.vinculoId, nome: userData?.nome || user?.email || "-", workshop, dataFeito, foto });
       limpar();
       await carregar();
     } catch (err) {
@@ -94,13 +110,23 @@ export default function MeusWorkshops() {
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">{t("certificates.subtitle")}</p>
       </div>
 
-      {!unidadeId ? (
+      {opcoesUnidade.length === 0 ? (
         <div className="flex gap-2 text-sm text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-xl p-4">
           <AlertTriangle className="w-5 h-5 shrink-0" /> {t("certificates.noUnit")}
         </div>
       ) : (
         <form onSubmit={enviar} className="p-5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm space-y-4">
           <h2 className="font-black text-slate-800 dark:text-white">{reenviando ? t("certificates.fix") : t("certificates.add")}</h2>
+          {opcoesUnidade.length > 1 && (
+            <div className="space-y-1">
+              <label htmlFor="cert-unidade" className="text-[10px] font-black uppercase tracking-wider text-slate-500">{t("certificates.fields.unit")}</label>
+              <select id="cert-unidade" value={destino?.unidadeId || ""} onChange={(e) => setUnidadeEscolhida(e.target.value)} className={campo}>
+                <option value="">{t("certificates.fields.unitPlaceholder")}</option>
+                {opcoesUnidade.map((o) => <option key={o.unidadeId} value={o.unidadeId}>{o.nome}</option>)}
+              </select>
+              <p className="text-[11px] text-slate-400">{t("certificates.fields.unitHint")}</p>
+            </div>
+          )}
           <div className="space-y-1">
             <label htmlFor="cert-workshop" className="text-[10px] font-black uppercase tracking-wider text-slate-500">{t("certificates.fields.workshop")}</label>
             <input id="cert-workshop" value={workshop} onChange={(e) => setWorkshop(e.target.value)} maxLength={120} className={campo} placeholder={t("certificates.fields.workshopPlaceholder")} />

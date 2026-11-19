@@ -848,14 +848,27 @@ service cloud.firestore {
           || (logado() && meuPapel() == 'mentor' && mentorDaUnidadeId(unidadeId))
           || (logado() && meuPapel() in papeisLider() && unidadeId is string && unidadeId in unidadesDoLiderUid(request.auth.uid));
       }
+      // Crachá antigo sem unidade: a unidade vem de um vínculo do próprio professor (vinculoId no certificado).
+      // O vínculo precisa ser dele (professorId do crachá ou cadastro com uidLogin = este login) e da mesma unidade.
+      function certVinculoDoProfessor(d, cracha, v) {
+        return string(v.get('unidadeId', '')) == d.unidadeId
+          && (v.get('professorId', '') == cracha.get('professorId', '#')
+              || get(/databases/$(database)/documents/professores/$(v.get('professorId', '#'))).data.get('uidLogin', '') == request.auth.uid);
+      }
+      function certUnidadeOk(d, cracha) {
+        return d.unidadeId == cracha.get('unidadeId', '')
+          || (d.get('vinculoId', '') is string && d.get('vinculoId', '') != ''
+              && exists(/databases/$(database)/documents/vinculos/$(d.vinculoId))
+              && certVinculoDoProfessor(d, cracha, get(/databases/$(database)/documents/vinculos/$(d.vinculoId)).data));
+      }
       function certValido() {
         let d = request.resource.data;
         let cracha = get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data;
         return logado() && cracha.get('role', '').lower() == 'professor'
-          && d.keys().hasOnly(['uid', 'unidadeId', 'nome', 'workshop', 'dataFeito', 'foto', 'status', 'criadoEm'])
+          && d.keys().hasOnly(['uid', 'unidadeId', 'vinculoId', 'nome', 'workshop', 'dataFeito', 'foto', 'status', 'criadoEm'])
           && d.uid == request.auth.uid
           && cid.matches(request.auth.uid + '_[A-Za-z0-9]{4,24}')
-          && d.unidadeId is string && d.unidadeId != '' && d.unidadeId == cracha.get('unidadeId', '')
+          && d.unidadeId is string && d.unidadeId != '' && certUnidadeOk(d, cracha)
           && d.status == 'pendente' && d.criadoEm == request.time
           && d.nome is string && d.nome.size() >= 3 && d.nome.size() <= 80
           && d.workshop is string && d.workshop.size() >= 3 && d.workshop.size() <= 120

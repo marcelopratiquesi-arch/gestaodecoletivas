@@ -8,6 +8,9 @@
     "workshop": "Workshop name",
     "workshopPlaceholder": "E.g.: Pratique Pilates Workshop 2025",
     "date": "Date you took it",
+    "unit": "Unit that verifies",
+    "unitPlaceholder": "Choose the unit",
+    "unitHint": "The leader and mentor of this unit will check the certificate.",
     "photo": "Certificate photo"
   },
   "choosePhoto": "Choose photo",
@@ -27,6 +30,7 @@
   "delete": "Delete",
   "deleteConfirm": "Delete the certificate \"{{name}}\"?",
   "errors": {
+    "chooseUnit": "Choose the unit that will verify it.",
     "name": "Write the workshop name (at least 3 letters).",
     "date": "Choose the date you took the workshop (it cannot be in the future).",
     "noPhoto": "Choose the certificate photo.",
