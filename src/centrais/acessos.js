@@ -63,7 +63,8 @@ export function acessoCentral(tipo, registro, userData, catalogs) {
   if (VAGA_DO_TIPO[tipo]) return liderDaVaga(registro, VAGA_DO_TIPO[tipo]) ? acessoUnidade(userData, registro) : null;
   if (tipo === 'mentor') {
     if (ehAdmin(papel)) return 'editar';
-    return papel === 'mentor' && registro.id === idDe(userData) ? 'ver' : null;
+    // O mentor vê a própria ficha; o 1º e o 2º mentor (mesma equipe) veem a ficha um do outro.
+    return papel === 'mentor' && (registro.id === idDe(userData) || escopoMentor(registro) === escopoMentor(userData)) ? 'ver' : null;
   }
   if (tipo === 'professor') {
     if (ehAdmin(papel)) return 'editar';

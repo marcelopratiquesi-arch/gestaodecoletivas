@@ -1,0 +1,67 @@
+{
+  "title": "Líderes temporales",
+  "subtitle": "Invitación por e-mail de Google, con unidades y plazo. Al vencer el plazo, el acceso se corta solo. No ocupa el lugar de 1º ni de 2º líder.",
+  "invite": "Invitar líder temporal",
+  "empty": "Todavía no hay líderes temporales.",
+  "expiringSoon": "{{count}} vencen en 7 días o menos",
+  "until": "Hasta {{date}} 23:59",
+  "inviteUntil": "Invitación válida hasta {{date}}",
+  "status": {
+    "expired": "Vencido",
+    "today": "Vence hoy",
+    "days_one": "Falta {{count}} día",
+    "days_other": "Faltan {{count}} días",
+    "waiting": "Esperando 1er ingreso"
+  },
+  "extend": "Prorrogar",
+  "reactivate": "Reactivar",
+  "makePermanent": "Efectivizar",
+  "endNow": "Terminar",
+  "cancelInvite": "Cancelar invitación",
+  "confirmEnd": "¿Terminar ahora el acceso de {{name}}? Pierde el acceso en el acto (podés reactivar después).",
+  "confirmMakePermanent": "¿Efectivizar a {{name}} como líder de verdad (sin plazo)? Pasa a ser 1º o 2º líder de las unidades.",
+  "confirmCancel": "¿Cancelar la invitación de {{email}}?",
+  "extendTitle": "Plazo de {{name}}",
+  "save": "Guardar",
+  "cancel": "Cancelar",
+  "send": "Enviar invitación",
+  "days_one": "{{count}} día",
+  "days_other": "{{count}} días",
+  "deadlineHint": "Hoy cuenta como el día 1 y el acceso vale hasta las 23:59 (Brasilia) del último día. Máximo {{max}} días, y se puede prorrogar después.",
+  "modalTitle": "Invitar líder temporal",
+  "modalSubtitle": "La persona entra con Google usando el e-mail de abajo y queda como líder de las unidades elegidas.",
+  "sectionPerson": "Persona",
+  "sectionUnits": "Unidades ({{count}}/{{max}})",
+  "sectionDeadline": "Plazo",
+  "field": {
+    "email": "E-mail de Google",
+    "name": "Nombre",
+    "phone": "WhatsApp"
+  },
+  "emailHint": "Tiene que ser la cuenta de Google con la que la persona va a entrar. Quien ya tiene acceso no necesita invitación.",
+  "searchUnit": "Buscar unidad",
+  "noUnits": "No hay unidades disponibles.",
+  "errors": {
+    "load": "No se pudieron cargar los líderes temporales.",
+    "action": "No se pudo completar.",
+    "save": "No se pudo enviar la invitación.",
+    "email": "Ingresá un e-mail válido.",
+    "name": "Ingresá el nombre (mínimo 3 letras).",
+    "phone": "Ingresá el WhatsApp.",
+    "unit": "Elegí al menos una unidad.",
+    "tooMany": "Máximo {{max}} unidades.",
+    "past": "Elegí un plazo que no haya pasado.",
+    "noSlot": "La unidad {{unit}} ya tiene 2 líderes. Liberá un lugar antes de efectivizar."
+  },
+  "banner": {
+    "today": "Tu acceso temporal termina HOY a las 23:59.",
+    "days_one": "Tu acceso temporal termina en {{count}} día ({{date}}).",
+    "days_other": "Tu acceso temporal termina en {{count}} días ({{date}}).",
+    "help": "Para seguir, pedile a tu mentor que lo prorrogue."
+  },
+  "chip": "Temporal hasta {{date}}",
+  "central": {
+    "title": "Líderes temporales",
+    "until": "Hasta {{date}}"
+  }
+}

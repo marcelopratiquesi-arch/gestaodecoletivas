@@ -18,7 +18,9 @@ service cloud.firestore {
       let r = c.get('role', '').lower();
       return r != 'bloqueado'
         && !(r == 'mentor' && c.get('status', '') == 'inativo')
-        && !(r == 'professor' && c.get('loginGoogle', false) != true);
+        && !(r == 'professor' && c.get('loginGoogle', false) != true)
+        // Líder temporário: depois do prazo (temporarioAte) o crachá deixa de valer sozinho, sem rotina nem função na nuvem.
+        && (!('temporarioAte' in c) || c.temporarioAte > request.time);
     }
     function logado() {
       return autenticado() && temCracha()
@@ -63,6 +65,15 @@ service cloud.firestore {
           || (ids.size() > 2 && mentorDaUnidadeId(ids[2]))
           || (ids.size() > 3 && mentorDaUnidadeId(ids[3]))
           || (ids.size() > 4 && mentorDaUnidadeId(ids[4])));
+    }
+    // Mentor de TODAS as unidades (até 5) de uma lista (líder temporário: o mentor só convida para unidades dele).
+    function mentorDeTodas(ids) {
+      return ids is list && ids.size() >= 1 && ids.size() <= 5
+        && mentorDaUnidadeId(ids[0])
+        && (ids.size() < 2 || mentorDaUnidadeId(ids[1]))
+        && (ids.size() < 3 || mentorDaUnidadeId(ids[2]))
+        && (ids.size() < 4 || mentorDaUnidadeId(ids[3]))
+        && (ids.size() < 5 || mentorDaUnidadeId(ids[4]));
     }
     // Unidades de um líder (pelo crachá dele); vazio se a pessoa não é líder.
     function unidadesDoLiderUid(uid) {
@@ -132,6 +143,24 @@ service cloud.firestore {
         // 2º mentor novo: o convite diz de qual mentor ele é o 2º (só o admin cria o convite); sem isso, não pode ter o campo.
         && d.get('mentorPrincipalId', '') == c.get('mentorPrincipalId', '')
         // O convite precisa ser marcado como usado na MESMA gravação (não serve duas vezes).
+        && getAfter(caminhoConvite()).data.status == 'usado';
+    }
+
+    // Líder TEMPORÁRIO: o admin ou o mentor das unidades cadastra o e-mail do Google (convites_acesso, papel 'lider');
+    // no 1º acesso a pessoa cria o PRÓPRIO crachá, com as unidades e o prazo do convite (e nada além disso).
+    function liderTemporarioAceitaConvite(uid) {
+      let d = request.resource.data;
+      let c = get(caminhoConvite()).data;
+      return emailGoogleVerificado() && request.auth.uid == uid
+        && exists(caminhoConvite())
+        && c.status == 'pendente' && c.papel == 'lider' && 'temporarioAte' in c && c.temporarioAte > request.time
+        && d.keys().hasOnly(['nome', 'email', 'telefone', 'pais', 'role', 'loginGoogle', 'criadoPor', 'criadoEm', 'unidadeId', 'unidadeIds', 'temporarioAte', 'temporarioDesde'])
+        && d.role == 'lider' && d.loginGoogle == true
+        && d.email == request.auth.token.email.lower()
+        && d.nome == c.nome && d.telefone == c.telefone && d.get('pais', '') == c.get('pais', '')
+        && d.criadoPor == c.criadoPor
+        && d.unidadeIds == c.unidadeIds && d.unidadeId == c.unidadeIds[0]
+        && d.temporarioAte == c.temporarioAte && d.temporarioDesde == request.time
         && getAfter(caminhoConvite()).data.status == 'usado';
     }
 
@@ -392,6 +421,20 @@ service cloud.firestore {
           );
       }
 
+      // Líder temporário (crachá com temporarioAte): o mentor de TODAS as unidades dele prorroga/encerra (muda só
+      // temporarioAte, no máximo 61 dias à frente) ou efetiva como líder de verdade (apaga temporarioAte e temporarioDesde).
+      function mentorMexeNoTemporario() {
+        let novo = request.resource.data;
+        return 'temporarioAte' in resource.data && papelDoAlvo() in papeisLider()
+          && mentorDeTodas(unidadesDoAlvo())
+          && (
+            (camposAlterados().hasOnly(['temporarioAte']) && 'temporarioAte' in novo && novo.temporarioAte is timestamp
+              && novo.temporarioAte <= request.time + duration.value(61, 'd'))
+            || (camposAlterados().hasOnly(['temporarioAte', 'temporarioDesde'])
+              && !('temporarioAte' in novo) && !('temporarioDesde' in novo))
+          );
+      }
+
       // ---------- Saída da função ("não sou mais da unidade" / "não sou mais mentor") ----------
       // A PRÓPRIA pessoa se tira do acesso, na hora, sem apagar o crachá (para dar para desfazer):
       //  - líder: vira 'bloqueado', ou volta a ser 'professor' se também é professor (perde só a liderança);
@@ -429,7 +472,9 @@ service cloud.firestore {
       }
 
       // Mentor só cria crachá de líder/unidade para as unidades DELE (aprovação de pedido de acesso).
-      allow create: if souAdmin()
+      // Os convites do Google vêm PRIMEIRO: falham rápido para quase todo mundo e a regra tem limite de 1000 verificações.
+      allow create: if liderTemporarioAceitaConvite(uid)
+        || souAdmin()
         // Crachá de professor só nasce da APROVAÇÃO de um pedido (login do Google): nunca com e-mail e senha.
         || (logado() && meuPapel() == 'mentor' && papelNovo() == 'professor' && request.resource.data.get('loginGoogle', false) == true)
         || (logado() && meuPapel() == 'mentor' && papelNovo() in papeisLider()
@@ -463,6 +508,8 @@ service cloud.firestore {
             && request.resource.data.telefone is string && request.resource.data.telefone.size() >= 6 && request.resource.data.telefone.size() <= 30
             && (papelNovo() == papelDoAlvo() || (papelDoAlvo() == 'unidade' && papelNovo() == 'lider')))
         || souAdmin()
+        // Líder temporário (só quando o alvo tem prazo: a checagem barata vem primeiro por causa do limite de 1000 verificações).
+        || ('temporarioAte' in resource.data && logado() && meuPapel() == 'mentor' && mentorMexeNoTemporario())
         || (logado() && meuPapel() == 'mentor' && papelDoAlvo() in ['lider', 'unidade', 'professor']
             && camposAlterados().hasOnly(['nome', 'email', 'telefone']))
         || (logado() && meuPapel() in papeisLider() && papelDoAlvo() == 'professor'
@@ -753,7 +800,10 @@ service cloud.firestore {
     match /convites_acesso/{email} {
       function souConvidado() { return emailGoogleVerificado() && request.auth.token.email.lower() == email; }
 
-      allow read: if souAdmin() || souConvidado();
+      // O mentor lê os convites de líder temporário dele (o convite guarda "mentorId" = escopo do mentor; consulta com where).
+      allow read: if souAdmin() || souConvidado()
+        || (logado() && meuPapel() == 'mentor' && resource.data.get('papel', '') == 'lider'
+            && resource.data.get('mentorId', '') == meuMentorId());
 
       allow create, update: if souAdmin()
         && request.resource.data.papel == 'mentor'
@@ -761,6 +811,31 @@ service cloud.firestore {
         && request.resource.data.email == email
         && request.resource.data.nome is string && request.resource.data.nome.size() >= 3
         && request.resource.data.telefone is string && request.resource.data.telefone.size() >= 6;
+
+      // Convite de LÍDER TEMPORÁRIO: admin, ou mentor de TODAS as unidades do convite (até 5), prazo de no máximo 61 dias.
+      function conviteTemporarioOk() {
+        let d = request.resource.data;
+        let ids = d.get('unidadeIds', []);
+        return d.papel == 'lider' && d.status in ['pendente', 'cancelado']
+          && d.email == email
+          && d.nome is string && d.nome.size() >= 3 && d.nome.size() <= 80
+          && d.telefone is string && d.telefone.size() >= 6 && d.telefone.size() <= 30
+          && ids is list && ids.size() >= 1 && ids.size() <= 5 && d.get('unidadeId', '') == ids[0]
+          && d.temporarioAte is timestamp && d.temporarioAte <= request.time + duration.value(61, 'd')
+          && (d.status == 'cancelado' || d.temporarioAte > request.time)
+          && d.get('mentorId', '') is string;
+      }
+      allow create: if conviteTemporarioOk() && request.resource.data.criadoPor == request.auth.uid
+        && (souAdmin() || (logado() && meuPapel() == 'mentor'
+            && request.resource.data.get('mentorId', '') == meuMentorId()
+            && mentorDeTodas(request.resource.data.get('unidadeIds', []))));
+      allow update: if conviteTemporarioOk()
+        && request.resource.data.criadoPor in [request.auth.uid, resource.data.get('criadoPor', '')]
+        && (souAdmin() || (logado() && meuPapel() == 'mentor'
+            && request.resource.data.get('mentorId', '') == meuMentorId()
+            && resource.data.get('papel', '') == 'lider'
+            && mentorDeTodas(resource.data.get('unidadeIds', []))
+            && mentorDeTodas(request.resource.data.get('unidadeIds', []))));
 
       // A pessoa convidada só marca o PRÓPRIO convite como usado, junto com a criação do crachá dela.
       allow update: if souConvidado() && resource.data.status == 'pendente'

@@ -1,15 +1,22 @@
+import { ChevronRight } from 'lucide-react';
 import { cor as corDe } from './cores';
 
 // Cartão da fila de 5: ícone redondo colorido, título pequeno, valor e uma frase curta.
 // Com `alerta`, a borda e a frase ficam amarelas. `extra` aparece ao lado do valor (ex.: ▲ 12%).
+// PADRÃO: todo cartão do topo é clicável (leva à aba ou tela certa) e, ao clicar, a janela rola até as abas
+// (senão a pessoa não vê nada mudar). Cartão sem onClick só existe se não há para onde levar.
 export default function Cartao({ icone: Icone, cor = 'blue', titulo, valor, frase, alerta = false, extra = null, onClick }) {
   const Envelope = onClick ? 'button' : 'div';
+  const aoClicar = onClick && ((e) => {
+    onClick(e);
+    setTimeout(() => document.getElementById('central-abas')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+  });
   return (
     <Envelope
-      {...(onClick ? { type: 'button', onClick } : {})}
+      {...(onClick ? { type: 'button', onClick: aoClicar } : {})}
       className={`text-left bg-white dark:bg-slate-900 rounded-xl border p-3.5 flex items-start gap-3 min-w-0 ${
         alerta ? 'border-amber-300 dark:border-amber-500/40' : 'border-slate-200/80 dark:border-slate-800'
-      } ${onClick ? 'hover:border-blue-300 dark:hover:border-blue-500/40 transition-colors' : ''}`}
+      } ${onClick ? 'cursor-pointer hover:border-blue-300 hover:shadow-sm dark:hover:border-blue-500/40 transition' : ''}`}
     >
       <span className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${corDe(alerta ? 'amber' : cor).icone}`}>
         {Icone && <Icone className="w-4 h-4" />}
@@ -26,6 +33,7 @@ export default function Cartao({ icone: Icone, cor = 'blue', titulo, valor, fras
           </span>
         )}
       </span>
+      {onClick && <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600 shrink-0 self-center" aria-hidden="true" />}
     </Envelope>
   );
 }

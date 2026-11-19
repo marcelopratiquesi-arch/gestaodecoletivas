@@ -25,10 +25,12 @@ import LinkUnidade from "../../../centrais/LinkUnidade";
 import LinkCentral from "../../../centrais/LinkCentral";
 import { tirarLiderDaUnidade, camposAoLiberarVaga, textoDaSaida, dadosDaVaga } from "./saidaDoLider";
 import { TornarLiderModal } from "./TornarLiderModal";
+import { TemporariosSecao } from "./TemporariosSecao";
 import { FiltroPadrao } from "../ui/FiltroPadrao";
 import { CabecalhoDoModal } from "../ui/CabecalhoDoModal";
 import { BotaoDeLinha } from "../ui/BotaoDeLinha";
 import { CabecalhoDaAba, CaixaDeNumeros, BotaoPrincipal, BotaoSecundario } from "../ui/CabecalhoDaAba";
+import { AcoesDoContato } from "../ui/AcoesDoContato";
 import { useFiltroCascata } from "../ui/useFiltroCascata";
 import SeloRepetido from "../ui/SeloRepetido";
 import { useSelosRepetidos } from "../ui/useSelosRepetidos";
@@ -337,6 +339,10 @@ export function LideresTab() {
         </p>
       )}
 
+      {/* LÍDERES TEMPORÁRIOS (convite pelo e-mail do Google, com prazo) */}
+      <TemporariosSecao role={role} escopoId={escopoId} unidades={catalogs?.unidades || []}
+        quem={{ id: userId, nome: meuNome, email: userData?.email }} registrarAuditoria={registrarAuditoria} />
+
       {/* LISTA DE UNIDADES E SEUS LÍDERES */}
       <div className="space-y-4">
         <FiltroPadrao abaId="lideres" filtro={filtro}
@@ -418,7 +424,7 @@ export function LideresTab() {
                               )}
                             </p>
                             <p className="text-[11px] text-slate-500 flex items-center gap-1"><Mail className="w-3 h-3" /> {u.liderEmail || "-"}</p>
-                            {u.liderTelefone && <p className="text-[11px] text-slate-500 flex items-center gap-1"><Phone className="w-3 h-3" /> {u.liderTelefone}</p>}
+                            {u.liderTelefone && <p className="text-[11px] text-slate-500 flex items-center gap-1"><Phone className="w-3 h-3" /> {u.liderTelefone} <AcoesDoContato telefone={u.liderTelefone} pais={u.pais} /></p>}
                             {u.lider2Uid && (
                               <div className="mt-2 pt-2 border-t border-dashed border-slate-200 dark:border-slate-700 space-y-0.5">
                                 <p className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 flex-wrap">
@@ -431,7 +437,7 @@ export function LideresTab() {
                                     className="p-1 rounded-md text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"><UserX className="w-3.5 h-3.5" /></button>
                                 </p>
                                 <p className="text-[11px] text-slate-500 flex items-center gap-1"><Mail className="w-3 h-3" /> {u.lider2Email || "-"}</p>
-                                {u.lider2Telefone && <p className="text-[11px] text-slate-500 flex items-center gap-1"><Phone className="w-3 h-3" /> {u.lider2Telefone}</p>}
+                                {u.lider2Telefone && <p className="text-[11px] text-slate-500 flex items-center gap-1"><Phone className="w-3 h-3" /> {u.lider2Telefone} <AcoesDoContato telefone={u.lider2Telefone} pais={u.pais} /></p>}
                               </div>
                             )}
                           </div>

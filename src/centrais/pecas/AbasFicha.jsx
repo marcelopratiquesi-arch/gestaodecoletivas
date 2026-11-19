@@ -3,7 +3,7 @@
 //   abas: [{ id, nome, icone, contador? }]
 export default function AbasFicha({ abas, ativa, onTrocar }) {
   return (
-    <div role="tablist" className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200/80 dark:border-slate-800 p-1.5 flex gap-1 overflow-x-auto">
+    <div id="central-abas" role="tablist" className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200/80 dark:border-slate-800 p-1.5 flex gap-1 overflow-x-auto">
       {abas.map(({ id, nome, icone: Icone, contador }) => {
         const escolhida = id === ativa;
         return (

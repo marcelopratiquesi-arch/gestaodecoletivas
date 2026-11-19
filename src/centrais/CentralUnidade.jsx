@@ -156,6 +156,7 @@ export default function CentralUnidade({ id: unidadeId, z, textoVoltar, onFechar
               ? t('centrais.unidade.cartoes.alunos.frase', { media: formatNumber(resumo.media), n: formatNumber(resumo.realizadas) })
               : t('centrais.semAulaNoPeriodo')}
           alerta={n.erro}
+          onClick={() => setAba('grade')}
         />
         <Cartao
           icone={Users}

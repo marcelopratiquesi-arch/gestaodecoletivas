@@ -150,6 +150,15 @@
     "remove": "Tirar de 2º mentor",
     "removeConfirm": "Tirar {{name}} de 2º mentor de {{mentor}}?\n\nSe era líder ou professor, volta a ser o que era.",
     "promoteConfirm": "{{name}} vira o 1º mentor e recebe as {{count}} unidade(s) de {{mentor}}.\n{{mentor}} fica sem unidades (pode receber outras depois).\n\nConfirmar?",
-    "leavesConfirm": "{{mentor}} tem um 2º mentor ({{name}}).\n\nAo sair, {{name}} assume todas as unidades. Confirmar?"
+    "leavesConfirm": "{{mentor}} tem um 2º mentor ({{name}}).\n\nAo sair, {{name}} assume todas as unidades. Confirmar?",
+    "accessOf": "Acesso de {{name}}"
+  },
+  "filter": {
+    "all": "Todos",
+    "with": "Com unidades",
+    "without": "Sem unidades",
+    "second": "Com 2º mentor",
+    "stale": "Sem entrar há +30 dias",
+    "never": "Nunca entrou"
   }
 }

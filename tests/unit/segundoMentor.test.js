@@ -7,6 +7,8 @@ import { segundoDe, principalDe, conviteDe, motivoQueBloqueia } from '../../src/
 import { resumoDoAcesso, corDoAcesso } from '../../src/utils/ultimoAcesso';
 import { unidadesVisiveis } from '../../src/centrais/acessos';
 import { acessoUnidade } from '../../src/centrais/contasUnidade';
+import { acessoCentral } from '../../src/centrais/acessos';
+import { linkWhatsApp } from '../../src/centrais/contato';
 
 const mentores = [
   { id: 'm1', nome: 'Primeiro', role: 'mentor' },
@@ -46,6 +48,22 @@ describe('2º mentor', () => {
     expect(motivoQueBloqueia({ role: 'mentor' })).toBe('alreadyMentor');
     expect(motivoQueBloqueia({ role: 'bloqueado' })).toBe('blocked');
     expect(motivoQueBloqueia(null)).toBe('noLogin');
+  });
+});
+
+describe('Central do mentor com 2º mentor', () => {
+  it('o 1º e o 2º mentor abrem a ficha um do outro (só leitura); outro mentor não', () => {
+    expect(acessoCentral('mentor', mentores[0], mentores[1], {})).toBe('ver');
+    expect(acessoCentral('mentor', mentores[1], mentores[0], {})).toBe('ver');
+    expect(acessoCentral('mentor', mentores[0], mentores[2], {})).toBe(null);
+    expect(acessoCentral('mentor', mentores[0], { id: 'a', role: 'admin' }, {})).toBe('editar');
+  });
+});
+
+describe('WhatsApp padrão', () => {
+  it('telefone com número gera link; sem número não', () => {
+    expect(linkWhatsApp('(48) 99853-4505', 'BR')).toBe('https://wa.me/5548998534505');
+    expect(linkWhatsApp('', 'BR')).toBe(null);
   });
 });
 
