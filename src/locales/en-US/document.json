@@ -1,6 +1,8 @@
 {
   "label": "ID document",
   "typeLabel": "Document type",
+  "otherDoc": "My document is a different one",
+  "backToCountry": "Back to {{tipo}}",
   "types": {
     "cpf": "CPF (Brazil)",
     "dni": "DNI (Argentina)",

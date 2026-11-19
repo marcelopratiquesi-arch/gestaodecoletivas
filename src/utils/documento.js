@@ -62,5 +62,13 @@ export function tipoDocumentoPadrao(idioma) {
   return "cpf";
 }
 
+/** Documento do país escolhido (BR → CPF, AR → DNI, US → SSN). País desconhecido cai no CPF. */
+export function tipoDocumentoDoPais(pais) {
+  const p = String(pais || "").toUpperCase();
+  if (p === "AR") return "dni";
+  if (p === "US") return "ssn";
+  return "cpf";
+}
+
 /** Código do documento na reserva (documentos_unicos): "cpf_12345678909". */
 export const idDocumentoUnico = (tipo, numero) => `${tipo}_${soNumeros(numero)}`;

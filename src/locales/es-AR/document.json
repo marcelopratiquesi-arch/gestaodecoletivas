@@ -1,6 +1,8 @@
 {
   "label": "Documento de identidad",
   "typeLabel": "Tipo de documento",
+  "otherDoc": "Mi documento es otro",
+  "backToCountry": "Volver a {{tipo}}",
   "types": {
     "cpf": "CPF (Brasil)",
     "dni": "DNI (Argentina)",
