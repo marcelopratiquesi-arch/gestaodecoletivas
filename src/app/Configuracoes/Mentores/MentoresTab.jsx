@@ -30,6 +30,7 @@ import { FiltroPadrao } from "../ui/FiltroPadrao";
 import { CabecalhoDoModal } from "../ui/CabecalhoDoModal";
 import { BotaoDeLinha } from "../ui/BotaoDeLinha";
 import { CabecalhoDaAba, CaixaDeNumeros, BotaoPrincipal, BotaoSecundario } from "../ui/CabecalhoDaAba";
+import { AcoesDoContato } from "../ui/AcoesDoContato";
 import { useFiltroCascata } from "../ui/useFiltroCascata";
 import SeloRepetido from "../ui/SeloRepetido";
 import { useSelosRepetidos } from "../ui/useSelosRepetidos";
@@ -667,6 +668,7 @@ export function MentoresTab() {
                                 <Edit2 className="w-3 h-3 text-slate-400 opacity-0 group-hover/edit:opacity-100 transition-opacity ml-1"/>
                             </div>
                         )}
+                        {m.telefone && editandoTelefoneId !== m.id && <div className="mt-0.5"><AcoesDoContato telefone={m.telefone} pais={paisAtual} /></div>}
                     </td>
                     
                     {/* UNIDADES VINCULADAS: abre o modal de vínculo */}

@@ -28,6 +28,11 @@ export function useNumerosDaUnidade({ unidadeId, ativo, mes, hoje, agoraHHMM }) 
     () => (mentorId ? catalogs.mentores.find((m) => m.id === mentorId) || null : null),
     [catalogs.mentores, mentorId],
   );
+  // 2º mentor: crachá de mentor ligado ao mentor da unidade (mesmas unidades).
+  const mentor2 = useMemo(
+    () => (mentorId ? catalogs.mentores.find((m) => m.mentorPrincipalId === mentorId) || null : null),
+    [catalogs.mentores, mentorId],
+  );
   const aulasForaDaLixeira = useMemo(
     () => catalogs.aulas.filter((a) => String(a.unidadeId) === String(unidadeId)),
     [catalogs.aulas, unidadeId],
@@ -84,7 +89,7 @@ export function useNumerosDaUnidade({ unidadeId, ativo, mes, hoje, agoraHHMM }) 
   );
 
   return {
-    unidade, mentor, aulas, grade, professores, modalidadePorId, professorPorId,
+    unidade, mentor, mentor2, aulas, grade, professores, modalidadePorId, professorPorId,
     periodo, meses, resumo, anterior, porMes, porProfessor, pendencias,
     erro: doTrimestre.erro,
   };

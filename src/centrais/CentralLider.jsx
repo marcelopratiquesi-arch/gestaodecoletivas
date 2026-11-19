@@ -27,6 +27,8 @@ import Variacao from './pecas/Variacao';
 import { Campo, SeletorDeMes } from './pecas/Basicos';
 import { BOTAO_PRINCIPAL, BOTAO_BRANCO } from './pecas/cores';
 import { QuadroEmDia, CartaoPessoa } from './secoes';
+import { CampoDocumento, CampoUltimoAcesso } from './CamposDaPessoa';
+import { lerDocumento } from '../services/documentoService';
 import { SecaoResumo, SecaoValores, SecaoProfessores, SecaoGrade } from './secoesUnidade';
 import LinkCentral from './LinkCentral';
 import { iniciais } from './contato';
@@ -34,7 +36,7 @@ import { abrirCentral, abrirCentralUnidade } from './abrirCentral';
 import { tipoDaVaga } from './acessos';
 import { telasPermitidas, caminhos } from './atalhos';
 import { useNumerosDaUnidade } from './useNumerosDaUnidade';
-import { acessoUnidade, aulasNaSemana, liderDaVaga, unidadesLideradasPor } from './contasUnidade';
+import { ehAdmin, acessoUnidade, aulasNaSemana, liderDaVaga, unidadesLideradasPor } from './contasUnidade';
 import { itensEmDiaLider } from './contasPessoas';
 
 const doisDigitos = (n) => String(n).padStart(2, '0');
@@ -54,7 +56,7 @@ export default function CentralLider({ id: unidadeId, vaga = 1, z, textoVoltar, 
   const cadastroDaUnidade = catalogs.unidades.find((u) => String(u.id) === String(unidadeId)) || null;
   const acesso = liderDaVaga(cadastroDaUnidade, vaga) ? acessoUnidade(userData, cadastroDaUnidade) : null;
   const n = useNumerosDaUnidade({ unidadeId, ativo: !!acesso, mes, hoje, agoraHHMM });
-  const { unidade, mentor, aulas, professores, resumo, anterior, pendencias } = n;
+  const { unidade, mentor, mentor2, aulas, professores, resumo, anterior, pendencias } = n;
 
   // Os itens "em dia" olham os dados DESTE líder (o 2º líder usa os campos lider2*).
   const itens = useMemo(() => {
@@ -71,6 +73,8 @@ export default function CentralLider({ id: unidadeId, vaga = 1, z, textoVoltar, 
   const lideradas = unidadesLideradasPor(lider.uid, catalogs.unidades).filter((x) => acessoUnidade(userData, x.unidade));
 
   const pode = telasPermitidas(userData);
+  // CPF/DNI/SSN do líder: ele mesmo, o admin e o mentor da unidade (é o que o banco libera).
+  const podeVerDocumento = ehAdmin(userData?.role) || lider.uid === (userData?.id || userData?.uid) || acesso === 'editar';
   const d = { ...n, itens, pode, irPara, mesDeHoje };
   const nome = lider.nome;
   const aConferir = lider.aConferir;
@@ -184,6 +188,16 @@ export default function CentralLider({ id: unidadeId, vaga = 1, z, textoVoltar, 
           : <Contato icone={Phone} texto={t('centrais.unidade.info.mentorSemTelefone')} falta />}
         {mentor?.email && <Contato icone={Mail} texto={mentor.email} copiar />}
       </CartaoPessoa>
+      {mentor2 && (
+        <div className="mt-3">
+          <CartaoPessoa icone={ShieldCheck} papel={t('centrais.mentor.segundo')} nome={mentor2.nome} link={{ tipo: 'mentor', alvo: mentor2 }}>
+            {mentor2.telefone
+              ? <Contato icone={Phone} texto={mentor2.telefone} copiar whatsapp pais={mentor2.pais || unidade.pais} />
+              : <Contato icone={Phone} texto={t('centrais.unidade.info.mentorSemTelefone')} falta />}
+            {mentor2.email && <Contato icone={Mail} texto={mentor2.email} copiar />}
+          </CartaoPessoa>
+        </div>
+      )}
     </Quadro>
   );
 
@@ -205,7 +219,8 @@ export default function CentralLider({ id: unidadeId, vaga = 1, z, textoVoltar, 
         <Campo rotulo={t('centrais.lider.conferencia')} falta={aConferir}>
           {aConferir ? t('centrais.aguardandoConferencia') : t('centrais.lider.conferido')}
         </Campo>
-        <Campo rotulo={t('centrais.ultimoAcessoRotulo')}><EmBreve /></Campo>
+        <CampoDocumento pode={podeVerDocumento} chave={lider.uid} leitor={lerDocumento} />
+        <CampoUltimoAcesso uid={lider.uid} />
       </div>
       {pode.cfgLideres && (
         <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">

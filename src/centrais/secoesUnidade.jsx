@@ -155,7 +155,7 @@ export function SecaoGrade({ d, comLink = false }) {
 // ---------- Mentor e Líder ----------
 export function SecaoEquipe({ d, comLink = false }) {
   const { t } = useTranslation();
-  const { unidade, mentor } = d;
+  const { unidade, mentor, mentor2 } = d;
   const acao = comLink ? atalhoTelaCompleta(t, d.pode.cfgLideres, caminhos.configuracoes(d.irPara, 'lideres')) : null;
 
   return (
@@ -168,6 +168,16 @@ export function SecaoEquipe({ d, comLink = false }) {
           {mentor?.email && <Contato icone={Mail} texto={mentor.email} copiar />}
           <UltimoAcesso quando={mentor?.ultimoAcesso} />
         </CartaoPessoa>
+
+        {mentor2 && (
+          <CartaoPessoa icone={ShieldCheck} papel={t('centrais.mentor.segundo')} nome={mentor2.nome} link={{ tipo: 'mentor', alvo: mentor2 }}>
+            {mentor2.telefone
+              ? <Contato icone={Phone} texto={mentor2.telefone} copiar whatsapp pais={mentor2.pais || unidade.pais} />
+              : <Contato icone={Phone} texto={t('centrais.unidade.info.mentorSemTelefone')} falta />}
+            {mentor2.email && <Contato icone={Mail} texto={mentor2.email} copiar />}
+            <UltimoAcesso quando={mentor2.ultimoAcesso} />
+          </CartaoPessoa>
+        )}
 
         <CartaoPessoa
           icone={UserCheck}

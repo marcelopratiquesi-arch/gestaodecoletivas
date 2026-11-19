@@ -16,6 +16,7 @@ import LinkUnidade from "../../../centrais/LinkUnidade";
 import { FiltroPadrao } from "../ui/FiltroPadrao";
 import { BotaoDeLinha } from "../ui/BotaoDeLinha";
 import { CabecalhoDaAba, CaixaDeNumeros, BotaoPrincipal, BotaoSecundario } from "../ui/CabecalhoDaAba";
+import { AcoesDoContato } from "../ui/AcoesDoContato";
 import { useFiltroCascata } from "../ui/useFiltroCascata";
 
 import { 
@@ -925,6 +926,7 @@ export function UnidadesTab() {
                                         </>
                                     ) : t('unitsTab.table.notInformed', "Add Whatsapp")}
                                   </span>
+                                  {u.telefone && <AcoesDoContato telefone={u.telefone} pais={paisAtual} />}
                                   <Edit2 onClick={() => { setEditandoTelefoneId(u.id); setTelefoneInline(u.telefone ? u.telefone.replace(paisDDI, '').trim() : ""); }} className="w-3 h-3 text-blue-500 opacity-0 group-hover/edit:opacity-100 cursor-pointer transition-opacity ml-1"/>
                               </div>
                           )}

@@ -25,6 +25,9 @@ import { Campo, Vazio, Numero, EstadoCarga, SeletorDeMes } from './pecas/Basicos
 import { GraficoBarras, EvolucaoMeses } from './pecas/Graficos';
 import { BOTAO_PRINCIPAL, BOTAO_BRANCO, TH, TD, SELO_ATIVO, SELO_INATIVO } from './pecas/cores';
 import { QuadroEmDia, GradeSemanal } from './secoes';
+import { CampoDocumento, CampoUltimoAcesso } from './CamposDaPessoa';
+import { lerDocumento } from '../services/documentoService';
+import { lerDocumentoDaFicha } from '../services/documentoFichaService';
 import LinkCentral from './LinkCentral';
 import { iniciais } from './contato';
 import { atalhoTelaCompleta, telasPermitidas, caminhos } from './atalhos';
@@ -126,6 +129,10 @@ export default function CentralProfessor({ id: professorId, z, textoVoltar, onFe
   if (!professor || !acesso) return null;
 
   const pode = telasPermitidas(userData);
+  // CPF/DNI/SSN do professor: só admin e mentor leem a gaveta da ficha (o banco confere).
+  const papelDeQuemOlha = String(userData?.role || '').trim().toLowerCase();
+  const podeVerDocumento = ['admin', 'administrador', 'master', 'mentor'].includes(papelDeQuemOlha);
+  const lerDocumentoDaGrade = async (id) => (await lerDocumentoDaFicha(id)) || (professor.uidLogin ? lerDocumento(professor.uidLogin) : null);
   const ativo = professor.status === 'ativo';
   const faltam = itens.filter((i) => !i.ok).length;
   const totalNaSemana = aulasNaSemana(aulas);
@@ -374,8 +381,13 @@ export default function CentralProfessor({ id: professorId, z, textoVoltar, onFe
         <Campo rotulo={t('centrais.professor.modalidades')}>
           {modalidades.length > 0 ? modalidades.map((m) => m.nome).join(', ') : t('centrais.semAulaNaGrade')}
         </Campo>
-        <Campo rotulo={t('centrais.cadastro.cpf')}><EmBreve /></Campo>
-        <Campo rotulo={t('centrais.ultimoAcessoRotulo')}><EmBreve /></Campo>
+        <Campo rotulo={t('centrais.professor.workshops')} falta={!(professor.workshops || []).length}>
+          {(professor.workshops || []).length > 0
+            ? [...professor.workshops].sort((a, b) => String(b.data).localeCompare(String(a.data))).map((w) => `${w.nome}${w.data ? ` (${formatDate(w.data)})` : ''}`).join(' · ')
+            : t('centrais.professor.semWorkshops')}
+        </Campo>
+        <CampoDocumento pode={podeVerDocumento} chave={String(professor.id)} leitor={lerDocumentoDaGrade} />
+        <CampoUltimoAcesso uid={professor.uidLogin} />
       </div>
       {pode.cfgProfessores && (
         <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">

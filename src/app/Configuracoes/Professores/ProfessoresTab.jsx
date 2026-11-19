@@ -29,6 +29,7 @@ import { FiltroPadrao } from "../ui/FiltroPadrao";
 import { CabecalhoDoModal } from "../ui/CabecalhoDoModal";
 import { BotaoDeLinha } from "../ui/BotaoDeLinha";
 import { CabecalhoDaAba, CaixaDeNumeros, BotaoPrincipal, BotaoSecundario } from "../ui/CabecalhoDaAba";
+import { AcoesDoContato } from "../ui/AcoesDoContato";
 import { useFiltroCascata } from "../ui/useFiltroCascata";
 import SeloRepetido from "../ui/SeloRepetido";
 import { useSelosRepetidos } from "../ui/useSelosRepetidos";
@@ -686,6 +687,7 @@ export function ProfessoresTab() {
                                                     <FlagIcon pais={paisAtual} /> {paisAtual}
                                                 </span>
                                                 {paisDDI} {p.telefone}
+                                                <AcoesDoContato telefone={p.telefone} pais={paisAtual} />
                                             </span>
                                         ) : (
                                             <span className="flex items-center gap-1 text-red-600 dark:text-red-400 font-bold bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 px-2 py-0.5 rounded-md w-fit" title={t('teachersTab.extra.phoneInvalidHint')}>
