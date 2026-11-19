@@ -26,7 +26,7 @@ const VisaoGlobal = ({ resumoCEO, openOciosidadeDetails, executeDrillDown }) => 
                     onClick={() => setMostrarLegenda(!mostrarLegenda)}
                 >
                     <div className="flex items-center gap-3">
-                        <HelpCircle className="w-5 h-5 text-blue-500"/>
+                        <HelpCircle className="w-5 h-5 text-slate-500"/>
                         <h3 className="text-sm font-black text-slate-700 dark:text-slate-200">{t('radar.global.howTitle')}</h3>
                     </div>
                     <ChevronDown className={`w-5 h-5 text-slate-400 transition-transform duration-300 ${mostrarLegenda ? 'rotate-180' : ''}`}/>
@@ -41,7 +41,7 @@ const VisaoGlobal = ({ resumoCEO, openOciosidadeDetails, executeDrillDown }) => 
                             </p>
                         </div>
                         <div>
-                            <h4 className="text-[11px] font-black text-rose-600 dark:text-rose-400 mb-2 flex items-center gap-1"><AlertOctagon className="w-3 h-3"/> {t('radar.global.biggestTitle')}</h4>
+                            <h4 className="text-[11px] font-black text-red-600 dark:text-red-400 mb-2 flex items-center gap-1"><AlertOctagon className="w-3 h-3"/> {t('radar.global.biggestTitle')}</h4>
                             <p className="text-[10px] text-slate-600 dark:text-slate-400 leading-relaxed normal-case">
                                 <Trans i18nKey="radar.global.biggestDesc" components={{ b: <b /> }} />
                             </p>
@@ -78,7 +78,7 @@ const VisaoGlobal = ({ resumoCEO, openOciosidadeDetails, executeDrillDown }) => 
                     <div className="flex-1 space-y-3 mb-2">
                         {list1.map((u) => (
                             <div key={u.id} className="flex justify-between items-center text-xs font-bold border-b border-slate-50 dark:border-slate-700/50 pb-2 group">
-                                <span className="text-slate-600 dark:text-slate-300 truncate pr-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 cursor-pointer transition-colors" onClick={() => openOciosidadeDetails(u.id)}>{u.nome}</span>
+                                <span className="text-slate-600 dark:text-slate-300 truncate pr-2 group-hover:text-slate-600 dark:group-hover:text-slate-400 cursor-pointer transition-colors" onClick={() => openOciosidadeDetails(u.id)}>{u.nome}</span>
                                 <span className="text-[#a06842] dark:text-[#c69c6d] font-black shrink-0 cursor-pointer group-hover:underline transition-all" onClick={() => openOciosidadeDetails(u.id)}>{t('radar.global.windowsPerMonth', { count: u.aulasPerdidasMes })}</span>
                             </div>
                         ))}
@@ -91,21 +91,21 @@ const VisaoGlobal = ({ resumoCEO, openOciosidadeDetails, executeDrillDown }) => 
                 </div>
 
                 {/* CARD 2: MAIOR OCIOSIDADE */}
-                <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border-t-4 border-t-rose-800 shadow-sm flex flex-col">
+                <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border-t-4 border-t-red-800 shadow-sm flex flex-col">
                     <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-2">
-                        <div className="w-4 h-4 bg-rose-100 dark:bg-rose-900/30 rounded flex items-center justify-center"><AlertOctagon className="w-3 h-3 text-rose-700 dark:text-rose-400" /></div>
+                        <div className="w-4 h-4 bg-red-100 dark:bg-red-900/30 rounded flex items-center justify-center"><AlertOctagon className="w-3 h-3 text-red-700 dark:text-red-400" /></div>
                         <h3 className="text-[10px] font-black tracking-widest text-slate-500 dark:text-slate-400">{t('radar.global.biggestTitle')}</h3>
                     </div>
                     <div className="mb-6 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => openOciosidadeDetails(resumoCEO.maiorOciosidade?.id)}>
-                        <span className="text-3xl font-black text-slate-800 dark:text-white leading-tight block truncate mb-1 hover:text-blue-600 transition-colors">{resumoCEO.maiorOciosidade?.nome || 'N/A'}</span>
+                        <span className="text-3xl font-black text-slate-800 dark:text-white leading-tight block truncate mb-1 hover:text-slate-600 transition-colors">{resumoCEO.maiorOciosidade?.nome || 'N/A'}</span>
                         <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400"><Trans i18nKey="radar.global.windowsOpen" values={{ count: resumoCEO.maiorOciosidade?.aulasPerdidasMes || 0 }} components={{ b: <span className="text-slate-800 dark:text-white font-black" /> }} /></p>
                     </div>
                     <div className="border-t border-slate-100 dark:border-slate-700 mb-3"></div>
                     <div className="flex-1 space-y-3 mb-2">
                         {list2.map((u) => (
                             <div key={u.id} className="flex justify-between items-center text-xs font-bold border-b border-slate-50 dark:border-slate-700/50 pb-2 group">
-                                <span className="text-slate-600 dark:text-slate-300 truncate pr-2 group-hover:text-rose-600 cursor-pointer transition-colors" onClick={() => openOciosidadeDetails(u.id)}>{u.nome}</span>
-                                <span className="text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/20 px-2 py-0.5 rounded font-black shrink-0 cursor-pointer group-hover:scale-105 transition-transform" onClick={() => openOciosidadeDetails(u.id)}>{t('radar.global.windowsPerMonth', { count: u.aulasPerdidasMes })}</span>
+                                <span className="text-slate-600 dark:text-slate-300 truncate pr-2 group-hover:text-red-600 cursor-pointer transition-colors" onClick={() => openOciosidadeDetails(u.id)}>{u.nome}</span>
+                                <span className="text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-2 py-0.5 rounded font-black shrink-0 cursor-pointer group-hover:scale-105 transition-transform" onClick={() => openOciosidadeDetails(u.id)}>{t('radar.global.windowsPerMonth', { count: u.aulasPerdidasMes })}</span>
                             </div>
                         ))}
                     </div>

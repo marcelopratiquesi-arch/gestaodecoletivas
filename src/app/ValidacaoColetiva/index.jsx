@@ -508,7 +508,7 @@ export default function ValidacaoColetiva() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
               <h1 className="text-3xl font-black text-slate-800 dark:text-white tracking-tight flex items-center gap-3">
-                <span className="bg-gradient-to-tr from-blue-600 to-indigo-600 text-white p-2 rounded-lg shadow-lg shadow-blue-500/20"><ShieldCheck className="w-7 h-7" /></span>
+                <span className="bg-gradient-to-tr from-slate-600 to-slate-600 text-white p-2 rounded-lg shadow-lg shadow-slate-500/20"><ShieldCheck className="w-7 h-7" /></span>
                 {t('groupValidation.title')}
               </h1>
               <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium text-sm">{t('groupValidation.subtitle')}</p>
@@ -522,13 +522,13 @@ export default function ValidacaoColetiva() {
         <div className="bg-white dark:bg-slate-800 p-3 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm w-full flex flex-wrap items-center gap-3">
             {/* DATAS (IGUAL VALIDAÇÃO DIÁRIA) */}
             <div className="flex bg-slate-100 dark:bg-slate-700 rounded-xl p-1 h-11 shrink-0">
-                <button onClick={() => handleDateChange('dia')} className={`px-4 text-xs font-bold rounded-lg uppercase transition-all ${modoFiltro === 'dia' ? 'bg-white dark:bg-slate-600 shadow-sm text-blue-600 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}>{t('common.period.day')}</button>
-                <button onClick={() => setModoFiltro('periodo')} className={`px-4 text-xs font-bold rounded-lg uppercase transition-all ${modoFiltro === 'periodo' ? 'bg-white dark:bg-slate-600 shadow-sm text-blue-600 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}>{t('common.period.range')}</button>
-                <button onClick={() => handleDateChange('mes')} className={`px-4 text-xs font-bold rounded-lg uppercase transition-all ${modoFiltro === 'mes' ? 'bg-white dark:bg-slate-600 shadow-sm text-blue-600 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}>{t('common.period.month')}</button>
+                <button onClick={() => handleDateChange('dia')} className={`px-4 text-xs font-bold rounded-lg uppercase transition-all ${modoFiltro === 'dia' ? 'bg-white dark:bg-slate-600 shadow-sm text-slate-600 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}>{t('common.period.day')}</button>
+                <button onClick={() => setModoFiltro('periodo')} className={`px-4 text-xs font-bold rounded-lg uppercase transition-all ${modoFiltro === 'periodo' ? 'bg-white dark:bg-slate-600 shadow-sm text-slate-600 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}>{t('common.period.range')}</button>
+                <button onClick={() => handleDateChange('mes')} className={`px-4 text-xs font-bold rounded-lg uppercase transition-all ${modoFiltro === 'mes' ? 'bg-white dark:bg-slate-600 shadow-sm text-slate-600 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}>{t('common.period.month')}</button>
             </div>
 
             <div className="h-11 px-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-700 flex items-center gap-2 shrink-0">
-                <Calendar className="w-4 h-4 text-blue-500"/>
+                <Calendar className="w-4 h-4 text-slate-500"/>
                 {modoFiltro === 'mes' ? (
                     <input type="month" value={dataInicio.substring(0, 7)} onChange={handleMonthChange} className="bg-transparent text-xs font-bold text-slate-700 dark:text-white outline-none cursor-pointer uppercase"/>
                 ) : (
@@ -563,17 +563,17 @@ export default function ValidacaoColetiva() {
       {/* TELA DE BLOQUEIO */}
       {isCofreGlobalFechado ? (
           <div className="py-24 text-center bg-white dark:bg-slate-800 border-dashed border-2 border-slate-300 dark:border-slate-700 shadow-sm animate-in fade-in zoom-in duration-300 m-4 rounded-2xl">
-              <div className="bg-blue-50 dark:bg-slate-900 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 border border-blue-100 dark:border-slate-800 shadow-inner">
-                  <Lock className="w-10 h-10 text-blue-500 animate-pulse"/>
+              <div className="bg-slate-50 dark:bg-slate-900 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 border border-slate-100 dark:border-slate-800 shadow-inner">
+                  <Lock className="w-10 h-10 text-slate-500 animate-pulse"/>
               </div>
               <h3 className="text-2xl font-black text-slate-700 dark:text-white mb-3 uppercase">{t('groupValidation.locked.title')}</h3>
               <p className="text-slate-500 dark:text-slate-400 text-sm font-medium max-w-lg mx-auto leading-relaxed uppercase">{t('groupValidation.locked.desc')}</p>
           </div>
       ) : erroEscuta ? (
-          <div role="alert" className="py-16 px-6 text-center bg-rose-50 dark:bg-rose-950/30 border-2 border-dashed border-rose-300 dark:border-rose-800 rounded-2xl m-4">
-              <AlertCircle className="w-10 h-10 text-rose-500 mx-auto mb-4"/>
-              <h3 className="text-xl font-black text-rose-700 dark:text-rose-300 mb-2">{t('groupValidation.error.title')}</h3>
-              <p className="text-rose-600 dark:text-rose-300 text-sm font-medium max-w-lg mx-auto leading-relaxed">{t('groupValidation.error.desc')}</p>
+          <div role="alert" className="py-16 px-6 text-center bg-red-50 dark:bg-red-950/30 border-2 border-dashed border-red-300 dark:border-red-800 rounded-2xl m-4">
+              <AlertCircle className="w-10 h-10 text-red-500 mx-auto mb-4"/>
+              <h3 className="text-xl font-black text-red-700 dark:text-red-300 mb-2">{t('groupValidation.error.title')}</h3>
+              <p className="text-red-600 dark:text-red-300 text-sm font-medium max-w-lg mx-auto leading-relaxed">{t('groupValidation.error.desc')}</p>
           </div>
       ) : (loadingRealtime || aguardandoFiltro) ? (
           <div className="py-24 text-center text-slate-400 font-black tracking-widest animate-pulse">{t('groupValidation.syncing')}</div>
@@ -581,17 +581,17 @@ export default function ValidacaoColetiva() {
           <>
             {/* CARDS DE RESUMO */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <KPICard title={t('groupValidation.kpis.expectedClasses')} value={dadosProcessados.kpis.totalAulas} icon={Calendar} colorClass="border-l-4 border-l-blue-500" iconBg="bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400"/>
+                <KPICard title={t('groupValidation.kpis.expectedClasses')} value={dadosProcessados.kpis.totalAulas} icon={Calendar} colorClass="border-l-4 border-l-slate-500" iconBg="bg-slate-50 text-slate-600 dark:bg-slate-900/20 dark:text-slate-400"/>
                 <KPICard title={t('groupValidation.kpis.units100')} value={dadosProcessados.kpis.unidadesValidadas} icon={CheckCircle2} colorClass="border-l-4 border-l-emerald-500" iconBg="bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400" subTitle={t('groupValidation.kpis.ofUnits', { count: dadosProcessados.unidades.length })}/>
-                <KPICard title={t('groupValidation.kpis.pendingUnits')} value={dadosProcessados.kpis.unidadesPendentes} icon={AlertCircle} colorClass="border-l-4 border-l-rose-500" iconBg="bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400"/>
+                <KPICard title={t('groupValidation.kpis.pendingUnits')} value={dadosProcessados.kpis.unidadesPendentes} icon={AlertCircle} colorClass="border-l-4 border-l-red-500" iconBg="bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400"/>
             </div>
 
             {/* NAVEGAÇÃO ENTRE ABAS */}
             <div className="flex gap-8 border-b border-slate-200 dark:border-slate-700">
                 {[{ id: 'ranking', label: t('groupValidation.tabs.ranking'), icon: Trophy }, { id: 'status', label: t('groupValidation.tabs.status'), icon: List }, { id: 'cobranca', label: t('groupValidation.tabs.collection'), icon: MessageSquare }].map(tab => (
-                    <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`pb-4 text-sm font-bold uppercase flex items-center gap-2 transition-all relative ${activeTab === tab.id ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300'}`}>
+                    <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`pb-4 text-sm font-bold uppercase flex items-center gap-2 transition-all relative ${activeTab === tab.id ? 'text-slate-600 dark:text-slate-400' : 'text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300'}`}>
                         <tab.icon className="w-4 h-4"/> {tab.label}
-                        {activeTab === tab.id && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 dark:bg-blue-400 rounded-t-full"></div>}
+                        {activeTab === tab.id && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-red-600 dark:bg-slate-400 rounded-t-full"></div>}
                     </button>
                 ))}
             </div>

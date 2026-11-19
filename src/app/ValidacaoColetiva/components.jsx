@@ -59,9 +59,9 @@ export const getEmojiByPercent = (percent) => {
 
 export const getColorClassByPercent = (percent) => {
     if (percent === 100) return 'bg-emerald-500 shadow-emerald-500/50 text-white';
-    if (percent >= 90) return 'bg-lime-500 shadow-lime-500/50 text-white';
-    if (percent >= 80) return 'bg-yellow-400 shadow-yellow-400/50 text-yellow-950';
-    if (percent >= 60) return 'bg-orange-500 shadow-orange-500/50 text-white';
+    if (percent >= 90) return 'bg-emerald-400 shadow-emerald-400/50 text-white';
+    if (percent >= 80) return 'bg-amber-400 shadow-amber-400/50 text-amber-950';
+    if (percent >= 60) return 'bg-amber-500 shadow-amber-500/50 text-white';
     return 'bg-red-600 shadow-red-600/50 text-white';
 };
 
@@ -89,17 +89,17 @@ export const filterPendingDates = (pendencias) => {
 export { formatPendencias } from '../../utils/pendencias';
 
 export const getRowColor = (status, diffDays) => {
-    if (status === 'FERIADO') return 'bg-purple-50/50 hover:bg-purple-50 dark:bg-purple-900/10 dark:hover:bg-purple-900/20';
+    if (status === 'FERIADO') return 'bg-slate-50/50 hover:bg-slate-50 dark:bg-slate-900/10 dark:hover:bg-slate-900/20';
     if (status !== 'REALIZADA' && status !== 'CANCELADA') return 'bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700';
     if (diffDays <= 0) return 'bg-emerald-50/30 hover:bg-emerald-50 dark:bg-emerald-900/10 dark:hover:bg-emerald-900/20';
     if (diffDays === 1) return 'bg-amber-50/30 hover:bg-amber-50 dark:bg-amber-900/10 dark:hover:bg-amber-900/20';
-    return 'bg-rose-50/30 hover:bg-rose-50 dark:bg-rose-900/10 dark:hover:bg-rose-900/20';
+    return 'bg-red-50/30 hover:bg-red-50 dark:bg-red-900/10 dark:hover:bg-red-900/20';
 };
 
 export const SortableHeader = ({ label, sortKey, currentSort, onSort, align = 'left' }) => (
     <th className={`p-4 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors select-none text-[10px] uppercase font-black text-slate-400 tracking-widest ${align === 'center' ? 'text-center' : align === 'right' ? 'text-right' : 'text-left'}`} onClick={() => onSort(sortKey)}>
         <div className={`flex items-center gap-1 ${align === 'center' ? 'justify-center' : align === 'right' ? 'justify-end' : 'justify-start'}`}>
-            {label} <ArrowUpDown className={`w-3 h-3 ${currentSort.key === sortKey ? 'text-blue-500 opacity-100' : 'opacity-30'}`}/>
+            {label} <ArrowUpDown className={`w-3 h-3 ${currentSort.key === sortKey ? 'text-slate-500 opacity-100' : 'opacity-30'}`}/>
         </div>
     </th>
 );
@@ -129,16 +129,16 @@ export const StatusBadge = ({ type }) => {
     const configs = {
         'PARABÉNS!': 'bg-emerald-100 text-emerald-700 border-emerald-200',
         'TUDO OK!': 'bg-emerald-100 text-emerald-700 border-emerald-200',
-        'EM ANDAMENTO': 'bg-blue-50 text-blue-600 border-blue-100',
+        'EM ANDAMENTO': 'bg-slate-50 text-slate-600 border-slate-100',
         'EM CONSTRUÇÃO': 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700',
         'AGUARDANDO INÍCIO': 'bg-amber-50 text-amber-600 border-amber-100',
         'AGUARDANDO': 'bg-amber-50 text-amber-600 border-amber-100',
         'VALIDADA': 'bg-emerald-50 text-emerald-700 border-emerald-200',
         'REALIZADA': 'bg-emerald-50 text-emerald-700 border-emerald-200',
-        'CANCELADA': 'bg-rose-50 text-rose-700 border-rose-200',
-        'FERIADO': 'bg-purple-50 text-purple-700 border-purple-200',
-        'ATRASADO': 'bg-orange-50 text-orange-700 border-orange-200',
-        'PENDENTE': 'bg-rose-50 text-rose-700 border-rose-200',
+        'CANCELADA': 'bg-red-50 text-red-700 border-red-200',
+        'FERIADO': 'bg-slate-50 text-slate-700 border-slate-200',
+        'ATRASADO': 'bg-amber-50 text-amber-700 border-amber-200',
+        'PENDENTE': 'bg-red-50 text-red-700 border-red-200',
         'FUTURO': 'bg-slate-50 dark:bg-slate-900 text-slate-400 border-slate-200 dark:border-slate-700'
     };
     
@@ -196,7 +196,7 @@ export const MultiSelectDropdown = ({ options, selectedValues, onChange, placeho
     return (
         <div className="relative w-full sm:flex-1" ref={dropdownRef}>
             <Icon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 z-10 pointer-events-none"/>
-            <div onClick={() => setIsOpen(!isOpen)} className={`w-full pl-12 pr-8 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-black text-slate-600 dark:text-slate-300 cursor-pointer shadow-sm flex items-center justify-between hover:border-blue-400 transition-all ${isOpen ? 'ring-2 ring-blue-500' : ''}`}>
+            <div onClick={() => setIsOpen(!isOpen)} className={`w-full pl-12 pr-8 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-black text-slate-600 dark:text-slate-300 cursor-pointer shadow-sm flex items-center justify-between hover:border-slate-400 transition-all ${isOpen ? 'ring-2 ring-red-500' : ''}`}>
                 <span className="truncate">{displayText}</span>
                 <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}/>
             </div>
@@ -204,18 +204,18 @@ export const MultiSelectDropdown = ({ options, selectedValues, onChange, placeho
             {isOpen && (
                 <div className="absolute top-12 left-0 w-full min-w-[250px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl rounded-xl z-50 overflow-hidden flex flex-col">
                     <div className="p-2 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 flex gap-2">
-                        <button onClick={selectAll} className="text-[9px] font-black text-blue-600 px-3 py-1.5 hover:bg-blue-100 rounded-md uppercase transition-colors flex-1">{t('common.multiSelect.all')}</button>
-                        <button onClick={clearAll} className="text-[9px] font-black text-rose-600 px-3 py-1.5 hover:bg-rose-100 rounded-md uppercase transition-colors flex-1">{t('common.multiSelect.clear')}</button>
+                        <button onClick={selectAll} className="text-[9px] font-black text-slate-600 px-3 py-1.5 hover:bg-slate-100 rounded-md uppercase transition-colors flex-1">{t('common.multiSelect.all')}</button>
+                        <button onClick={clearAll} className="text-[9px] font-black text-red-600 px-3 py-1.5 hover:bg-red-100 rounded-md uppercase transition-colors flex-1">{t('common.multiSelect.clear')}</button>
                     </div>
                     <div className="p-2 bg-slate-50 dark:bg-slate-900 border-b border-slate-100 dark:border-slate-700 relative">
                         <Search className="w-3 h-3 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"/>
-                        <input type="text" placeholder={t('common.multiSelect.search')} value={buscaInterna} onChange={(e) => setBuscaInterna(e.target.value)} className="w-full pl-8 pr-2 py-1.5 text-[10px] font-bold uppercase rounded border border-slate-200 dark:border-slate-700 outline-none focus:border-blue-500"/>
+                        <input type="text" placeholder={t('common.multiSelect.search')} value={buscaInterna} onChange={(e) => setBuscaInterna(e.target.value)} className="w-full pl-8 pr-2 py-1.5 text-[10px] font-bold uppercase rounded border border-slate-200 dark:border-slate-700 outline-none focus:border-red-500"/>
                     </div>
                     <div className="overflow-y-auto max-h-60 p-1 custom-scrollbar">
                         {filteredOptions.length === 0 && <div className="p-3 text-[10px] text-slate-400 text-center font-bold uppercase">{t('common.multiSelect.noResults')}</div>}
                         {filteredOptions.map(o => (
                             <label key={o.value} className="flex items-center gap-2 p-2.5 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer rounded-lg transition-colors">
-                                <input type="checkbox" checked={selectedValues.includes(o.value)} onChange={() => toggleOption(o.value)} className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-blue-600 focus:ring-blue-500"/>
+                                <input type="checkbox" checked={selectedValues.includes(o.value)} onChange={() => toggleOption(o.value)} className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-slate-600 focus:ring-red-500"/>
                                 <span className="text-[10px] font-black uppercase text-slate-700 dark:text-slate-200">{o.label}</span>
                             </label>
                         ))}

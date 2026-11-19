@@ -77,27 +77,27 @@ const MultiSelectDropdown = ({ label, options, selected, onChange, placeholder }
     return (
         <div className="relative w-full">
             <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase mb-1.5 block tracking-widest">{label}</label>
-            <div onClick={() => setIsOpen(!isOpen)} className={`w-full p-3 bg-slate-50 dark:bg-slate-900 border ${isOpen ? 'border-blue-500 ring-2 ring-blue-100 dark:ring-blue-900/30' : 'border-slate-200 dark:border-slate-700'} rounded-xl text-[10px] font-black outline-none cursor-pointer flex justify-between items-center transition-all uppercase shadow-sm`}>
+            <div onClick={() => setIsOpen(!isOpen)} className={`w-full p-3 bg-slate-50 dark:bg-slate-900 border ${isOpen ? 'border-slate-500 ring-2 ring-red-100 dark:ring-red-900/30' : 'border-slate-200 dark:border-slate-700'} rounded-xl text-[10px] font-black outline-none cursor-pointer flex justify-between items-center transition-all uppercase shadow-sm`}>
                 <span className="truncate text-slate-700 dark:text-slate-300">{selected.length === 0 ? (placeholder || t('radar.filters.select')) : selected.length === 1 ? options.find(o => o.id === selected[0])?.label : t('common.multiSelect.selected', { count: selected.length })}</span>
-                <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180 text-blue-500' : ''}`} />
+                <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180 text-slate-500' : ''}`} />
             </div>
             {isOpen && (
                 <>
                     <div className="fixed inset-0 z-[40]" onClick={() => setIsOpen(false)} />
                     <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl z-[50] overflow-hidden flex flex-col max-h-[350px]">
                         <div className="p-2 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 shrink-0">
-                            <div className="relative"><Search className="w-3 h-3 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" /><input type="text" placeholder={t('common.multiSelect.search')} value={search} onChange={(e) => setSearch(e.target.value)} className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg pl-8 pr-3 py-2 text-[10px] font-black uppercase outline-none focus:border-blue-500 dark:text-white placeholder-slate-300 dark:placeholder-slate-600"/></div>
+                            <div className="relative"><Search className="w-3 h-3 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" /><input type="text" placeholder={t('common.multiSelect.search')} value={search} onChange={(e) => setSearch(e.target.value)} className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg pl-8 pr-3 py-2 text-[10px] font-black uppercase outline-none focus:border-red-500 dark:text-white placeholder-slate-300 dark:placeholder-slate-600"/></div>
                         </div>
                         <div className="overflow-y-auto custom-scrollbar p-2 flex-1 space-y-1">
                             {filteredOptions.length === 0 ? <div className="p-3 text-center text-[10px] font-bold text-slate-400 uppercase">{t('common.multiSelect.noResults')}</div> : filteredOptions.map(opt => (
-                                <div key={opt.id} onClick={() => toggle(opt.id)} className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors ${selected.includes(opt.id) ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-600 dark:text-slate-300'}`}>
-                                    {selected.includes(opt.id) ? <CheckSquare className="w-4 h-4 text-blue-500 shrink-0" /> : <Square className="w-4 h-4 text-slate-300 dark:text-slate-600 shrink-0" />}<span className="text-[10px] font-black uppercase truncate">{opt.label}</span>
+                                <div key={opt.id} onClick={() => toggle(opt.id)} className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors ${selected.includes(opt.id) ? 'bg-slate-50 dark:bg-slate-900/30 text-slate-700 dark:text-slate-400' : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-600 dark:text-slate-300'}`}>
+                                    {selected.includes(opt.id) ? <CheckSquare className="w-4 h-4 text-slate-500 shrink-0" /> : <Square className="w-4 h-4 text-slate-300 dark:text-slate-600 shrink-0" />}<span className="text-[10px] font-black uppercase truncate">{opt.label}</span>
                                 </div>
                             ))}
                         </div>
                         <div className="p-2 border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 shrink-0 flex gap-2">
-                            <button onClick={handleSelectAll} className="flex-1 py-2 text-[9px] font-black text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded uppercase transition-colors">{t('common.multiSelect.all')}</button>
-                            {selected.length > 0 && <button onClick={() => onChange([])} className="flex-1 py-2 text-[9px] font-black text-rose-500 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded uppercase transition-colors">{t('common.multiSelect.clear')}</button>}
+                            <button onClick={handleSelectAll} className="flex-1 py-2 text-[9px] font-black text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900/50 rounded uppercase transition-colors">{t('common.multiSelect.all')}</button>
+                            {selected.length > 0 && <button onClick={() => onChange([])} className="flex-1 py-2 text-[9px] font-black text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded uppercase transition-colors">{t('common.multiSelect.clear')}</button>}
                         </div>
                     </div>
                 </>
@@ -375,7 +375,7 @@ export default function RadarDeGrade() {
             const media = totalN > 0 ? Math.round(totalSoma / totalN) : 0;
             
             let saude = { label: 'MÉDIA', color: 'text-amber-500', bg: 'bg-amber-50 dark:bg-amber-900/20', border: 'border-amber-200 dark:border-amber-800', icon: <Activity className="w-3 h-3"/> };
-            if (media >= 20) saude = { label: 'ALTA DEMANDA', color: 'text-rose-500', bg: 'bg-rose-50 dark:bg-rose-900/20', border: 'border-rose-200 dark:border-rose-800', icon: <Flame className="w-3 h-3"/> };
+            if (media >= 20) saude = { label: 'ALTA DEMANDA', color: 'text-red-500', bg: 'bg-red-50 dark:bg-red-900/20', border: 'border-red-200 dark:border-red-800', icon: <Flame className="w-3 h-3"/> };
             if (media > 0 && media < 10) saude = { label: 'BAIXA DEMANDA', color: 'text-slate-500 dark:text-slate-400', bg: 'bg-slate-50 dark:bg-slate-800', border: 'border-slate-200 dark:border-slate-700', icon: <AlertTriangle className="w-3 h-3"/> };
             
             return { ...u, dias: diasData, mediaAlunos: media, saude, totalAulas };
@@ -619,24 +619,24 @@ export default function RadarDeGrade() {
             <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 border-b border-slate-200 dark:border-slate-800 pb-6">
                 <div>
                     <h1 className="text-3xl font-black text-slate-800 dark:text-white tracking-tight flex items-center gap-3">
-                        <span className="bg-blue-600 text-white p-2 rounded-lg shadow-lg shadow-blue-500/20 dark:shadow-none"><Radar className="w-7 h-7" /></span>
+                        <span className="bg-red-600 text-white p-2 rounded-lg shadow-lg shadow-slate-500/20 dark:shadow-none"><Radar className="w-7 h-7" /></span>
                         {t('radar.title')}
                     </h1>
                 </div>
                 
                 {/* MENU DE NAVEGAÇÃO SUPERIOR */}
                 <div className="flex bg-slate-200 dark:bg-slate-800 p-1 rounded-xl shadow-inner shrink-0 overflow-x-auto max-w-full border border-slate-200 dark:border-slate-700">
-                    <button onClick={() => setModoVisao('matriz')} className={`px-5 py-2.5 rounded-lg text-[11px] font-black transition-all flex items-center whitespace-nowrap gap-2 ${modoVisao === 'matriz' ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><LayoutGrid className="w-4 h-4"/> {t('radar.views.matrix')}</button>
-                    <button onClick={() => setModoVisao('cartoes')} className={`px-5 py-2.5 rounded-lg text-[11px] font-black transition-all flex items-center whitespace-nowrap gap-2 ${modoVisao === 'cartoes' ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><CalendarDays className="w-4 h-4"/> {t('radar.views.byUnit')}</button>
-                    <button onClick={() => setModoVisao('global')} className={`px-5 py-2.5 rounded-lg text-[11px] font-black transition-all flex items-center whitespace-nowrap gap-2 ${modoVisao === 'global' ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm border dark:border-slate-700' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><BarChart className="w-4 h-4"/> {t('radar.views.global')}</button>
-                    <button onClick={() => setModoVisao('performance')} className={`px-5 py-2.5 rounded-lg text-[11px] font-black transition-all flex items-center whitespace-nowrap gap-2 ${modoVisao === 'performance' ? 'bg-slate-900 dark:bg-slate-950 text-white dark:text-blue-400 shadow-sm border dark:border-slate-700' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><Activity className="w-4 h-4"/> {t('radar.views.performance')}</button>
+                    <button onClick={() => setModoVisao('matriz')} className={`px-5 py-2.5 rounded-lg text-[11px] font-black transition-all flex items-center whitespace-nowrap gap-2 ${modoVisao === 'matriz' ? 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><LayoutGrid className="w-4 h-4"/> {t('radar.views.matrix')}</button>
+                    <button onClick={() => setModoVisao('cartoes')} className={`px-5 py-2.5 rounded-lg text-[11px] font-black transition-all flex items-center whitespace-nowrap gap-2 ${modoVisao === 'cartoes' ? 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><CalendarDays className="w-4 h-4"/> {t('radar.views.byUnit')}</button>
+                    <button onClick={() => setModoVisao('global')} className={`px-5 py-2.5 rounded-lg text-[11px] font-black transition-all flex items-center whitespace-nowrap gap-2 ${modoVisao === 'global' ? 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 shadow-sm border dark:border-slate-700' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><BarChart className="w-4 h-4"/> {t('radar.views.global')}</button>
+                    <button onClick={() => setModoVisao('performance')} className={`px-5 py-2.5 rounded-lg text-[11px] font-black transition-all flex items-center whitespace-nowrap gap-2 ${modoVisao === 'performance' ? 'bg-slate-900 dark:bg-slate-950 text-white dark:text-slate-400 shadow-sm border dark:border-slate-700' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><Activity className="w-4 h-4"/> {t('radar.views.performance')}</button>
                 </div>
             </div>
 
             <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-5">
                 <div className="col-span-full md:col-span-2 xl:col-span-2 flex items-center gap-2 bg-slate-100 dark:bg-slate-900 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
                     {[ {id: '', label: t('radar.shifts.all'), icon: Zap}, {id: 'manha', label: t('radar.shifts.morning'), icon: Sun}, {id: 'tarde', label: t('radar.shifts.afternoon'), icon: Sunset}, {id: 'noite', label: t('radar.shifts.night'), icon: Moon} ].map(turno => (
-                        <button key={turno.id} onClick={() => setTurnoFiltro(turno.id)} className={`flex-1 py-3 rounded-lg text-[10px] font-black transition-all flex items-center justify-center gap-2 ${turnoFiltro === turno.id ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'}`}><turno.icon className="w-3.5 h-3.5"/> {turno.label}</button>
+                        <button key={turno.id} onClick={() => setTurnoFiltro(turno.id)} className={`flex-1 py-3 rounded-lg text-[10px] font-black transition-all flex items-center justify-center gap-2 ${turnoFiltro === turno.id ? 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 shadow-sm' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'}`}><turno.icon className="w-3.5 h-3.5"/> {turno.label}</button>
                     ))}
                 </div>
                 
@@ -651,8 +651,8 @@ export default function RadarDeGrade() {
 
             {isCofreFechado ? (
                 <div className="py-24 text-center bg-white dark:bg-slate-800 rounded-3xl border border-dashed border-slate-300 dark:border-slate-700 shadow-sm">
-                    <div className="bg-blue-50 dark:bg-blue-900/30 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 border border-blue-100 dark:border-blue-800 shadow-inner">
-                        <Lock className="w-10 h-10 text-blue-500 dark:text-blue-400 animate-pulse"/>
+                    <div className="bg-slate-50 dark:bg-slate-900/30 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 border border-slate-100 dark:border-slate-800 shadow-inner">
+                        <Lock className="w-10 h-10 text-slate-500 dark:text-slate-400 animate-pulse"/>
                     </div>
                     <h3 className="text-2xl font-black text-slate-700 dark:text-slate-200 mb-3">{t('radar.locked.title')}</h3>
                     <p className="text-slate-500 dark:text-slate-400 text-xs font-bold max-w-lg mx-auto leading-relaxed">
@@ -677,7 +677,7 @@ export default function RadarDeGrade() {
                                     </thead>
                                     <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
                                         {dadosRadar.map(u => (
-                                            <tr key={u.id} className="group hover:bg-blue-50/30 dark:hover:bg-slate-700/30 transition-colors">
+                                            <tr key={u.id} className="group hover:bg-slate-50/30 dark:hover:bg-slate-700/30 transition-colors">
                                                 <td className="p-5 sticky left-0 z-20 bg-white dark:bg-slate-800 group-hover:bg-slate-50 dark:group-hover:bg-slate-800/90 border-r border-slate-200 dark:border-slate-700 shadow-[4px_0_10px_-4px_rgba(0,0,0,0.05)]">
                                                     <div className="font-black text-slate-800 dark:text-slate-100 text-sm mb-1">{u.nome}</div>
                                                     <button 
@@ -688,18 +688,18 @@ export default function RadarDeGrade() {
                                                     </button>
                                                     <button 
                                                         onClick={() => setFloatingSchedule({ isOpen: true, unidadeId: u.id, unidadeNome: u.nome, pos: getCenterPos(480, 600), size: floatingSchedule.size })} 
-                                                        className="mt-2 w-full flex items-center justify-center gap-2 py-1.5 bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600 dark:hover:text-white rounded-lg text-[9px] font-black border border-slate-200 dark:border-slate-700 transition-colors"
+                                                        className="mt-2 w-full flex items-center justify-center gap-2 py-1.5 bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-red-600 hover:text-white dark:hover:bg-red-600 dark:hover:text-white rounded-lg text-[9px] font-black border border-slate-200 dark:border-slate-700 transition-colors"
                                                     >
                                                         <CalendarDays className="w-3 h-3"/> {t('radar.matrix.schedule')}
                                                     </button>
                                                 </td>
                                                 {ALL_DAYS.map(dia => (
-                                                    <td key={dia} onClick={() => setPreviewModal({ isOpen: true, unidadeNome: u.nome, unidadeId: u.id, dia, aulas: (aulasPorUnidade[u.id] || []).filter(a => a.dias?.includes(dia)).sort((a,b) => timeToMins(a.hora) - timeToMins(b.hora)), buracos: u.dias[dia], pos: getCenterPos(450, 500), size: previewModal.size })} className="p-3 border-r border-slate-100 dark:border-slate-700/50 align-top cursor-pointer group/cell hover:bg-blue-100/40 dark:hover:bg-blue-900/20 transition-colors">
+                                                    <td key={dia} onClick={() => setPreviewModal({ isOpen: true, unidadeNome: u.nome, unidadeId: u.id, dia, aulas: (aulasPorUnidade[u.id] || []).filter(a => a.dias?.includes(dia)).sort((a,b) => timeToMins(a.hora) - timeToMins(b.hora)), buracos: u.dias[dia], pos: getCenterPos(450, 500), size: previewModal.size })} className="p-3 border-r border-slate-100 dark:border-slate-700/50 align-top cursor-pointer group/cell hover:bg-slate-100/40 dark:hover:bg-slate-900/20 transition-colors">
                                                         <div className="flex flex-col gap-1.5 h-full text-center">
                                                             {u.dias[dia].length === 0 ? <span className="text-[9px] font-bold text-slate-400 dark:text-slate-600 py-4 opacity-30">{t('radar.matrix.full')}</span> : u.dias[dia].map((j, i) => (
-                                                                <div key={i} className="text-[10px] font-bold px-2 py-1 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-blue-600 dark:text-blue-400 shadow-sm flex items-center gap-1"><Clock className="w-3 h-3 opacity-60"/> {j}</div>
+                                                                <div key={i} className="text-[10px] font-bold px-2 py-1 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 shadow-sm flex items-center gap-1"><Clock className="w-3 h-3 opacity-60"/> {j}</div>
                                                             ))}
-                                                            <div className="opacity-0 group-hover/cell:opacity-100 transition-opacity mt-auto text-[8px] font-black text-blue-500 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 py-1 rounded uppercase">{t('radar.matrix.consult')} <BookOpen className="w-2.5 h-2.5 inline ml-0.5"/></div>
+                                                            <div className="opacity-0 group-hover/cell:opacity-100 transition-opacity mt-auto text-[8px] font-black text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/30 py-1 rounded uppercase">{t('radar.matrix.consult')} <BookOpen className="w-2.5 h-2.5 inline ml-0.5"/></div>
                                                         </div>
                                                     </td>
                                                 ))}
@@ -718,10 +718,10 @@ export default function RadarDeGrade() {
                                 if (!u) return null;
                                 return (
                                     <div key={dia} className="bg-white dark:bg-slate-800 rounded-3xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-xl cursor-pointer" onClick={() => setPreviewModal({ isOpen: true, unidadeNome: u.nome, unidadeId: u.id, dia, aulas: (aulasPorUnidade[u.id] || []).filter(a => a.dias?.includes(dia)).sort((a,b) => timeToMins(a.hora) - timeToMins(b.hora)), buracos: u.dias[dia], pos: getCenterPos(450, 500), size: previewModal.size })}>
-                                        <h3 className="font-black text-lg text-blue-600 dark:text-blue-400 mb-4">{formatWeekday(dia)}</h3>
+                                        <h3 className="font-black text-lg text-slate-600 dark:text-slate-400 mb-4">{formatWeekday(dia)}</h3>
                                         <div className="space-y-3">
                                             {u.dias[dia].length === 0 ? <p className="text-xs font-bold text-slate-300 dark:text-slate-600 italic text-center py-4">{t('radar.matrix.fullyBooked')}</p> : u.dias[dia].map((j, i) => (
-                                                <div key={i} className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-2xl border border-blue-100 dark:border-blue-900/50 text-blue-700 dark:text-blue-400 font-bold text-xs"><Clock className="w-4 h-4 opacity-50"/> {j}</div>
+                                                <div key={i} className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-900/20 rounded-2xl border border-slate-100 dark:border-slate-900/50 text-slate-700 dark:text-slate-400 font-bold text-xs"><Clock className="w-4 h-4 opacity-50"/> {j}</div>
                                             ))}
                                         </div>
                                     </div>
@@ -747,7 +747,7 @@ export default function RadarDeGrade() {
                     
                     <div className="flex items-center justify-center gap-4 w-full mb-4">
                         <div className="flex flex-col items-center">
-                            <span className="text-3xl font-black text-rose-600 dark:text-rose-500 tracking-tighter">{ociosidadeModal.unidade?.aulasPerdidasMes || 0}</span>
+                            <span className="text-3xl font-black text-red-600 dark:text-red-500 tracking-tighter">{ociosidadeModal.unidade?.aulasPerdidasMes || 0}</span>
                             <span className="text-[9px] font-bold text-slate-500 uppercase mt-1">{t('radar.idleModal.emptyWindows')}</span>
                         </div>
                         <div className="h-10 w-px bg-slate-200 dark:bg-slate-700"></div>
@@ -766,7 +766,7 @@ export default function RadarDeGrade() {
 
                         {/* 🟢 ADICIONADO A METRAGEM DA SALA AQUI NO TOPO */}
                         <div className="flex flex-col items-center">
-                            <span className="text-3xl font-black text-blue-600 dark:text-blue-500 tracking-tighter">{ociosidadeModal.unidade?.metragemSalaColetiva || 0}m²</span>
+                            <span className="text-3xl font-black text-slate-600 dark:text-slate-500 tracking-tighter">{ociosidadeModal.unidade?.metragemSalaColetiva || 0}m²</span>
                             <span className="text-[9px] font-bold text-slate-500 uppercase mt-1">{t('radar.idleModal.groupRoom')}</span>
                         </div>
                     </div>
@@ -783,11 +783,11 @@ export default function RadarDeGrade() {
                         return (
                             <div key={dia} className="flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm transition-transform hover:-translate-y-0.5">
                                 <div className="flex items-center gap-3">
-                                    <div className={`w-2 h-2 rounded-full ${breakdown.janelasMes > 0 ? 'bg-rose-500 shadow-[0_0_5px_rgba(244,63,94,0.5)]' : 'bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)]'}`}></div>
+                                    <div className={`w-2 h-2 rounded-full ${breakdown.janelasMes > 0 ? 'bg-red-500 shadow-[0_0_5px_rgba(244,63,94,0.5)]' : 'bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)]'}`}></div>
                                     <span className="font-black text-slate-700 dark:text-slate-200 text-sm uppercase tracking-wide">{formatWeekday(dia)}</span>
                                 </div>
                                 <div className="text-right">
-                                    <div className={`text-sm font-black ${breakdown.janelasMes > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                                    <div className={`text-sm font-black ${breakdown.janelasMes > 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
                                         {t('radar.idleModal.emptyClasses', { count: breakdown.janelasMes })}
                                     </div>
                                     <div className="text-[9px] font-bold text-slate-400 mt-0.5 uppercase tracking-widest">
@@ -799,7 +799,7 @@ export default function RadarDeGrade() {
                     })}
                 </div>
                 <div className="p-5 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 shrink-0">
-                    <button onClick={() => { setOciosidadeModal({...ociosidadeModal, isOpen: false}); executeDrillDown(ociosidadeModal.unidade?.id); }} className="w-full py-3.5 bg-slate-900 dark:bg-blue-600 text-white rounded-xl font-black text-[10px] tracking-widest uppercase shadow-lg hover:bg-slate-800 transition-all flex items-center justify-center gap-2">{t('radar.idleModal.viewInMatrix')} <ArrowRight className="w-4 h-4"/></button>
+                    <button onClick={() => { setOciosidadeModal({...ociosidadeModal, isOpen: false}); executeDrillDown(ociosidadeModal.unidade?.id); }} className="w-full py-3.5 bg-slate-900 dark:bg-red-600 text-white rounded-xl font-black text-[10px] tracking-widest uppercase shadow-lg hover:bg-slate-800 transition-all flex items-center justify-center gap-2">{t('radar.idleModal.viewInMatrix')} <ArrowRight className="w-4 h-4"/></button>
                 </div>
             </ResizableModal>
 
@@ -814,7 +814,7 @@ export default function RadarDeGrade() {
                     
                     <div className="flex items-center justify-center gap-4 w-full mb-4">
                         <div className="flex flex-col items-center">
-                            <span className="text-3xl font-black text-purple-600 dark:text-purple-400 tracking-tighter">{performanceModal.unidade?.taxaOcupacao?.toFixed(1) || 0}%</span>
+                            <span className="text-3xl font-black text-slate-600 dark:text-slate-400 tracking-tighter">{performanceModal.unidade?.taxaOcupacao?.toFixed(1) || 0}%</span>
                             <span className="text-[9px] font-bold text-slate-500 uppercase mt-1">{t('radar.perfModal.occupancyAvg')}</span>
                         </div>
                         <div className="h-10 w-px bg-slate-200 dark:bg-slate-700"></div>
@@ -826,7 +826,7 @@ export default function RadarDeGrade() {
                         <div className="h-10 w-px bg-slate-200 dark:bg-slate-700"></div>
 
                         <div className="flex flex-col items-center">
-                            <span className="text-3xl font-black text-blue-600 dark:text-blue-500 tracking-tighter">{performanceModal.unidade?.metragem || 0}m²</span>
+                            <span className="text-3xl font-black text-slate-600 dark:text-slate-500 tracking-tighter">{performanceModal.unidade?.metragem || 0}m²</span>
                             <span className="text-[9px] font-bold text-slate-500 uppercase mt-1">{t('radar.idleModal.groupRoom')}</span>
                         </div>
                     </div>
@@ -848,11 +848,11 @@ export default function RadarDeGrade() {
                                 </div>
                                 <div className="flex flex-col items-end shrink-0 w-32">
                                     <div className="text-xs font-black mb-1">
-                                        <span className={aula.ocupacao > 80 ? 'text-rose-500' : 'text-slate-700 dark:text-slate-200'}>{aula.mediaAlunos}</span> 
+                                        <span className={aula.ocupacao > 80 ? 'text-red-500' : 'text-slate-700 dark:text-slate-200'}>{aula.mediaAlunos}</span> 
                                         <span className="text-slate-400">{t('radar.perfModal.capacity', { count: aula.capacidade })}</span>
                                     </div>
                                     <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-                                        <div className={`h-full rounded-full ${aula.ocupacao > 80 ? 'bg-rose-500' : 'bg-purple-500'}`} style={{ width: `${Math.min(aula.ocupacao, 100)}%` }}></div>
+                                        <div className={`h-full rounded-full ${aula.ocupacao > 80 ? 'bg-red-500' : 'bg-red-500'}`} style={{ width: `${Math.min(aula.ocupacao, 100)}%` }}></div>
                                     </div>
                                     <div className="text-[8px] font-black text-slate-400 mt-1 uppercase text-right w-full">{t('radar.perfModal.fillRate', { value: aula.ocupacao.toFixed(0) })}</div>
                                 </div>
@@ -865,7 +865,7 @@ export default function RadarDeGrade() {
             {/* OUTROS MODAIS EXISTENTES */}
             <ResizableModal 
                 isOpen={previewModal.isOpen} onClose={() => setPreviewModal({...previewModal, isOpen: false})} 
-                title={t('radar.preview.title', { day: formatWeekday(previewModal.dia), unit: previewModal.unidadeNome })} icon={CalendarIcon} headerColor="bg-blue-50 dark:bg-slate-900 text-blue-800 dark:text-blue-400 border-blue-100 dark:border-slate-800"
+                title={t('radar.preview.title', { day: formatWeekday(previewModal.dia), unit: previewModal.unidadeNome })} icon={CalendarIcon} headerColor="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-400 border-slate-100 dark:border-slate-800"
                 pos={previewModal.pos} setPos={(pos) => setPreviewModal({...previewModal, pos})} size={previewModal.size} setSize={(size) => setPreviewModal({...previewModal, size})} minW={350} minH={300}
             >
                 <div className="p-6 overflow-y-auto flex-1 space-y-4 custom-scrollbar bg-white dark:bg-slate-800">
@@ -887,7 +887,7 @@ export default function RadarDeGrade() {
                                             <div className="text-[9px] font-black text-slate-400 dark:text-slate-500 mt-0.5 truncate uppercase">{(a.dias || []).map(d => formatWeekday(d, { short: true })).join(', ')}</div>
                                         </div>
                                         <div className="flex flex-col items-end justify-center bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-lg px-3 py-1.5 shadow-sm">
-                                            <span className="text-lg font-black text-blue-600 dark:text-blue-400 leading-none">{mediaAula} <span className="text-[10px] font-bold opacity-60">{t('radar.preview.studentsShort')}</span></span>
+                                            <span className="text-lg font-black text-slate-600 dark:text-slate-400 leading-none">{mediaAula} <span className="text-[10px] font-bold opacity-60">{t('radar.preview.studentsShort')}</span></span>
                                             <span className="text-[8px] font-bold text-slate-400 dark:text-slate-500 uppercase mt-0.5">{t('radar.preview.last30')}</span>
                                         </div>
                                     </div>
@@ -897,13 +897,13 @@ export default function RadarDeGrade() {
                     )}
                 </div>
                 <div className="p-5 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 shrink-0">
-                    <button onClick={() => { setFormData({ modalidadeId: '', professorId: '', hora: previewModal.buracos.length > 0 ? previewModal.buracos[0].split(' - ')[0] : '', valor: '', dias: [previewModal.dia], dataInicio: getTodayStr() }); setAddAulaModal({ isOpen: true, pos: getCenterPos(400, 650), size: addAulaModal.size }); }} className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-black text-xs tracking-widest uppercase shadow-lg shadow-blue-500/20 active:scale-95 transition-all flex items-center justify-center gap-2"><CalendarPlus className="w-4 h-4"/> {t('radar.preview.fillSlot')}</button>
+                    <button onClick={() => { setFormData({ modalidadeId: '', professorId: '', hora: previewModal.buracos.length > 0 ? previewModal.buracos[0].split(' - ')[0] : '', valor: '', dias: [previewModal.dia], dataInicio: getTodayStr() }); setAddAulaModal({ isOpen: true, pos: getCenterPos(400, 650), size: addAulaModal.size }); }} className="w-full py-3.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-black text-xs tracking-widest uppercase shadow-lg shadow-slate-500/20 active:scale-95 transition-all flex items-center justify-center gap-2"><CalendarPlus className="w-4 h-4"/> {t('radar.preview.fillSlot')}</button>
                 </div>
             </ResizableModal>
 
             <ResizableModal 
                 isOpen={addAulaModal.isOpen} onClose={() => setAddAulaModal({...addAulaModal, isOpen: false})} 
-                title={t('radar.newClass.title', { unit: previewModal.unidadeNome })} icon={PlusCircle} headerColor="bg-blue-50 dark:bg-slate-900 text-blue-800 dark:text-blue-400 border-blue-100 dark:border-slate-800"
+                title={t('radar.newClass.title', { unit: previewModal.unidadeNome })} icon={PlusCircle} headerColor="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-400 border-slate-100 dark:border-slate-800"
                 pos={addAulaModal.pos} setPos={(pos) => setAddAulaModal({...addAulaModal, pos})} size={addAulaModal.size} setSize={(size) => setAddAulaModal({...addAulaModal, size})} minW={320} minH={450}
             >
                 <form onSubmit={salvarNovaAula} className="p-6 space-y-5 overflow-y-auto custom-scrollbar flex-1 bg-white dark:bg-slate-800">
@@ -911,7 +911,7 @@ export default function RadarDeGrade() {
                         <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-2 block">{t('radar.newClass.days')}</label>
                         <div className="flex flex-wrap gap-2">
                             {ALL_DAYS.map(d => (
-                                <button key={d} type="button" onClick={() => toggleDia(d)} className={`px-3 py-2 text-[10px] font-black rounded-lg border uppercase transition-colors ${formData.dias.includes(d) ? 'bg-blue-600 dark:bg-blue-500 text-white border-blue-700 dark:border-blue-600 shadow-md scale-105' : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'}`}>
+                                <button key={d} type="button" onClick={() => toggleDia(d)} className={`px-3 py-2 text-[10px] font-black rounded-lg border uppercase transition-colors ${formData.dias.includes(d) ? 'bg-red-600 dark:bg-red-500 text-white border-slate-700 dark:border-slate-600 shadow-md scale-105' : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'}`}>
                                     {formatWeekday(d, { short: true })}
                                 </button>
                             ))}
@@ -920,7 +920,7 @@ export default function RadarDeGrade() {
 
                     <div>
                         <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1 block">{t('radar.newClass.modality')}</label>
-                        <select required value={formData.modalidadeId} onChange={handleModalidadeChange} className="w-full p-3 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-800 dark:text-white outline-none focus:border-blue-500 bg-slate-50 dark:bg-slate-900 uppercase">
+                        <select required value={formData.modalidadeId} onChange={handleModalidadeChange} className="w-full p-3 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-800 dark:text-white outline-none focus:border-red-500 bg-slate-50 dark:bg-slate-900 uppercase">
                             <option value="">{t('radar.newClass.selectModality')}</option>
                             {catalogs.modalidades?.map(m => <option key={m.id} value={m.id}>{m.nome}</option>)}
                         </select>
@@ -928,7 +928,7 @@ export default function RadarDeGrade() {
 
                     <div>
                         <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1 block">{t('radar.newClass.teacher')}</label>
-                        <select required disabled={!formData.modalidadeId} value={formData.professorId} onChange={e => setFormData({...formData, professorId: e.target.value})} className="w-full p-3 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-800 dark:text-white outline-none focus:border-blue-500 bg-slate-50 dark:bg-slate-900 uppercase disabled:opacity-50">
+                        <select required disabled={!formData.modalidadeId} value={formData.professorId} onChange={e => setFormData({...formData, professorId: e.target.value})} className="w-full p-3 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-800 dark:text-white outline-none focus:border-red-500 bg-slate-50 dark:bg-slate-900 uppercase disabled:opacity-50">
                             <option value="">{!formData.modalidadeId ? t('radar.newClass.selectModalityFirst') : professoresVinculados.length === 0 ? t('radar.newClass.noTeacherLinked') : t('radar.newClass.selectTeacher')}</option>
                             {professoresVinculados.filter(p => !p.modalidades || p.modalidades.includes(formData.modalidadeId)).map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
                         </select>
@@ -944,11 +944,11 @@ export default function RadarDeGrade() {
                     <div className="flex gap-4">
                         <div className="flex-1">
                             <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1 block">{t('radar.newClass.startTime')}</label>
-                            <input required type="time" value={formData.hora} onChange={e => setFormData({...formData, hora: e.target.value})} className="w-full p-3 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-black text-slate-800 dark:text-white outline-none focus:border-blue-500 bg-slate-50 dark:bg-slate-900 uppercase"/>
+                            <input required type="time" value={formData.hora} onChange={e => setFormData({...formData, hora: e.target.value})} className="w-full p-3 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-black text-slate-800 dark:text-white outline-none focus:border-red-500 bg-slate-50 dark:bg-slate-900 uppercase"/>
                         </div>
                         <div className="flex-1">
                             <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1 block">{t('radar.newClass.value', { symbol: getCurrencySymbol(catalogs.unidades?.find(u => String(u.id) === String(previewModal.unidadeId))?.pais) })}</label>
-                            <input required type="number" step="0.01" min="0.01" value={formData.valor} onChange={e => setFormData({...formData, valor: e.target.value})} className="w-full p-3 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-800 dark:text-white outline-none focus:border-blue-500 bg-slate-50 dark:bg-slate-900 uppercase"/>
+                            <input required type="number" step="0.01" min="0.01" value={formData.valor} onChange={e => setFormData({...formData, valor: e.target.value})} className="w-full p-3 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-800 dark:text-white outline-none focus:border-red-500 bg-slate-50 dark:bg-slate-900 uppercase"/>
                         </div>
                     </div>
                     
@@ -964,7 +964,7 @@ export default function RadarDeGrade() {
                 isOpen={floatingSchedule.isOpen} onClose={() => setFloatingSchedule({...floatingSchedule, isOpen: false})} 
                 title={t('radar.floating.title', { unit: floatingSchedule.unidadeNome })} icon={LayoutGrid} headerColor="bg-[#1e293b] text-white border-slate-800"
                 pos={floatingSchedule.pos} setPos={(pos) => setFloatingSchedule({...floatingSchedule, pos})} size={floatingSchedule.size} setSize={(size) => setFloatingSchedule({...floatingSchedule, size})} minW={320} minH={300}
-                headerButtons={<button onClick={() => navigate(`/app/cronograma?unidade=${floatingSchedule.unidadeId}`)} className="bg-blue-600 hover:bg-blue-500 p-2 rounded-lg text-white transition-colors"><CalendarIcon className="w-4 h-4"/></button>}
+                headerButtons={<button onClick={() => navigate(`/app/cronograma?unidade=${floatingSchedule.unidadeId}`)} className="bg-red-600 hover:bg-red-500 p-2 rounded-lg text-white transition-colors"><CalendarIcon className="w-4 h-4"/></button>}
             >
                 <div className="p-4 overflow-y-auto bg-slate-50 dark:bg-slate-900 custom-scrollbar space-y-4 flex-1">
                     {aulasDaUnidadeFlutuante.length === 0 ? (
@@ -985,7 +985,7 @@ export default function RadarDeGrade() {
                                                 const prof = catalogs.professores?.find(p => p.id === aula.professorId);
                                                 const mediaAula = getMediaAula(aula.id);
                                                 return (
-                                                    <div key={idx} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 flex items-center gap-3 hover:border-blue-300 dark:hover:border-blue-600 transition-colors shadow-sm">
+                                                    <div key={idx} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 flex items-center gap-3 hover:border-slate-300 dark:hover:border-slate-600 transition-colors shadow-sm">
                                                         <div className={`font-black text-[11px] px-3 py-2 rounded-lg shrink-0 text-center w-16 shadow-sm ${getDisciplinaColor(mod?.nome)}`}>
                                                             {aula.hora}
                                                         </div>
@@ -995,7 +995,7 @@ export default function RadarDeGrade() {
                                                                 <div className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wide truncate mt-0.5"><User className="w-3 h-3 inline mr-1 -mt-0.5"/> {prof?.nome || 'N/A'}</div>
                                                             </div>
                                                             <div className="flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded px-2 py-1 shrink-0">
-                                                                <span className="text-xs font-black text-blue-600 dark:text-blue-400 leading-none">{mediaAula} <span className="text-[8px]">{t('radar.preview.studentsShort')}</span></span>
+                                                                <span className="text-xs font-black text-slate-600 dark:text-slate-400 leading-none">{mediaAula} <span className="text-[8px]">{t('radar.preview.studentsShort')}</span></span>
                                                                 <span className="text-[7px] font-bold text-slate-400 dark:text-slate-500 uppercase mt-0.5">{t('radar.floating.days30')}</span>
                                                             </div>
                                                         </div>
@@ -1031,12 +1031,12 @@ export default function RadarDeGrade() {
                             flowPreview.ultimasAulas.map((v, i) => {
                                 const mod = modMap[v.modalidadeId];
                                 return (
-                                    <div key={i} className="flex justify-between items-center bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm shrink-0 hover:border-blue-200 dark:hover:border-blue-800 transition-colors uppercase">
+                                    <div key={i} className="flex justify-between items-center bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm shrink-0 hover:border-slate-200 dark:hover:border-slate-800 transition-colors uppercase">
                                         <div className="flex flex-col min-w-0 flex-1 pr-2">
                                             <span className="text-[11px] font-black text-slate-700 dark:text-slate-300 truncate">{mod?.nome || t('radar.groupClass')}</span>
                                             <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 mt-0.5">{formatDate(v.data)}</span>
                                         </div>
-                                        <div className="text-xs font-black text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-3 py-1.5 rounded-lg border border-blue-100 dark:border-blue-800 shrink-0">
+                                        <div className="text-xs font-black text-slate-700 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/30 px-3 py-1.5 rounded-lg border border-slate-100 dark:border-slate-800 shrink-0">
                                             {v.alunos} <span className="text-[8px] uppercase">{t('radar.health.students')}</span>
                                         </div>
                                     </div>
