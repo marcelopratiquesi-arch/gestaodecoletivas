@@ -14,7 +14,7 @@ import { documentoValido, limparDocumento, tipoDocumentoPadrao } from "../../../
 
 import { 
     ShieldCheck, Edit2, Trash2, AlertTriangle, CheckCircle2, 
-    Loader2, User, Mail, Ban, IdCard, CalendarClock, PowerOff, Plus, X, Phone, Check, Clock, Link2, ScanSearch, Users, ArrowUpCircle, UserMinus, Timer
+    Loader2, User, Mail, Ban, IdCard, CalendarClock, PowerOff, Plus, X, Phone, Check, Clock, Link2, ScanSearch, Users, ArrowUpCircle, UserMinus, Timer, ChevronDown
 } from "lucide-react";
 
 const EMAIL_VALIDO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
