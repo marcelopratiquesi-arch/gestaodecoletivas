@@ -63,5 +63,20 @@
   "central": {
     "title": "Líderes temporales",
     "until": "Hasta {{date}}"
+  },
+  "mentor": {
+    "add": "Mentor temporal (cobertura por plazo)",
+    "title": "Mentor temporal",
+    "help": "Cubre las unidades de {{mentor}} por un plazo, con el mismo acceso (incluidas las que reciba después). Puede haber varios, no ocupa el lugar de 2º mentor y solo lo habilita el admin.",
+    "confirm": "¿Darle acceso de mentor a {{name}} para cubrir a {{mentor}} hasta el {{date}} 23:59? Quien es líder sigue siendo líder.",
+    "badge": "Cobertura de {{name}}",
+    "has": "Cobertura temporal: {{name}}",
+    "pending": "Invitación de cobertura pendiente: {{name}}",
+    "end": "Terminar cobertura",
+    "endConfirm": "¿Terminar la cobertura de {{name}} en lugar de {{mentor}}? Quien era líder o profesor vuelve a serlo; quien entró solo para cubrir pierde el acceso.",
+    "chip": "Cubre a {{nome}} hasta {{date}}",
+    "coverLabel": "Mentor temporal (hasta {{date}})",
+    "coverField": "Mentor temporal",
+    "bannerHelp": "Para seguir, pedile al administrador que lo prorrogue."
   }
 }

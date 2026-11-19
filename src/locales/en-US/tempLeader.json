@@ -63,5 +63,20 @@
   "central": {
     "title": "Temporary leaders",
     "until": "Until {{date}}"
+  },
+  "mentor": {
+    "add": "Temporary mentor (deadline-based cover)",
+    "title": "Temporary mentor",
+    "help": "Covers {{mentor}}'s units for a set period, with the same access (including units they receive later). There can be several, it does not use the 2nd mentor slot, and only the admin can grant it.",
+    "confirm": "Give {{name}} mentor access to cover {{mentor}} until {{date}} 11:59 PM? Leaders stay leaders.",
+    "badge": "Covering {{name}}",
+    "has": "Temporary cover: {{name}}",
+    "pending": "Cover invite pending: {{name}}",
+    "end": "End cover",
+    "endConfirm": "End {{name}}'s cover for {{mentor}}? Former leaders or teachers go back to that role; people who joined only to cover lose access.",
+    "chip": "Covers {{nome}} until {{date}}",
+    "coverLabel": "Temporary mentor (until {{date}})",
+    "coverField": "Temporary mentor",
+    "bannerHelp": "To continue, ask the administrator to extend it."
   }
 }

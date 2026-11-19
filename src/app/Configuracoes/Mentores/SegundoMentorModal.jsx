@@ -9,11 +9,15 @@ import { acharDonoDoDocumento } from "../../../services/documentoService";
 import { documentoValido, TIPOS_DOCUMENTO } from "../../../utils/documento";
 import { entrarComoSegundo, convidarSegundo } from "./acoesSegundoMentor";
 import { motivoQueBloqueia } from "./segundoMentor";
+import { SeletorDePrazo } from "../Lideres/TemporariosSecao";
+import { diaDoFim, fimPorDias } from "../../../utils/temporario";
 
 const EMAIL_VALIDO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export function SegundoMentorModal({ principal, professores = [], unidades = [], quem, registrarAuditoria, onClose }) {
-  const { t } = useTranslation();
+// temporario = true: cobertura por prazo (mentor temporário); vários por mentor, só o admin.
+export function SegundoMentorModal({ principal, professores = [], unidades = [], quem, registrarAuditoria, onClose, temporario = false }) {
+  const { t, i18n } = useTranslation();
+  const [fim, setFim] = useState(() => (temporario ? fimPorDias(30) : null));
   const [modo, setModo] = useState("existente"); // existente | novo
   const [busca, setBusca] = useState("");
   const [pessoa, setPessoa] = useState(null);
@@ -86,11 +90,17 @@ export function SegundoMentorModal({ principal, professores = [], unidades = [],
   async function confirmarExistente() {
     if (!pessoa || !cracha || bloqueio) return;
     const nomePessoa = cracha.nome || pessoa.nome;
-    if (!window.confirm(t("mentorsTab.second.confirm", { name: nomePessoa, mentor: principal.nome }))) return;
+    if (temporario && (!fim || fim.getTime() <= Date.now())) return setErro(t("tempLeader.errors.past"));
+    const aviso = temporario
+      ? t("tempLeader.mentor.confirm", { name: nomePessoa, mentor: principal.nome, date: diaDoFim(fim, i18n.language) })
+      : t("mentorsTab.second.confirm", { name: nomePessoa, mentor: principal.nome });
+    if (!window.confirm(aviso)) return;
     setSalvando(true); setErro("");
     try {
-      await entrarComoSegundo({ cracha, uid: pessoa.uid, principalId: principal.id });
-      await registrarAuditoria("NOVA", `Virou 2º mentor de ${principal.nome} (era ${papelAtual || "-"}).`, { id: pessoa.uid, nome: nomePessoa, email: cracha.email }, `Mentor principal: ${principal.nome}`);
+      await entrarComoSegundo({ cracha, uid: pessoa.uid, principalId: principal.id, fim: temporario ? fim : null });
+      await registrarAuditoria("NOVA", temporario
+        ? `Virou mentor temporário de ${principal.nome} até ${diaDoFim(fim, i18n.language)} (era ${papelAtual || "-"}).`
+        : `Virou 2º mentor de ${principal.nome} (era ${papelAtual || "-"}).`, { id: pessoa.uid, nome: nomePessoa, email: cracha.email }, `Mentor principal: ${principal.nome}`);
       alert(t("mentorsTab.second.done", { name: nomePessoa }));
       onClose();
     } catch (e) { console.error(e); setErro(t("mentorsTab.second.errors.save") + " " + (e.message || "")); } finally { setSalvando(false); }
@@ -101,10 +111,11 @@ export function SegundoMentorModal({ principal, professores = [], unidades = [],
     if (nome.trim().length < 3) return setErro(t("mentorsTab.messages.nameRequired"));
     if (!EMAIL_VALIDO.test(email.trim())) return setErro(t("mentorsTab.messages.invalidEmail"));
     if (telefone.trim().length < 6) return setErro(t("mentorsTab.extra.whatsappRequired"));
+    if (temporario && (!fim || fim.getTime() <= Date.now())) return setErro(t("tempLeader.errors.past"));
     setSalvando(true);
     try {
-      const emailGoogle = await convidarSegundo({ email, nome, telefone, pais: principal.pais || "BR", principalId: principal.id, quem });
-      await registrarAuditoria("NOVA", `2º mentor de ${principal.nome} cadastrado pelo e-mail do Google (aguardando o 1º acesso).`, { id: null, nome: nome.trim(), email: emailGoogle, emailGoogle }, `Mentor principal: ${principal.nome}`);
+      const emailGoogle = await convidarSegundo({ email, nome, telefone, pais: principal.pais || "BR", principalId: principal.id, quem, fim: temporario ? fim : null });
+      await registrarAuditoria("NOVA", `${temporario ? `Mentor temporário (até ${diaDoFim(fim, i18n.language)})` : "2º mentor"} de ${principal.nome} cadastrado pelo e-mail do Google (aguardando o 1º acesso).`, { id: null, nome: nome.trim(), email: emailGoogle, emailGoogle }, `Mentor principal: ${principal.nome}`);
       alert(t("mentorsTab.second.invited", { name: nome.trim() }));
       onClose();
     } catch (e) { console.error(e); setErro(t("mentorsTab.second.errors.save") + " " + (e.message || "")); } finally { setSalvando(false); }
@@ -118,8 +129,8 @@ export function SegundoMentorModal({ principal, professores = [], unidades = [],
       <div onClick={(e) => e.stopPropagation()} className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-h-[90vh] flex flex-col overflow-hidden">
         <div className="p-5 border-b border-slate-100 dark:border-slate-700 flex items-start justify-between gap-3">
           <div>
-            <h3 className="text-lg font-black text-slate-800 dark:text-white flex items-center gap-2"><Users className="w-5 h-5 text-blue-600" /> {t("mentorsTab.second.title")}</h3>
-            <p className="text-xs text-slate-500 mt-1">{t("mentorsTab.second.help", { mentor: principal.nome })}</p>
+            <h3 className="text-lg font-black text-slate-800 dark:text-white flex items-center gap-2"><Users className="w-5 h-5 text-blue-600" /> {temporario ? t("tempLeader.mentor.title") : t("mentorsTab.second.title")}</h3>
+            <p className="text-xs text-slate-500 mt-1">{temporario ? t("tempLeader.mentor.help", { mentor: principal.nome }) : t("mentorsTab.second.help", { mentor: principal.nome })}</p>
           </div>
           <button type="button" onClick={onClose} disabled={salvando} className="p-2 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"><X className="w-4 h-4" /></button>
         </div>
@@ -172,6 +183,13 @@ export function SegundoMentorModal({ principal, professores = [], unidades = [],
                 </label>
               ))}
               <p className="text-[11px] text-slate-500">{t("mentorsTab.second.inviteHelp")}</p>
+            </div>
+          )}
+
+          {temporario && (
+            <div className="space-y-1">
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t("tempLeader.sectionDeadline")}</span>
+              <SeletorDePrazo fim={fim} onFim={setFim} desabilitado={salvando} />
             </div>
           )}
 

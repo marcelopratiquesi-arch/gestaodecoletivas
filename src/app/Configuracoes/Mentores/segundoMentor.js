@@ -1,15 +1,24 @@
 // 2º mentor: crachá de mentor com "mentorPrincipalId" (id do 1º mentor). Só o admin mexe (aba Mentores).
 // As unidades continuam com mentorId = 1º mentor; o 2º enxerga e faz o mesmo nelas (ver escopoMentor em permissions.js
 // e meuMentorId() no firestore.rules). Contas puras, com teste.
-import { deleteField, serverTimestamp } from "firebase/firestore";
+import { deleteField, serverTimestamp, Timestamp } from "firebase/firestore";
 
 const texto = (v) => String(v ?? "").trim();
 const papelDe = (c) => texto(c?.role).toLowerCase();
 
-// Quem é o 2º mentor de um mentor (só 1 por mentor).
+// Mentor TEMPORÁRIO = cobertura de um mentor por prazo: mesmo crachá do 2º mentor (mentorPrincipalId) + "temporarioAte".
+// Só o admin cria; pode haver vários por mentor e eles não ocupam a vaga do 2º mentor.
+const comPrazo = (c) => !!c?.temporarioAte;
+
+// Quem é o 2º mentor de um mentor (só 1 por mentor; os temporários não contam).
 export function segundoDe(mentores = [], principalId) {
   if (!principalId) return null;
-  return mentores.find((m) => m.mentorPrincipalId === principalId) || null;
+  return mentores.find((m) => m.mentorPrincipalId === principalId && !comPrazo(m)) || null;
+}
+// Mentores temporários que cobrem um mentor (ativos, vencidos e ainda não encerrados).
+export function temporariosDe(mentores = [], principalId) {
+  if (!principalId) return [];
+  return mentores.filter((m) => m.mentorPrincipalId === principalId && comPrazo(m));
 }
 export function principalDe(mentores = [], segundo) {
   return segundo?.mentorPrincipalId ? mentores.find((m) => m.id === segundo.mentorPrincipalId) || null : null;
@@ -17,7 +26,10 @@ export function principalDe(mentores = [], segundo) {
 
 // Convite pendente de 2º mentor (pessoa nova, ainda sem o 1º acesso).
 export function conviteDe(convites = [], principalId) {
-  return convites.find((c) => c.mentorPrincipalId === principalId && c.status === "pendente") || null;
+  return convites.find((c) => c.mentorPrincipalId === principalId && c.status === "pendente" && !comPrazo(c)) || null;
+}
+export function convitesTemporariosDe(convites = [], principalId) {
+  return convites.filter((c) => c.mentorPrincipalId === principalId && c.status === "pendente" && comPrazo(c));
 }
 
 // Quem pode ser 2º mentor: qualquer pessoa com acesso que ainda não é mentor nem admin
@@ -32,13 +44,15 @@ export function motivoQueBloqueia(cracha) {
 }
 
 // Campos gravados no crachá ao virar 2º mentor. Guarda o papel de antes para voltar a ele ao sair.
-export function camposAoEntrar(cracha, principalId) {
+// Com "fim" (Date) vira mentor temporário: o banco corta o acesso sozinho depois do prazo.
+export function camposAoEntrar(cracha, principalId, fim = null) {
   return {
     role: "mentor",
     status: "ativo",
     mentorPrincipalId: principalId,
     papelAntesSegundoMentor: papelDe(cracha),
     segundoMentorDesde: serverTimestamp(),
+    ...(fim ? { temporarioAte: Timestamp.fromDate(fim), temporarioDesde: serverTimestamp() } : {}),
   };
 }
 
@@ -52,6 +66,8 @@ export function camposAoSair(cracha) {
     mentorPrincipalId: deleteField(),
     papelAntesSegundoMentor: deleteField(),
     segundoMentorDesde: deleteField(),
+    temporarioAte: deleteField(),
+    temporarioDesde: deleteField(),
   };
 }
 

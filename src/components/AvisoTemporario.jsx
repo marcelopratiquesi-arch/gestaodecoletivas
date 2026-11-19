@@ -32,7 +32,7 @@ export default function AvisoTemporario() {
       <Timer className="w-5 h-5 shrink-0 mt-0.5" />
       <div className="text-sm font-semibold">
         <p>{texto}</p>
-        <p className="text-xs font-medium opacity-90 mt-0.5">{t("tempLeader.banner.help")}</p>
+        <p className="text-xs font-medium opacity-90 mt-0.5">{userData?.role === "mentor" ? t("tempLeader.mentor.bannerHelp") : t("tempLeader.banner.help")}</p>
       </div>
       <button type="button" onClick={() => setFechado(true)} aria-label={t("tempLeader.cancel")} className="shrink-0 p-1 rounded-md hover:bg-white/20">
         <X className="w-4 h-4" />

@@ -54,7 +54,9 @@
     "descTemp": "You were registered as a temporary leader. Check your details and the deadline, then sign in.",
     "roleTemp": "Temporary leader",
     "enterTemp": "Sign in as temporary leader",
-    "until": "Access until"
+    "until": "Access until",
+    "roleMentorTemp": "Temporary mentor",
+    "enterMentorTemp": "Sign in as temporary mentor"
   },
   "andTeacher": "and teacher",
   "connectedAs": "Signed in as {{email}}",

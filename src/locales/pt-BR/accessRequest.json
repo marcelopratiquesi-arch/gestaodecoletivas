@@ -54,7 +54,9 @@
     "descTemp": "Você foi cadastrado(a) como líder temporário(a). Confira os dados e o prazo e entre.",
     "roleTemp": "Líder temporário(a)",
     "enterTemp": "Entrar como líder temporário",
-    "until": "Acesso até"
+    "until": "Acesso até",
+    "roleMentorTemp": "Mentor(a) temporário(a)",
+    "enterMentorTemp": "Entrar como mentor temporário"
   },
   "andTeacher": "e professor",
   "connectedAs": "Conectado como {{email}}",

@@ -37,6 +37,8 @@ import { useValidacoesDasUnidades, useFechamentosMensais } from './useValidacoes
 import { DIAS_JANELA_PENDENCIAS, periodoDoMes, liderDaVaga, ehAdmin } from './contasUnidade';
 import { mesesDoTrimestre, limitesDoMes, gastoPorUnidade, gastoPorUnidadeDoResumo, totaisPorMoeda } from './contasValores';
 import { linhasDoMentor, professoresDoMentor, aValidarPorUnidade, itensEmDiaMentor } from './contasPessoas';
+import { SeloDoPrazo } from '../app/Configuracoes/Lideres/TemporariosSecao';
+import { diaDoFim } from '../utils/temporario';
 
 const doisDigitos = (n) => String(n).padStart(2, '0');
 const ABAS_COM_VALORES = ['valores', 'panorama'];
@@ -126,7 +128,9 @@ export default function CentralMentor({ id: mentorId, z, textoVoltar, onFechar, 
   const pode = telasPermitidas(userData);
   const ativo = mentor.status === 'ativo';
   // Equipe de mentores: o 2º mentor (espelho do 1º) e, na ficha do 2º, o 1º mentor.
-  const segundo = catalogs.mentores.find((m) => m.mentorPrincipalId === mentor.id) || null;
+  const segundo = catalogs.mentores.find((m) => m.mentorPrincipalId === mentor.id && !m.temporarioAte) || null;
+  // Mentores temporários (cobertura por prazo, só o admin cria): não ocupam a vaga do 2º mentor.
+  const temporarios = catalogs.mentores.filter((m) => m.mentorPrincipalId === mentor.id && m.temporarioAte);
   const principal2 = mentor.mentorPrincipalId ? catalogs.mentores.find((m) => m.id === mentor.mentorPrincipalId) || null : null;
   // CPF/DNI/SSN do mentor: o admin e o próprio mentor (é o que o banco libera).
   const podeVerDocumento = ehAdmin(userData?.role) || mentor.id === (userData?.id || userData?.uid);
@@ -138,7 +142,8 @@ export default function CentralMentor({ id: mentorId, z, textoVoltar, onFechar, 
 
   const selos = [
     { texto: t('centrais.papel.mentor'), cor: 'blue' },
-    mentor.mentorPrincipalId && { texto: t('centrais.mentor.segundoDe', { nome: principal2?.nome || '-' }), cor: 'violet' },
+    mentor.mentorPrincipalId && !mentor.temporarioAte && { texto: t('centrais.mentor.segundoDe', { nome: principal2?.nome || '-' }), cor: 'violet' },
+    mentor.mentorPrincipalId && mentor.temporarioAte && { texto: t('tempLeader.mentor.chip', { nome: principal2?.nome || '-', date: diaDoFim(mentor.temporarioAte) }), cor: 'amber' },
     { texto: ativo ? t('centrais.ativo') : t('centrais.inativo'), cor: ativo ? 'emerald' : 'slate' },
     faltam > 0
       ? { texto: t('centrais.selos.faltam', { n: faltam }), cor: 'amber' }
@@ -345,11 +350,12 @@ export default function CentralMentor({ id: mentorId, z, textoVoltar, onFechar, 
 
   const equipe = (
     <>
-      {(segundo || principal2) && (
+      {(segundo || principal2 || temporarios.length > 0) && (
         <Quadro titulo={t('centrais.mentor.equipeMentoresTitulo')} icone={ShieldCheck} acao={atalhoTelaCompleta(t, pode.cfgMentores, caminhos.configuracoes(irPara, 'mentores'))}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {principal2 && cartaoMentor(principal2, t('centrais.mentor.primeiro'))}
             {segundo && cartaoMentor(segundo, t('centrais.mentor.segundo'))}
+            {temporarios.map((tmp) => cartaoMentor(tmp, t('tempLeader.mentor.coverLabel', { date: diaDoFim(tmp.temporarioAte) })))}
           </div>
         </Quadro>
       )}
@@ -427,6 +433,9 @@ export default function CentralMentor({ id: mentorId, z, textoVoltar, onFechar, 
         {principal2 && (
           <Campo rotulo={t('centrais.mentor.primeiro')}><LinkCentral tipo="mentor" alvo={principal2}>{principal2.nome}</LinkCentral></Campo>
         )}
+        {temporarios.map((tmp) => (
+          <Campo key={tmp.id} rotulo={t('tempLeader.mentor.coverField')}><LinkCentral tipo="mentor" alvo={tmp}>{tmp.nome}</LinkCentral> <SeloDoPrazo fim={tmp.temporarioAte} /></Campo>
+        ))}
         {segundo && (
           <Campo rotulo={t('centrais.mentor.segundo')}><LinkCentral tipo="mentor" alvo={segundo}>{segundo.nome}</LinkCentral></Campo>
         )}

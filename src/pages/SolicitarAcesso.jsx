@@ -78,12 +78,15 @@ export default function SolicitarAcesso() {
         const c = snap.exists() ? snap.data() : null;
         // Convite de mentor (admin) ou de líder temporário (admin/mentor; vem com unidades e prazo, e ainda dentro do prazo).
         const temporarioValido = c?.papel === "lider" && !!c?.temporarioAte && Array.isArray(c?.unidadeIds) && (c.temporarioAte.toMillis?.() || 0) > Date.now();
-        setConvite(c?.status === "pendente" && (c?.papel === "mentor" || temporarioValido) ? c : null);
+        // Mentor temporário (cobertura): o convite traz prazo, que ainda não pode ter vencido.
+        const mentorValido = c?.papel === "mentor" && (!c?.temporarioAte || (c.temporarioAte.toMillis?.() || 0) > Date.now());
+        setConvite(c?.status === "pendente" && (mentorValido || temporarioValido) ? c : null);
       })
       .catch(() => setConvite(null));
   }, [uid, userData, emailGoogle]);
 
   const temporario = convite?.papel === "lider";
+  const mentorTemporario = convite?.papel === "mentor" && !!convite?.temporarioAte;
 
   async function aceitarConvite() {
     setErro("");
@@ -103,6 +106,7 @@ export default function SolicitarAcesso() {
         criadoPor: convite.criadoPor, criadoEm: serverTimestamp(),
         // 2º mentor novo: o convite já diz de qual mentor ele é o 2º.
         ...(convite.mentorPrincipalId ? { mentorPrincipalId: convite.mentorPrincipalId } : {}),
+        ...(convite.temporarioAte ? { temporarioAte: convite.temporarioAte, temporarioDesde: serverTimestamp() } : {}),
       });
       batch.update(doc(db, "convites_acesso", emailGoogle), { status: "usado", usadoPor: uid, usadoEm: serverTimestamp() });
       await batch.commit();
@@ -112,6 +116,7 @@ export default function SolicitarAcesso() {
         tipoAcao: "NOVA",
         descricao: temporario
           ? `Líder temporário(a) ${convite.nome}: 1º acesso pelo Google (até ${diaDoFim(convite.temporarioAte)}).`
+          : mentorTemporario ? `Mentor(a) temporário(a) ${convite.nome}: 1º acesso pelo Google (cobertura até ${diaDoFim(convite.temporarioAte)}).`
           : `Mentor(a) ${convite.nome}: 1º acesso pelo Google (cadastrado pelo admin).`,
         quem: { id: uid, nome: convite.nome, email: emailGoogle },
         alvo: { id: uid, nome: convite.nome, email: emailGoogle, emailGoogle },
@@ -218,14 +223,14 @@ export default function SolicitarAcesso() {
             <ShieldCheck className="w-8 h-8 text-blue-500" />
           </div>
           <h2 className="text-xl font-black text-white">{t("accessRequest.invite.title", { name: convite.nome })}</h2>
-          <p className="text-sm text-zinc-400">{temporario ? t("accessRequest.invite.descTemp") : t("accessRequest.invite.desc")}</p>
+          <p className="text-sm text-zinc-400">{temporario || mentorTemporario ? t("accessRequest.invite.descTemp") : t("accessRequest.invite.desc")}</p>
           <div className="text-left bg-zinc-900 border border-zinc-800 rounded-2xl p-4 text-sm space-y-1">
             <p><span className="text-zinc-500">{t("accessRequest.fields.name")}:</span> <b>{convite.nome}</b></p>
             <p><span className="text-zinc-500">{t("accessRequest.fields.phone")}:</span> <b>{convite.telefone}</b></p>
-            <p><span className="text-zinc-500">{t("accessRequest.fields.role")}:</span> <b>{temporario ? t("accessRequest.invite.roleTemp") : t("accessRequest.invite.role")}</b></p>
-            {temporario && (
+            <p><span className="text-zinc-500">{t("accessRequest.fields.role")}:</span> <b>{temporario ? t("accessRequest.invite.roleTemp") : mentorTemporario ? t("accessRequest.invite.roleMentorTemp") : t("accessRequest.invite.role")}</b></p>
+            {(temporario || mentorTemporario) && (
               <>
-                <p><span className="text-zinc-500">{t("accessRequest.fields.units")}:</span> <b>{convite.unidadeIds.map((id) => porId.get(id)?.nome || id).join(", ")}</b></p>
+                {temporario && <p><span className="text-zinc-500">{t("accessRequest.fields.units")}:</span> <b>{convite.unidadeIds.map((id) => porId.get(id)?.nome || id).join(", ")}</b></p>}
                 <p><span className="text-zinc-500">{t("accessRequest.invite.until")}:</span> <b>{diaDoFim(convite.temporarioAte, i18n.language)} 23:59</b></p>
               </>
             )}
@@ -236,7 +241,7 @@ export default function SolicitarAcesso() {
             </div>
           )}
           <button type="button" onClick={aceitarConvite} disabled={aceitando} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black uppercase text-sm py-4 rounded-xl flex items-center justify-center gap-2 disabled:opacity-60">
-            {aceitando ? <Loader2 className="w-5 h-5 animate-spin" /> : <ShieldCheck className="w-4 h-4" />} {temporario ? t("accessRequest.invite.enterTemp") : t("accessRequest.invite.enter")}
+            {aceitando ? <Loader2 className="w-5 h-5 animate-spin" /> : <ShieldCheck className="w-4 h-4" />} {temporario ? t("accessRequest.invite.enterTemp") : mentorTemporario ? t("accessRequest.invite.enterMentorTemp") : t("accessRequest.invite.enter")}
           </button>
           {sair}
         </div>

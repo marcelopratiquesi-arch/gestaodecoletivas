@@ -14,7 +14,7 @@ import { documentoValido, limparDocumento, tipoDocumentoPadrao } from "../../../
 
 import { 
     ShieldCheck, Edit2, Trash2, AlertTriangle, CheckCircle2, 
-    Loader2, User, Mail, ChevronDown, ChevronUp, Ban, PowerOff, Plus, X, Phone, Check, Clock, Link2, ScanSearch, Users, ArrowUpCircle, UserMinus
+    Loader2, User, Mail, ChevronDown, ChevronUp, Ban, PowerOff, Plus, X, Phone, Check, Clock, Link2, ScanSearch, Users, ArrowUpCircle, UserMinus, Timer
 } from "lucide-react";
 
 const EMAIL_VALIDO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -23,8 +23,10 @@ import LinkCentral from "../../../centrais/LinkCentral";
 import { useCatalogs } from "../../../contexts/CatalogContext";
 import { UnidadesVinculadasModal } from "./UnidadesVinculadasModal";
 import { SegundoMentorModal } from "./SegundoMentorModal";
-import { segundoDe, principalDe, conviteDe } from "./segundoMentor";
-import { sairDeSegundo, promoverASegundo } from "./acoesSegundoMentor";
+import { segundoDe, principalDe, conviteDe, temporariosDe, convitesTemporariosDe } from "./segundoMentor";
+import { sairDeSegundo, promoverASegundo, prorrogarMentorTemporario } from "./acoesSegundoMentor";
+import { SeloDoPrazo, PrazoModal } from "../Lideres/TemporariosSecao";
+import { diaDoFim, fimDoTemporario } from "../../../utils/temporario";
 import { resumoDoAcesso } from "../../../utils/ultimoAcesso";
 import { FiltroPadrao } from "../ui/FiltroPadrao";
 import { CabecalhoDoModal } from "../ui/CabecalhoDoModal";
@@ -145,6 +147,8 @@ export function MentoresTab() {
   const todasUnidades = useMemo(() => catalogs?.unidades || [], [catalogs?.unidades]);
   const [vinculoAlvo, setVinculoAlvo] = useState(null);
   const [segundoAlvo, setSegundoAlvo] = useState(null); // mentor que vai ganhar (ou trocar) o 2º mentor
+  const [temporarioAlvo, setTemporarioAlvo] = useState(null); // mentor que vai ganhar um mentor temporário (cobertura)
+  const [prazoAlvo, setPrazoAlvo] = useState(null); // mentor temporário que está tendo o prazo mudado
   const { t, i18n } = useTranslation(); // 🟢 TRADUTOR CONECTADO
   
   const role = useMemo(() => String(userData?.role || "").trim().toLowerCase(), [userData?.role]);
@@ -473,6 +477,25 @@ export function MentoresTab() {
     } catch (e) { alert(t('mentorsTab.second.errors.save') + ' ' + e.message); } finally { setSalvando(false); }
   }
 
+  // Mentor temporário: encerra a cobertura (líder/professor volta ao papel de antes) ou muda o prazo.
+  async function encerrarTemporario(tmp) {
+    const principal = principalDe(mentores, tmp);
+    if (!window.confirm(t('tempLeader.mentor.endConfirm', { name: tmp.nome, mentor: principal?.nome || '-' }))) return;
+    try {
+      setSalvando(true);
+      await sairDeSegundo({ cracha: tmp });
+      await registrarLogAuditoria('ALTERADA', `Cobertura temporária de ${principal?.nome || '-'} encerrada.`, tmp, tmp.papelAntesSegundoMentor ? `Voltou a: ${tmp.papelAntesSegundoMentor}` : 'Sem papel anterior: ficou sem acesso.');
+    } catch (e) { alert(t('mentorsTab.second.errors.save') + ' ' + e.message); } finally { setSalvando(false); }
+  }
+  async function mudarPrazoTemporario(tmp, fim) {
+    setPrazoAlvo(null);
+    try {
+      setSalvando(true);
+      await prorrogarMentorTemporario(tmp.id, fim);
+      await registrarLogAuditoria('ALTERADA', `Prazo do mentor temporário alterado para ${diaDoFim(fim, i18n.language)}.`, tmp, `Cobertura de ${principalDe(mentores, tmp)?.nome || '-'}`);
+    } catch (e) { alert(t('mentorsTab.second.errors.save') + ' ' + e.message); } finally { setSalvando(false); }
+  }
+
   // O 2º mentor vira o 1º: recebe todas as unidades; o mentor de antes fica sem unidades (recebe outras depois).
   async function tornarPrimeiro(seg) {
     const principal = principalDe(mentores, seg);
@@ -667,11 +690,30 @@ export function MentoresTab() {
                     <td className="p-4">
                       <LinkCentral tipo="mentor" alvo={m} className="font-black text-slate-800 dark:text-white text-base">{m.nome}</LinkCentral>
                       <SeloRepetido selo={selosRepetidos.get(`cracha:${m.id}`)} detalheDe={(o) => o.email || ""} />
-                      {m.mentorPrincipalId && (
+                      {m.mentorPrincipalId && !m.temporarioAte && (
                         <span className="ml-2 inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-md bg-violet-50 text-violet-700 border border-violet-200 dark:bg-violet-900/20 dark:text-violet-300 dark:border-violet-800 normal-case align-middle">
                           <Users className="w-3 h-3"/> {t('mentorsTab.second.badge', { name: principalDe(mentores, m)?.nome || '-' })}
                         </span>
                       )}
+                      {m.mentorPrincipalId && m.temporarioAte && (
+                        <div className="mt-1 flex flex-wrap items-center gap-1.5 normal-case">
+                          <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-md bg-teal-50 text-teal-700 border border-teal-200 dark:bg-teal-900/20 dark:text-teal-300 dark:border-teal-800">
+                            <Timer className="w-3 h-3"/> {t('tempLeader.mentor.badge', { name: principalDe(mentores, m)?.nome || '-' })}
+                          </span>
+                          <SeloDoPrazo fim={m.temporarioAte} />
+                          <span className="text-[10px] font-bold text-slate-500">{t('tempLeader.until', { date: diaDoFim(fimDoTemporario(m), i18n.language) })}</span>
+                        </div>
+                      )}
+                      {!m.mentorPrincipalId && temporariosDe(mentores, m.id).map((tmp) => (
+                        <div key={tmp.id} className="text-[11px] font-bold text-teal-700 dark:text-teal-300 normal-case mt-0.5 flex flex-wrap items-center gap-1.5">
+                          <Timer className="w-3 h-3"/> {t('tempLeader.mentor.has', { name: tmp.nome })} <SeloDoPrazo fim={tmp.temporarioAte} />
+                        </div>
+                      ))}
+                      {!m.mentorPrincipalId && convitesTemporariosDe(convites, m.id).map((c) => (
+                        <div key={c.id || c.email} className="text-[11px] font-bold text-amber-600 dark:text-amber-400 normal-case mt-0.5 flex items-center gap-1">
+                          <Clock className="w-3 h-3"/> {t('tempLeader.mentor.pending', { name: c.nome })}
+                        </div>
+                      ))}
                       {!m.mentorPrincipalId && segundoDe(mentores, m.id) && (
                         <div className="text-[11px] font-bold text-violet-600 dark:text-violet-300 normal-case mt-0.5 flex items-center gap-1">
                           <Users className="w-3 h-3"/> {t('mentorsTab.second.has', { name: segundoDe(mentores, m.id).nome })}
@@ -762,10 +804,19 @@ export function MentoresTab() {
                             {!m.mentorPrincipalId && !segundoDe(mentores, m.id) && !conviteDe(convites, m.id) && m.status === 'ativo' && (
                                 <BotaoDeLinha abaId="mentores" icone={Users} onClick={() => setSegundoAlvo(m)} title={t('mentorsTab.second.add')} />
                             )}
-                            {m.mentorPrincipalId && (
+                            {!m.mentorPrincipalId && m.status === 'ativo' && (
+                                <BotaoDeLinha abaId="mentores" icone={Timer} onClick={() => setTemporarioAlvo(m)} title={t('tempLeader.mentor.add')} />
+                            )}
+                            {m.mentorPrincipalId && m.temporarioAte && (
+                                <BotaoDeLinha abaId="mentores" tipo="ativar" icone={Timer} onClick={() => setPrazoAlvo(m)} title={t('tempLeader.extend')} />
+                            )}
+                            {m.mentorPrincipalId && m.temporarioAte && (
+                                <BotaoDeLinha abaId="mentores" tipo="desativar" icone={UserMinus} onClick={() => encerrarTemporario(m)} title={t('tempLeader.mentor.end')} />
+                            )}
+                            {m.mentorPrincipalId && !m.temporarioAte && (
                                 <BotaoDeLinha abaId="mentores" tipo="ativar" icone={ArrowUpCircle} onClick={() => tornarPrimeiro(m)} title={t('mentorsTab.second.makeFirst')} />
                             )}
-                            {m.mentorPrincipalId && (
+                            {m.mentorPrincipalId && !m.temporarioAte && (
                                 <BotaoDeLinha abaId="mentores" tipo="desativar" icone={UserMinus} onClick={() => removerSegundo(m)} title={t('mentorsTab.second.remove')} />
                             )}
                             <BotaoDocumento onClick={() => setDocAlvo({ id: m.id, nome: m.nome, email: m.email })} />
@@ -786,6 +837,8 @@ export function MentoresTab() {
 
       {/* MODAL */}
       {segundoAlvo && <SegundoMentorModal principal={segundoAlvo} professores={catalogs?.professores || []} unidades={todasUnidades} quem={userData} registrarAuditoria={registrarLogAuditoria} onClose={() => setSegundoAlvo(null)} />}
+      {temporarioAlvo && <SegundoMentorModal temporario principal={temporarioAlvo} professores={catalogs?.professores || []} unidades={todasUnidades} quem={userData} registrarAuditoria={registrarLogAuditoria} onClose={() => setTemporarioAlvo(null)} />}
+      {prazoAlvo && <PrazoModal abaId="mentores" cracha={prazoAlvo} onFechar={() => setPrazoAlvo(null)} onSalvar={(fim) => mudarPrazoTemporario(prazoAlvo, fim)} />}
       {vinculoAlvo && <UnidadesVinculadasModal mentor={vinculoAlvo} mentores={mentores} unidades={todasUnidades} quem={userData} onClose={() => setVinculoAlvo(null)} />}
       {docAlvo && <DocumentoModal alvo={docAlvo} onClose={() => setDocAlvo(null)} />}
 

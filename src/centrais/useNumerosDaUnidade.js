@@ -31,7 +31,7 @@ export function useNumerosDaUnidade({ unidadeId, ativo, mes, hoje, agoraHHMM }) 
   );
   // 2º mentor: crachá de mentor ligado ao mentor da unidade (mesmas unidades).
   const mentor2 = useMemo(
-    () => (mentorId ? catalogs.mentores.find((m) => m.mentorPrincipalId === mentorId) || null : null),
+    () => (mentorId ? catalogs.mentores.find((m) => m.mentorPrincipalId === mentorId && !m.temporarioAte) || null : null),
     [catalogs.mentores, mentorId],
   );
   const aulasForaDaLixeira = useMemo(

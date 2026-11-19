@@ -1,20 +1,27 @@
 // Gravações do 2º mentor (só o admin chama; o banco já deixa o admin gravar crachás e unidades).
-import { doc, serverTimestamp, setDoc, updateDoc, writeBatch } from "firebase/firestore";
+import { doc, serverTimestamp, setDoc, Timestamp, updateDoc, writeBatch } from "firebase/firestore";
 import { db } from "../../../services/firebase";
 import { publicarUnidade } from "../../../services/vitrinePublica";
 import { camposAoEntrar, camposAoPromover, camposAoSair } from "./segundoMentor";
 
 // Pessoa que já tem login: vira 2º mentor (líder continua líder; o papel de antes fica guardado).
-export async function entrarComoSegundo({ cracha, uid, principalId }) {
-  await updateDoc(doc(db, "usuarios", uid), { ...camposAoEntrar(cracha, principalId), atualizadoEm: serverTimestamp() });
+// Com "fim" (Date): mentor TEMPORÁRIO, cobertura do mentor principal até o fim do prazo.
+export async function entrarComoSegundo({ cracha, uid, principalId, fim = null }) {
+  await updateDoc(doc(db, "usuarios", uid), { ...camposAoEntrar(cracha, principalId, fim), atualizadoEm: serverTimestamp() });
+}
+
+// Novo prazo do mentor temporário (prorrogar ou reativar um vencido). Só o admin.
+export function prorrogarMentorTemporario(uid, fim) {
+  return updateDoc(doc(db, "usuarios", uid), { temporarioAte: Timestamp.fromDate(fim), atualizadoEm: serverTimestamp() });
 }
 
 // Pessoa nova: convite pelo e-mail do Google, já marcado como 2º mentor do principal (o crachá nasce no 1º acesso).
-export async function convidarSegundo({ email, nome, telefone, pais, principalId, quem }) {
+export async function convidarSegundo({ email, nome, telefone, pais, principalId, quem, fim = null }) {
   const emailGoogle = email.trim().toLowerCase();
   await setDoc(doc(db, "convites_acesso", emailGoogle), {
     papel: "mentor", status: "pendente", email: emailGoogle, nome: nome.trim(), pais, telefone: telefone.trim(),
     mentorPrincipalId: principalId,
+    ...(fim ? { temporarioAte: Timestamp.fromDate(fim) } : {}),
     criadoPor: quem?.id || quem?.uid, criadoPorNome: quem?.nome || quem?.email || "Admin", criadoEm: serverTimestamp(),
   });
   return emailGoogle;

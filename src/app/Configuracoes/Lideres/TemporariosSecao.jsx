@@ -212,7 +212,7 @@ export function TemporariosSecao({ role, escopoId, unidades, quem, pedirAtualiza
 }
 
 // ---------- Escolha do prazo: atalhos em dias (hoje é o dia 1) ou uma data ----------
-function SeletorDePrazo({ fim, onFim, desabilitado }) {
+export function SeletorDePrazo({ fim, onFim, desabilitado }) {
   const { t } = useTranslation();
   const hoje = hojeBrasilia();
   const ultimoPermitido = somarDias(hoje, DIAS_MAXIMOS - 1);
@@ -239,13 +239,13 @@ function SeletorDePrazo({ fim, onFim, desabilitado }) {
   );
 }
 
-function PrazoModal({ cracha, onFechar, onSalvar }) {
+export function PrazoModal({ cracha, onFechar, onSalvar, abaId = "lideres" }) {
   const { t } = useTranslation();
   const [fim, setFim] = useState(fimPorDias(30));
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={onFechar}>
       <div onClick={(e) => e.stopPropagation()} className="w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-2xl overflow-hidden">
-        <CabecalhoDoModal abaId="lideres" icone={Timer} titulo={t("tempLeader.extendTitle", { name: cracha.nome })} onFechar={onFechar} />
+        <CabecalhoDoModal abaId={abaId} icone={Timer} titulo={t("tempLeader.extendTitle", { name: cracha.nome })} onFechar={onFechar} />
         <div className="p-5 space-y-4">
           <SeletorDePrazo fim={fim} onFim={setFim} />
           <div className="flex justify-end gap-2">

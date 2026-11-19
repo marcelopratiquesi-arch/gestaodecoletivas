@@ -54,7 +54,9 @@
     "descTemp": "Te registraron como líder temporal. Revisá tus datos y el plazo, y entrá.",
     "roleTemp": "Líder temporal",
     "enterTemp": "Entrar como líder temporal",
-    "until": "Acceso hasta"
+    "until": "Acceso hasta",
+    "roleMentorTemp": "Mentor temporal",
+    "enterMentorTemp": "Entrar como mentor temporal"
   },
   "andTeacher": "y profesor",
   "connectedAs": "Conectado como {{email}}",

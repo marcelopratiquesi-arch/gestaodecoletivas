@@ -86,3 +86,36 @@ describe('validação do convite', () => {
     expect(validarConvite({ ...ok, fim: null, agora: AGORA })).toBe('past');
   });
 });
+
+// Mentor temporário: cobertura por prazo, não ocupa a vaga do 2º mentor.
+import { segundoDe, temporariosDe, conviteDe, convitesTemporariosDe, camposAoEntrar, camposAoSair } from '../../src/app/Configuracoes/Mentores/segundoMentor';
+
+describe('mentor temporário', () => {
+  const ate = { toMillis: () => AGORA + 86400000, toDate: () => new Date(AGORA + 86400000) };
+  const mentores = [
+    { id: 'm1', role: 'mentor' },
+    { id: 'm2', role: 'mentor', mentorPrincipalId: 'm1' },
+    { id: 'm3', role: 'mentor', mentorPrincipalId: 'm1', temporarioAte: ate },
+    { id: 'm4', role: 'mentor', mentorPrincipalId: 'm1', temporarioAte: ate },
+  ];
+  it('o temporário não vira o 2º mentor, e pode haver vários', () => {
+    expect(segundoDe(mentores, 'm1').id).toBe('m2');
+    expect(temporariosDe(mentores, 'm1').map((m) => m.id)).toEqual(['m3', 'm4']);
+    expect(segundoDe([mentores[0], mentores[2]], 'm1')).toBe(null);
+  });
+  it('convite de cobertura não conta como convite de 2º mentor', () => {
+    const convites = [{ mentorPrincipalId: 'm1', status: 'pendente', temporarioAte: ate }];
+    expect(conviteDe(convites, 'm1')).toBe(null);
+    expect(convitesTemporariosDe(convites, 'm1')).toHaveLength(1);
+  });
+  it('ao entrar leva o prazo; ao sair apaga o prazo e volta ao papel de antes', () => {
+    const entrou = camposAoEntrar({ role: 'lider' }, 'm1', new Date(AGORA + 86400000));
+    expect(entrou.role).toBe('mentor');
+    expect(entrou.mentorPrincipalId).toBe('m1');
+    expect(entrou.temporarioAte).toBeTruthy();
+    expect(camposAoEntrar({ role: 'lider' }, 'm1').temporarioAte).toBeUndefined();
+    const saiu = camposAoSair({ papelAntesSegundoMentor: 'lider' });
+    expect(saiu.role).toBe('lider');
+    expect(Object.keys(saiu)).toEqual(expect.arrayContaining(['temporarioAte', 'temporarioDesde', 'mentorPrincipalId']));
+  });
+});

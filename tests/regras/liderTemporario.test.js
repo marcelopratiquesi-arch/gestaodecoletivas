@@ -195,3 +195,71 @@ describe('mentor e admin cuidam do líder temporário', () => {
     await assertFails(updateDoc(doc(como('mentor1'), 'usuarios/liderA'), { temporarioAte: daqui(30) }));
   });
 });
+
+// ===================== MENTOR TEMPORÁRIO (cobertura de um mentor, só o admin) =====================
+const EMAIL_M = 'cobertura@gmail.com';
+const semUndefined = (o) => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined));
+const conviteMentor = (extra = {}) => semUndefined({
+  papel: 'mentor', status: 'pendente', email: EMAIL_M, nome: 'Mentor Cobertura', telefone: '(31) 99999-0000', pais: 'BR',
+  criadoPor: 'admin1', mentorPrincipalId: 'mentor1', temporarioAte: ATE, ...extra,
+});
+const noConviteM = (db) => doc(db, `convites_acesso/${EMAIL_M}`);
+const conviteMentorNoBanco = (extra = {}) => env.withSecurityRulesDisabled(async (ctx) => {
+  await setDoc(doc(ctx.firestore(), `convites_acesso/${EMAIL_M}`), conviteMentor(extra));
+});
+const aceitarMentor = (db, uid, c = conviteMentor(), extra = {}) => {
+  const b = writeBatch(db);
+  b.set(doc(db, `usuarios/${uid}`), semUndefined({
+    nome: c.nome, email: EMAIL_M, telefone: c.telefone, pais: c.pais, role: 'mentor', status: 'ativo', loginGoogle: true,
+    criadoPor: c.criadoPor, criadoEm: serverTimestamp(), mentorPrincipalId: c.mentorPrincipalId,
+    temporarioAte: c.temporarioAte, temporarioDesde: serverTimestamp(), ...extra,
+  }));
+  b.update(noConviteM(db), { status: 'usado', usadoPor: uid });
+  return b.commit();
+};
+
+describe('convite de mentor temporário', () => {
+  it('só o admin convida; precisa de mentor principal e de prazo de até 61 dias', async () => {
+    await assertSucceeds(setDoc(noConviteM(como('admin1')), conviteMentor()));
+    await assertFails(setDoc(noConviteM(como('mentor1')), conviteMentor({ criadoPor: 'mentor1' })));
+    await assertFails(setDoc(noConviteM(como('admin1')), conviteMentor({ mentorPrincipalId: undefined })));
+    await assertFails(setDoc(noConviteM(como('admin1')), conviteMentor({ temporarioAte: daqui(90) })));
+  });
+  it('a pessoa entra como mentor com o prazo e passa a ver as unidades do mentor principal', async () => {
+    await conviteMentorNoBanco();
+    await assertSucceeds(aceitarMentor(google('cob1', EMAIL_M), 'cob1'));
+    await assertSucceeds(getDoc(doc(google('cob1', EMAIL_M), 'unidades/uniA')));
+  });
+  it('não muda o prazo, não tira o mentor principal, não vira temporário sem convite de prazo', async () => {
+    await conviteMentorNoBanco();
+    const db = google('cob1', EMAIL_M);
+    await assertFails(aceitarMentor(db, 'cob1', conviteMentor(), { temporarioAte: daqui(60) }));
+    await assertFails(aceitarMentor(db, 'cob1', conviteMentor(), { mentorPrincipalId: 'mentor2' }));
+    await assertFails(aceitarMentor(db, 'cob1', conviteMentor(), { temporarioAte: undefined, temporarioDesde: undefined }));
+    await conviteMentorNoBanco({ temporarioAte: undefined });
+    await assertFails(aceitarMentor(db, 'cob1', conviteMentor({ temporarioAte: ATE }), {}));
+  });
+  it('convite vencido não serve', async () => {
+    await conviteMentorNoBanco({ temporarioAte: ATE_VENCIDO });
+    await assertFails(aceitarMentor(google('cob1', EMAIL_M), 'cob1', conviteMentor({ temporarioAte: ATE_VENCIDO })));
+  });
+});
+
+describe('mentor temporário já com crachá', () => {
+  const cracha = (extra = {}) => env.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), 'usuarios/cob1'), { role: 'mentor', status: 'ativo', nome: 'Cobertura', loginGoogle: true, mentorPrincipalId: 'mentor1', temporarioAte: daqui(5), ...extra });
+  });
+  it('dentro do prazo funciona; vencido perde tudo', async () => {
+    await cracha();
+    await assertSucceeds(getDoc(doc(como('cob1'), 'unidades/uniA')));
+    await cracha({ temporarioAte: daqui(-1) });
+    await assertFails(getDoc(doc(como('cob1'), 'unidades/uniA')));
+  });
+  it('não prorroga o próprio prazo; o admin prorroga e encerra (volta ao papel de antes)', async () => {
+    await cracha();
+    await assertFails(updateDoc(doc(como('cob1'), 'usuarios/cob1'), { temporarioAte: daqui(60) }));
+    await assertFails(updateDoc(doc(como('mentor1'), 'usuarios/cob1'), { temporarioAte: daqui(30) }));
+    await assertSucceeds(updateDoc(doc(como('admin1'), 'usuarios/cob1'), { temporarioAte: daqui(30) }));
+    await assertSucceeds(updateDoc(doc(como('admin1'), 'usuarios/cob1'), { role: 'lider', temporarioAte: deleteField(), temporarioDesde: deleteField(), mentorPrincipalId: deleteField() }));
+  });
+});

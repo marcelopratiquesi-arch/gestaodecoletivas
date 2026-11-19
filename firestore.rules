@@ -135,13 +135,18 @@ service cloud.firestore {
       return emailGoogleVerificado() && request.auth.uid == uid
         && exists(caminhoConvite())
         && c.status == 'pendente' && c.papel == 'mentor'
-        && d.keys().hasOnly(['nome', 'email', 'telefone', 'pais', 'role', 'status', 'loginGoogle', 'criadoPor', 'criadoEm', 'mentorPrincipalId'])
+        && d.keys().hasOnly(['nome', 'email', 'telefone', 'pais', 'role', 'status', 'loginGoogle', 'criadoPor', 'criadoEm', 'mentorPrincipalId', 'temporarioAte', 'temporarioDesde'])
         && d.role == 'mentor' && d.status == 'ativo' && d.loginGoogle == true
         && d.email == request.auth.token.email.lower()
         && d.nome == c.nome && d.telefone == c.telefone && d.get('pais', '') == c.get('pais', '')
         && d.criadoPor == c.criadoPor
         // 2º mentor novo: o convite diz de qual mentor ele é o 2º (só o admin cria o convite); sem isso, não pode ter o campo.
         && d.get('mentorPrincipalId', '') == c.get('mentorPrincipalId', '')
+        // Mentor TEMPORÁRIO (cobertura de um mentor, só o admin convida): o prazo vem do convite, ainda não pode ter vencido,
+        // e só existe junto com o mentor principal. Sem prazo no convite, o crachá não pode ter prazo.
+        && d.get('temporarioAte', null) == c.get('temporarioAte', null)
+        && (!('temporarioAte' in d) || ('mentorPrincipalId' in d && d.temporarioAte > request.time && d.get('temporarioDesde', null) == request.time))
+        && ('temporarioAte' in d || !('temporarioDesde' in d))
         // O convite precisa ser marcado como usado na MESMA gravação (não serve duas vezes).
         && getAfter(caminhoConvite()).data.status == 'usado';
     }
@@ -808,6 +813,10 @@ service cloud.firestore {
       allow create, update: if souAdmin()
         && request.resource.data.papel == 'mentor'
         && request.resource.data.status in ['pendente', 'cancelado']
+        // Mentor temporário (cobertura): precisa de mentor principal e de prazo de no máximo 61 dias.
+        && (!('temporarioAte' in request.resource.data)
+            || ('mentorPrincipalId' in request.resource.data && request.resource.data.temporarioAte is timestamp
+                && request.resource.data.temporarioAte <= request.time + duration.value(61, 'd')))
         && request.resource.data.email == email
         && request.resource.data.nome is string && request.resource.data.nome.size() >= 3
         && request.resource.data.telefone is string && request.resource.data.telefone.size() >= 6;
