@@ -251,12 +251,39 @@ service cloud.firestore {
             && exists(/databases/$(database)/documents/configuracoes/modalidadesBasicas)
             && ids.toSet().difference(get(/databases/$(database)/documents/configuracoes/modalidadesBasicas).data.get('ids', []).toSet()).size() == 0);
     }
-    match /unidades/{document=**} {
+    // Quem grava em "unidades" (Etapa 1 das regras por unidade):
+    //  - admin: tudo;
+    //  - mentor (inclusive 2º mentor e quem tem cobertura): cria, edita e apaga SÓ as unidades dele (mentorId), e não troca o
+    //    mentor da unidade (quem redistribui unidades é o admin); as modalidades continuam só do admin;
+    //  - líder: só os campos de líder da PRÓPRIA unidade (atualização de cadastro, saída da função, desfazer saída).
+    // Professor não grava. Ninguém mais.
+    function camposDeLiderDaUnidade() {
+      return ['liderUid', 'liderNome', 'liderEmail', 'liderTelefone', 'liderTipo', 'liderDesde', 'liderAConferir',
+              'lider2Uid', 'lider2Nome', 'lider2Email', 'lider2Telefone', 'lider2Tipo', 'lider2Desde',
+              'loginAntigoDesligado', 'loginAntigoDesligadoEm'];
+    }
+    // Usa o papel de VERDADE do crachá (não o efetivo): quem tem cobertura de mentor continua líder da própria unidade.
+    function liderDestaUnidade(unidadeId) {
+      let c = meuUsuario();
+      return c.get('role', '').lower() in papeisLider() && (unidadeId == c.get('unidadeId', '') || unidadeId in c.get('unidadeIds', []));
+    }
+    match /unidades/{unidadeId} {
       allow read: if logado();
-      allow create: if logado() && !souProfessor() && (souAdmin() || modalidadesIniciaisPermitidas());
-      allow update: if logado() && !souProfessor()
-        && (souAdmin() || !camposAlterados().hasAny(camposDeModalidadeDaUnidade()));
-      allow delete: if logado() && !souProfessor();
+      allow create: if souAdmin()
+        || (logado() && meuPapel() == 'mentor' && ehMeuMentor(request.resource.data.get('mentorId', ''))
+            && modalidadesIniciaisPermitidas());
+      allow update: if souAdmin()
+        || (logado() && meuPapel() == 'mentor' && ehMeuMentor(resource.data.get('mentorId', ''))
+            && request.resource.data.get('mentorId', '') == resource.data.get('mentorId', '')
+            && !camposAlterados().hasAny(camposDeModalidadeDaUnidade()))
+        || (logado() && liderDestaUnidade(unidadeId) && camposAlterados().hasOnly(camposDeLiderDaUnidade()));
+      allow delete: if souAdmin()
+        || (logado() && meuPapel() == 'mentor' && ehMeuMentor(resource.data.get('mentorId', '')));
+      // Se algum dia houver subcoleção dentro de uma unidade: lê quem está logado, grava só o admin.
+      match /{sub=**} {
+        allow read: if logado();
+        allow write: if souAdmin();
+      }
     }
     // Lista básica de modalidades da rede (usada nas unidades novas). Todos os logados leem; só o admin grava.
     match /configuracoes/{docId} {
