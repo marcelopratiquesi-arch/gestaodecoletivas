@@ -1,0 +1,14 @@
+{
+  "sortAsc": "Ordenar de la A a la Z",
+  "sortDesc": "Ordenar de la Z a la A",
+  "more": "Más acciones",
+  "access": {
+    "column": "Acceso",
+    "never": "Nunca ingresó",
+    "via": {
+      "google": "Google",
+      "senha": "Correo y contraseña",
+      "antigo": "Login antiguo"
+    }
+  }
+}

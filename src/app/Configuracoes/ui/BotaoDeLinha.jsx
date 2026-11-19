@@ -14,17 +14,30 @@ const POR_COR = {
   slate: "bg-slate-100 text-slate-600 hover:bg-slate-600 hover:text-white dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-500 dark:hover:text-white",
 };
 
+// Discreto (padrão novo das tabelas, 360 de 2026-11-19): cinza parado, a cor só aparece ao passar o mouse.
+const DISCRETO = {
+  blue: "bg-slate-100 text-slate-500 hover:bg-blue-600 hover:text-white dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-blue-600 dark:hover:text-white",
+  teal: "bg-slate-100 text-slate-500 hover:bg-teal-600 hover:text-white dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-teal-600 dark:hover:text-white",
+  green: "bg-slate-100 text-slate-500 hover:bg-green-600 hover:text-white dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-green-600 dark:hover:text-white",
+  red: "bg-slate-100 text-slate-500 hover:bg-red-600 hover:text-white dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-red-600 dark:hover:text-white",
+  orange: "bg-slate-100 text-slate-500 hover:bg-orange-600 hover:text-white dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-orange-600 dark:hover:text-white",
+  pink: "bg-slate-100 text-slate-500 hover:bg-pink-600 hover:text-white dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-pink-600 dark:hover:text-white",
+  purple: "bg-slate-100 text-slate-500 hover:bg-purple-600 hover:text-white dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-purple-600 dark:hover:text-white",
+  slate: "bg-slate-100 text-slate-500 hover:bg-slate-600 hover:text-white dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-500 dark:hover:text-white",
+};
+
 /**
  * @param {{abaId:string, tipo?:"editar"|"ativar"|"desativar"|"perigo", icone:React.ElementType,
- *          compacto?:boolean, girar?:boolean, className?:string}} props
+ *          compacto?:boolean, girar?:boolean, discreto?:boolean, className?:string}} props
  * Demais props (onClick, title, disabled...) vão direto para o <button>.
  */
-export function BotaoDeLinha({ abaId, tipo = "editar", icone, compacto, girar, className = "", ...resto }) {
+export function BotaoDeLinha({ abaId, tipo = "editar", icone, compacto, girar, discreto, className = "", ...resto }) {
   const Icone = icone;
   const cor = tipo === "perigo" ? "red" : tipo === "desativar" ? "orange" : tipo === "ativar" ? "green" : temaDaAba(abaId).cor;
+  const mapa = discreto ? DISCRETO : POR_COR;
   return (
-    <button type="button" {...resto}
-      className={`${compacto ? "p-1.5 rounded-md" : "p-2 rounded-lg"} transition-colors disabled:opacity-50 ${POR_COR[cor] || POR_COR.slate} ${className}`}>
+    <button type="button" aria-label={resto.title} {...resto}
+      className={`${compacto ? "p-1.5 rounded-md" : "p-2 rounded-lg"} transition-colors disabled:opacity-50 ${mapa[cor] || mapa.slate} ${className}`}>
       <Icone className={`${compacto ? "w-3.5 h-3.5" : "w-4 h-4"} ${girar ? "animate-spin" : ""}`} />
     </button>
   );

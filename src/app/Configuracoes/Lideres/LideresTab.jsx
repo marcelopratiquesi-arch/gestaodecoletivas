@@ -14,7 +14,7 @@ import { createUserWithEmailAndPassword, getAuth, signOut } from "firebase/auth"
 import { initializeApp, getApp, deleteApp } from "firebase/app";
 import { useTranslation } from "react-i18next";
 import {
-  IdCard, UserCheck, UserPlus, UserX, Search, Loader2, Building2, Mail, Phone, Edit2, X, Check, KeyRound, AlertTriangle, BadgeCheck, UserCog, ScanSearch,
+  IdCard, UserCheck, UserPlus, UserX, Search, Loader2, Building2, Edit2, X, Check, KeyRound, AlertTriangle, BadgeCheck, UserCog, ScanSearch, User, Repeat,
 } from "lucide-react";
 import { db } from "../../../services/firebase";
 import { useAuth } from "../../../contexts/AuthContext";
@@ -30,8 +30,15 @@ import { FiltroPadrao } from "../ui/FiltroPadrao";
 import { CabecalhoDoModal } from "../ui/CabecalhoDoModal";
 import { BotaoDeLinha } from "../ui/BotaoDeLinha";
 import { CabecalhoDaAba, CaixaDeNumeros, BotaoPrincipal, BotaoSecundario } from "../ui/CabecalhoDaAba";
-import { AcoesDoContato } from "../ui/AcoesDoContato";
 import { useFiltroCascata } from "../ui/useFiltroCascata";
+import { CelulaContato } from "../ui/CelulaContato";
+import { CelulaAcesso } from "../ui/CelulaAcesso";
+import { ColunaOrdenavel, CLASSE_TITULO } from "../ui/ColunaOrdenavel";
+import { MenuDeAcoes } from "../ui/MenuDeAcoes";
+import { Selo } from "../ui/Selo";
+import { useOrdenacao } from "../ui/useOrdenacao";
+import { useUltimosAcessos } from "../ui/useUltimosAcessos";
+import { paraData } from "../../../utils/ultimoAcesso";
 import SeloRepetido from "../ui/SeloRepetido";
 import { useSelosRepetidos } from "../ui/useSelosRepetidos";
 import { BotaoDocumento, DocumentoModal, BuscaDocumento, AvisoDocumento } from "../Documento/DocumentoModal";
@@ -54,6 +61,8 @@ function tipoDeAcesso(u) {
   if (u.uidLogin && !u.loginAntigoDesligado) return "antigo";
   return null;
 }
+// De quem é o "último acesso" que a linha mostra/ordena: o 1º líder ou, sem líder, o login antigo da unidade.
+const uidDoAcesso = (u) => u.liderUid || (tipoDeAcesso(u) === "antigo" ? u.uidLogin : null);
 
 export function LideresTab() {
   const { t } = useTranslation();
@@ -116,10 +125,24 @@ export function LideresTab() {
     nomeMentor,
     extra: soDaSituacao,
   });
-  // Líder novo "a conferir" aparece primeiro.
-  const lista = useMemo(
-    () => [...filtro.resultado].sort((a, b) => Number(b.liderAConferir === true) - Number(a.liderAConferir === true)),
-    [filtro.resultado]);
+  // Coluna "Acesso": último acesso do 1º e do 2º líder (ou do login antigo da unidade, enquanto existir).
+  // Cada crachá é lido uma vez por sessão (ver useUltimosAcessos).
+  const uidsDeAcesso = useMemo(() => minhasUnidades.flatMap((u) => [
+    u.liderUid, u.lider2Uid, tipoDeAcesso(u) === "antigo" ? u.uidLogin : null,
+  ]), [minhasUnidades]);
+  const { acessoDe, carregando: carregandoAcessos } = useUltimosAcessos(uidsDeAcesso);
+
+  // Todas as colunas ordenam (A→Z / Z→A). Sem clique: líder "a conferir" primeiro, depois a unidade de A a Z.
+  const colunas = useMemo(() => ({
+    unidade: (u) => u.nome,
+    lider: (u) => u.liderNome || u.liderEmail || "",
+    acesso: (u) => paraData(acessoDe(uidDoAcesso(u)))?.getTime() || 0, // nunca entrou = 0 → primeiro no A→Z
+    mentor: (u) => nomeMentor(u.mentorId) || "",
+  }), [acessoDe, nomeMentor]);
+  const padrao = useCallback((a, b) => Number(b.liderAConferir === true) - Number(a.liderAConferir === true)
+    || String(a.nome || "").localeCompare(String(b.nome || ""), "pt-BR"), []);
+  const ordenacao = useOrdenacao(filtro.resultado, colunas, { padrao });
+  const lista = ordenacao.ordenada;
 
 
   const kpis = useMemo(() => {
@@ -316,12 +339,6 @@ export function LideresTab() {
 
   if (!podeAcessar) return null;
 
-  const rotuloAcesso = {
-    google: { texto: t("leadersTab.access.google"), cor: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800" },
-    senha: { texto: t("leadersTab.access.password"), cor: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-300 dark:border-emerald-800" },
-    antigo: { texto: t("leadersTab.access.legacy"), cor: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800" },
-  };
-
   return (
     <div className="p-6 space-y-8">
       {/* CABEÇALHO */}
@@ -402,97 +419,114 @@ export function LideresTab() {
             <Building2 className="w-10 h-10 mx-auto mb-3 opacity-30" /> {t("leadersTab.empty")}
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-700">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 dark:bg-slate-900/50 text-[10px] font-black uppercase tracking-widest text-slate-500">
+          <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+            <table className="w-full min-w-[920px] text-left text-sm">
+              <thead className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
                 <tr>
-                  <th className="p-4">{t("leadersTab.col.unit")}</th>
-                  <th className="p-4">{t("leadersTab.col.leader")}</th>
-                  <th className="p-4">{t("leadersTab.col.access")}</th>
-                  {role === "admin" && <th className="p-4">{t("leadersTab.col.mentor")}</th>}
-                  <th className="p-4 text-right">{t("leadersTab.col.actions")}</th>
+                  <ColunaOrdenavel campo="unidade" rotulo={t("leadersTab.col.unit")} ordenacao={ordenacao} cor="teal" className="w-[18%]" />
+                  <ColunaOrdenavel campo="lider" rotulo={t("leadersTab.col.leader")} ordenacao={ordenacao} cor="teal" />
+                  <ColunaOrdenavel campo="acesso" rotulo={t("tabela.access.column")} ordenacao={ordenacao} cor="teal" className="w-40" />
+                  {role === "admin" && <ColunaOrdenavel campo="mentor" rotulo={t("leadersTab.col.mentor")} ordenacao={ordenacao} cor="teal" className="w-36" />}
+                  <th className={`${CLASSE_TITULO} text-right w-44`}>{t("leadersTab.col.actions")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
                 {lista.map((u) => {
-                  const acesso = tipoDeAcesso(u);
+                  const como = tipoDeAcesso(u);
                   const ocupado = processando === u.id;
+                  const pais = siglaPais(u);
+                  const nomeDoMentor = nomeMentor(u.mentorId);
                   return (
-                    <tr key={u.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/20">
-                      <td className="p-4">
-                        <LinkUnidade unidade={u} className="font-black text-slate-800 dark:text-slate-200 uppercase text-xs">{u.nome}</LinkUnidade>
-                        <p className="text-[11px] text-slate-400 font-bold">{u.estado || "-"}{u.status && u.status !== "ativa" ? ` · ${u.status}` : ""}</p>
+                    <tr key={u.id} className="align-top hover:bg-slate-50/70 dark:hover:bg-slate-700/20 transition-colors">
+                      {/* UNIDADE */}
+                      <td className="px-4 py-4">
+                        <LinkUnidade unidade={u} className="font-black text-slate-800 dark:text-slate-100 uppercase text-xs leading-snug">{u.nome}</LinkUnidade>
+                        <p className="text-[11px] text-slate-400 font-bold mt-0.5">{u.estado || "-"}{u.status && u.status !== "ativa" ? ` · ${u.status}` : ""}</p>
                       </td>
-                      <td className="p-4">
+
+                      {/* LÍDER(ES): nome + etiquetas, e o contato padrão embaixo */}
+                      <td className="px-4 py-4">
                         {u.liderUid ? (
-                          <div className="space-y-0.5">
-                            <p className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 flex-wrap">
-                              <LinkCentral tipo="lider" alvo={u}>{u.liderNome || "-"}</LinkCentral>
-                              <SeloRepetido selo={selosRepetidos.get(`cracha:${u.liderUid}`)} detalheDe={(o) => o.email || ""} />
-                              {u.liderAConferir === true && (
-                                <span className="px-1.5 py-0.5 rounded-md border text-[9px] font-black uppercase bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-700">{t("leadersTab.toCheck")}</span>
-                              )}
-                            </p>
-                            <p className="text-[11px] text-slate-500 flex items-center gap-1"><Mail className="w-3 h-3" /> {u.liderEmail || "-"}</p>
-                            {u.liderTelefone && <p className="text-[11px] text-slate-500 flex items-center gap-1"><Phone className="w-3 h-3" /> {u.liderTelefone} <AcoesDoContato telefone={u.liderTelefone} pais={u.pais} /></p>}
+                          <div className="space-y-3">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <LinkCentral tipo="lider" alvo={u} className="font-black text-slate-800 dark:text-slate-100">{u.liderNome || "-"}</LinkCentral>
+                                <SeloRepetido selo={selosRepetidos.get(`cracha:${u.liderUid}`)} detalheDe={(o) => o.email || ""} />
+                                {u.liderAConferir === true && <Selo tipo="aviso" icone={AlertTriangle}>{t("leadersTab.toCheck")}</Selo>}
+                              </div>
+                              <CelulaContato email={u.liderEmail} telefone={u.liderTelefone} pais={pais} />
+                            </div>
                             {u.lider2Uid && (
-                              <div className="mt-2 pt-2 border-t border-dashed border-slate-200 dark:border-slate-700 space-y-0.5">
-                                <p className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 flex-wrap">
-                                  <LinkCentral tipo="lider2" alvo={u}>{u.lider2Nome || "-"}</LinkCentral>
+                              <div className="pt-3 border-t border-dashed border-slate-200 dark:border-slate-700 space-y-1">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <LinkCentral tipo="lider2" alvo={u} className="font-black text-slate-800 dark:text-slate-100">{u.lider2Nome || "-"}</LinkCentral>
                                   <SeloRepetido selo={selosRepetidos.get(`cracha:${u.lider2Uid}`)} detalheDe={(o) => o.email || ""} />
-                                  <span className="px-1.5 py-0.5 rounded-md border text-[9px] font-black uppercase bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-900/20 dark:text-violet-300 dark:border-violet-800">{t("leadersTab.second.badge")}</span>
-                                  <button onClick={() => setDocAlvo({ id: u.lider2Uid, nome: u.lider2Nome, email: u.lider2Email })} title={t("document.modal.edit")}
-                                    className="p-1 rounded-md text-slate-400 hover:bg-blue-50 hover:text-blue-600"><IdCard className="w-3.5 h-3.5" /></button>
-                                  <button onClick={() => remover(u, 2)} disabled={ocupado} title={t("leadersTab.second.remove")}
-                                    className="p-1 rounded-md text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"><UserX className="w-3.5 h-3.5" /></button>
-                                </p>
-                                <p className="text-[11px] text-slate-500 flex items-center gap-1"><Mail className="w-3 h-3" /> {u.lider2Email || "-"}</p>
-                                {u.lider2Telefone && <p className="text-[11px] text-slate-500 flex items-center gap-1"><Phone className="w-3 h-3" /> {u.lider2Telefone} <AcoesDoContato telefone={u.lider2Telefone} pais={u.pais} /></p>}
+                                  <Selo tipo="tema" abaId="lideres">{t("leadersTab.second.badge")}</Selo>
+                                </div>
+                                <CelulaContato email={u.lider2Email} telefone={u.lider2Telefone} pais={pais} />
                               </div>
                             )}
                           </div>
                         ) : (
-                          <span className="text-xs font-bold text-amber-600 flex items-center gap-1"><AlertTriangle className="w-3.5 h-3.5" /> {t("leadersTab.noLeader")}</span>
+                          <Selo tipo="aviso" icone={AlertTriangle}>{t("leadersTab.noLeader")}</Selo>
                         )}
                       </td>
-                      <td className="p-4">
-                        {acesso ? (
-                          <span className={`inline-block px-2 py-1 rounded-md border text-[10px] font-black uppercase ${rotuloAcesso[acesso].cor}`}>{rotuloAcesso[acesso].texto}</span>
-                        ) : <span className="text-xs text-slate-400">-</span>}
+
+                      {/* ACESSO: último acesso de cada líder (ou do login antigo) + por onde entra */}
+                      <td className="px-4 py-4">
+                        {u.liderUid ? (
+                          <div className="space-y-3">
+                            <CelulaAcesso quando={acessoDe(u.liderUid)} como={como} carregando={carregandoAcessos} />
+                            {u.lider2Uid && (
+                              <div className="pt-3 border-t border-dashed border-slate-200 dark:border-slate-700">
+                                <CelulaAcesso rotulo={t("leadersTab.second.badge")} quando={acessoDe(u.lider2Uid)}
+                                  como={u.lider2Tipo === "senha" ? "senha" : "google"} carregando={carregandoAcessos} />
+                              </div>
+                            )}
+                          </div>
+                        ) : como === "antigo" ? (
+                          <CelulaAcesso quando={acessoDe(u.uidLogin)} como="antigo" carregando={carregandoAcessos} />
+                        ) : <span className="text-xs text-slate-300">—</span>}
                       </td>
+
+                      {/* MENTOR (só o admin vê) */}
                       {role === "admin" && (
-                        <td className="p-4 text-xs font-bold text-slate-500">{mentores.find((m) => m.id === u.mentorId)?.nome?.split(" ")[0] || "-"}</td>
+                        <td className="px-4 py-4">
+                          {nomeDoMentor ? (
+                            <span title={nomeDoMentor} className="inline-flex items-center gap-1.5 max-w-full px-2 py-1 rounded-md border text-xs font-bold bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-800/60 dark:text-slate-200 dark:border-slate-700">
+                              <User className="w-3.5 h-3.5 shrink-0 text-teal-500" /> <span className="truncate">{nomeDoMentor.split(" ")[0]}</span>
+                            </span>
+                          ) : <span className="text-xs text-slate-300">—</span>}
+                        </td>
                       )}
-                      <td className="p-4">
-                        <div className="flex justify-end gap-2">
+
+                      {/* AÇÕES: as do dia a dia à vista; o resto no menu ⋯ (remover sempre por último, em vermelho) */}
+                      <td className="px-4 py-4">
+                        <div className="flex justify-end items-center gap-1.5">
                           {u.liderUid ? (
                             <>
                               {u.liderAConferir === true && (
-                                <button onClick={() => confirmar(u)} disabled={ocupado} title={t("leadersTab.confirm")}
-                                  className="px-3 py-2 rounded-lg bg-teal-500 hover:bg-teal-600 text-white text-[10px] font-black uppercase flex items-center gap-1.5 disabled:opacity-50">
-                                  <BadgeCheck className="w-3.5 h-3.5" /> {t("leadersTab.confirm")}
-                                </button>
+                                <BotaoDeLinha abaId="lideres" tipo="ativar" icone={BadgeCheck} onClick={() => confirmar(u)} disabled={ocupado} title={t("leadersTab.confirm")} />
                               )}
-                              {!u.lider2Uid && (
-                                <button onClick={() => setTornarLider({ vaga: 2, unidade: u })} disabled={ocupado} title={t("leadersTab.second.addHint")}
-                                  className="px-3 py-2 rounded-lg bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300 hover:bg-violet-100 text-[10px] font-black uppercase flex items-center gap-1.5 disabled:opacity-50 whitespace-nowrap">
-                                  <UserPlus className="w-3.5 h-3.5" /> {t("leadersTab.second.add")}
-                                </button>
+                              <BotaoDeLinha abaId="lideres" discreto icone={Edit2} onClick={() => abrirEditar(u)} disabled={ocupado} title={t("leadersTab.edit")} />
+                              <BotaoDeLinha abaId="lideres" discreto icone={IdCard} onClick={() => setDocAlvo({ id: u.liderUid, nome: u.liderNome, email: u.liderEmail })} disabled={ocupado} title={t("document.modal.edit")} />
+                              {ocupado ? (
+                                <span className="p-2"><Loader2 className="w-4 h-4 animate-spin text-teal-500" /></span>
+                              ) : (
+                                <MenuDeAcoes itens={[
+                                  { id: "confirmar", rotulo: t("leadersTab.menu.confirmShort"), icone: BadgeCheck, onClick: () => confirmar(u), oculto: u.liderAConferir !== true },
+                                  { id: "segundo", rotulo: t("leadersTab.menu.addSecond"), icone: UserPlus, onClick: () => setTornarLider({ vaga: 2, unidade: u }), oculto: !!u.lider2Uid },
+                                  { id: "trocar", rotulo: t("leadersTab.replace"), icone: Repeat, onClick: () => abrirNovo(u) },
+                                  { id: "doc2", rotulo: t("leadersTab.menu.docSecond"), icone: IdCard, onClick: () => setDocAlvo({ id: u.lider2Uid, nome: u.lider2Nome, email: u.lider2Email }), oculto: !u.lider2Uid },
+                                  { id: "tirar2", rotulo: t("leadersTab.second.remove"), icone: UserX, tipo: "perigo", onClick: () => remover(u, 2), oculto: !u.lider2Uid },
+                                  { id: "tirar", rotulo: t("leadersTab.remove"), icone: UserX, tipo: "perigo", onClick: () => remover(u) },
+                                ]} />
                               )}
-                              <BotaoDocumento onClick={() => setDocAlvo({ id: u.liderUid, nome: u.liderNome, email: u.liderEmail })} disabled={ocupado} />
-                              <BotaoDeLinha abaId="lideres" icone={Edit2} onClick={() => abrirEditar(u)} disabled={ocupado} title={t("leadersTab.edit")} />
-                              <BotaoDeLinha abaId="lideres" icone={UserPlus} onClick={() => abrirNovo(u)} disabled={ocupado} title={t("leadersTab.replace")} />
-                              <BotaoDeLinha abaId="lideres" tipo="perigo" icone={ocupado ? Loader2 : UserX} girar={ocupado} onClick={() => remover(u)} disabled={ocupado} title={t("leadersTab.remove")} />
                             </>
                           ) : (
                             <>
-                              <button onClick={() => setTornarLider({ vaga: 1, unidade: u })} title={t("leadersTab.promote.title")}
-                                className="px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 hover:bg-amber-100 text-[10px] font-black uppercase flex items-center gap-1.5 whitespace-nowrap">
-                                <UserCog className="w-3.5 h-3.5" /> {t("leadersTab.promote.pick")}
-                              </button>
-                              <button onClick={() => abrirNovo(u)} className="px-3 py-2 rounded-lg bg-teal-500 hover:bg-teal-600 text-white text-[10px] font-black uppercase flex items-center gap-1.5">
-                                <UserPlus className="w-3.5 h-3.5" /> {t("leadersTab.register")}
-                              </button>
+                              <BotaoDeLinha abaId="lideres" discreto icone={UserCog} onClick={() => setTornarLider({ vaga: 1, unidade: u })} title={t("leadersTab.menu.pick")} />
+                              <BotaoDeLinha abaId="lideres" discreto icone={UserPlus} onClick={() => abrirNovo(u)} title={t("leadersTab.menu.register")} />
                             </>
                           )}
                         </div>
