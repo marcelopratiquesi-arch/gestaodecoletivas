@@ -131,7 +131,10 @@
       "noLogin": "This person has no login yet.",
       "blocked": "This person is blocked.",
       "admin": "Admin already has full access.",
-      "alreadyMentor": "This person is already a mentor."
+      "alreadyMentor": "This person is already a mentor.",
+      "alreadySecond": "This person is already the 2nd mentor of another mentor.",
+      "mentorWithUnits": "This mentor already has their own units and would lose access to them as a fixed 2nd mentor. Use the Temporary mentor button (cover): they keep their units and gain this mentor units for a period.",
+      "self": "A mentor cannot cover themselves."
     },
     "confirm": "Make {{name}} the 2nd mentor of {{mentor}}?",
     "done": "{{name}} is now a 2nd mentor.",

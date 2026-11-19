@@ -1,7 +1,7 @@
 // Contas das Centrais do Mentor, do Líder e do Professor. Conta pura (sem banco e sem tela), com teste.
 // Reaproveita as regras da Central da Unidade (contasUnidade.js) e do resto do sistema
 // (pendências do professor: src/utils/validacoes.js — o mesmo número do selo do menu dele).
-import { escopoMentor } from '../permissions';
+import { ehDoMeuEscopo } from '../permissions';
 import { deduplicarValidacoes, pendenciasDoProfessor } from '../utils/validacoes';
 import { valorDaValidacao } from '../utils/valores';
 import { getDiaSemana, getCurrencyCode } from '../utils/formatters';
@@ -17,7 +17,7 @@ const soNumeros = (v) => texto(v).replace(/\D/g, '');
 // Uma linha por unidade do mentor: grade, professores e o que falta no cadastro da unidade.
 export function linhasDoMentor({ mentor, unidades = [], aulas = [], vinculos = [], professores = [], hoje }) {
   return unidades
-    .filter((u) => u.mentorId && u.mentorId === escopoMentor(mentor))
+    .filter((u) => ehDoMeuEscopo(mentor, u.mentorId))
     .map((unidade) => {
       const aulasVigentes = aulasDaUnidade(aulas, unidade.id, hoje);
       const profs = professoresDaUnidade({ unidadeId: unidade.id, vinculos, professores, aulas: aulasVigentes });
