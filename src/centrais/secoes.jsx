@@ -1,7 +1,7 @@
 // Quadros que mais de uma Central usa (professores, grade da semana, "Está tudo em dia?", cartão de pessoa).
 // Só leitura: mostram e levam para a tela certa.
 import { useTranslation } from 'react-i18next';
-import { ListChecks, Phone, Mail } from 'lucide-react';
+import { ListChecks, Phone, Mail, Award } from 'lucide-react';
 import Quadro from './pecas/Quadro';
 import ItemEmDia from './pecas/ItemEmDia';
 import Contato from './pecas/Contato';
@@ -47,13 +47,14 @@ export function TabelaProfessores({ linhas, paisPadrao, textoVazio, pagamentos, 
   const comPagamentos = pagamentos !== undefined;
   return (
     <div className="overflow-x-auto -mx-4 px-4">
-      <table className={`w-full text-[12px] ${comPagamentos ? 'min-w-[720px]' : 'min-w-[560px]'}`}>
+      <table className={`w-full text-[12px] ${comPagamentos ? 'min-w-[780px]' : 'min-w-[620px]'}`}>
         <thead>
           <tr className="border-b border-slate-100 dark:border-slate-800">
             <th className={TH}>{t('centrais.professores.nome')}</th>
             <th className={TH}>{t('centrais.professores.contato')}</th>
             {comUnidades && <th className={TH}>{t('centrais.professores.unidades')}</th>}
             <th className={`${TH} text-center`}>{t('centrais.professores.aulasSemana')}</th>
+            <th className={`${TH} text-center`}>{t('centrais.professores.workshops')}</th>
             {comPagamentos && <th className={`${TH} text-center`}>{t('centrais.professores.aulasDadas')}</th>}
             {comPagamentos && <th className={`${TH} text-right`}>{t('centrais.professores.recebeu')}</th>}
             <th className={TH}>{t('centrais.professores.situacao')}</th>
@@ -78,6 +79,13 @@ export function TabelaProfessores({ linhas, paisPadrao, textoVazio, pagamentos, 
                 </td>
               )}
               <td className={`${TD} text-center font-extrabold ${aulasNaSemana ? 'text-slate-800 dark:text-white' : 'text-slate-400'}`}>{aulasNaSemana}</td>
+              <td className={`${TD} text-center`}>
+                <LinkCentral tipo="professor" alvo={professor} className="font-extrabold">
+                  <span className={`inline-flex items-center gap-1 ${(professor.workshops || []).length ? 'text-amber-700 dark:text-amber-300' : 'text-slate-400'}`}>
+                    <Award className="w-3 h-3" /> {(professor.workshops || []).length}
+                  </span>
+                </LinkCentral>
+              </td>
               {comPagamentos && (
                 <td className={`${TD} text-center font-extrabold text-slate-800 dark:text-white`}>
                   {pagamentos ? formatNumber(pagamentos.get(String(professor.id))?.realizadas || 0) : '…'}
