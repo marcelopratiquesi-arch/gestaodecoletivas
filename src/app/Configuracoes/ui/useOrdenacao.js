@@ -33,7 +33,8 @@ export function useOrdenacao(lista, colunas, opcoes = {}) {
     return copia.sort((a, b) => sinal * comparar(valor(a), valor(b)));
   }, [lista, colunas, estado, padrao]);
 
-  const ordenarPor = (campo) => setEstado((e) => ({ campo, direcao: e.campo === campo && e.direcao === "asc" ? "desc" : "asc" }));
+  // Sem `direcao`: alterna A→Z / Z→A (clique no título). Com `direcao`: vai direto (seletor do celular).
+  const ordenarPor = (campo, direcao) => setEstado((e) => ({ campo, direcao: direcao || (e.campo === campo && e.direcao === "asc" ? "desc" : "asc") }));
 
   return { ordenada, campo: estado.campo, direcao: estado.direcao, ordenarPor };
 }

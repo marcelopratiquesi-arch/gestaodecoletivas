@@ -25,10 +25,9 @@ import { tirarLiderDaUnidade, camposAoLiberarVaga, textoDaSaida, dadosDaVaga } f
 import { TornarLiderModal } from "./TornarLiderModal";
 import { ConviteModal, PrazoModal } from "./TemporariosSecao";
 import { useLideresTemporarios } from "./useLideresTemporarios";
-import { CentralDeLideres } from "./CentralDeLideres";
+import { ListaLideres } from "./ListaLideres";
 import { FichaDaUnidade } from "./FichaDaUnidade";
-import { situacaoDaUnidade, PRECISA_DE_ACAO } from "./situacoes";
-import { whatsAppComMensagem } from "./frasesDaSituacao";
+import { useOrdenacao } from "../ui/useOrdenacao";
 import { CabecalhoDoModal } from "../ui/CabecalhoDoModal";
 import { useFiltroCascata } from "../ui/useFiltroCascata";
 import { useUltimosAcessos } from "../ui/useUltimosAcessos";
@@ -56,6 +55,15 @@ function tipoDeAcesso(u) {
   return null;
 }
 
+// Botões arredondados da lista (Opção B): Todas · Com líder · Sem líder · A conferir · Temporários.
+const DA_SITUACAO = {
+  todas: () => true,
+  com: (l) => !!l.u.liderUid,
+  sem: (l) => !l.u.liderUid,
+  conferir: (l) => l.u.liderAConferir === true && !!l.u.liderUid,
+  temporarios: (l) => l.temTemporario,
+};
+
 export function LideresTab() {
   const { t } = useTranslation();
   const { userData } = useAuth();
@@ -68,8 +76,7 @@ export function LideresTab() {
   const meuNome = userData?.nome || userData?.email || "Admin";
   const podeAcessar = role === "admin" || role === "mentor";
 
-  const [situacao, setSituacao] = useState(""); // "" = todas | "pendentes" | semLider | conferir | temporario | semAcesso | ok
-  const [ordem, setOrdem] = useState("situacao"); // situacao (mais urgente primeiro) | az | za | acesso
+  const [situacao, setSituacao] = useState("todas"); // todas | com | sem | conferir | temporarios
   const [selecionadaId, setSelecionadaId] = useState(null); // unidade com a ficha aberta
   const [mostrarBuscaDoc, setMostrarBuscaDoc] = useState(false);
   const pedidosRef = useRef(null);
@@ -141,39 +148,32 @@ export function LideresTab() {
   const todasUnidades = useMemo(() => catalogs?.unidades || [], [catalogs?.unidades]);
   const temp = useLideresTemporarios({ role, escopos, unidades: todasUnidades, registrarAuditoria });
 
-  // Situação de cada unidade (ver situacoes.js) e a lista da "central de pendências".
-  const [agora] = useState(() => Date.now());
+  // Lista (Opção B): cada unidade com o último acesso do líder (ou do login antigo) e se tem temporário.
   const linhasTodas = useMemo(() => filtro.resultado.map((u) => {
-    const uid = u.liderUid || (tipoDeAcesso(u) === "antigo" ? u.uidLogin : null);
-    const ultimo = acessoDe(uid);
-    const sit = situacaoDaUnidade(u, {
-      ultimoAcesso: acessoDe(u.liderUid), carregandoAcesso: carregandoAcessos, agora,
-      temporarios: temp.porUnidade.get(String(u.id))?.temporarios || [], pedidos: pedidosPorUnidade.get(String(u.id)) || 0,
-    });
-    return { u, sit, ultimo };
-  }), [filtro.resultado, acessoDe, carregandoAcessos, agora, temp.porUnidade, pedidosPorUnidade]);
+    const doTemp = temp.porUnidade.get(String(u.id));
+    const loginAntigo = tipoDeAcesso(u) === "antigo";
+    return {
+      u, loginAntigo,
+      ultimo: acessoDe(u.liderUid || (loginAntigo ? u.uidLogin : null)),
+      temTemporario: !!(doTemp && (doTemp.temporarios.length || doTemp.convites.length)),
+    };
+  }), [filtro.resultado, acessoDe, temp.porUnidade]);
 
-  const contagens = useMemo(() => {
-    const c = { total: linhasTodas.length, semLider: 0, conferir: 0, temporario: 0, semAcesso: 0, ok: 0, tempVencendo: 0 };
-    linhasTodas.forEach((l) => {
-      c[l.sit.id] += 1;
-      if (l.sit.id === "temporario" && l.sit.diasTemporario <= 15) c.tempVencendo += 1;
-    });
-    return c;
-  }, [linhasTodas]);
+  // Botões arredondados: Todas · Com líder · Sem líder · A conferir · Temporários (cada um com a contagem).
+  const chips = ["todas", "com", "sem", "conferir", "temporarios"].map((id) => ({
+    id, rotulo: t(`leadersTab.listB.chip.${id}`), n: linhasTodas.filter(DA_SITUACAO[id]).length,
+  }));
+  const linhasDaSituacao = useMemo(() => linhasTodas.filter(DA_SITUACAO[situacao] || DA_SITUACAO.todas), [linhasTodas, situacao]);
 
-  const linhas = useMemo(() => {
-    const doFiltro = linhasTodas.filter((l) => !situacao || (situacao === "pendentes" ? PRECISA_DE_ACAO.has(l.sit.id) : l.sit.id === situacao));
-    const porNome = (a, b) => String(a.u.nome || "").localeCompare(String(b.u.nome || ""), "pt-BR", { sensitivity: "base" });
-    const msAcesso = (l) => paraData(l.ultimo)?.getTime() || 0;
-    const cmp = {
-      situacao: (a, b) => a.sit.prioridade - b.sit.prioridade || porNome(a, b),
-      az: porNome,
-      za: (a, b) => porNome(b, a),
-      acesso: (a, b) => msAcesso(a) - msAcesso(b) || porNome(a, b), // quem está há mais tempo sem entrar primeiro
-    }[ordem] || porNome;
-    return [...doFiltro].sort(cmp);
-  }, [linhasTodas, situacao, ordem]);
+  // Todas as colunas ordenam (A→Z / Z→A). Abre pela unidade, de A a Z; "a conferir" não muda a ordem.
+  const colunas = useMemo(() => ({
+    unidade: (l) => l.u.nome,
+    lider: (l) => l.u.liderNome || l.u.liderEmail || "",
+    acesso: (l) => paraData(l.ultimo)?.getTime() || 0, // nunca entrou = 0 → primeiro (quem está há mais tempo sem entrar)
+    mentor: (l) => nomeMentor(l.u.mentorId) || "",
+  }), [nomeMentor]);
+  const ordenacao = useOrdenacao(linhasDaSituacao, colunas, { inicial: { campo: "unidade", direcao: "asc" } });
+  const linhas = ordenacao.ordenada;
   const selecionada = linhasTodas.find((l) => l.u.id === selecionadaId) || null;
 
   // "Escolher líder": se alguém já pediu esta unidade pelo Google, leva aos pedidos; senão abre a escolha.
@@ -184,18 +184,6 @@ export function LideresTab() {
       return;
     }
     setTornarLider({ vaga: 1, unidade: u });
-  }
-
-  // Botão de próximo passo da lista.
-  function proximoPasso({ u, sit }) {
-    if (sit.id === "semLider") return escolherLider(u);
-    if (sit.id === "conferir") return confirmar(u);
-    if (sit.id === "temporario") return temp.abrirPrazo(sit.temporario);
-    if (sit.id === "semAcesso") {
-      const link = whatsAppComMensagem(sit, u, t, siglaPais(u));
-      if (link) { window.open(link, "_blank", "noopener"); return; }
-    }
-    setSelecionadaId(u.id);
   }
 
   // Tira o líder atual da unidade dentro de um batch já aberto (ver saidaDoLider.js):
@@ -389,15 +377,15 @@ export function LideresTab() {
 
       <div className="flex flex-col lg:flex-row gap-4 lg:items-start">
         <div className="flex-1 min-w-0">
-          <CentralDeLideres contagens={contagens} situacao={situacao} setSituacao={setSituacao} onCadastrar={() => abrirNovo(null)}
-            filtro={filtro} mostrarMentor={role === "admin"} ordem={ordem} setOrdem={setOrdem} nomeMentor={nomeMentor}
-            linhas={linhas} carregando={loadingCatalogs} carregandoAcessos={carregandoAcessos}
-            selecionadaId={selecionadaId} onSelecionar={(u) => setSelecionadaId(u.id)} onPasso={proximoPasso}
+          <ListaLideres linhas={linhas} total={linhasTodas.length} chips={chips} situacao={situacao} setSituacao={setSituacao}
+            filtro={filtro} mostrarMentor={role === "admin"} ordenacao={ordenacao} nomeMentor={nomeMentor}
+            carregando={loadingCatalogs} carregandoAcessos={carregandoAcessos} onCadastrar={() => abrirNovo(null)}
+            selecionadaId={selecionadaId} onSelecionar={(u) => setSelecionadaId(u.id)}
             acaoExtra={podeAcessar && (
               <button type="button" onClick={() => setMostrarBuscaDoc((v) => !v)} aria-expanded={mostrarBuscaDoc}
                 className={`h-10 px-3 rounded-xl border text-xs font-extrabold uppercase inline-flex items-center gap-2 ${mostrarBuscaDoc
-                  ? "border-neutral-900 bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900"
-                  : "border-neutral-200 bg-white text-neutral-700 hover:border-neutral-400 dark:bg-neutral-900 dark:border-neutral-700 dark:text-neutral-300"}`}>
+                  ? "border-red-600 bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300"
+                  : "border-slate-200 bg-white text-slate-600 hover:border-red-400 hover:text-red-700 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-300"}`}>
                 <ScanSearch className="w-4 h-4" /> {t("document.search.title")}
               </button>
             )}
@@ -411,7 +399,7 @@ export function LideresTab() {
         {/* FICHA DA UNIDADE: painel à direita (computador) / tela cheia (celular) */}
         <div className="lg:w-[440px] xl:w-[480px] lg:shrink-0">
           {selecionada ? (
-            <FichaDaUnidade key={selecionada.u.id} u={selecionada.u} sit={selecionada.sit} pais={siglaPais(selecionada.u)}
+            <FichaDaUnidade key={selecionada.u.id} u={selecionada.u} pais={siglaPais(selecionada.u)}
               nomeMentor={role === "admin" ? nomeMentor(selecionada.u.mentorId) : ""} ocupado={processando === selecionada.u.id}
               acessoDe={acessoDe} carregandoAcessos={carregandoAcessos}
               temps={temp.porUnidade.get(String(selecionada.u.id))} tempOcupado={temp.ocupado}
@@ -437,7 +425,7 @@ export function LideresTab() {
               }} />
           ) : (
             <div className="hidden lg:flex flex-col items-center justify-center gap-2 p-8 rounded-2xl border border-dashed border-neutral-300 bg-white text-center text-sm font-semibold text-neutral-500 dark:bg-neutral-900 dark:border-neutral-700 lg:sticky lg:top-4">
-              {t("leadersTab.central.pickUnit")}
+              {t("leadersTab.listB.pickUnit")}
             </div>
           )}
         </div>

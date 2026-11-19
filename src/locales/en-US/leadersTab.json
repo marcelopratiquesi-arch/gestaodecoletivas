@@ -141,116 +141,37 @@
     "register": "Register new leader",
     "confirmShort": "Confirm it is the right person"
   },
-  "central": {
-    "title": "Leaders · what needs attention",
-    "subtitle_one": "{{count}} of {{total}} units has something pending. Click a block to see only that group.",
-    "subtitle_other": "{{count}} of {{total}} units have something pending. Click a block to see only that group.",
-    "summary": "Summary",
-    "units": "Units",
-    "breadcrumb": "Settings › Leaders",
-    "pendingCount_one": "{{count}} pending",
-    "pendingCount_other": "{{count}} pending",
+  "listB": {
     "unitsCount_one": "{{count}} unit",
     "unitsCount_other": "{{count}} units",
-    "okCount": "{{count}} all good",
-    "tile": {
-      "semLider": "No leader",
-      "conferir": "To confirm",
-      "temporario": "Temporary",
-      "semAcesso": "No access 30+ days",
-      "ok": "All good"
-    },
-    "tileHint": {
-      "semLider": "Choose or register someone",
-      "conferir": "Signed in with Google, needs confirming",
-      "temporario": "With an end date",
-      "semAcesso": "Reach out on WhatsApp",
-      "ok": "Nothing to do",
-      "tempSoon_one": "{{count}} ends within 15 days",
-      "tempSoon_other": "{{count}} end within 15 days"
-    },
-    "chip": {
-      "pending": "Pending",
-      "semLider": "No leader",
-      "conferir": "To confirm",
-      "temporario": "Temp.",
-      "semAcesso": "No access",
-      "ok": "All good"
-    },
-    "situation": {
-      "semLider": "No leader",
-      "conferir": "To confirm",
-      "temporario": "Temporary",
-      "semAcesso": "No access",
-      "ok": "All good"
-    },
-    "sort": {
-      "label": "Sort",
-      "situation": "Most urgent first",
-      "az": "Unit A→Z",
-      "za": "Unit Z→A",
-      "access": "Oldest access"
-    },
-    "groupAction": "Needs action · {{count}}",
-    "groupOk": "All good · {{count}}",
-    "urgentFirst": "most urgent first",
     "neverShort": "never",
-    "pickUnit": "Click a unit to see its details.",
-    "short": {
-      "requests_one": "{{count}} person already asked for access",
-      "requests_other": "{{count}} people already asked for access",
-      "legacy": "Still signs in with the unit's old login",
-      "noLeader": "Nobody is responsible for this unit",
-      "check": "Confirm it is the right person",
-      "tempToday": "Temporary {{name}} ends today",
-      "temp_one": "Temporary {{name}} ends in {{count}} day",
-      "temp_other": "Temporary {{name}} ends in {{count}} days",
-      "never": "Registered, but never signed in",
-      "stale_one": "Hasn't signed in for {{count}} day",
-      "stale_other": "Hasn't signed in for {{count}} days",
-      "two": "2 active leaders",
-      "ok": "Confirmed"
-    },
-    "long": {
-      "requests_one": "{{count}} person asked for access to this unit with Google. Approve it in the requests block at the top, or choose someone who already has access.",
-      "requests_other": "{{count}} people asked for access to this unit with Google. Approve them in the requests block at the top, or choose someone who already has access.",
-      "noLeader": "Nobody is responsible for this unit. Choose someone who already has access or register a leader.",
-      "check": "{{name}} signed in with Google and took over the unit. Confirm they really are this unit's leader.",
-      "temp_one": "Temporary leader {{name}} ends in {{count}} day ({{date}}).",
-      "temp_other": "Temporary leader {{name}} ends in {{count}} days ({{date}}).",
-      "never": "{{name}} was registered but never signed in. Send them how to sign in on WhatsApp.",
-      "stale_one": "{{name}} hasn't signed in for {{count}} day.",
-      "stale_other": "{{name}} hasn't signed in for {{count}} days."
-    },
-    "step": {
-      "pick": "Choose leader",
-      "confirm": "✓ Confirm",
-      "confirmLong": "✓ Yes, it's the right person",
-      "extend": "Extend",
-      "whatsapp": "Message on WhatsApp",
-      "open": "View details",
-      "register": "Register leader"
-    },
-    "message": {
-      "never": "Hi, {{name}}! To sign in to the Pratique system, open {{link}} and sign in with your email {{email}}.",
-      "stale": "Hi, {{name}}, how are you? You haven't signed in to the Pratique system ({{link}}) for {{count}} days. Need help getting in?"
+    "tempShort": "Temporary",
+    "sort": "Sort:",
+    "sortUnitAz": "Unit A→Z",
+    "sortUnitZa": "Unit Z→A",
+    "sortLeaderAz": "Leader A→Z",
+    "sortAccess": "Oldest access",
+    "open": "View",
+    "chip": {
+      "todas": "All",
+      "com": "With leader",
+      "sem": "No leader",
+      "conferir": "To confirm",
+      "temporarios": "Temporary"
     },
     "lastAccess": "Last access",
     "copyEmail": "Copy email",
     "copyPhone": "Copy phone",
     "call": "Call",
-    "moreOptions": "More options",
-    "sheet": "Unit details",
-    "close": "Close details",
-    "whatsMissing": "What's missing",
-    "noPhone": "No phone on file: edit the contact to message on WhatsApp.",
-    "mainLeader": "Main leader",
-    "document": "Document (SSN)",
-    "add": "+ Add",
-    "define": "+ Set",
-    "temporary": "Temporary",
+    "back": "Back to the list",
+    "details": "Unit details",
+    "close": "Close panel",
+    "noLeaderHelp": "Nobody is responsible for this unit. Choose someone who already has access or register a leader.",
+    "temporary": "Temporary leader",
+    "noTemporary": "None right now.",
     "makePermanent": "Make permanent",
     "end": "End",
-    "otherActions": "Other actions"
+    "document": "Document (SSN)",
+    "pickUnit": "Click a unit to see its details."
   }
 }
