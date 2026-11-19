@@ -296,11 +296,11 @@ service cloud.firestore {
       allow write: if souAdmin();
     }
     // Ficha do professor (Etapa 2 das regras por unidade). Mentor e líder criam e editam só os campos de CONTATO e de
-    // vínculo com o login (nome, e-mail, país, telefone, status, uidLogin, documentoOk, workshops e as marcas de data);
+    // vínculo com o login (nome, e-mail, país, telefone, status, uidLogin, documentoOk, workshops, contrato CLT/Saver e as marcas de data);
     // qualquer outro campo, e apagar a ficha, é só do admin (que também junta fichas e liga crachás).
     function camposDeFichaDoProfessor() {
       return ['nome', 'email', 'pais', 'telefone', 'status', 'documentoOk', 'uidLogin', 'workshops',
-              'updatedAt', 'createdAt', 'createdBy', 'roleCreator'];
+              'updatedAt', 'createdAt', 'createdBy', 'roleCreator', 'tipoContrato', 'saverLocais'];
     }
     match /professores/{professorId} {
       allow read: if logado();
