@@ -118,6 +118,7 @@
       "allDone": "YOUR NETWORK IS 100% SPOTLESS! GREAT JOB FOLLOWING UP! 🏆👏"
     },
     "mentorToUnit": "HI LEADER *{{unit}}*, WE FOUND PENDING GROUP CLASS VALIDATIONS.\nDAYS: {{dates}}\nCAN YOU CATCH UP TODAY? 🚀",
+    "mentorToUnitNamed": "HI {{leader}}, LEADER OF *{{unit}}*! WE FOUND PENDING GROUP CLASS VALIDATIONS.\nDAYS: {{dates}}\nCAN YOU CATCH UP TODAY? 🚀",
     "generalTitle": "📢 *GROUP VALIDATION STATUS - {{period}}*",
     "adminGeneral": {
       "congratsTitle": "🏆 *CONGRATS (100% VALIDATED):*",

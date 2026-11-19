@@ -118,6 +118,7 @@
       "allDone": "SUA REDE ESTÁ 100% IMPECÁVEL! PARABÉNS PELO ACOMPANHAMENTO! 🏆👏"
     },
     "mentorToUnit": "FALA LÍDER *{{unit}}*, IDENTIFICAMOS PENDÊNCIAS NA VALIDAÇÃO DAS COLETIVAS.\nDIAS: {{dates}}\nCONSEGUE REGULARIZAR HOJE? 🚀",
+    "mentorToUnitNamed": "FALA {{leader}}, LÍDER DA *{{unit}}*! IDENTIFICAMOS PENDÊNCIAS NA VALIDAÇÃO DAS COLETIVAS.\nDIAS: {{dates}}\nCONSEGUE REGULARIZAR HOJE? 🚀",
     "generalTitle": "📢 *STATUS VALIDAÇÃO COLETIVA - {{period}}*",
     "adminGeneral": {
       "congratsTitle": "🏆 *PARABÉNS (100% VALIDADO):*",
