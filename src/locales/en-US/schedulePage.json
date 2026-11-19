@@ -47,7 +47,15 @@
     "delete": "Delete",
     "saveEdit": "Save Changes",
     "selectUnitAlert": "Select a unit",
-    "noTeacherLinked": "None linked"
+    "noTeacherLinked": "None linked",
+    "sectionClass": "The class",
+    "sectionWhen": "When",
+    "sectionValue": "Value",
+    "startHint": "First day the class exists and is recorded.",
+    "endHint": "Leave empty if the class continues. After this date it leaves the schedule.",
+    "valueAuto": "Same as the price table value",
+    "valueManual": "Value typed by you",
+    "editHint": "When you change unit, teacher, modality, time, days or value, the system will ask whether to create a new phase from a date (keeps the past) or just fix the data."
   },
   "splitModal": {
     "title": "Grid Alteration",
@@ -75,7 +83,9 @@
     "deleteError": "Error sending the class to the trash.",
     "saveError": "Error saving.",
     "valueRequired": "❌ Enter the class value (greater than zero).",
-    "duplicateConfirm": "⚠️ A class just like this already exists (same unit, modality, teacher, time and day).\n\nSaving anyway may pay the same class twice.\n\nSave anyway?"
+    "duplicateConfirm": "⚠️ A class just like this already exists (same unit, modality, teacher, time and day).\n\nSaving anyway may pay the same class twice.\n\nSave anyway?",
+    "noDays": "❌ Select at least one weekday.",
+    "endInPast": "❌ The end date has already passed: the class would be born ended. Leave it empty or pick today or later."
   },
   "unknownModality": "Unknown",
   "unknownUnit": "Unknown Unit",
@@ -112,5 +122,8 @@
       "hora": "time",
       "dias": "days"
     }
+  },
+  "mobile": {
+    "noClassesDay": "No classes on this day."
   }
 }

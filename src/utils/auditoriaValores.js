@@ -1,7 +1,7 @@
 // AUDITORIA DE VALORES (aba "Valores" do Relatório): cada aula realizada, o valor PAGO (o digitado no Cronograma, gravado
 // na validação) contra o valor SUGERIDO pela tabela de preços. Só mostra; não altera nada e não recalcula o passado.
 // Regras: src/utils/pulseira.js (pulseira por modalidade, vigência no mês seguinte, Saver, aulas seguidas, preta).
-import { chaveDaTabela, compararValor, fimDaAula, grupoDaModalidade, marcarSeguidas, turnoDaHora, valorSugerido } from './pulseira.js';
+import { chaveDaTabela, compararValor, ehUnidadeBrasil, fimDaAula, grupoDaModalidade, marcarSeguidas, turnoDaHora, valorSugerido } from './pulseira.js';
 
 const mesDe = (dataISO) => String(dataISO || '').slice(0, 7);
 
@@ -87,7 +87,7 @@ export function auditarValores({ linhas, tabela, professorPorId, modalidadePorId
         unidadeNome: linha.unidadeNome, modalidadeNome: linha.modalidadeNome, data: v.data, hora: aula.hora, alunos: Number(v.alunos) || 0,
         pago, substituto: linha.tipoLinha === 'substituto',
       };
-      const brasil = !unidade?.pais || unidade.pais === 'BR';
+      const brasil = ehUnidadeBrasil(unidade?.pais);
       if (!brasil || !professor || !chaveDaTabela(modalidadeNome)) {
         itens.push({ ...base, situacao: 'sem-sugestao', sugerido: null, motivo: !brasil ? 'moeda' : !professor ? 'professor' : 'modalidade' });
         return;

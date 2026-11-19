@@ -3,7 +3,15 @@
     "followingTag": "seguida",
     "saverTag": "acadêmico",
     "followingNow": "aula seguida de outra do professor",
-    "days": {"0": "Domingo", "1": "Segunda", "2": "Terça", "3": "Quarta", "4": "Quinta", "5": "Sexta", "6": "Sábado"},
+    "days": {
+      "0": "Domingo",
+      "1": "Segunda",
+      "2": "Terça",
+      "3": "Quarta",
+      "4": "Quinta",
+      "5": "Sexta",
+      "6": "Sábado"
+    },
     "title": "Valor sugerido pela tabela",
     "use": "Usar este valor",
     "band": "Pulseira {{nivel}}",
@@ -20,7 +28,8 @@
     "equal": "O valor digitado confere com a tabela.",
     "note": "É só uma sugestão: o valor da aula continua sendo o que você digita.",
     "none": "Sem valor sugerido para esta modalidade na tabela.",
-    "loading": "Carregando a tabela..."
+    "loading": "Carregando a tabela...",
+    "failed": "Não foi possível ler a tabela de preços agora. Tente abrir a janela de novo."
   },
   "open": "Tabela de preços",
   "title": "Tabela de preços",
