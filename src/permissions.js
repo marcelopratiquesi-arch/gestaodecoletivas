@@ -13,8 +13,7 @@ const PAGE_RULES = {
   financeiro: ["admin", "mentor"],
   configuracoes: ["admin", "mentor", "lider", "unidade"],
   pratique_play: ["admin", "mentor", "lider", "unidade"],
-  // Acesso à Loja e Workshops (Gestão Financeira e Stock)
-  workshops: ["admin", "mentor"]
+  // Loja & Workshops virou uma aba de Configurações (só admin); o endereço /app/workshops só redireciona para lá.
 };
 
 // Líder: perfil novo que substitui o antigo "unidade". Durante a transição os dois valem igual.

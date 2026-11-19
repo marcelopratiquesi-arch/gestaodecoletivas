@@ -26,7 +26,6 @@ import ControleAcessosPage from "../app/ControleAcessos";
 import OciosidadePage from "../app/Ociosidade"; // Importação do Radar de Grade
 
 // 🟢 IMPORTAÇÃO DA LOJA E WORKSHOPS
-import WorkshopsPage from "../app/Workshops"; 
 
 export default function AppRoutes() {
   return (
@@ -142,15 +141,8 @@ export default function AppRoutes() {
             } 
           />
 
-          {/* 🟢 NOVA ROTA: LOJA & WORKSHOPS */}
-          <Route 
-            path="workshops" 
-            element={
-              <RoleRoute pageKey="workshops">
-                <WorkshopsPage />
-              </RoleRoute>
-            } 
-          />
+          {/* Loja & Workshops agora é uma aba de Configurações (só admin): o endereço antigo leva para lá. */}
+          <Route path="workshops" element={<Navigate to="/app/configuracoes" state={{ aba: "workshops" }} replace />} />
           
           {/* Configurações */}
           <Route 
