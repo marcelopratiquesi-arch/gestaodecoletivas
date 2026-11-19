@@ -157,7 +157,7 @@ export default function TabelaPrecosModal({ aberto, onFechar }) {
                           {NIVEIS.map((nivel) => (
                             <td key={nivel} className={`${COR_NIVEL[nivel].celula} px-3 py-3 align-middle border-l border-white/20`}>
                               <div className="space-y-1.5">
-                                {camposDoNivel(modalidade.tipo, nivel).map((campo) => (
+                                {camposDoNivel(modalidade.tipo).map((campo) => (
                                   <div key={campo} className="flex items-center justify-between gap-2 text-sm font-bold">
                                     <span className="uppercase text-[11px] opacity-90">{rotuloCampo(campo)}</span>
                                     {editando ? (

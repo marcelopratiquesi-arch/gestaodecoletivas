@@ -19,12 +19,12 @@ describe('valores padrão (combinados com o usuário em 2026-11-19)', () => {
     expect(p.precos.training.vermelha).toEqual({ qualquer: 30, academico: 20 });
     expect(p.precos.training.preta).toEqual({ qualquer: 35, academico: 25 });
   });
-  it('Jump e Dance: aulas seguidas e pulseira preta = 50 (corrigido, imagem dizia 45)', () => {
+  it('Jump e Dance: pulseira preta = 1 aula 50, 2 a 3 aulas 45, acadêmicos 35', () => {
     for (const id of ['jump', 'dance']) {
       expect(p.precos[id].cinza).toEqual({ umaAula: 35, seguidas: 30, academico: 20 });
       expect(p.precos[id].verde).toEqual({ umaAula: 40, seguidas: 35, academico: 25 });
       expect(p.precos[id].vermelha).toEqual({ umaAula: 45, seguidas: 40, academico: 30 });
-      expect(p.precos[id].preta).toEqual({ qualquer: 50, academico: 35 });
+      expect(p.precos[id].preta).toEqual({ umaAula: 50, seguidas: 45, academico: 35 });
     }
   });
   it('Power Bumbum: pulseira preta = 35 (corrigido)', () => {
@@ -41,7 +41,7 @@ describe('valores padrão (combinados com o usuário em 2026-11-19)', () => {
   it('todo campo de cada célula existe e é número', () => {
     ORDEM.forEach((id) => NIVEIS.forEach((nivel) => {
       const tipo = id === 'jump' || id === 'dance' ? 'seguidas' : 'simples';
-      camposDoNivel(tipo, nivel).forEach((campo) => expect(typeof p.precos[id][nivel][campo]).toBe('number'));
+      camposDoNivel(tipo).forEach((campo) => expect(typeof p.precos[id][nivel][campo]).toBe('number'));
     }));
   });
 });
@@ -58,9 +58,16 @@ describe('mesclarComPadrao', () => {
     });
     expect(m.precos.core20.verde.qualquer).toBe(16);
     expect(m.precos.core20.verde.academico).toBe(10); // faltava: padrão
-    expect(m.precos.jump.preta).toEqual({ qualquer: 50, academico: 35 }); // estragado: padrão
+    expect(m.precos.jump.preta).toEqual({ umaAula: 50, seguidas: 45, academico: 35 }); // estragado: padrão
     expect(m.modalidades.core40.visivel).toBe(true);
     expect(m.frequenciaPreta).toEqual({ manha: 18, noite: 25 });
+  });
+});
+
+describe('tabela salva antes do ajuste das aulas seguidas', () => {
+  it('a pulseira preta de Jump/Dance com só "qualquer" vira "1 aula" e ganha 2 a 3 aulas = 45', () => {
+    const m = mesclarComPadrao({ precos: { jump: { preta: { qualquer: 52, academico: 36 } } } });
+    expect(m.precos.jump.preta).toEqual({ umaAula: 52, seguidas: 45, academico: 36 });
   });
 });
 
@@ -86,12 +93,12 @@ describe('listarDiferencas (auditoria)', () => {
   it('lista só o que mudou, com de ➔ para', () => {
     const a = tabelaPadrao();
     const d = tabelaPadrao();
-    d.precos.jump.preta.qualquer = 55;
+    d.precos.jump.preta.umaAula = 55;
     d.modalidades.core40.visivel = true;
     d.frequenciaPreta.manha = 20;
     expect(listarDiferencas(a, d)).toEqual([
       'Power Core 40: passou a aparecer',
-      'Energy Jump · Preta · Qualquer aula: R$ 50 ➔ R$ 55',
+      'Energy Jump · Preta · 1 aula: R$ 50 ➔ R$ 55',
       'Frequência preta (manhã): 15 ➔ 20',
     ]);
   });

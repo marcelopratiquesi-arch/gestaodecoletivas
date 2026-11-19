@@ -35,7 +35,7 @@ const SEGUIDAS = (c, v, r, p) => ({
   cinza: { umaAula: c[0], seguidas: c[1], academico: c[2] },
   verde: { umaAula: v[0], seguidas: v[1], academico: v[2] },
   vermelha: { umaAula: r[0], seguidas: r[1], academico: r[2] },
-  preta: { qualquer: p[0], academico: p[1] },
+  preta: { umaAula: p[0], seguidas: p[1], academico: p[2] },
 });
 
 // Valores combinados com o usuário em 2026-11-19 (imagem "Plano de Carreira - Valores Coletivas", com 2 correções:
@@ -54,8 +54,9 @@ export function tabelaPadrao() {
       core20: SIMPLES([10, 5], [15, 10], [20, 15], [25, 20]),
       core40: SIMPLES([20, 10], [25, 15], [30, 20], [35, 25]),
       training: SIMPLES([20, 10], [25, 15], [30, 20], [35, 25]),
-      jump: SEGUIDAS([35, 30, 20], [40, 35, 25], [45, 40, 30], [50, 35]),
-      dance: SEGUIDAS([35, 30, 20], [40, 35, 25], [45, 40, 30], [50, 35]),
+      // Pulseira preta: 1 aula 50, 2 a 3 aulas seguidas 45, acadêmicos 35 (ajustado em 2026-11-19).
+      jump: SEGUIDAS([35, 30, 20], [40, 35, 25], [45, 40, 30], [50, 45, 35]),
+      dance: SEGUIDAS([35, 30, 20], [40, 35, 25], [45, 40, 30], [50, 45, 35]),
       bumbum: SIMPLES([15, 10], [20, 15], [25, 20], [35, 25]),
     },
     // Pulseira preta: média de alunos acima destes números (regra mudada em 2026-11-19).
@@ -64,8 +65,8 @@ export function tabelaPadrao() {
 }
 
 // Quais valores existem em cada célula.
-export function camposDoNivel(tipo, nivel) {
-  if (tipo === 'seguidas' && nivel !== 'preta') return ['umaAula', 'seguidas', 'academico'];
+export function camposDoNivel(tipo) {
+  if (tipo === 'seguidas') return ['umaAula', 'seguidas', 'academico'];
   return ['qualquer', 'academico'];
 }
 
@@ -79,9 +80,12 @@ export function mesclarComPadrao(salvo) {
     const tipo = MODALIDADES_TABELA[id].tipo;
     if (typeof salvo.modalidades?.[id]?.visivel === 'boolean') base.modalidades[id].visivel = salvo.modalidades[id].visivel;
     NIVEIS.forEach((nivel) => {
-      camposDoNivel(tipo, nivel).forEach((campo) => {
-        const v = Number(salvo.precos?.[id]?.[nivel]?.[campo]);
-        if (salvo.precos?.[id]?.[nivel]?.[campo] != null && valorValido(v)) base.precos[id][nivel][campo] = v;
+      camposDoNivel(tipo).forEach((campo) => {
+        const celula = salvo.precos?.[id]?.[nivel];
+        // Tabela salva antes de 2026-11-19: a pulseira preta de Jump/Dance tinha só "qualquer"; vira "1 aula".
+        const bruto = celula?.[campo] ?? (tipo === 'seguidas' && campo === 'umaAula' ? celula?.qualquer : undefined);
+        const v = Number(bruto);
+        if (bruto != null && valorValido(v)) base.precos[id][nivel][campo] = v;
       });
     });
   });
