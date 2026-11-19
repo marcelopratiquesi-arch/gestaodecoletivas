@@ -42,6 +42,8 @@ export default function WorkshopsCadastro() {
   const { userData } = useAuth();
   // Participantes e importação têm contato de gente que pode nem ser professor: só o admin.
   const souAdmin = ['admin', 'administrador', 'master'].includes(String(userData?.role || '').trim().toLowerCase());
+  // Admin e mentor cadastram e editam; o líder só VÊ a lista (as regras do banco também barram a gravação dele).
+  const podeEditar = souAdmin || String(userData?.role || '').trim().toLowerCase() === 'mentor';
   const [importando, setImportando] = useState(null); // workshop
   const [verPart, setVerPart] = useState(null); // workshop
   const [lista, setLista] = useState(null);
@@ -204,8 +206,8 @@ export default function WorkshopsCadastro() {
         </div>
         <div className="flex flex-wrap gap-2">
           {souAdmin && <button type="button" onClick={completarModalidades} disabled={salvando || lista === null} className={`${botao} bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-60`}><Award className="w-4 h-4" /> {t('shop.ws.fillModality')}</button>}
-          <button type="button" onClick={abrirRapido} className={`${botao} bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-700`}><ListPlus className="w-4 h-4" /> {t('shop.ws.quick')}</button>
-          <button type="button" onClick={abrirNovo} className={`${botao} bg-purple-600 text-white hover:bg-purple-700 shadow-lg shadow-purple-500/20`}><Plus className="w-4 h-4" /> {t('shop.ws.newBtn')}</button>
+          {podeEditar && <button type="button" onClick={abrirRapido} className={`${botao} bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-700`}><ListPlus className="w-4 h-4" /> {t('shop.ws.quick')}</button>}
+          {podeEditar && <button type="button" onClick={abrirNovo} className={`${botao} bg-purple-600 text-white hover:bg-purple-700 shadow-lg shadow-purple-500/20`}><Plus className="w-4 h-4" /> {t('shop.ws.newBtn')}</button>}
         </div>
       </div>
 
@@ -260,9 +262,9 @@ export default function WorkshopsCadastro() {
               ) : (
                 <span className="flex items-center gap-1 text-[11px] font-bold text-slate-400 border border-dashed border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2"><Users className="w-3.5 h-3.5" /> {w.totalParticipantes || 0}</span>
               )}
-              <button type="button" onClick={() => abrirDup(w)} className="flex items-center gap-1 px-3 py-2 rounded-lg border border-purple-300 text-purple-700 dark:text-purple-300 text-xs font-black hover:bg-purple-50 dark:hover:bg-purple-900/30"><Copy className="w-3.5 h-3.5" /> {t('shop.ws.duplicate')}</button>
-              <button type="button" onClick={() => abrirEditar(w)} className="flex items-center gap-1 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-xs font-black hover:bg-slate-50 dark:hover:bg-slate-700"><Edit className="w-3.5 h-3.5" /> {t('shop.ws.edit')}</button>
-              <button type="button" onClick={() => excluir(w)} className="flex items-center gap-1 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 text-red-600 text-xs font-black hover:bg-red-50 dark:hover:bg-red-900/20"><Trash2 className="w-3.5 h-3.5" /> {confirmando === w.id ? t('shop.ws.confirmDelete') : t('shop.ws.delete')}</button>
+              {podeEditar && <button type="button" onClick={() => abrirDup(w)} className="flex items-center gap-1 px-3 py-2 rounded-lg border border-purple-300 text-purple-700 dark:text-purple-300 text-xs font-black hover:bg-purple-50 dark:hover:bg-purple-900/30"><Copy className="w-3.5 h-3.5" /> {t('shop.ws.duplicate')}</button>}
+              {podeEditar && <button type="button" onClick={() => abrirEditar(w)} className="flex items-center gap-1 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-xs font-black hover:bg-slate-50 dark:hover:bg-slate-700"><Edit className="w-3.5 h-3.5" /> {t('shop.ws.edit')}</button>}
+              {podeEditar && <button type="button" onClick={() => excluir(w)} className="flex items-center gap-1 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 text-red-600 text-xs font-black hover:bg-red-50 dark:hover:bg-red-900/20"><Trash2 className="w-3.5 h-3.5" /> {confirmando === w.id ? t('shop.ws.confirmDelete') : t('shop.ws.delete')}</button>}
             </div>
           </div>
         ))}

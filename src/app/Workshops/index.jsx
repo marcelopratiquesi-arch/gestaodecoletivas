@@ -16,7 +16,6 @@ import toast from 'react-hot-toast'; // o <Toaster /> agora fica no AppLayout (u
 import PainelResumo from './PainelResumo';
 import TabelaEstoque from './TabelaEstoque';
 import DREModal from './DREModal';
-import WorkshopsCadastro from './WorkshopsCadastro';
 
 
 const formatarNomeEvento = (w) => {
@@ -308,7 +307,6 @@ export default function WorkshopsTab() {
         <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
           <button onClick={() => setActiveTab('dashboard')} className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-black uppercase transition-all ${activeTab === 'dashboard' ? 'bg-white dark:bg-slate-700 shadow text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}><LayoutDashboard className="w-4 h-4"/> {t('shop.tabs.dashboard')}</button>
           <button onClick={() => setActiveTab('estoque')} className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-black uppercase transition-all ${activeTab === 'estoque' ? 'bg-white dark:bg-slate-700 shadow text-emerald-600 dark:text-emerald-400' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}><Package className="w-4 h-4"/> {t('shop.tabs.stock')}</button>
-          <button onClick={() => setActiveTab('workshops')} className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-black uppercase transition-all ${activeTab === 'workshops' ? 'bg-white dark:bg-slate-700 shadow text-purple-600 dark:text-purple-400' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}><Users className="w-4 h-4"/> {t('shop.tabs.workshops')}</button>
           <button onClick={() => setActiveTab('eventos')} className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-black uppercase transition-all ${activeTab === 'eventos' ? 'bg-white dark:bg-slate-700 shadow text-purple-600 dark:text-purple-400' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}><Calendar className="w-4 h-4"/> {t('shop.tabs.events')}</button>
         </div>
       </div>
@@ -320,8 +318,6 @@ export default function WorkshopsTab() {
       {activeTab === 'estoque' && (
         <TabelaEstoque kpis={kpis} filtroEstoque={filtroEstoque} setFiltroEstoque={setFiltroEstoque} abrirModalNovoStock={abrirModalNovoStock} stockLedgerFiltrado={stockLedgerFiltrado} abrirModalEditarStock={abrirModalEditarStock} handleExcluirStock={handleExcluirStock} />
       )}
-
-      {activeTab === 'workshops' && <WorkshopsCadastro />}
 
       {/* 🟢 ABA DE EVENTOS */}
       {activeTab === 'eventos' && (

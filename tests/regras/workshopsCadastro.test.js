@@ -40,8 +40,8 @@ describe('workshops_cadastro', () => {
     await assertSucceeds(getDoc(doc(como('admin1'), 'workshops_cadastro/w1')));
     await assertSucceeds(getDoc(doc(como('mentor1'), 'workshops_cadastro/w1')));
   });
-  it('líder e visitante não leem; o professor lê (para escolher o workshop em Meus workshops)', async () => {
-    await assertFails(getDoc(doc(como('lider1'), 'workshops_cadastro/w1')));
+  it('líder (aba Workshops de Configurações) e professor (Meus workshops) leem; visitante não', async () => {
+    await assertSucceeds(getDoc(doc(como('lider1'), 'workshops_cadastro/w1')));
     await assertSucceeds(getDoc(doc(como('prof1'), 'workshops_cadastro/w1')));
     await assertFails(getDoc(doc(env.unauthenticatedContext().firestore(), 'workshops_cadastro/w1')));
   });
@@ -49,8 +49,9 @@ describe('workshops_cadastro', () => {
     await assertSucceeds(setDoc(doc(como('admin1'), 'workshops_cadastro/n1'), novo()));
     await assertSucceeds(setDoc(doc(como('mentor1'), 'workshops_cadastro/n2'), novo()));
   });
-  it('líder e professor não criam (nem pela regra geral)', async () => {
+  it('líder e professor só leem: não criam, não editam e não apagam (nem pela regra geral)', async () => {
     await assertFails(setDoc(doc(como('lider1'), 'workshops_cadastro/n1'), novo()));
+    await assertFails(setDoc(doc(como('lider1'), 'workshops_cadastro/w1'), novo({ nome: 'Trocado pelo líder' })));
     await assertFails(setDoc(doc(como('prof1'), 'workshops_cadastro/n1'), novo()));
   });
   it('recusa modalidade, situação, data e campo inválidos', async () => {

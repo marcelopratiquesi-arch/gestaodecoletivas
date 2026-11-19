@@ -435,6 +435,7 @@ export default function Sidebar({ collapsed }) {
                   {cofreAberto && cofreUnlocked && (
                       <div className={`mt-2 space-y-1 animate-in slide-in-from-top-2 fade-in duration-200 ${collapsed ? 'flex flex-col items-center' : 'pl-2 border-l-2 border-rose-200 dark:border-rose-900/30 ml-4'}`}>
                           <NavItem to="/app/ociosidade" icon={Target} label={t('sidebar.items.radarGrade')} collapsed={collapsed} active={isActive("/app/ociosidade")} />
+                          <NavItem to="/app/workshops" icon={ShoppingBag} label={t('sidebar.items.lojaEventos')} collapsed={collapsed} active={isActive("/app/workshops")} />
                           <NavItem to="/app/auditoria" icon={FileSearch} label={t('sidebar.items.auditoria')} collapsed={collapsed} active={isActive("/app/auditoria")} />
                           <NavItem to="/app/acessos" icon={Key} label={t('sidebar.items.acessos')} collapsed={collapsed} active={isActive("/app/acessos")} />
                       </div>

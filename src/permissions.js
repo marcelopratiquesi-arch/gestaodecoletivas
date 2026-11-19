@@ -15,7 +15,8 @@ const PAGE_RULES = {
   financeiro: ["admin", "mentor"],
   configuracoes: ["admin", "mentor", "lider", "unidade"],
   pratique_play: ["admin", "mentor", "lider", "unidade"],
-  // Loja & Workshops virou uma aba de Configurações (só admin); o endereço /app/workshops só redireciona para lá.
+  // Loja & Eventos (Resumo, Estoque e Eventos: tem dinheiro) fica no Cofre. O cadastro de Workshops é uma aba de Configurações.
+  workshops: ["admin", "mentor"],
 };
 
 // Líder: perfil novo que substitui o antigo "unidade". Durante a transição os dois valem igual.

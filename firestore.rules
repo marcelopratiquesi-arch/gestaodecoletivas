@@ -983,9 +983,10 @@ service cloud.firestore {
         && (!('totalParticipantes' in d) || (d.totalParticipantes is int && d.totalParticipantes >= 0));
     }
     match /workshops_cadastro/{workshopId} {
-      // O professor lê o cadastro (nome, data, modalidade) para escolher o workshop que fez em "Meus workshops".
+      // O professor lê o cadastro (nome, data, modalidade) para escolher o workshop que fez em "Meus workshops"; o líder
+      // também lê (aba Workshops de Configurações, só para ver). Quem GRAVA continua sendo só admin e mentor.
       // Os participantes (subcoleção abaixo) continuam só do admin.
-      allow read: if adminOuMentor() || souProfessor();
+      allow read: if adminOuMentor() || souProfessor() || (logado() && meuPapel() in papeisLider());
       allow create: if adminOuMentor() && workshopCadastroOk(request.resource.data)
         && (souAdmin() || request.resource.data.get('totalParticipantes', 0) == 0);
       // O contador de participantes quem muda é a importação (admin): o mentor não o altera.
