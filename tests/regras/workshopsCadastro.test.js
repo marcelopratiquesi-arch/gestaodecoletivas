@@ -40,9 +40,9 @@ describe('workshops_cadastro', () => {
     await assertSucceeds(getDoc(doc(como('admin1'), 'workshops_cadastro/w1')));
     await assertSucceeds(getDoc(doc(como('mentor1'), 'workshops_cadastro/w1')));
   });
-  it('líder, professor e visitante não leem', async () => {
+  it('líder e visitante não leem; o professor lê (para escolher o workshop em Meus workshops)', async () => {
     await assertFails(getDoc(doc(como('lider1'), 'workshops_cadastro/w1')));
-    await assertFails(getDoc(doc(como('prof1'), 'workshops_cadastro/w1')));
+    await assertSucceeds(getDoc(doc(como('prof1'), 'workshops_cadastro/w1')));
     await assertFails(getDoc(doc(env.unauthenticatedContext().firestore(), 'workshops_cadastro/w1')));
   });
   it('admin e mentor criam workshop válido', async () => {

@@ -90,7 +90,8 @@
     "aulasDadas": "Classes taught in the period",
     "recebeu": "Earned in the period",
     "situacao": "Status",
-    "semContato": "No contact"
+    "semContato": "No contact",
+    "workshops": "Workshops"
   },
   "avisos": {
     "naoEncontrado": "I could not find that record.",

@@ -50,7 +50,11 @@
     "desc": "El administrador ya te registró como mentor. Revisá los datos y entrá.",
     "role": "Mentor",
     "enter": "Entrar como mentor",
-    "error": "No se pudo completar el ingreso. Intentá de nuevo o hablá con el administrador."
+    "error": "No se pudo completar el ingreso. Intentá de nuevo o hablá con el administrador.",
+    "descTemp": "Te registraron como líder temporal. Revisá tus datos y el plazo, y entrá.",
+    "roleTemp": "Líder temporal",
+    "enterTemp": "Entrar como líder temporal",
+    "until": "Acceso hasta"
   },
   "andTeacher": "y profesor",
   "connectedAs": "Conectado como {{email}}",

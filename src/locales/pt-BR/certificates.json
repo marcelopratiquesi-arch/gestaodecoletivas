@@ -6,9 +6,13 @@
   "fix": "Corrigir e reenviar",
   "fields": {
     "workshop": "Nome do workshop",
-    "workshopPlaceholder": "Ex.: Workshop Pratique Pilates 2025",
+    "workshopPlaceholder": "Escolha o workshop",
     "date": "Data em que fez",
-    "photo": "Foto do certificado"
+    "unit": "Unidade que verifica",
+    "unitPlaceholder": "Escolha a unidade",
+    "unitHint": "O líder e o mentor dessa unidade vão conferir o certificado.",
+    "photo": "Foto do certificado",
+    "workshopHint": "Não achou o seu workshop? Peça ao líder ou mentor para cadastrá-lo."
   },
   "choosePhoto": "Escolher foto",
   "changePhoto": "Trocar foto",
@@ -27,6 +31,7 @@
   "delete": "Apagar",
   "deleteConfirm": "Apagar o certificado \"{{name}}\"?",
   "errors": {
+    "chooseUnit": "Escolha a unidade que vai verificar.",
     "name": "Escreva o nome do workshop (pelo menos 3 letras).",
     "date": "Escolha a data em que você fez o workshop (não pode ser no futuro).",
     "noPhoto": "Escolha a foto do certificado.",
@@ -34,7 +39,9 @@
     "photo": "Não foi possível preparar esta foto. Tente outra.",
     "save": "Não foi possível enviar. Tente de novo.",
     "delete": "Não foi possível apagar.",
-    "load": "Não foi possível carregar os seus certificados."
+    "load": "Não foi possível carregar os seus certificados.",
+    "choose": "Escolha o workshop que você fez.",
+    "loadList": "Não foi possível carregar a lista de workshops."
   },
   "manager": {
     "button": "Workshops (certificados)",
@@ -56,5 +63,7 @@
     "verifyConfirm": "Confirmar que o certificado de {{name}} (\"{{workshop}}\") está correto?",
     "refusePrompt": "Recusar o certificado \"{{workshop}}\" de {{name}}?\n\nEscreva o motivo (o professor vai ver):",
     "error": "Não foi possível salvar a conferência."
-  }
+  },
+  "loadingList": "Carregando workshops...",
+  "alreadyListed": "já consta"
 }

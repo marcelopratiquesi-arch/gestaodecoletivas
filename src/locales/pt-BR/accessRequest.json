@@ -50,7 +50,11 @@
     "desc": "O administrador já cadastrou você como mentor. Confira os dados e entre.",
     "role": "Mentor",
     "enter": "Entrar como mentor",
-    "error": "Não foi possível concluir a entrada. Tente de novo ou fale com o administrador."
+    "error": "Não foi possível concluir a entrada. Tente de novo ou fale com o administrador.",
+    "descTemp": "Você foi cadastrado(a) como líder temporário(a). Confira os dados e o prazo e entre.",
+    "roleTemp": "Líder temporário(a)",
+    "enterTemp": "Entrar como líder temporário",
+    "until": "Acesso até"
   },
   "andTeacher": "e professor",
   "connectedAs": "Conectado como {{email}}",

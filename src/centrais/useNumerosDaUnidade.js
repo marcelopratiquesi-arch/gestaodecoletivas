@@ -9,6 +9,7 @@ import { useMemo } from 'react';
 import { useCatalogs } from '../contexts/CatalogContext';
 import { somarDias } from '../utils/agendaAulas';
 import { useValidacoesDaUnidade } from './useValidacoesDaUnidade';
+import { useTemporariosDaUnidade } from './useTemporariosDaUnidade';
 import {
   aulasDaUnidade, gradePorDia, professoresDaUnidade, periodoDoMes, indicadoresDaUnidade, pendenciasDaUnidade,
   DIAS_JANELA_PENDENCIAS,
@@ -59,6 +60,7 @@ export function useNumerosDaUnidade({ unidadeId, ativo, mes, hoje, agoraHHMM }) 
   // No mês atual, a busca do trimestre já cobre os últimos 7 dias; só em mês antigo é preciso buscar à parte.
   const cobrePendencias = inicioDoTrimestre <= inicioPendencias && periodo.fim >= hoje;
   const idParaBuscar = ativo ? unidadeId : null;
+  const temporarios = useTemporariosDaUnidade(unidadeId, ativo);
   const doTrimestre = useValidacoesDaUnidade(idParaBuscar, inicioDoTrimestre, periodo.fim);
   const recentes = useValidacoesDaUnidade(cobrePendencias ? null : idParaBuscar, inicioPendencias, hoje);
   const validacoes = doTrimestre.validacoes;
@@ -89,7 +91,7 @@ export function useNumerosDaUnidade({ unidadeId, ativo, mes, hoje, agoraHHMM }) 
   );
 
   return {
-    unidade, mentor, mentor2, aulas, grade, professores, modalidadePorId, professorPorId,
+    unidade, mentor, mentor2, temporarios, aulas, grade, professores, modalidadePorId, professorPorId,
     periodo, meses, resumo, anterior, porMes, porProfessor, pendencias,
     erro: doTrimestre.erro,
   };
