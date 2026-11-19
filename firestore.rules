@@ -237,7 +237,7 @@ service cloud.firestore {
     }
     match /modalidades/{document=**} {
       allow read: if true;
-      allow write: if logado() && !souProfessor();
+      allow write: if souAdmin(); // a aba Modalidades é só do admin
     }
     // Modalidades habilitadas na unidade: campo "modalidadesIds" (e os dois de controle). Só o ADMIN altera numa
     // unidade que já existe. Ao criar a unidade, mentor só pode começar com modalidades da lista básica da rede
@@ -1068,15 +1068,55 @@ service cloud.firestore {
       allow delete: if (logado() && resource.data.uid == request.auth.uid && resource.data.status != 'verificado') || souAdmin();
     }
 
+    // ===================== AUDITORIA, FINANCEIRO, LOJA E PLAY (Etapa 3 das regras por unidade) =====================
+    // Cada coleção abaixo tem regra própria e está na lista de exceções da regra-curinga lá embaixo.
+    function souAdminOuMentor() { return logado() && meuPapel() in ['admin', 'administrador', 'master', 'mentor']; }
+
+    // Registros de auditoria: todo mundo que está logado CRIA (inclusive professor, ao validar, e o log de sair do
+    // sistema); lê quem está logado; ninguém edita nem apaga, só o admin.
+    match /auditoria_cronograma/{id} {
+      allow read: if logado();
+      allow create: if logado();
+      allow update, delete: if souAdmin();
+    }
+    match /auditoria_configuracoes/{id} {
+      allow read: if logado();
+      allow create: if logado();
+      allow update, delete: if souAdmin();
+    }
+    // Financeiro (tela só de admin e mentor): leitura e gravação só deles. Auditoria financeira nunca se edita.
+    match /auditoria_financeiro/{id} {
+      allow read: if souAdminOuMentor();
+      allow create: if souAdminOuMentor();
+      allow update, delete: if souAdmin();
+    }
+    match /indicadores_mensais/{id} {
+      allow read, create, update: if souAdminOuMentor();
+      allow delete: if souAdmin();
+    }
+    // Loja e Workshops (estoque, eventos e transações; tela só de admin e mentor).
+    match /unipower_stock/{id} {
+      allow read, write: if souAdminOuMentor();
+    }
+    match /unipower_workshops/{id} {
+      allow read, write: if souAdminOuMentor();
+    }
+    match /unipower_transacoes/{id} {
+      allow read, write: if souAdminOuMentor();
+    }
+    // Faixas do Pratique Play: quem está logado ouve; só o admin cadastra e apaga.
+    match /pratique_play_faixas/{id} {
+      allow read: if logado();
+      allow write: if souAdmin();
+    }
+
     // ===================== DEMAIS COLEÇÕES =====================
-    // Logados leem e escrevem (como antes), EXCETO as coleções com regra própria acima
-    // (usuarios, publico, validacoes, solicitacoes_acesso, convites_acesso, documentos_*, resumos_mensais e telemetria_leituras).
-    // Professor não grava nada aqui, só cria registros de auditoria (log da validação e do "Sair").
-    // (No Firestore, se QUALQUER regra libera, a ação passa; por isso as exceções precisam estar aqui.)
+    // Qualquer coleção SEM regra própria (acima): quem está logado lê (como antes) e SÓ O ADMIN grava (restaurar backup).
+    // (No Firestore, se QUALQUER regra libera, a ação passa; por isso as coleções com regra própria precisam estar na
+    // lista de exceções de leitura e de escrita aqui embaixo.)
     match /{colecao}/{resto=**} {
-      allow read: if logado() && !(colecao in ['feriados_propostas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos', 'documentos_ficha', 'documentos_professor', 'contatos_unicos', 'telemetria_leituras', 'tabela_precos', 'workshops_cadastro', 'certificados_professor']);
-      allow write: if logado() && !(colecao in ['feriados', 'feriados_propostas', 'usuarios', 'publico', 'validacoes', 'aulas', 'aulas_publicas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'resumos_mensais', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos', 'professores', 'documentos_ficha', 'documentos_professor', 'contatos_unicos', 'telemetria_leituras', 'tabela_precos', 'workshops_cadastro', 'certificados_professor', 'unidades', 'configuracoes', 'vinculos']) && !souProfessor();
-      allow create: if logado() && colecao in ['auditoria_cronograma', 'auditoria_configuracoes'];
+      allow read: if logado() && !(colecao in ['feriados_propostas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos', 'documentos_ficha', 'documentos_professor', 'contatos_unicos', 'telemetria_leituras', 'tabela_precos', 'workshops_cadastro', 'certificados_professor', 'indicadores_mensais', 'auditoria_financeiro', 'unipower_stock', 'unipower_workshops', 'unipower_transacoes']);
+      allow write: if souAdmin() && !(colecao in ['feriados', 'feriados_propostas', 'usuarios', 'publico', 'validacoes', 'aulas', 'aulas_publicas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'resumos_mensais', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos', 'professores', 'documentos_ficha', 'documentos_professor', 'contatos_unicos', 'telemetria_leituras', 'tabela_precos', 'workshops_cadastro', 'certificados_professor', 'unidades', 'configuracoes', 'vinculos']);
     }
   }
 }
