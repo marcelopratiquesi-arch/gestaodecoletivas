@@ -100,7 +100,7 @@ async function contarColecoes() {
   const colecoes = [
     'aulas', 'vinculos', 'unidades', 'professores', 'modalidades', 'feriados', 'usuarios', 'validacoes',
     'auditoria_cronograma', 'auditoria_configuracoes', 'auditoria_financeiro',
-    'unipower_workshops', 'unipower_transacoes', 'unipower_stock',
+    'unipower_workshops', 'workshops_cadastro', 'unipower_transacoes', 'unipower_stock',
     'pratique_play_faixas', 'solicitacoes_acesso', 'saidas_acesso', 'pedidos_unidade',
     'indicadores_mensais', 'convites_acesso', 'resumos_mensais', 'telemetria_leituras',
   ]
