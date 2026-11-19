@@ -1,4 +1,52 @@
 {
+  "values": {
+    "tab": "Values",
+    "loadError": "Could not load the price table.",
+    "note": "Compares the amount PAID for each class held with the amount SUGGESTED by the price table (wristband per modality, Saver, back-to-back classes and monthly average). It is only an overview: nothing here changes what was paid or the past. The black wristband is only confirmed after the month closes, with the period covering the whole month.",
+    "cards": {
+      "right": "Correct",
+      "over": "Overpaid",
+      "under": "Underpaid",
+      "noSuggestion": "No suggestion",
+      "balance": "Difference (paid − suggested)"
+    },
+    "byTeacher": "Overview by teacher",
+    "allTeachers": "Show all",
+    "byClass": "Class by class",
+    "filters": {
+      "erradas": "Wrong",
+      "todas": "All",
+      "certas": "Correct",
+      "semSugestao": "No suggestion"
+    },
+    "cols": {
+      "teacher": "Teacher",
+      "classes": "Classes",
+      "paid": "Paid",
+      "suggested": "Suggested",
+      "difference": "Difference",
+      "date": "Date",
+      "unit": "Unit",
+      "modality": "Modality",
+      "students": "Students",
+      "status": "Status"
+    },
+    "status": {
+      "certo": "Correct",
+      "maior": "Overpaid",
+      "menor": "Underpaid",
+      "sem-sugestao": "No suggestion"
+    },
+    "why": {
+      "moeda": "The table is in reais (unit in another country)",
+      "professor": "Teacher not found",
+      "modalidade": "Modality not in the table (or hidden)"
+    },
+    "pretaExtra": "extra of {{extra}} if the average passes at month end",
+    "substitute": "substitute",
+    "empty": "Nothing to show in this period.",
+    "more": "Show 50 more"
+  },
   "title": "Financial Intelligence",
   "subtitle": "Payroll and Occupancy Executive Dashboard",
   "filters": {

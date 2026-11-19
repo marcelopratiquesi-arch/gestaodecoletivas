@@ -1,4 +1,52 @@
 {
+  "values": {
+    "tab": "Valores",
+    "loadError": "Não foi possível carregar a tabela de preços.",
+    "note": "Compara o valor PAGO em cada aula realizada com o valor SUGERIDO pela tabela de preços (pulseira por modalidade, Saver, aulas seguidas e média do mês). É só um panorama: nada aqui muda o valor pago nem o passado. A pulseira preta só se confirma depois que o mês fecha, com o período cobrindo o mês inteiro.",
+    "cards": {
+      "right": "Certas",
+      "over": "Pagas a mais",
+      "under": "Pagas a menos",
+      "noSuggestion": "Sem sugestão",
+      "balance": "Diferença (pago − sugerido)"
+    },
+    "byTeacher": "Panorama por professor",
+    "allTeachers": "Ver todos",
+    "byClass": "Aula por aula",
+    "filters": {
+      "erradas": "Erradas",
+      "todas": "Todas",
+      "certas": "Certas",
+      "semSugestao": "Sem sugestão"
+    },
+    "cols": {
+      "teacher": "Professor",
+      "classes": "Aulas",
+      "paid": "Pago",
+      "suggested": "Sugerido",
+      "difference": "Diferença",
+      "date": "Data",
+      "unit": "Unidade",
+      "modality": "Modalidade",
+      "students": "Alunos",
+      "status": "Situação"
+    },
+    "status": {
+      "certo": "Certo",
+      "maior": "Pago a mais",
+      "menor": "Pago a menos",
+      "sem-sugestao": "Sem sugestão"
+    },
+    "why": {
+      "moeda": "A tabela está em reais (unidade de outro país)",
+      "professor": "Professor não encontrado",
+      "modalidade": "Modalidade fora da tabela (ou escondida)"
+    },
+    "pretaExtra": "extra de {{extra}} se a média passar no fim do mês",
+    "substitute": "substituto",
+    "empty": "Nada para mostrar neste período.",
+    "more": "Ver mais 50"
+  },
   "title": "Inteligência Financeira",
   "subtitle": "Painel Executivo de Folha e Ocupação",
   "filters": {

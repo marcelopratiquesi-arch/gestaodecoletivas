@@ -1,4 +1,52 @@
 {
+  "values": {
+    "tab": "Valores",
+    "loadError": "No se pudo cargar la tabla de precios.",
+    "note": "Compara el valor PAGADO en cada clase dada con el valor SUGERIDO por la tabla de precios (pulsera por modalidad, Saver, clases seguidas y promedio del mes). Es solo un panorama: nada de esto cambia lo pagado ni el pasado. La pulsera negra solo se confirma cuando cierra el mes, con el período cubriendo el mes entero.",
+    "cards": {
+      "right": "Correctas",
+      "over": "Pagadas de más",
+      "under": "Pagadas de menos",
+      "noSuggestion": "Sin sugerencia",
+      "balance": "Diferencia (pagado − sugerido)"
+    },
+    "byTeacher": "Panorama por profesor",
+    "allTeachers": "Ver todos",
+    "byClass": "Clase por clase",
+    "filters": {
+      "erradas": "Erróneas",
+      "todas": "Todas",
+      "certas": "Correctas",
+      "semSugestao": "Sin sugerencia"
+    },
+    "cols": {
+      "teacher": "Profesor",
+      "classes": "Clases",
+      "paid": "Pagado",
+      "suggested": "Sugerido",
+      "difference": "Diferencia",
+      "date": "Fecha",
+      "unit": "Sede",
+      "modality": "Modalidad",
+      "students": "Alumnos",
+      "status": "Situación"
+    },
+    "status": {
+      "certo": "Correcta",
+      "maior": "Pagada de más",
+      "menor": "Pagada de menos",
+      "sem-sugestao": "Sin sugerencia"
+    },
+    "why": {
+      "moeda": "La tabla está en reales (sede de otro país)",
+      "professor": "Profesor no encontrado",
+      "modalidade": "Modalidad fuera de la tabla (u oculta)"
+    },
+    "pretaExtra": "extra de {{extra}} si el promedio supera a fin de mes",
+    "substitute": "suplente",
+    "empty": "Nada para mostrar en este período.",
+    "more": "Ver 50 más"
+  },
   "title": "Inteligencia Financiera",
   "subtitle": "Panel Ejecutivo de Nómina y Ocupación",
   "filters": {
