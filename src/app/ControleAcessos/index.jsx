@@ -137,7 +137,7 @@ export default function ControleAcessosPage() {
     if (!isAdmin) {
         return (
             <div className="flex flex-col items-center justify-center h-[80vh] text-slate-500">
-                <ShieldAlert className="w-20 h-20 mb-4 text-rose-500 opacity-50" />
+                <ShieldAlert className="w-20 h-20 mb-4 text-red-500 opacity-50" />
                 <h2 className="text-2xl font-black uppercase tracking-widest text-slate-700">{t('misc.access.deniedTitle')}</h2>
                 <p className="mt-2 text-sm font-bold uppercase">{t('misc.access.deniedDesc')}</p>
             </div>
@@ -171,7 +171,7 @@ export default function ControleAcessosPage() {
                         <input 
                             type="text" 
                             placeholder={t('misc.access.search').toUpperCase()} 
-                            className="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-black outline-none focus:border-blue-500 transition-colors shadow-sm uppercase"
+                            className="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-black outline-none focus:border-red-500 transition-colors shadow-sm uppercase"
                             value={busca}
                             onChange={e => setBusca(e.target.value)}
                         />
@@ -201,7 +201,7 @@ export default function ControleAcessosPage() {
                                                 <td className="p-5">
                                                     <div className="flex items-center gap-3">
                                                         <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-white shrink-0 shadow-sm
-                                                            ${roleAtual === 'admin' ? 'bg-rose-600' : roleAtual === 'mentor' ? 'bg-blue-600' : 'bg-slate-400'}`}>
+                                                            ${roleAtual === 'admin' ? 'bg-red-600' : roleAtual === 'mentor' ? 'bg-red-600' : 'bg-slate-400'}`}>
                                                             {roleAtual === 'admin' ? <ShieldCheck className="w-5 h-5"/> : <Users className="w-5 h-5"/>}
                                                         </div>
                                                         <div>
@@ -221,8 +221,8 @@ export default function ControleAcessosPage() {
                                                     <div className="relative w-48">
                                                         <select 
                                                             className={`w-full p-2.5 rounded-lg text-xs font-black uppercase outline-none border transition-all cursor-pointer appearance-none shadow-sm
-                                                                ${roleAtual === 'admin' ? 'bg-rose-50 border-rose-200 text-rose-700' : 
-                                                                roleAtual === 'mentor' ? 'bg-blue-50 border-blue-200 text-blue-700' : 
+                                                                ${roleAtual === 'admin' ? 'bg-red-50 border-red-200 text-red-700' : 
+                                                                roleAtual === 'mentor' ? 'bg-slate-50 border-slate-200 text-slate-700' : 
                                                                 (roleAtual === 'lider' || roleAtual === 'unidade') ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 
                                                                 'bg-slate-50 border-slate-200 text-slate-700'}
                                                             `}

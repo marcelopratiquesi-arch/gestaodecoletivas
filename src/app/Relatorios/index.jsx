@@ -161,24 +161,24 @@ const MultiSelectDropdown = ({ label, options, selected, onChange, placeholder, 
     return (
         <div className="relative w-full" ref={ref}>
             <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase mb-1.5 block tracking-widest">{label}</label>
-            <button type="button" onClick={() => setIsOpen(!isOpen)} title={texto} className={`w-full h-[42px] px-3 bg-white dark:bg-slate-900 border ${isOpen ? 'border-blue-500 ring-2 ring-blue-100 dark:ring-blue-900/30' : selected.length > 0 ? 'border-blue-300 dark:border-blue-700' : 'border-slate-200 dark:border-slate-700'} rounded-xl text-[11px] font-black outline-none cursor-pointer flex justify-between items-center gap-2 transition-all uppercase shadow-sm text-left`}>
-                <span className={`truncate ${selected.length > 0 ? 'text-blue-700 dark:text-blue-400' : 'text-slate-700 dark:text-slate-300'}`}>{texto}</span>
-                <ChevronDown className={`w-4 h-4 shrink-0 text-slate-400 transition-transform ${isOpen ? 'rotate-180 text-blue-500' : ''}`} />
+            <button type="button" onClick={() => setIsOpen(!isOpen)} title={texto} className={`w-full h-[42px] px-3 bg-white dark:bg-slate-900 border ${isOpen ? 'border-slate-500 ring-2 ring-red-100 dark:ring-red-900/30' : selected.length > 0 ? 'border-slate-300 dark:border-slate-700' : 'border-slate-200 dark:border-slate-700'} rounded-xl text-[11px] font-black outline-none cursor-pointer flex justify-between items-center gap-2 transition-all uppercase shadow-sm text-left`}>
+                <span className={`truncate ${selected.length > 0 ? 'text-slate-700 dark:text-slate-400' : 'text-slate-700 dark:text-slate-300'}`}>{texto}</span>
+                <ChevronDown className={`w-4 h-4 shrink-0 text-slate-400 transition-transform ${isOpen ? 'rotate-180 text-slate-500' : ''}`} />
             </button>
             {isOpen && (
                 // alignRight: o último filtro abre para a esquerda, para a caixa não sair da tela.
                 <div className={`absolute top-full ${alignRight ? 'right-0' : 'left-0'} mt-2 w-full min-w-[240px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl z-[50] overflow-hidden flex flex-col max-h-[380px]`}>
                     <div className="p-2 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 shrink-0 space-y-2">
-                        <div className="relative"><Search className="w-3 h-3 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" /><input autoFocus type="text" placeholder={t('common.multiSelect.search')} value={search} onChange={(e) => setSearch(e.target.value)} className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg pl-8 pr-3 py-2 text-[11px] font-bold outline-none focus:border-blue-500 dark:text-white placeholder-slate-400 dark:placeholder-slate-600"/></div>
+                        <div className="relative"><Search className="w-3 h-3 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" /><input autoFocus type="text" placeholder={t('common.multiSelect.search')} value={search} onChange={(e) => setSearch(e.target.value)} className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg pl-8 pr-3 py-2 text-[11px] font-bold outline-none focus:border-red-500 dark:text-white placeholder-slate-400 dark:placeholder-slate-600"/></div>
                         <div className="flex justify-between">
-                            <button type="button" onClick={handleSelectAll} className="text-[10px] font-black text-blue-600 dark:text-blue-400 px-2 py-1 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded uppercase transition-colors">{t('common.multiSelect.selectAll')}</button>
-                            <button type="button" onClick={() => onChange([])} disabled={selected.length === 0} className="text-[10px] font-black text-rose-600 dark:text-rose-400 px-2 py-1 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded uppercase transition-colors disabled:opacity-30 disabled:hover:bg-transparent">{t('common.multiSelect.clear')}</button>
+                            <button type="button" onClick={handleSelectAll} className="text-[10px] font-black text-slate-600 dark:text-slate-400 px-2 py-1 hover:bg-slate-50 dark:hover:bg-slate-900/30 rounded uppercase transition-colors">{t('common.multiSelect.selectAll')}</button>
+                            <button type="button" onClick={() => onChange([])} disabled={selected.length === 0} className="text-[10px] font-black text-red-600 dark:text-red-400 px-2 py-1 hover:bg-red-50 dark:hover:bg-red-900/30 rounded uppercase transition-colors disabled:opacity-30 disabled:hover:bg-transparent">{t('common.multiSelect.clear')}</button>
                         </div>
                     </div>
                     <div className="overflow-y-auto custom-scrollbar p-1.5 flex-1">
                         {filteredOptions.length === 0 ? <div className="p-3 text-center text-[10px] font-bold text-slate-400 uppercase">{t('common.multiSelect.noResults')}</div> : filteredOptions.map(opt => (
-                            <div key={opt.id} onClick={() => toggle(opt.id)} className={`flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer transition-colors ${selected.includes(opt.id) ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-600 dark:text-slate-300'}`}>
-                                {selected.includes(opt.id) ? <CheckSquare className="w-4 h-4 text-blue-500 shrink-0" /> : <Square className="w-4 h-4 text-slate-300 dark:text-slate-600 shrink-0" />}
+                            <div key={opt.id} onClick={() => toggle(opt.id)} className={`flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer transition-colors ${selected.includes(opt.id) ? 'bg-slate-50 dark:bg-slate-900/30 text-slate-700 dark:text-slate-400' : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-600 dark:text-slate-300'}`}>
+                                {selected.includes(opt.id) ? <CheckSquare className="w-4 h-4 text-slate-500 shrink-0" /> : <Square className="w-4 h-4 text-slate-300 dark:text-slate-600 shrink-0" />}
                                 <span className="text-[11px] font-bold uppercase leading-tight break-words">{opt.label}</span>
                             </div>
                         ))}
@@ -799,7 +799,7 @@ export default function RelatorioPage() {
           <div className="h-8 w-px bg-slate-200 dark:bg-slate-600 mx-1 shrink-0"></div>
           <div className="relative shrink-0">
             <button onClick={() => setShowExportMenu(!showExportMenu)} className="px-4 h-[38px] bg-emerald-500 hover:bg-emerald-600 rounded-xl text-white shadow-sm transition-colors flex items-center gap-2 font-bold text-xs uppercase"><Download className="w-4 h-4"/> {t('reports.filters.export', 'Exportar')}</button>
-            {showExportMenu && (<div className="absolute right-0 top-12 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl rounded-xl w-40 z-50 overflow-hidden animate-in fade-in zoom-in duration-200"><button onClick={() => handleExport('excel')} className="w-full text-left px-4 py-3 text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 text-slate-700 dark:text-slate-300"><FileSpreadsheet className="w-4 h-4 text-green-600"/> Excel (XLSX)</button><button onClick={() => handleExport('csv')} className="w-full text-left px-4 py-3 text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 text-slate-700 dark:text-slate-300"><FileText className="w-4 h-4 text-blue-600"/> CSV</button></div>)}
+            {showExportMenu && (<div className="absolute right-0 top-12 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl rounded-xl w-40 z-50 overflow-hidden animate-in fade-in zoom-in duration-200"><button onClick={() => handleExport('excel')} className="w-full text-left px-4 py-3 text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 text-slate-700 dark:text-slate-300"><FileSpreadsheet className="w-4 h-4 text-emerald-600"/> Excel (XLSX)</button><button onClick={() => handleExport('csv')} className="w-full text-left px-4 py-3 text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 text-slate-700 dark:text-slate-300"><FileText className="w-4 h-4 text-slate-600"/> CSV</button></div>)}
           </div>
         </div>
       </div>
@@ -835,8 +835,8 @@ export default function RelatorioPage() {
       {/* 🟢 O COFRE DE DADOS */}
       {isCofreFechado ? (
           <div className="py-24 text-center bg-white dark:bg-slate-800 rounded-3xl border border-dashed border-slate-300 dark:border-slate-700 shadow-sm animate-in fade-in zoom-in duration-300">
-            <div className="bg-blue-50 dark:bg-slate-900 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 border border-blue-100 dark:border-slate-800 shadow-inner">
-              <Lock className="w-10 h-10 text-blue-500 animate-pulse"/>
+            <div className="bg-slate-50 dark:bg-slate-900 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 border border-slate-100 dark:border-slate-800 shadow-inner">
+              <Lock className="w-10 h-10 text-slate-500 animate-pulse"/>
             </div>
             <h3 className="text-2xl font-black text-slate-700 dark:text-white mb-3">
                 {t('reports.kpis.vaultActivated', 'Cofre de Relatórios Ativado')}
@@ -848,7 +848,7 @@ export default function RelatorioPage() {
       ) : (
         <>
           {carregandoDados && (
-            <div className="flex items-center justify-center gap-2 py-2 text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900 rounded-xl">
+            <div className="flex items-center justify-center gap-2 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/20 border border-slate-100 dark:border-slate-900 rounded-xl">
               <LayoutDashboard className="w-4 h-4 animate-spin"/> {t('layout.loading', 'Carregando...')}
             </div>
           )}
@@ -892,19 +892,19 @@ export default function RelatorioPage() {
 
               {/* BLOCO 2: MOTOR OPERACIONAL */}
               <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 xl:p-8 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between relative overflow-hidden h-[340px]">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/4 pointer-events-none"></div>
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/4 pointer-events-none"></div>
 
                   <div>
                       <div className="flex items-center justify-between mb-6">
                           <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest text-[10px] xl:text-xs">
-                              <Activity className="w-4 h-4 text-blue-500"/> {t('reports.kpis.operationalEngine', 'Motor Operacional')}
+                              <Activity className="w-4 h-4 text-slate-500"/> {t('reports.kpis.operationalEngine', 'Motor Operacional')}
                           </div>
                       </div>
 
                       <div className="space-y-4">
                           <div className="flex items-center justify-between p-3">
                               <div className="flex items-center gap-3">
-                                  <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 flex items-center justify-center"><CheckCircle2 className="w-4 h-4"/></div>
+                                  <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-600 dark:bg-slate-900/30 dark:text-slate-400 flex items-center justify-center"><CheckCircle2 className="w-4 h-4"/></div>
                                   <div>
                                       <span className="block text-xs font-black text-slate-700 dark:text-slate-200 uppercase tracking-wide">{t('reports.kpis.completedClasses', 'Aulas Realizadas')}</span>
                                   </div>
@@ -937,12 +937,12 @@ export default function RelatorioPage() {
 
               {/* BLOCO 3: SAÚDE DA GRADE (COM SEMÁFORO DE CORES) */}
               <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 xl:p-8 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between relative overflow-hidden h-[340px]">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/4 pointer-events-none"></div>
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/4 pointer-events-none"></div>
 
                   <div>
                       <div className="flex items-center justify-between mb-6">
                           <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest text-[10px] xl:text-xs">
-                              <TrendingUp className="w-4 h-4 text-purple-500"/> {t('reports.kpis.gridHealth', 'Saúde da Grade')}
+                              <TrendingUp className="w-4 h-4 text-slate-500"/> {t('reports.kpis.gridHealth', 'Saúde da Grade')}
                           </div>
                       </div>
 
@@ -963,13 +963,13 @@ export default function RelatorioPage() {
                           <div className="p-3">
                               <div className="flex justify-between items-end mb-2">
                                   <div className="flex items-center gap-2">
-                                      <AlertTriangle className="w-4 h-4 text-rose-500"/>
+                                      <AlertTriangle className="w-4 h-4 text-red-500"/>
                                       <span className="text-xs font-black text-slate-700 dark:text-slate-200 uppercase tracking-wide">{t('reports.kpis.vacancyRate', 'Taxa de Vacância')}</span>
                                   </div>
-                                  <span className="text-xl font-black text-rose-500 dark:text-rose-400">{(kpis.taxaVacancia || 0).toFixed(1)}%</span>
+                                  <span className="text-xl font-black text-red-500 dark:text-red-400">{(kpis.taxaVacancia || 0).toFixed(1)}%</span>
                               </div>
                               <div className="w-full h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-                                  <div className="h-full rounded-full bg-rose-500" style={{ width: `${kpis.taxaVacancia || 0}%` }}></div>
+                                  <div className="h-full rounded-full bg-red-500" style={{ width: `${kpis.taxaVacancia || 0}%` }}></div>
                               </div>
                           </div>
 
@@ -993,20 +993,20 @@ export default function RelatorioPage() {
                   <div className="flex p-1 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
                       <button
                           onClick={() => { setViewMode('agrupado'); setExpandedRowId(null); }}
-                          className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-xs font-bold uppercase transition-all ${viewMode === 'agrupado' ? 'bg-slate-100 dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-700'}`}
+                          className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-xs font-bold uppercase transition-all ${viewMode === 'agrupado' ? 'bg-slate-100 dark:bg-slate-700 shadow-sm text-slate-600 dark:text-slate-400' : 'text-slate-500 hover:text-slate-700'}`}
                       >
                           <Layers className="w-4 h-4"/> {t('reports.table.summary', 'Resumo da Folha')}
                       </button>
                       <button
                           onClick={() => { setViewMode('detalhado'); setExpandedRowId(null); }}
-                          className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-xs font-bold uppercase transition-all ${viewMode === 'detalhado' ? 'bg-slate-100 dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-700'}`}
+                          className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-xs font-bold uppercase transition-all ${viewMode === 'detalhado' ? 'bg-slate-100 dark:bg-slate-700 shadow-sm text-slate-600 dark:text-slate-400' : 'text-slate-500 hover:text-slate-700'}`}
                       >
                           <AlignJustify className="w-4 h-4"/> {t('reports.table.detailed', 'Detalhado')}
                       </button>
                       {podeVerTabelaPrecos(role) && (
                           <button
                               onClick={() => { setViewMode('valores'); setExpandedRowId(null); }}
-                              className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-xs font-bold uppercase transition-all ${viewMode === 'valores' ? 'bg-slate-100 dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-700'}`}
+                              className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-xs font-bold uppercase transition-all ${viewMode === 'valores' ? 'bg-slate-100 dark:bg-slate-700 shadow-sm text-slate-600 dark:text-slate-400' : 'text-slate-500 hover:text-slate-700'}`}
                           >
                               <DollarSign className="w-4 h-4"/> {t('reports.values.tab')}
                           </button>
@@ -1045,8 +1045,8 @@ export default function RelatorioPage() {
 
                           return (
                             <React.Fragment key={row.id}>
-                              <tr className={`hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer group ${expandedRowId === row.id ? 'bg-slate-50 dark:bg-slate-700/30 border-l-4 border-l-blue-500' : ''}`} onClick={() => toggleRow(row.id)}>
-                                <td className="p-3 text-slate-300 group-hover:text-blue-500 transition-colors">
+                              <tr className={`hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer group ${expandedRowId === row.id ? 'bg-slate-50 dark:bg-slate-700/30 border-l-4 border-l-slate-500' : ''}`} onClick={() => toggleRow(row.id)}>
+                                <td className="p-3 text-slate-300 group-hover:text-slate-500 transition-colors">
                                   {expandedRowId === row.id ? <ChevronDown className="w-4 h-4"/> : <ChevronRight className="w-4 h-4"/>}
                                 </td>
                                 <td className="p-3">
@@ -1064,21 +1064,21 @@ export default function RelatorioPage() {
                                 <td className="p-3">
                                     <div className="flex items-center gap-2">
                                         <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-black border
-                                            ${row.tipoLinha === 'substituto' ? 'bg-blue-100 text-blue-700 border-blue-200' :
-                                              row.tipoLinha === 'aulao' ? 'bg-purple-100 text-purple-700 border-purple-200' :
+                                            ${row.tipoLinha === 'substituto' ? 'bg-slate-100 text-slate-700 border-slate-200' :
+                                              row.tipoLinha === 'aulao' ? 'bg-slate-100 text-slate-700 border-slate-200' :
                                               'bg-slate-200 text-slate-600 border-slate-300 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600'}`}>
                                             {getInitials(row.professorNome)}
                                         </div>
                                         <div>
-                                            <span className={`font-bold uppercase ${row.tipoLinha === 'substituto' ? 'text-blue-600 dark:text-blue-400' : row.tipoLinha === 'aulao' ? 'text-purple-600 dark:text-purple-400' : 'text-slate-800 dark:text-white'}`}>{row.professorNome}</span>
+                                            <span className={`font-bold uppercase ${row.tipoLinha === 'substituto' ? 'text-slate-600 dark:text-slate-400' : row.tipoLinha === 'aulao' ? 'text-slate-600 dark:text-slate-400' : 'text-slate-800 dark:text-white'}`}>{row.professorNome}</span>
                                             {row.isGroup && <span className="block text-[8px] uppercase font-black text-slate-400">{t('reports.table.consolidatedTotal')}</span>}
-                                            {!row.isGroup && row.tipoLinha === 'substituto' && <span className="block text-[8px] uppercase font-black text-blue-400 flex items-center gap-0.5"><ArrowRightLeft className="w-2 h-2"/> {t('reports.table.substitute')}</span>}
-                                            {!row.isGroup && row.tipoLinha === 'aulao' && <span className="block text-[8px] uppercase font-black text-purple-400 flex items-center gap-0.5"><Star className="w-2 h-2"/> {t('reports.table.specialClass')}</span>}
+                                            {!row.isGroup && row.tipoLinha === 'substituto' && <span className="block text-[8px] uppercase font-black text-slate-400 flex items-center gap-0.5"><ArrowRightLeft className="w-2 h-2"/> {t('reports.table.substitute')}</span>}
+                                            {!row.isGroup && row.tipoLinha === 'aulao' && <span className="block text-[8px] uppercase font-black text-slate-400 flex items-center gap-0.5"><Star className="w-2 h-2"/> {t('reports.table.specialClass')}</span>}
                                         </div>
                                     </div>
                                 </td>
 
-                                <td className="p-3 text-center font-bold text-blue-600 bg-blue-50 dark:bg-blue-900/10 rounded">{row.aulasRealizadas}</td>
+                                <td className="p-3 text-center font-bold text-slate-600 bg-slate-50 dark:bg-slate-900/10 rounded">{row.aulasRealizadas}</td>
 
                                 <td className={`p-3 text-center font-bold rounded ${row.aulasCanceladas > 0 ? 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400' : 'text-slate-300'}`}>
                                     {row.aulasCanceladas > 0 ? row.aulasCanceladas : '-'}
@@ -1104,7 +1104,7 @@ export default function RelatorioPage() {
                                 </td>
 
                                 <td className="p-3 text-right text-slate-500 dark:text-slate-400">{formatSmartCurrency(row.valorHora, row.unidadePais)}</td>
-                                <td className="p-3 text-right font-mono text-green-600 font-black text-sm">{formatSmartCurrency(row.totalReceber, row.unidadePais)}</td>
+                                <td className="p-3 text-right font-mono text-emerald-600 font-black text-sm">{formatSmartCurrency(row.totalReceber, row.unidadePais)}</td>
                               </tr>
 
                               {/* EXPANSÃO DA GAVETA */}
@@ -1118,9 +1118,9 @@ export default function RelatorioPage() {
                                                 {(row.aulasFilhas || []).map(filha => {
                                                     const filhaOcupTheme = getOcupacaoTheme(filha.ocupacao || 0);
                                                     return (
-                                                    <div key={filha.id} className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex justify-between items-center hover:border-blue-300 transition-colors">
+                                                    <div key={filha.id} className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex justify-between items-center hover:border-slate-300 transition-colors">
                                                         <div>
-                                                            <div className="font-mono font-bold text-blue-600 dark:text-blue-400 mb-0.5"><Clock className="w-3 h-3 inline mr-1 -mt-0.5"/>{filha.horario}</div>
+                                                            <div className="font-mono font-bold text-slate-600 dark:text-slate-400 mb-0.5"><Clock className="w-3 h-3 inline mr-1 -mt-0.5"/>{filha.horario}</div>
                                                             <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{(filha.dias || []).join(', ').toUpperCase()}</div>
                                                         </div>
                                                         <div className="text-right flex flex-col items-end">
@@ -1156,9 +1156,9 @@ export default function RelatorioPage() {
                                                                 const itemClass = validacao
                                                                     ? (validacao.status === 'cancelada'
                                                                         ? 'bg-red-50 border-red-100 text-red-700 dark:bg-red-900/20 dark:border-red-900 dark:text-red-300'
-                                                                        : 'bg-green-50 border-green-100 text-green-700 dark:bg-green-900/20 dark:border-green-900 dark:text-green-300')
+                                                                        : 'bg-emerald-50 border-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:border-emerald-900 dark:text-emerald-300')
                                                                     : (foiSubstituido
-                                                                        ? 'bg-blue-50 border-blue-100 text-blue-700 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-300 opacity-70'
+                                                                        ? 'bg-slate-50 border-slate-100 text-slate-700 dark:bg-slate-900/20 dark:border-slate-800 dark:text-slate-300 opacity-70'
                                                                         : 'bg-slate-50 border-slate-100 text-slate-300 dark:bg-slate-900 dark:border-slate-800 opacity-60');
 
                                                                 return (
