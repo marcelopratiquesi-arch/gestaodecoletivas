@@ -133,5 +133,12 @@
     "add": "2nd leader",
     "addHint": "Add a 2nd leader to this unit (someone who already has access)",
     "remove": "Remove the 2nd leader"
+  },
+  "menu": {
+    "addSecond": "Add 2nd leader",
+    "docSecond": "2nd leader document",
+    "pick": "Choose someone already registered",
+    "register": "Register new leader",
+    "confirmShort": "Confirm it is the right person"
   }
 }

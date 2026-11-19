@@ -133,5 +133,12 @@
     "add": "2º líder",
     "addHint": "Adicionar um 2º líder nesta unidade (alguém que já tem acesso)",
     "remove": "Remover o 2º líder"
+  },
+  "menu": {
+    "addSecond": "Adicionar 2º líder",
+    "docSecond": "Documento do 2º líder",
+    "pick": "Escolher pessoa já cadastrada",
+    "register": "Cadastrar líder novo",
+    "confirmShort": "Confirmar que é a pessoa certa"
   }
 }
