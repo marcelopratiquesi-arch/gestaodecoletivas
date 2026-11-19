@@ -1,3 +1,4 @@
+import { escopoMentor } from "../../permissions.js";
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCatalogs } from '../../contexts/CatalogContext'; 
@@ -36,6 +37,7 @@ export default function ValidacaoColetiva() {
   const { t } = useTranslation();
   const role = String(userData?.role || "").toLowerCase();
   const userId = userData?.id || userData?.uid;
+  const escopoId = escopoMentor(userData); // id que vale como "mentor das unidades" (2º mentor usa o do 1º)
   const isMentor = role === 'mentor';
   
   const { catalogs, loadingCatalogs } = useCatalogs();
@@ -89,8 +91,8 @@ export default function ValidacaoColetiva() {
       if (!catalogs?.unidades) return [];
       // Unidade inativa não entra: não tem aula esperada, não tem o que cobrar (e deixa de gastar leitura).
       const ativas = catalogs.unidades.filter(u => !u.status || u.status === 'ativa');
-      return isMentor ? ativas.filter(u => u.mentorId === userId) : ativas;
-  }, [catalogs?.unidades, isMentor, userId]);
+      return isMentor ? ativas.filter(u => u.mentorId === escopoId) : ativas;
+  }, [catalogs?.unidades, isMentor, escopoId]);
 
   const estadosOptions = useMemo(() => [...new Set(unidadesBase.map(u => u.estado).filter(Boolean))].sort().map(e => ({ value: e, label: e })), [unidadesBase]);
   // Filtro lembrado de unidade/mentor/estado que não existe mais (unidade desativada, mentor trocado...) é ignorado,

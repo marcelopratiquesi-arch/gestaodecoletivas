@@ -166,7 +166,7 @@ export function SecaoEquipe({ d, comLink = false }) {
             ? <Contato icone={Phone} texto={mentor.telefone} copiar whatsapp pais={mentor.pais || unidade.pais} />
             : <Contato icone={Phone} texto={t('centrais.unidade.info.mentorSemTelefone')} falta />}
           {mentor?.email && <Contato icone={Mail} texto={mentor.email} copiar />}
-          <UltimoAcesso />
+          <UltimoAcesso quando={mentor?.ultimoAcesso} />
         </CartaoPessoa>
 
         <CartaoPessoa

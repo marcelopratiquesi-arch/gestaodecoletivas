@@ -8,7 +8,7 @@
 //   Mentor    -> admin: todos · o próprio mentor: a dele (leitura)
 //   Professor -> admin: todos · mentor e líder: os professores vinculados às unidades deles ·
 //                o próprio professor: a dele (leitura)
-import { ehLider, unidadesDoLider } from '../permissions';
+import { ehLider, unidadesDoLider, escopoMentor } from '../permissions';
 import { acessoUnidade, acharUnidade, ehAdmin, liderDaVaga } from './contasUnidade';
 
 // Vaga de líder de cada tipo de ficha.
@@ -32,7 +32,7 @@ const acharPorIdOuNome = (lista = [], alvo) => {
 export function unidadesVisiveis(userData, unidades = []) {
   const papel = papelDe(userData);
   if (ehAdmin(papel)) return unidades;
-  if (papel === 'mentor') return unidades.filter((u) => u.mentorId && u.mentorId === idDe(userData));
+  if (papel === 'mentor') return unidades.filter((u) => u.mentorId && u.mentorId === escopoMentor(userData));
   if (ehLider(papel)) { const minhas = unidadesDoLider(userData); return unidades.filter((u) => minhas.includes(String(u.id))); }
   return [];
 }

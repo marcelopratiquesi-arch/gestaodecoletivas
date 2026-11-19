@@ -40,10 +40,16 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/usuarios/$(request.auth.uid))
         && meuPapel() == 'professor';
     }
+    // Id de mentor que vale para o logado: o dele mesmo, ou o do 1º mentor se ele é 2º mentor (crachá com
+    // mentorPrincipalId; só o admin grava esse campo). O 2º mentor enxerga/faz o mesmo que o 1º nas unidades dele.
+    function meuMentorId() {
+      let c = get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data;
+      return c.get('mentorPrincipalId', '') is string && c.get('mentorPrincipalId', '') != '' ? c.mentorPrincipalId : request.auth.uid;
+    }
     // O mentor logado é o mentor desta unidade? (id vazio = não)
     function mentorDaUnidadeId(unidadeId) {
       return unidadeId is string && unidadeId != ''
-        && get(/databases/$(database)/documents/unidades/$(unidadeId)).data.get('mentorId', '') == request.auth.uid;
+        && get(/databases/$(database)/documents/unidades/$(unidadeId)).data.get('mentorId', '') == meuMentorId();
     }
     function papelDoAlvo() { return resource.data.get('role', '').lower(); }
     function papelNovo() { return request.resource.data.get('role', '').lower(); }
@@ -118,11 +124,13 @@ service cloud.firestore {
       return emailGoogleVerificado() && request.auth.uid == uid
         && exists(caminhoConvite())
         && c.status == 'pendente' && c.papel == 'mentor'
-        && d.keys().hasOnly(['nome', 'email', 'telefone', 'pais', 'role', 'status', 'loginGoogle', 'criadoPor', 'criadoEm'])
+        && d.keys().hasOnly(['nome', 'email', 'telefone', 'pais', 'role', 'status', 'loginGoogle', 'criadoPor', 'criadoEm', 'mentorPrincipalId'])
         && d.role == 'mentor' && d.status == 'ativo' && d.loginGoogle == true
         && d.email == request.auth.token.email.lower()
         && d.nome == c.nome && d.telefone == c.telefone && d.get('pais', '') == c.get('pais', '')
         && d.criadoPor == c.criadoPor
+        // 2º mentor novo: o convite diz de qual mentor ele é o 2º (só o admin cria o convite); sem isso, não pode ter o campo.
+        && d.get('mentorPrincipalId', '') == c.get('mentorPrincipalId', '')
         // O convite precisa ser marcado como usado na MESMA gravação (não serve duas vezes).
         && getAfter(caminhoConvite()).data.status == 'usado';
     }
@@ -312,7 +320,7 @@ service cloud.firestore {
 
     function mentorPodeGravar(vid, d) {
       return meuPapel() == 'mentor'
-        && get(/databases/$(database)/documents/unidades/$(d.unidadeId)).data.get('mentorId', '') == request.auth.uid
+        && get(/databases/$(database)/documents/unidades/$(d.unidadeId)).data.get('mentorId', '') == meuMentorId()
         && idCerto(vid, d) && mesmaAulaEDia(d)
         && diaDa(d.data) <= hojeLocal()
         && (diaDa(d.data) >= inicioDoMes() || justificada(d))
@@ -333,7 +341,7 @@ service cloud.firestore {
       // Apagar = "reverter cancelamento" (só admin e mentor da unidade, como na tela).
       allow delete: if souAdmin()
         || (logado() && meuPapel() == 'mentor'
-            && get(/databases/$(database)/documents/unidades/$(resource.data.unidadeId)).data.get('mentorId', '') == request.auth.uid);
+            && get(/databases/$(database)/documents/unidades/$(resource.data.unidadeId)).data.get('mentorId', '') == meuMentorId());
     }
 
     // ===================== CRACHÁS (usuarios) =====================
@@ -425,7 +433,7 @@ service cloud.firestore {
         // Crachá de professor só nasce da APROVAÇÃO de um pedido (login do Google): nunca com e-mail e senha.
         || (logado() && meuPapel() == 'mentor' && papelNovo() == 'professor' && request.resource.data.get('loginGoogle', false) == true)
         || (logado() && meuPapel() == 'mentor' && papelNovo() in papeisLider()
-            && get(/databases/$(database)/documents/unidades/$(request.resource.data.unidadeId)).data.get('mentorId', '') == request.auth.uid
+            && get(/databases/$(database)/documents/unidades/$(request.resource.data.unidadeId)).data.get('mentorId', '') == meuMentorId()
             && request.resource.data.get('unidadeIds', [request.resource.data.unidadeId]) == [request.resource.data.unidadeId])
         || (logado() && meuPapel() in papeisLider() && papelNovo() == 'professor' && request.resource.data.get('loginGoogle', false) == true)
         // Mentor novo convidado pelo admin (aba Mentores): no 1º acesso pelo Google, a própria pessoa cria
@@ -469,7 +477,7 @@ service cloud.firestore {
         // Professor do login antigo (sem Google): a própria pessoa apaga o crachá antigo para poder pedir acesso.
         || (autenticado() && request.auth.uid == uid && papelDoAlvo() == 'professor' && resource.data.get('loginGoogle', false) != true)
         || (logado() && meuPapel() == 'mentor' && papelDoAlvo() in papeisLider()
-            && get(/databases/$(database)/documents/unidades/$(resource.data.unidadeId)).data.get('mentorId', '') == request.auth.uid
+            && get(/databases/$(database)/documents/unidades/$(resource.data.unidadeId)).data.get('mentorId', '') == meuMentorId()
             && unidadesDoAlvo().size() <= 1);
 
       // Favoritos do Pratique Play: cada pessoa mexe só nos próprios.

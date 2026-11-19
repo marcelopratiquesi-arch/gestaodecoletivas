@@ -105,5 +105,51 @@
     "noResults": "Nenhuma unidade encontrada.",
     "confirmTake": "A unidade {{unit}} hoje é de {{from}}. Passar para {{to}}?",
     "saveError": "Não foi possível salvar."
+  },
+  "second": {
+    "title": "2º mentor",
+    "help": "O 2º mentor de {{mentor}} enxerga e faz o mesmo que ele em todas as unidades dele (inclusive as que ele ganhar depois).",
+    "modeExisting": "Já cadastrado",
+    "modeNew": "Convidar e-mail novo",
+    "search": "Buscar por nome, e-mail ou CPF/DNI/SSN...",
+    "docSearching": "Procurando o documento...",
+    "docNone": "Nenhuma pessoa com esse documento (use \"Convidar e-mail novo\").",
+    "noPeople": "Ninguém encontrado.",
+    "tag": {
+      "professor": "Professor",
+      "lider": "Líder",
+      "mentor": "Mentor",
+      "admin": "Admin"
+    },
+    "reading": "Lendo o cadastro...",
+    "now": "Hoje é {{role}}. Vai receber o acesso de mentor.",
+    "keepsLeader": "Continua líder de: {{units}} (o nome dele segue aparecendo lá). Se sair de 2º mentor, volta a ser só líder.",
+    "outsideWarning": "Atenção: {{units}} não é(são) unidade(s) deste mentor. Nelas ele fica sem o acesso de mentor (a liderança continua).",
+    "errors": {
+      "read": "Não consegui ler o cadastro.",
+      "save": "Não foi possível salvar.",
+      "noLogin": "Essa pessoa ainda não tem login no sistema.",
+      "blocked": "Essa pessoa está sem acesso (bloqueada).",
+      "admin": "Admin já tem acesso total.",
+      "alreadyMentor": "Essa pessoa já é mentor."
+    },
+    "confirm": "Colocar {{name}} como 2º mentor de {{mentor}}?",
+    "done": "{{name}} agora é 2º mentor.",
+    "invited": "{{name}} foi cadastrado(a). No 1º acesso pelo Google, entra como 2º mentor.",
+    "googleEmail": "E-mail do Google",
+    "inviteHelp": "A pessoa entra pelo Google com esse e-mail e vira 2º mentor automaticamente.",
+    "save": "Colocar como 2º mentor",
+    "invite": "Cadastrar convite",
+    "badge": "2º mentor de {{name}}",
+    "has": "2º mentor: {{name}}",
+    "pending": "2º mentor convidado: {{name}} (aguardando 1º acesso)",
+    "sameUnits": "Mesmas unidades de {{name}}",
+    "shared": "da equipe",
+    "add": "Adicionar 2º mentor",
+    "makeFirst": "Tornar 1º mentor",
+    "remove": "Tirar de 2º mentor",
+    "removeConfirm": "Tirar {{name}} de 2º mentor de {{mentor}}?\n\nSe era líder ou professor, volta a ser o que era.",
+    "promoteConfirm": "{{name}} vira o 1º mentor e recebe as {{count}} unidade(s) de {{mentor}}.\n{{mentor}} fica sem unidades (pode receber outras depois).\n\nConfirmar?",
+    "leavesConfirm": "{{mentor}} tem um 2º mentor ({{name}}).\n\nAo sair, {{name}} assume todas as unidades. Confirmar?"
   }
 }

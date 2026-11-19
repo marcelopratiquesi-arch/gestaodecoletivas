@@ -90,6 +90,8 @@ export default function SolicitarAcesso() {
         nome: convite.nome, email: emailGoogle, telefone: convite.telefone, pais: convite.pais || "",
         role: "mentor", status: "ativo", loginGoogle: true,
         criadoPor: convite.criadoPor, criadoEm: serverTimestamp(),
+        // 2º mentor novo: o convite já diz de qual mentor ele é o 2º.
+        ...(convite.mentorPrincipalId ? { mentorPrincipalId: convite.mentorPrincipalId } : {}),
       });
       batch.update(doc(db, "convites_acesso", emailGoogle), { status: "usado", usadoPor: uid, usadoEm: serverTimestamp() });
       await batch.commit();

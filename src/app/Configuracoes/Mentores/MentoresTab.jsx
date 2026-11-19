@@ -14,7 +14,7 @@ import { documentoValido, limparDocumento, tipoDocumentoPadrao } from "../../../
 
 import { 
     ShieldCheck, Edit2, Trash2, AlertTriangle, CheckCircle2, 
-    Loader2, User, Mail, ChevronDown, ChevronUp, Ban, PowerOff, Plus, X, Phone, Check, Clock, Link2, ScanSearch
+    Loader2, User, Mail, ChevronDown, ChevronUp, Ban, PowerOff, Plus, X, Phone, Check, Clock, Link2, ScanSearch, Users, ArrowUpCircle, UserMinus
 } from "lucide-react";
 
 const EMAIL_VALIDO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -22,6 +22,10 @@ import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
 import LinkCentral from "../../../centrais/LinkCentral";
 import { useCatalogs } from "../../../contexts/CatalogContext";
 import { UnidadesVinculadasModal } from "./UnidadesVinculadasModal";
+import { SegundoMentorModal } from "./SegundoMentorModal";
+import { segundoDe, principalDe, conviteDe } from "./segundoMentor";
+import { sairDeSegundo, promoverASegundo } from "./acoesSegundoMentor";
+import { resumoDoAcesso } from "../../../utils/ultimoAcesso";
 import { FiltroPadrao } from "../ui/FiltroPadrao";
 import { CabecalhoDoModal } from "../ui/CabecalhoDoModal";
 import { BotaoDeLinha } from "../ui/BotaoDeLinha";
@@ -139,6 +143,7 @@ export function MentoresTab() {
   const { catalogs } = useCatalogs(); // admin recebe a rede inteira, sem leitura extra
   const todasUnidades = useMemo(() => catalogs?.unidades || [], [catalogs?.unidades]);
   const [vinculoAlvo, setVinculoAlvo] = useState(null);
+  const [segundoAlvo, setSegundoAlvo] = useState(null); // mentor que vai ganhar (ou trocar) o 2º mentor
   const { t, i18n } = useTranslation(); // 🟢 TRADUTOR CONECTADO
   
   const role = useMemo(() => String(userData?.role || "").trim().toLowerCase(), [userData?.role]);
@@ -234,7 +239,7 @@ export function MentoresTab() {
   const soDoStatus = useCallback((m) => !statusFiltro || (statusFiltro === 'ativo') === (m.status === 'ativo'), [statusFiltro]);
   const filtro = useFiltroCascata(mentores, {
       getPais: (m) => m.pais || PAIS_DEFAULT,
-      getEstados: (m) => estadosDoMentor[m.id] || [],
+      getEstados: (m) => estadosDoMentor[m.mentorPrincipalId || m.id] || [],
       textoBusca: (m) => [m.nome, m.email, m.telefone],
       extra: soDoStatus,
   });
@@ -414,10 +419,48 @@ export function MentoresTab() {
       }
   }
 
+  // ==========================================
+  // 2º MENTOR (espelho do 1º: mesmas unidades)
+  // ==========================================
+  // Tira o 2º mentor: líder/professor volta a ser o que era (a unidade e o nome de líder nunca saíram).
+  async function removerSegundo(seg) {
+    const principal = principalDe(mentores, seg);
+    if (!window.confirm(t('mentorsTab.second.removeConfirm', { name: seg.nome, mentor: principal?.nome || '-' }))) return;
+    try {
+      setSalvando(true);
+      await sairDeSegundo({ cracha: seg });
+      await registrarLogAuditoria('ALTERADA', `Deixou de ser 2º mentor de ${principal?.nome || '-'}.`, seg, seg.papelAntesSegundoMentor ? `Voltou a: ${seg.papelAntesSegundoMentor}` : 'Sem papel anterior: ficou sem acesso.');
+    } catch (e) { alert(t('mentorsTab.second.errors.save') + ' ' + e.message); } finally { setSalvando(false); }
+  }
+
+  // O 2º mentor vira o 1º: recebe todas as unidades; o mentor de antes fica sem unidades (recebe outras depois).
+  async function tornarPrimeiro(seg) {
+    const principal = principalDe(mentores, seg);
+    if (!principal) return;
+    const total = todasUnidades.filter(u => u.mentorId === principal.id).length;
+    if (!window.confirm(t('mentorsTab.second.promoteConfirm', { name: seg.nome, mentor: principal.nome, count: total }))) return;
+    try {
+      setSalvando(true);
+      const movidas = await promoverASegundo({ principal, segundo: seg, unidades: todasUnidades });
+      await registrarLogAuditoria('ALTERADA', `Virou o 1º mentor no lugar de ${principal.nome}.`, seg, `${movidas} unidade(s) passaram de ${principal.nome} para ${seg.nome}.`);
+    } catch (e) { alert(t('mentorsTab.second.errors.save') + ' ' + e.message); } finally { setSalvando(false); }
+  }
+
+  // Se o 1º mentor sai (inativar ou excluir) e tem 2º mentor, o 2º assume as unidades antes.
+  async function passarParaSegundoSeTiver(m) {
+    const seg = segundoDe(mentores, m.id);
+    if (!seg) return true;
+    if (!window.confirm(t('mentorsTab.second.leavesConfirm', { mentor: m.nome, name: seg.nome }))) return false;
+    const movidas = await promoverASegundo({ principal: m, segundo: seg, unidades: todasUnidades });
+    await registrarLogAuditoria('ALTERADA', `Assumiu as unidades de ${m.nome} (o 1º mentor saiu).`, seg, `${movidas} unidade(s) passaram para ${seg.nome}.`);
+    return true;
+  }
+
   // STATUS COM AUDITORIA
   async function alternarStatus(m) {
     const novoStatus = m.status === 'ativo' ? 'inativo' : 'ativo';
     try { 
+        if (novoStatus === 'inativo' && !(await passarParaSegundoSeTiver(m))) return;
         await updateDoc(doc(db, "usuarios", m.id), { status: novoStatus }); 
         await registrarLogAuditoria('ALTERADA', `Status modificado para ${novoStatus.toUpperCase()}`, m, novoStatus === 'inativo' ? 'Acesso ao sistema bloqueado.' : 'Acesso ao sistema liberado.');
     } catch (e) { 
@@ -431,6 +474,7 @@ export function MentoresTab() {
     
     try {
         setSalvando(true);
+        if (!(await passarParaSegundoSeTiver(m))) { setSalvando(false); return; }
         await deleteDoc(doc(db, "usuarios", m.id));
         await registrarLogAuditoria('EXCLUÍDA', 'Mentor e acessos excluídos do sistema.', m, `Exclusão definitiva.`);
     } catch (e) { 
@@ -548,6 +592,21 @@ export function MentoresTab() {
                     <td className="p-4">
                       <LinkCentral tipo="mentor" alvo={m} className="font-black text-slate-800 dark:text-white text-base">{m.nome}</LinkCentral>
                       <SeloRepetido selo={selosRepetidos.get(`cracha:${m.id}`)} detalheDe={(o) => o.email || ""} />
+                      {m.mentorPrincipalId && (
+                        <span className="ml-2 inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-md bg-violet-50 text-violet-700 border border-violet-200 dark:bg-violet-900/20 dark:text-violet-300 dark:border-violet-800 normal-case align-middle">
+                          <Users className="w-3 h-3"/> {t('mentorsTab.second.badge', { name: principalDe(mentores, m)?.nome || '-' })}
+                        </span>
+                      )}
+                      {!m.mentorPrincipalId && segundoDe(mentores, m.id) && (
+                        <div className="text-[11px] font-bold text-violet-600 dark:text-violet-300 normal-case mt-0.5 flex items-center gap-1">
+                          <Users className="w-3 h-3"/> {t('mentorsTab.second.has', { name: segundoDe(mentores, m.id).nome })}
+                        </div>
+                      )}
+                      {!m.mentorPrincipalId && !segundoDe(mentores, m.id) && conviteDe(convites, m.id) && (
+                        <div className="text-[11px] font-bold text-amber-600 dark:text-amber-400 normal-case mt-0.5 flex items-center gap-1">
+                          <Clock className="w-3 h-3"/> {t('mentorsTab.second.pending', { name: conviteDe(convites, m.id).nome })}
+                        </div>
+                      )}
                       <div className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5 flex items-center gap-1">
                           <Mail className="w-3 h-3"/> {m.email}
                       </div>
@@ -599,35 +658,51 @@ export function MentoresTab() {
                     
                     {/* UNIDADES VINCULADAS: abre o modal de vínculo */}
                     <td className="p-4">
-                      <button onClick={() => setVinculoAlvo(m)} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-black bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white dark:bg-blue-900/30 dark:text-blue-400 transition-colors" title={t('mentorsTab.linked.manage')}>
-                        <Link2 className="w-3.5 h-3.5"/> {todasUnidades.filter(u => u.mentorId === m.id).length}
-                      </button>
+                      {m.mentorPrincipalId ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-black bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300" title={t('mentorsTab.second.sameUnits', { name: principalDe(mentores, m)?.nome || '-' })}>
+                          <Link2 className="w-3.5 h-3.5"/> {todasUnidades.filter(u => u.mentorId === m.mentorPrincipalId).length} <span className="font-medium normal-case">{t('mentorsTab.second.shared')}</span>
+                        </span>
+                      ) : (
+                        <button onClick={() => setVinculoAlvo(m)} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-black bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white dark:bg-blue-900/30 dark:text-blue-400 transition-colors" title={t('mentorsTab.linked.manage')}>
+                          <Link2 className="w-3.5 h-3.5"/> {todasUnidades.filter(u => u.mentorId === m.id).length}
+                        </button>
+                      )}
                     </td>
 
-                    {/* ACESSO: último login registrado */}
+                    {/* ACESSO: data e hora do último acesso (sempre visíveis) + "há X dias" colorido */}
                     <td className="p-4 text-xs whitespace-nowrap">
-                      {m.ultimoAcesso?.toDate ? (() => {
-                        const data = m.ultimoAcesso.toDate();
-                        const dias = Math.max(0, Math.floor((Date.now() - data.getTime()) / 86400000));
-                        const cor = dias <= 7 ? 'text-emerald-600 dark:text-emerald-400' : dias <= 30 ? 'text-amber-600 dark:text-amber-400' : 'text-red-600 dark:text-red-400';
-                        const rotulo = new Intl.RelativeTimeFormat(i18n.language, { numeric: 'auto' }).format(-dias, 'day');
+                      {(() => {
+                        const ac = resumoDoAcesso(m.ultimoAcesso, i18n.language);
+                        if (!ac) return <span className="text-slate-400 font-medium normal-case">{t('mentorsTab.table.neverSeen', 'Sem registro')}</span>;
+                        const cor = ac.cor === 'emerald' ? 'text-emerald-600 dark:text-emerald-400' : ac.cor === 'amber' ? 'text-amber-600 dark:text-amber-400' : 'text-red-600 dark:text-red-400';
                         return (
-                          <div title={data.toLocaleString(i18n.language, { dateStyle: 'short', timeStyle: 'short' })}>
-                            <div className={`font-bold ${cor}`}>{rotulo}</div>
-                            <div className="text-[10px] text-slate-400 font-medium">{data.toLocaleDateString(i18n.language)}</div>
+                          <div title={ac.dataHora}>
+                            <div className="font-bold text-slate-700 dark:text-slate-200 normal-case">{ac.dia} · {ac.hora}</div>
+                            <div className={`text-[11px] font-bold normal-case ${cor}`}>{ac.relativo}</div>
                           </div>
                         );
-                      })() : <span className="text-slate-400 font-medium normal-case">{t('mentorsTab.table.neverSeen', 'Sem registro')}</span>}
+                      })()}
                     </td>
 
                     {/* AÇÕES */}
                     <td className="p-4 text-right">
                         <div className="flex gap-2 justify-end opacity-40 group-hover:opacity-100 transition-opacity">
+                            {!m.mentorPrincipalId && !segundoDe(mentores, m.id) && !conviteDe(convites, m.id) && m.status === 'ativo' && (
+                                <BotaoDeLinha abaId="mentores" icone={Users} onClick={() => setSegundoAlvo(m)} title={t('mentorsTab.second.add')} />
+                            )}
+                            {m.mentorPrincipalId && (
+                                <BotaoDeLinha abaId="mentores" tipo="ativar" icone={ArrowUpCircle} onClick={() => tornarPrimeiro(m)} title={t('mentorsTab.second.makeFirst')} />
+                            )}
+                            {m.mentorPrincipalId && (
+                                <BotaoDeLinha abaId="mentores" tipo="desativar" icone={UserMinus} onClick={() => removerSegundo(m)} title={t('mentorsTab.second.remove')} />
+                            )}
                             <BotaoDocumento onClick={() => setDocAlvo({ id: m.id, nome: m.nome, email: m.email })} />
                             <BotaoDeLinha abaId="mentores" icone={Edit2} onClick={() => abrirModalEditar(m)} title={t('mentorsTab.table.edit', 'Editar Completo')} />
                             <BotaoDeLinha abaId="mentores" tipo={m.status === "ativo" ? "desativar" : "ativar"} icone={m.status === "ativo" ? PowerOff : CheckCircle2} onClick={() => alternarStatus(m)}
                                 title={m.status === "ativo" ? t('mentorsTab.table.deactivate', 'Desactivar') : t('mentorsTab.table.activate', 'Ativar')} />
-                            <BotaoDeLinha abaId="mentores" tipo="perigo" icone={Trash2} onClick={() => excluir(m)} title={t('mentorsTab.table.delete', 'Excluir Definitivamente')} />
+                            {!m.mentorPrincipalId && (
+                                <BotaoDeLinha abaId="mentores" tipo="perigo" icone={Trash2} onClick={() => excluir(m)} title={t('mentorsTab.table.delete', 'Excluir Definitivamente')} />
+                            )}
                         </div>
                     </td>
                   </tr>
@@ -638,6 +713,7 @@ export function MentoresTab() {
       </div>
 
       {/* MODAL */}
+      {segundoAlvo && <SegundoMentorModal principal={segundoAlvo} professores={catalogs?.professores || []} unidades={todasUnidades} quem={userData} registrarAuditoria={registrarLogAuditoria} onClose={() => setSegundoAlvo(null)} />}
       {vinculoAlvo && <UnidadesVinculadasModal mentor={vinculoAlvo} mentores={mentores} unidades={todasUnidades} quem={userData} onClose={() => setVinculoAlvo(null)} />}
       {docAlvo && <DocumentoModal alvo={docAlvo} onClose={() => setDocAlvo(null)} />}
 

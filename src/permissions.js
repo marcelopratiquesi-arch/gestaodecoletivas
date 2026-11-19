@@ -69,3 +69,13 @@ export function professorDeLoginAntigo(cracha) {
 }
 // Recado para a tela de entrada explicar que o professor agora entra pelo Google e pede acesso.
 export const AVISO_PROFESSOR_LOGIN_ANTIGO = "pratique_aviso_professor_login_antigo";
+
+// 2º mentor: crachá de mentor com "mentorPrincipalId" = id do 1º mentor. Ele enxerga e faz o mesmo que o 1º
+// nas unidades dele (unidades.mentorId continua sendo o do 1º). Toda tela que filtra "minhas unidades" compara
+// unidades.mentorId com ESTE id (para o 1º mentor e para todo o resto, é o próprio id).
+export function escopoMentor(userData) {
+  return userData?.mentorPrincipalId || userData?.id || userData?.uid;
+}
+export function ehSegundoMentor(cracha) {
+  return String(cracha?.role || "").trim().toLowerCase() === "mentor" && !!cracha?.mentorPrincipalId;
+}

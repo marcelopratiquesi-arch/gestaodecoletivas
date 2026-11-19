@@ -1,4 +1,4 @@
-import { ehLider, unidadesDoLider } from '../../permissions';
+import { ehLider, unidadesDoLider, escopoMentor } from '../../permissions';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import { useAuth } from '../../contexts/AuthContext';
@@ -210,6 +210,7 @@ export default function RelatorioPage() {
   // Líder pode comandar mais de uma unidade ("id1,id2"; ver unidadesDoLider em permissions.js).
   const unidadesLiderKey = unidadesDoLider(userData).join(',');
   const userId = userData?.id || userData?.uid;
+  const escopoId = escopoMentor(userData); // id que vale como "mentor das unidades" (2º mentor usa o do 1º)
 
   const [loading, setLoading] = useState(true);
   const [catalogs, setCatalogs] = useState({
@@ -275,7 +276,7 @@ export default function RelatorioPage() {
       setLoading(true);
       try {
         let qUnidades = query(collection(db, 'unidades'), orderBy('nome'));
-        if (role === 'mentor') qUnidades = query(collection(db, 'unidades'), where('mentorId', '==', userId));
+        if (role === 'mentor') qUnidades = query(collection(db, 'unidades'), where('mentorId', '==', escopoId));
         else if (ehLider(role)) qUnidades = query(collection(db, 'unidades'), where(documentId(), 'in', unidadesLiderKey.split(',').slice(0, LIMITE_IN)));
 
         const usersQuery = query(collection(db, 'usuarios'), where('role', '==', 'mentor'));
@@ -304,7 +305,7 @@ export default function RelatorioPage() {
       finally { setLoading(false); }
     };
     loadCatalogs();
-  }, [role, userId, unidadesLiderKey]);
+  }, [role, userId, unidadesLiderKey, escopoId]);
 
   // Listas Dinâmicas de Filtros (país e estado já vêm padronizados do carregamento)
   const listasFiltros = useMemo(() => {
