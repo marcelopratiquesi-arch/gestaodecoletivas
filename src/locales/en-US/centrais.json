@@ -65,7 +65,8 @@
     "equipe": "Team",
     "unidades": "Units",
     "aulas": "Classes",
-    "cadastro": "Record"
+    "cadastro": "Record",
+    "workshops": "Workshops"
   },
   "cadastro": {
     "nome": "Name",
@@ -373,7 +374,9 @@
       "ultimaAula": "Last class taught",
       "aulasNoPeriodo": "{{n}} class(es) taught in the period",
       "umaUnidade": "Linked unit",
-      "cadastro": "Record status"
+      "cadastro": "Record status",
+      "workshops": "Workshops",
+      "workshopsVazio": "No workshops recorded"
     },
     "emDia": {
       "ativo": {
@@ -411,6 +414,15 @@
         "falta": "{{n}} of their class(es) this month not validated.",
         "acao": "Open validation"
       }
+    },
+    "workshops": {
+      "titulo": "Workshops the teacher took",
+      "vazio": "No workshops recorded for this teacher yet.",
+      "nota": "They count for all of the teacher’s units.",
+      "por": "added by {{nome}}",
+      "editar": "Add or remove workshops",
+      "ultimo": "Latest: {{nome}}",
+      "colPor": "Added by"
     }
   }
 }
