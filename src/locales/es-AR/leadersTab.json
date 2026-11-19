@@ -140,5 +140,117 @@
     "pick": "Elegir una persona ya registrada",
     "register": "Registrar líder nuevo",
     "confirmShort": "Confirmar que es la persona correcta"
+  },
+  "central": {
+    "title": "Líderes · lo que necesita atención",
+    "subtitle_one": "{{count}} de {{total}} unidades tiene algo pendiente. Hacé clic en un bloque para ver solo ese grupo.",
+    "subtitle_other": "{{count}} de {{total}} unidades tienen algo pendiente. Hacé clic en un bloque para ver solo ese grupo.",
+    "summary": "Resumen",
+    "units": "Unidades",
+    "breadcrumb": "Configuración › Líderes",
+    "pendingCount_one": "{{count}} pendiente",
+    "pendingCount_other": "{{count}} pendientes",
+    "unitsCount_one": "{{count}} unidad",
+    "unitsCount_other": "{{count}} unidades",
+    "okCount": "{{count}} todo en orden",
+    "tile": {
+      "semLider": "Sin líder",
+      "conferir": "A confirmar",
+      "temporario": "Temporales",
+      "semAcesso": "Sin acceso 30+ días",
+      "ok": "Todo en orden"
+    },
+    "tileHint": {
+      "semLider": "Elegir o registrar a alguien",
+      "conferir": "Entró con Google, falta confirmar",
+      "temporario": "Con fecha de fin",
+      "semAcesso": "Escribir por WhatsApp",
+      "ok": "Nada que hacer",
+      "tempSoon_one": "{{count}} vence en hasta 15 días",
+      "tempSoon_other": "{{count}} vencen en hasta 15 días"
+    },
+    "chip": {
+      "pending": "Pendientes",
+      "semLider": "Sin líder",
+      "conferir": "A confirmar",
+      "temporario": "Temp.",
+      "semAcesso": "Sin acceso",
+      "ok": "En orden"
+    },
+    "situation": {
+      "semLider": "Sin líder",
+      "conferir": "A confirmar",
+      "temporario": "Temporal",
+      "semAcesso": "Sin acceso",
+      "ok": "Todo en orden"
+    },
+    "sort": {
+      "label": "Ordenar",
+      "situation": "Más urgente primero",
+      "az": "Unidad A→Z",
+      "za": "Unidad Z→A",
+      "access": "Acceso más antiguo"
+    },
+    "groupAction": "Necesita acción · {{count}}",
+    "groupOk": "Todo en orden · {{count}}",
+    "urgentFirst": "más urgente primero",
+    "neverShort": "nunca",
+    "pickUnit": "Hacé clic en una unidad para ver la ficha.",
+    "short": {
+      "requests_one": "{{count}} persona ya pidió acceso",
+      "requests_other": "{{count}} personas ya pidieron acceso",
+      "legacy": "Todavía entra con el login antiguo de la unidad",
+      "noLeader": "Nadie responde por esta unidad",
+      "check": "Confirmar si es la persona correcta",
+      "tempToday": "Temporal {{name}} vence hoy",
+      "temp_one": "Temporal {{name}} vence en {{count}} día",
+      "temp_other": "Temporal {{name}} vence en {{count}} días",
+      "never": "Registrado, pero nunca entró",
+      "stale_one": "No entra hace {{count}} día",
+      "stale_other": "No entra hace {{count}} días",
+      "two": "2 líderes activos",
+      "ok": "Confirmada"
+    },
+    "long": {
+      "requests_one": "{{count}} persona pidió acceso a esta unidad con Google. Aprobalo en el bloque de pedidos, arriba, o elegí a alguien que ya tiene acceso.",
+      "requests_other": "{{count}} personas pidieron acceso a esta unidad con Google. Aprobalas en el bloque de pedidos, arriba, o elegí a alguien que ya tiene acceso.",
+      "noLeader": "Nadie responde por esta unidad. Elegí a alguien que ya tiene acceso o registrá un líder.",
+      "check": "{{name}} entró con Google y asumió la unidad. Confirmá que es realmente la líder de esta unidad.",
+      "temp_one": "El líder temporal {{name}} vence en {{count}} día ({{date}}).",
+      "temp_other": "El líder temporal {{name}} vence en {{count}} días ({{date}}).",
+      "never": "{{name}} fue registrado, pero nunca entró al sistema. Mandale por WhatsApp cómo entrar.",
+      "stale_one": "{{name}} no entra al sistema hace {{count}} día.",
+      "stale_other": "{{name}} no entra al sistema hace {{count}} días."
+    },
+    "step": {
+      "pick": "Elegir líder",
+      "confirm": "✓ Confirmar",
+      "confirmLong": "✓ Sí, es la persona correcta",
+      "extend": "Prorrogar",
+      "whatsapp": "Escribir por WhatsApp",
+      "open": "Ver ficha",
+      "register": "Registrar líder"
+    },
+    "message": {
+      "never": "¡Hola, {{name}}! Para entrar al sistema de Pratique, abrí {{link}} y entrá con tu correo {{email}}.",
+      "stale": "Hola, {{name}}, ¿todo bien? Hace {{count}} días que no entrás al sistema de Pratique ({{link}}). ¿Necesitás ayuda para acceder?"
+    },
+    "lastAccess": "Último acceso",
+    "copyEmail": "Copiar correo",
+    "copyPhone": "Copiar teléfono",
+    "call": "Llamar",
+    "moreOptions": "Más opciones",
+    "sheet": "Ficha de la unidad",
+    "close": "Cerrar ficha",
+    "whatsMissing": "Lo que falta",
+    "noPhone": "Sin teléfono registrado: editá el contacto para escribir por WhatsApp.",
+    "mainLeader": "Líder principal",
+    "document": "Documento (DNI)",
+    "add": "+ Agregar",
+    "define": "+ Definir",
+    "temporary": "Temporal",
+    "makePermanent": "Efectivizar",
+    "end": "Terminar",
+    "otherActions": "Otras acciones"
   }
 }
