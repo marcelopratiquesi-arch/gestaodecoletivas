@@ -159,6 +159,7 @@ export function MentoresTab() {
   const [loading, setLoading] = useState(true);
   
   // UX
+  const [situacao, setSituacao] = useState("todos"); // todos | com | sem | segundo | parado | nunca (filtro próprio da aba, ao lado do status)
   const [statusFiltro, setStatusFiltro] = useState("ativo"); // abre SEMPRE com os ativos; "" = todos | ativo | inativo (clique nos números do topo)
   const [mostrarBuscaDoc, setMostrarBuscaDoc] = useState(false); // busca por CPF/DNI/SSN (esta aba já é só admin)
   const [sortConfig, setSortConfig] = useState({ field: 'nome', direction: 'asc' });
@@ -238,11 +239,49 @@ export function MentoresTab() {
       return mapa;
   }, [todasUnidades]);
   const soDoStatus = useCallback((m) => !statusFiltro || (statusFiltro === 'ativo') === (m.status === 'ativo'), [statusFiltro]);
+
+  // Unidades de cada mentor (o 2º mentor tem as do 1º) e quem lidera cada uma: tudo do catálogo já carregado.
+  const unidadesDoMentor = useMemo(() => {
+      const mapa = {};
+      todasUnidades.forEach(u => { if (u.mentorId) (mapa[u.mentorId] ||= []).push(u); });
+      return mapa;
+  }, [todasUnidades]);
+  const unidadesDe = useCallback((m) => unidadesDoMentor[m.mentorPrincipalId || m.id] || [], [unidadesDoMentor]);
+  const nomeDaUnidade = useCallback((id) => todasUnidades.find(u => String(u.id) === String(id))?.nome, [todasUnidades]);
+  const nomeDoLider = useCallback((uid) => {
+      const u = todasUnidades.find(x => x.liderUid === uid || x.lider2Uid === uid);
+      return u ? (u.liderUid === uid ? u.liderNome : u.lider2Nome) : undefined;
+  }, [todasUnidades]);
+
+  // Situação do mentor: unidades, 2º mentor e há quanto tempo não entra (30 dias sem entrar = parado).
+  const [agoraMs] = useState(() => Date.now());
+  const situacaoDe = useCallback((m) => {
+      const ms = m.ultimoAcesso?.toMillis?.() || 0;
+      return {
+          com: unidadesDe(m).length > 0,
+          sem: unidadesDe(m).length === 0,
+          segundo: !m.mentorPrincipalId && !!segundoDe(mentores, m.id),
+          nunca: !ms,
+          parado: !!ms && agoraMs - ms > 30 * 86400000,
+      };
+  }, [unidadesDe, mentores, agoraMs]);
+  const soDaSituacao = useCallback((m) => situacao === 'todos' || situacaoDe(m)[situacao] === true, [situacao, situacaoDe]);
+  const contagemSituacao = useMemo(() => {
+      const base = mentores.filter(soDoStatus);
+      const c = { todos: base.length, com: 0, sem: 0, segundo: 0, parado: 0, nunca: 0 };
+      base.forEach(m => { const s = situacaoDe(m); Object.keys(c).forEach(k => { if (k !== 'todos' && s[k]) c[k]++; }); });
+      return c;
+  }, [mentores, soDoStatus, situacaoDe]);
+
   const filtro = useFiltroCascata(mentores, {
       getPais: (m) => m.pais || PAIS_DEFAULT,
       getEstados: (m) => estadosDoMentor[m.mentorPrincipalId || m.id] || [],
+      getUnidadeIds: (m) => unidadesDe(m).map(u => u.id),
+      getLiderIds: (m) => unidadesDe(m).flatMap(u => [u.liderUid, u.lider2Uid]).filter(Boolean),
+      nomeUnidade: nomeDaUnidade,
+      nomeLider: nomeDoLider,
       textoBusca: (m) => [m.nome, m.email, m.telefone, principalDe(mentores, m)?.nome, segundoDe(mentores, m.id)?.nome], // o 2º mentor aparece junto do 1º na busca
-      extra: soDoStatus,
+      extra: (m) => soDoStatus(m) && soDaSituacao(m),
   });
 
   // Selo "possível repetido" (mesmo telefone de outra pessoa): compara os mentores que a tela já carregou.
@@ -515,7 +554,7 @@ export function MentoresTab() {
       </CabecalhoDaAba>
 
       {/* BUSCA + FILTROS (filtro padrão das Configurações; o status são os números do topo) */}
-      <FiltroPadrao abaId="mentores" filtro={filtro} mostrar={["pais", "estado"]} ativoExtra={statusFiltro !== "ativo"} aoLimpar={() => setStatusFiltro("ativo")} placeholder={t('mentorsTab.searchPlaceholder', 'Buscar mentor, e-mail ou telefone...')}
+      <FiltroPadrao abaId="mentores" filtro={filtro} mostrar={["pais", "estado", "unidade", "lider"]} ativoExtra={statusFiltro !== "ativo" || situacao !== "todos"} aoLimpar={() => { setStatusFiltro("ativo"); setSituacao("todos"); }} placeholder={t('mentorsTab.searchPlaceholder', 'Buscar mentor, e-mail ou telefone...')}
           acoes={role === "admin" && (
               <button type="button" onClick={() => setMostrarBuscaDoc(v => !v)} aria-expanded={mostrarBuscaDoc}
                   className={`px-4 py-3 rounded-xl border text-xs font-black uppercase flex items-center justify-center gap-2 transition-colors ${mostrarBuscaDoc
@@ -525,6 +564,28 @@ export function MentoresTab() {
               </button>
           )}>
           {role === "admin" && mostrarBuscaDoc && <BuscaDocumento />}
+
+          {/* Situação: um seletor só, com a contagem de cada grupo (mesmo jeito da aba Líderes) */}
+          <div className="flex flex-wrap gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-900 w-fit max-w-full">
+            {[
+              { id: "todos", rotulo: t('mentorsTab.filter.all') },
+              { id: "com", rotulo: t('mentorsTab.filter.with') },
+              { id: "sem", rotulo: t('mentorsTab.filter.without') },
+              { id: "segundo", rotulo: t('mentorsTab.filter.second') },
+              { id: "parado", rotulo: t('mentorsTab.filter.stale') },
+              { id: "nunca", rotulo: t('mentorsTab.filter.never') },
+            ].map((f) => (
+              <button key={f.id} type="button" onClick={() => setSituacao(f.id)} aria-pressed={situacao === f.id}
+                className={`px-3.5 py-2 rounded-lg text-xs font-black uppercase flex items-center gap-2 transition-colors ${situacao === f.id
+                  ? "bg-white dark:bg-slate-700 text-blue-600 shadow-sm"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"}`}>
+                {f.rotulo}
+                <span className={`min-w-[1.5rem] px-1.5 py-0.5 rounded-md text-[10px] text-center ${situacao === f.id
+                  ? "bg-blue-600 text-white"
+                  : (f.id === "parado" || f.id === "nunca" || f.id === "sem") && contagemSituacao[f.id] > 0 ? "bg-amber-100 text-amber-700" : "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-300"}`}>{contagemSituacao[f.id]}</span>
+              </button>
+            ))}
+          </div>
       </FiltroPadrao>
 
       {/* CADASTRADOS PELO E-MAIL DO GOOGLE, AINDA SEM O 1º ACESSO */}
