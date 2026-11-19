@@ -673,6 +673,15 @@ export function ProfessoresTab() {
                                             <IdCard className="w-3 h-3" /> {t('teachersTab.cpf.badge')}
                                         </span>
                                     )}
+                                    {(() => {
+                                        const qtd = Array.isArray(p.workshops) ? p.workshops.length : 0;
+                                        return (
+                                            <button type="button" onClick={() => setProfWorkshops(p)} title={t('teachersTab.workshopsBadgeTip')}
+                                                className={`ml-2 inline-flex items-center gap-1 align-middle text-[9px] font-black px-1.5 py-0.5 rounded border transition-colors ${qtd > 0 ? 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-900/20 dark:border-amber-800 dark:text-amber-400' : 'border-slate-200 bg-slate-50 text-slate-400 hover:bg-slate-100 dark:bg-slate-800 dark:border-slate-700'}`}>
+                                                <Award className="w-3 h-3" /> {t('teachersTab.workshopsBadge', { count: qtd })}
+                                            </button>
+                                        );
+                                    })()}
                                 </td>
                                 <td className="p-4">
                                     <div className="flex flex-col gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400">

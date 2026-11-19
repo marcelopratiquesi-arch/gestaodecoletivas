@@ -89,7 +89,8 @@
     "aulasDadas": "Aulas dadas no período",
     "recebeu": "Recebeu no período",
     "situacao": "Situação",
-    "semContato": "Sem contato"
+    "semContato": "Sem contato",
+    "workshops": "Workshops"
   },
   "avisos": {
     "naoEncontrado": "Não encontrei esse cadastro.",

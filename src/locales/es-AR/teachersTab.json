@@ -45,7 +45,7 @@
     "optionalHint": "Opcional por ahora: completalo para terminar la ficha. Queda en un área protegida (solo admin y mentor lo ven).",
     "fixHint": "Corregí solo si el número está mal.",
     "replacesOldLogin": "Esta ficha está vinculada a otro acceso (casi siempre el antiguo, con contraseña). Al confirmar, pasa a usar el acceso nuevo de esta persona.",
-    "fromLogin":"Este documento es del acceso (login) de {{name}} ({{email}}). Vinculándolo a la ficha de la grilla, no queda duplicada."
+    "fromLogin": "Este documento es del acceso (login) de {{name}} ({{email}}). Vinculándolo a la ficha de la grilla, no queda duplicada."
   },
   "newLinkBtn": "+ NUEVO VÍNCULO",
   "fixEmailsBtn": "CORREGIR CORREOS",
@@ -134,5 +134,8 @@
     "deactivateProfile": "Desactivar perfil",
     "activateProfile": "Activar perfil",
     "deleteNetwork": "Eliminar definitivamente de toda la red"
-  }
+  },
+  "workshopsBadge_one": "{{count}} workshop",
+  "workshopsBadge_other": "{{count}} workshops",
+  "workshopsBadgeTip": "Ver los workshops de este profesor"
 }

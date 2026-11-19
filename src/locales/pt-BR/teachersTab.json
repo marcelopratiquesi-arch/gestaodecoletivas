@@ -45,7 +45,7 @@
     "optionalHint": "Opcional por enquanto: preencha para completar a ficha. Fica em área protegida (só admin e mentor veem).",
     "fixHint": "Corrija só se o número estiver errado.",
     "replacesOldLogin": "Esta ficha está ligada a outro login (quase sempre o antigo, da senha). Confirmando, ela passa a usar o login novo desta pessoa.",
-    "fromLogin":"Este documento é do acesso (login) de {{name}} ({{email}}). Ligando à ficha da grade, ela não fica duplicada."
+    "fromLogin": "Este documento é do acesso (login) de {{name}} ({{email}}). Ligando à ficha da grade, ela não fica duplicada."
   },
   "newLinkBtn": "+ NOVO VÍNCULO",
   "fixEmailsBtn": "CORRIGIR E-MAILS",
@@ -134,5 +134,8 @@
     "deactivateProfile": "Desativar perfil",
     "activateProfile": "Ativar perfil",
     "deleteNetwork": "Excluir definitivamente de toda a rede"
-  }
+  },
+  "workshopsBadge_one": "{{count}} workshop",
+  "workshopsBadge_other": "{{count}} workshops",
+  "workshopsBadgeTip": "Ver os workshops deste professor"
 }

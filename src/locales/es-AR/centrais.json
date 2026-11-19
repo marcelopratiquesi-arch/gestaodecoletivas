@@ -89,7 +89,8 @@
     "aulasDadas": "Clases dadas en el período",
     "recebeu": "Cobró en el período",
     "situacao": "Situación",
-    "semContato": "Sin contacto"
+    "semContato": "Sin contacto",
+    "workshops": "Workshops"
   },
   "avisos": {
     "naoEncontrado": "No encontré ese registro.",
