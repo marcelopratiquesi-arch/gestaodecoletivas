@@ -853,6 +853,14 @@ service cloud.firestore {
       allow write: if souAdmin();
     }
 
+    // ===================== TABELA DE PREÇOS (tabela_precos) =====================
+    // Valor por aula por modalidade e pulseira (src/utils/tabelaPrecos.js). Admin, mentor e líder leem; PROFESSOR NÃO
+    // lê (são valores de pagamento); só o admin grava. Está na lista de exceções da regra-curinga (senão ela liberaria).
+    match /tabela_precos/{docId} {
+      allow read: if logado() && (meuPapel() in ['admin', 'administrador', 'master', 'mentor'] || meuPapel() in papeisLider());
+      allow write: if souAdmin();
+    }
+
     // ===================== TELEMETRIA DE LEITURAS (telemetria_leituras) =====================
     // Resumo de quantas leituras cada pessoa fez no dia, por tela (src/services/telemetriaLeituras.js).
     // Cada pessoa grava só o próprio documento do dia ({AAAA-MM-DD}_{uid}), com a hora do servidor e só estes
@@ -982,8 +990,8 @@ service cloud.firestore {
     // Professor não grava nada aqui, só cria registros de auditoria (log da validação e do "Sair").
     // (No Firestore, se QUALQUER regra libera, a ação passa; por isso as exceções precisam estar aqui.)
     match /{colecao}/{resto=**} {
-      allow read: if logado() && !(colecao in ['feriados_propostas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos', 'documentos_ficha', 'documentos_professor', 'contatos_unicos', 'telemetria_leituras', 'workshops_cadastro', 'certificados_professor']);
-      allow write: if logado() && !(colecao in ['feriados', 'feriados_propostas', 'usuarios', 'publico', 'validacoes', 'aulas', 'aulas_publicas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'resumos_mensais', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos', 'professores', 'documentos_ficha', 'documentos_professor', 'contatos_unicos', 'telemetria_leituras', 'workshops_cadastro', 'certificados_professor', 'unidades', 'configuracoes']) && !souProfessor();
+      allow read: if logado() && !(colecao in ['feriados_propostas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos', 'documentos_ficha', 'documentos_professor', 'contatos_unicos', 'telemetria_leituras', 'tabela_precos', 'workshops_cadastro', 'certificados_professor']);
+      allow write: if logado() && !(colecao in ['feriados', 'feriados_propostas', 'usuarios', 'publico', 'validacoes', 'aulas', 'aulas_publicas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'resumos_mensais', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos', 'professores', 'documentos_ficha', 'documentos_professor', 'contatos_unicos', 'telemetria_leituras', 'tabela_precos', 'workshops_cadastro', 'certificados_professor', 'unidades', 'configuracoes']) && !souProfessor();
       allow create: if logado() && colecao in ['auditoria_cronograma', 'auditoria_configuracoes'];
     }
   }

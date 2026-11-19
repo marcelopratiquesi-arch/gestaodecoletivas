@@ -1,0 +1,50 @@
+{
+  "open": "Tabela de preços",
+  "title": "Tabela de preços",
+  "subtitle": "Valor por aula, por modalidade e por pulseira (plano de carreira das coletivas).",
+  "edit": "Editar valores",
+  "close": "Fechar",
+  "cancel": "Cancelar",
+  "save": "Salvar",
+  "saved_one": "Tabela salva. {{count}} valor alterado.",
+  "saved_other": "Tabela salva. {{count}} valores alterados.",
+  "noChanges": "Nada foi alterado.",
+  "loadError": "Não foi possível carregar a tabela de preços. Tente de novo.",
+  "saveError": "Não foi possível salvar. Confira sua conexão e tente de novo.",
+  "invalidValues_one": "{{count}} campo está vazio ou inválido. Use só números (ex.: 12,50).",
+  "invalidValues_other": "{{count}} campos estão vazios ou inválidos. Use só números (ex.: 12,50).",
+  "hidden": "Escondida",
+  "visible": "Visível",
+  "levels": {
+    "cinza": "Sem workshop",
+    "verde": "Pulseira verde",
+    "vermelha": "Pulseira vermelha",
+    "preta": "Pulseira preta"
+  },
+  "levelHint": {
+    "cinza": "nenhum workshop",
+    "verde": "1 workshop",
+    "vermelha": "2 workshops",
+    "preta": "3 workshops"
+  },
+  "fields": {
+    "qualquer": "Qualquer aula",
+    "academico": "Acadêmicos",
+    "umaAula": "1 aula",
+    "seguidas": "2 a 3 aulas"
+  },
+  "rulesTitle": "Como ler a tabela",
+  "ruleWorkshop": "A pulseira depende de quantos workshops a pessoa fez. Cada modalidade conta como um workshop.",
+  "ruleAcademic": "Acadêmicos: aula dada no horário de estágio/trabalho. Os demais valores são para aula fora desse horário.",
+  "ruleStreak": "Jump e Dance: \"2 a 3 aulas\" vale quando a pessoa dá aulas seguidas no mesmo dia (ex.: Jump e depois Dance).",
+  "blackTitle": "Pulseira preta",
+  "blackIntro": "Além dos 3 workshops, a turma precisa ter média de alunos acima de:",
+  "freq": {
+    "manha": "Manhã:",
+    "noite": "Noite:"
+  },
+  "students": "alunos",
+  "notAutomatic": "Atenção: esta tabela é de consulta e edição. Ela ainda não calcula o pagamento automaticamente; o valor de cada aula continua sendo o cadastrado no Cronograma.",
+  "lastUpdate": "Última alteração em {{when}} por {{who}}.",
+  "neverSaved": "Valores iniciais do plano de carreira. Ainda não foram salvos pelo administrador."
+}

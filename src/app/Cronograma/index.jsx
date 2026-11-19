@@ -3,7 +3,7 @@ import {
   Calendar, Clock, Plus, Filter, 
   Search, Trash2, Edit2, X, Check, 
   MapPin, Loader2, AlertTriangle, Users,
-  DollarSign, Globe, ChevronRight, List, ChevronDown, User, CalendarDays, History, ArrowRightLeft 
+  DollarSign, Globe, ChevronRight, List, ChevronDown, User, CalendarDays, History, ArrowRightLeft, BadgeDollarSign
 } from 'lucide-react';
 
 import { useAuth } from '../../contexts/AuthContext'; 
@@ -22,6 +22,8 @@ import { espelharAula, espelharMudanca, removerAulaPublica } from '../../service
 import { podeVerHistorico, aulasDoHistorico } from '../../utils/historicoAulas';
 import HistoricoAulas from './HistoricoAulas';
 import { modalidadeHabilitada } from '../../utils/modalidadesPorUnidade';
+import { podeVerTabelaPrecos } from '../../utils/tabelaPrecos';
+import TabelaPrecosModal from '../../components/TabelaPrecos/TabelaPrecosModal';
 
 // --- FUNÇÕES UTILITÁRIAS ---
 const getTodayStr = () => new Date().toLocaleDateString('en-CA');
@@ -167,6 +169,9 @@ export default function CronogramaPage() {
   const userId = useMemo(() => userData?.id || userData?.uid, [userData]);
   const escopoId = escopoMentor(userData); // id que vale como "mentor das unidades" (2º mentor usa o do 1º)
   const isReadOnly = role === 'professor';
+  // Tabela de preços (valor por aula x pulseira): admin edita; mentor e líder só consultam; professor não vê.
+  const podeVerPrecos = podeVerTabelaPrecos(role);
+  const [precosAberta, setPrecosAberta] = useState(false);
 
   // --- DADOS GLOBAIS E DE TELA ---
   const [saving, setSaving] = useState(false);
@@ -753,8 +758,21 @@ export default function CronogramaPage() {
             </div>
           )}
 
+          {podeVerPrecos && (
+            <>
+              <button
+                type="button"
+                onClick={() => setPrecosAberta(true)}
+                className="h-12 px-5 rounded-xl font-bold text-xs uppercase flex items-center gap-2 whitespace-nowrap border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors"
+              >
+                <BadgeDollarSign className="w-4 h-4" /> {t('priceTable.open')}
+              </button>
+              <TabelaPrecosModal aberto={precosAberta} onFechar={() => setPrecosAberta(false)} />
+            </>
+          )}
+
           {!isReadOnly && !emHistorico && (
-            <button 
+            <button
                 onClick={openNewModal}
                 disabled={!selectedUnit}
                 className={`
