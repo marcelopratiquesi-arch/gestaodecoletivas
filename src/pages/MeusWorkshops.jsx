@@ -8,6 +8,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { useCatalogs } from "../contexts/CatalogContext";
 import { apagarCertificado, enviarCertificado, listarMeusCertificados, listarWorkshopsEscolhiveis } from "../services/certificadoService";
 import { comprimirImagem } from "../utils/imagem";
+import { opcoesDeUnidadeDoProfessor } from "../utils/unidadeDoProfessor";
 
 const ESTILO = {
   pendente: { cor: "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300", Icone: Clock },
@@ -29,16 +30,7 @@ export default function MeusWorkshops() {
   const arquivoRef = useRef(null);
 
   // Unidade que verifica: a do crachá; se o crachá é antigo e não tem, vem dos vínculos do professor (sem leitura extra).
-  const opcoesUnidade = useMemo(() => {
-    if (userData?.unidadeId) return [{ unidadeId: String(userData.unidadeId), vinculoId: "" }];
-    const profId = userData?.professorId || (catalogs?.professores || []).find((p) => p.uidLogin === uid)?.id;
-    if (!profId) return [];
-    const vistos = new Map();
-    (catalogs?.vinculos || []).forEach((v) => {
-      if (String(v.professorId) === String(profId) && v.unidadeId && !vistos.has(String(v.unidadeId))) vistos.set(String(v.unidadeId), { unidadeId: String(v.unidadeId), vinculoId: v.id });
-    });
-    return [...vistos.values()].map((o) => ({ ...o, nome: (catalogs?.unidades || []).find((u) => String(u.id) === o.unidadeId)?.nome || o.unidadeId }));
-  }, [userData, uid, catalogs]);
+  const opcoesUnidade = useMemo(() => opcoesDeUnidadeDoProfessor({ userData, uid, catalogs }), [userData, uid, catalogs]);
   const [unidadeEscolhida, setUnidadeEscolhida] = useState("");
   const destino = opcoesUnidade.find((o) => o.unidadeId === unidadeEscolhida) || (opcoesUnidade.length === 1 ? opcoesUnidade[0] : null);
 

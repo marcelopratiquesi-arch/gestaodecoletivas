@@ -38,6 +38,7 @@ import { useSelosRepetidos } from "../ui/useSelosRepetidos";
 import JuntarFichasModal from "../Backup/JuntarFichasModal";
 import { liberarContatos, sincronizarEAvisar } from "../../../services/contatoService";
 import CertificadosAVerificar from "./CertificadosAVerificar";
+import AtualizacoesAConferir from "./AtualizacoesAConferir";
 import CertificadosDoProfessor from "./CertificadosDoProfessor";
 
 // 🌍 PADRÃO OURO INTERNACIONAL — mesma identidade visual usada em MentoresTab
@@ -609,6 +610,7 @@ export function ProfessoresTab() {
     <div className="p-6 animate-fade-in max-w-7xl mx-auto space-y-6 uppercase">
       {/* PEDIDOS DE ACESSO DE PROFESSORES (login pessoal pelo Google) */}
       <PedidosProfessor />
+      <AtualizacoesAConferir />
       <CertificadosAVerificar />
       {/* HEADER E KPIS */}
       <CabecalhoDaAba abaId="professores" icone={UserPlus} titulo={t('teachersTab.title', 'Gestão de Professores')} subtitulo={t('teachersTab.subtitle', 'Controle de base e vínculos com as unidades.')}
