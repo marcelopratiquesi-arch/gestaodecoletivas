@@ -5,10 +5,12 @@ import { useCatalogs } from "../../../contexts/CatalogContext";
 import { db } from "../../../services/firebase";
 import { publicarProfessor, removerProfessorDaVitrine } from "../../../services/vitrinePublica";
 import {
-  addDoc, collection, deleteDoc, doc, onSnapshot, serverTimestamp, updateDoc, query, where, writeBatch
+  addDoc, collection, deleteDoc, doc, getDoc, onSnapshot, serverTimestamp, updateDoc, query, where, writeBatch
 } from "firebase/firestore";
 import NovoVinculoModal from "./NovoVinculoModal";
 import CampoDocumento from "../../../components/acesso/CampoDocumento";
+import CampoContrato from "../../../components/acesso/CampoContrato";
+import { contratoVazio, validarContrato, resumoContrato, mesmoContrato } from "../../../utils/contrato";
 import { documentoValido, formatarDocumento, limparDocumento, tipoDocumentoPadrao } from "../../../utils/documento";
 import { apagarDocumentoDaFichaNoLote, documentoDaFichaNoLote, lerDocumentoDaFicha } from "../../../services/documentoFichaService";
 import { ERRO_DOCUMENTO_EM_USO, gravarComAviso } from "../../../services/documentoService";
@@ -178,6 +180,8 @@ export function ProfessoresTab() {
   // Documento (CPF/DNI/SSN) no formulário: o número nunca vai para a ficha, só para a gaveta privada.
   const [docForm, setDocForm] = useState({ tipo: "cpf", numero: "" });
   const [docAnterior, setDocAnterior] = useState(null); // documento já gravado (admin/mentor veem e corrigem)
+  const [contrato, setContrato] = useState(contratoVazio()); // CLT ou Saver (e onde/quando)
+  const [contratoInformado, setContratoInformado] = useState(null); // o que o próprio professor informou no crachá dele (1 leitura ao abrir a edição)
   const [avisoTelefoneNovo, setAvisoTelefoneNovo] = useState("");
   const [uidLoginNovo, setUidLoginNovo] = useState(""); // cadastro novo de quem já tem login (documento achado no crachá)
   
@@ -365,6 +369,8 @@ export function ProfessoresTab() {
       setDocAnterior(null);
       setAvisoTelefoneNovo(dados.avisoTelefone || "");
       setUnidadeSelecionadaId(minhasUnidades.length === 1 ? minhasUnidades[0].id : "");
+      setContrato(contratoVazio());
+      setContratoInformado(null);
       setStatus("ativo");
       setErro("");
       setModalFormAberto(true);
@@ -377,6 +383,14 @@ export function ProfessoresTab() {
       setPais(p.pais || PAIS_DEFAULT); // 🟢 CARREGA O PAÍS
       setTelefone(formatarTelefone(p.telefone || "", p.pais || PAIS_DEFAULT));
       setStatus(p.status || "ativo");
+      setContrato(p.tipoContrato === "saver" ? { tipoContrato: "saver", saverLocais: p.saverLocais || [] } : contratoVazio());
+      setContratoInformado(null);
+      if (p.uidLogin) {
+          getDoc(doc(db, "usuarios", String(p.uidLogin))).then((snap) => {
+              const u = snap.exists() ? snap.data() : null;
+              if (u?.tipoContrato) setContratoInformado({ tipoContrato: u.tipoContrato, saverLocais: u.saverLocais || [] });
+          }).catch((err) => console.error("Ler contrato informado:", err));
+      }
       setDocForm({ tipo: tipoDocumentoPadrao(i18n.language), numero: "" });
       setDocAnterior(null);
       setAvisoTelefoneNovo("");
@@ -425,6 +439,10 @@ export function ProfessoresTab() {
     // O líder só informa o documento de ficha que ainda não tem; corrigir é com admin e mentor.
     const gravarDoc = docMudou && (!profEditando?.documentoOk || (veDocumento && !!docAnterior));
 
+    const contratoOk = validarContrato(contrato);
+    if (!contratoOk.ok) return parar(t(`accessRequest.contract.errors.${contratoOk.erro}`));
+    const nomeDaUnidade = (id) => (unidades || []).find((u) => String(u.id) === String(id))?.nome || id;
+
     // De novo ao salvar: e-mail de outra ficha barra (é a mesma pessoa ou o e-mail está errado).
     const mesmoEmail = (!profEditando || emailMudou)
         && fichasParecidas(professoresTotais, { email: emailLimpo }, profEditando?.id).find(a => a.campos.includes('email'));
@@ -441,11 +459,14 @@ export function ProfessoresTab() {
           
           if (emailMudou) mudancas.push(`E-mail: ${profEditando.email || 'Sem e-mail'} ➔ ${emailLimpo}`);
           if (gravarDoc) mudancas.push(docAnterior ? 'Documento de identificação corrigido' : 'Documento de identificação informado');
+          const contratoMudou = !mesmoContrato({ tipoContrato: profEditando.tipoContrato, saverLocais: profEditando.saverLocais }, contratoOk.valor);
+          if (contratoMudou) mudancas.push(`Contrato: ${resumoContrato(profEditando, nomeDaUnidade)} ➔ ${resumoContrato(contratoOk.valor, nomeDaUnidade)}`);
           const lote = writeBatch(db);
           lote.update(doc(db, "professores", profEditando.id), {
             nome: nomeLimpo, pais, telefone, status, updatedAt: serverTimestamp(),
             ...(emailMudou ? { email: emailLimpo } : {}),
             ...(gravarDoc ? { documentoOk: true } : {}),
+            ...(contratoMudou ? { tipoContrato: contratoOk.valor.tipoContrato, saverLocais: contratoOk.valor.saverLocais } : {}),
           });
           if (gravarDoc) documentoDaFichaNoLote(lote, { professorId: profEditando.id, tipo: docForm.tipo, numero: docNumero, anterior: docAnterior, marcarFicha: false });
           await (gravarDoc ? gravarComAviso(lote) : lote.commit());
@@ -475,6 +496,7 @@ export function ProfessoresTab() {
           const lote = writeBatch(db);
           lote.set(docRef, {
               nome: nomeLimpo, email: emailLimpo, pais, telefone, status, documentoOk: true,
+              tipoContrato: contratoOk.valor.tipoContrato, saverLocais: contratoOk.valor.saverLocais,
               ...(uidLoginNovo ? { uidLogin: uidLoginNovo } : {}),
               createdAt: serverTimestamp(), createdBy: userId, roleCreator: role
           });
@@ -494,7 +516,7 @@ export function ProfessoresTab() {
           }, t);
           await publicarProfessor(docRef.id, nomeLimpo);
 
-          let logDetalhe = `Email: ${emailLimpo} | Documento de identificação informado`;
+          let logDetalhe = `Email: ${emailLimpo} | Documento de identificação informado | Contrato: ${resumoContrato(contratoOk.valor, nomeDaUnidade)}`;
           let nomeUnidadeAudit = "";
 
           if (unidadeSelecionadaId) {
@@ -857,6 +879,17 @@ export function ProfessoresTab() {
                         )}
                     </div>
                 )}
+
+                {/* CONTRATO: CLT ou Saver (acadêmico). Define o valor da aula sugerido no Cronograma e no relatório. */}
+                <div className="space-y-2 normal-case">
+                    <CampoContrato claro id="ficha-contrato" valor={contrato} onChange={setContrato} unidades={unidades || []} desabilitado={salvando} />
+                    {profEditando && contratoInformado && !mesmoContrato(contratoInformado, contrato) && (
+                        <p className="text-xs font-bold border p-2.5 rounded-lg text-amber-700 bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 flex items-start justify-between gap-3">
+                            <span>{t('accessRequest.contract.declared', { value: resumoContrato(contratoInformado, (id) => (unidades || []).find((u) => String(u.id) === String(id))?.nome || id) })}</span>
+                            <button type="button" onClick={() => setContrato({ tipoContrato: contratoInformado.tipoContrato, saverLocais: contratoInformado.saverLocais })} className="shrink-0 underline font-black uppercase">{t('accessRequest.contract.useDeclared')}</button>
+                        </p>
+                    )}
+                </div>
 
                 {/* 🟢 PAÍS COM NOME COMPLETO + BANDEIRA E DDI */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

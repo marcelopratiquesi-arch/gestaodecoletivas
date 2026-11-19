@@ -30,6 +30,8 @@ import {
 import { useUnidadesPublicas, LIMITE_MODALIDADES } from "../components/acesso/acessoDados";
 import CampoDocumento from "../components/acesso/CampoDocumento";
 import SeletorModalidades from "../components/acesso/SeletorModalidades";
+import CampoContrato from "../components/acesso/CampoContrato";
+import { contratoVazio, validarContrato } from "../utils/contrato";
 import { documentoValido, formatarDocumento, tipoDocumentoPadrao } from "../utils/documento";
 import { documentoNoLote, gravarComAviso, lerDocumento, ERRO_DOCUMENTO_EM_USO } from "../services/documentoService";
 import { sincronizarEAvisar } from "../services/contatoService";
@@ -63,6 +65,7 @@ export default function AtualizarCadastro() {
   const [nome, setNome] = useState("");
   const [telefone, setTelefone] = useState("");
   const [modalidades, setModalidades] = useState(""); // professor: modalidades escolhidas (texto "Zumba, Pilates")
+  const [contrato, setContrato] = useState(contratoVazio()); // professor: CLT ou Saver (e onde/quando)
   const [docTipo, setDocTipo] = useState(() => tipoDocumentoPadrao(i18n.language));
   const [docNumero, setDocNumero] = useState("");
   const [docAnterior, setDocAnterior] = useState(null); // documento já guardado (ex.: informado pelo admin)
@@ -95,6 +98,7 @@ export default function AtualizarCadastro() {
     if (!eraLoginDeUnidade) setNome((v) => v || userData.nome || "");
     setTelefone((v) => v || userData.telefone || "");
     setModalidades((v) => v || userData.modalidades || "");
+    setContrato((v) => (v.tipoContrato === "clt" && userData.tipoContrato === "saver" ? { tipoContrato: "saver", saverLocais: userData.saverLocais || [] } : v));
   }, [userData, eraLoginDeUnidade]);
 
   // Se o documento já está guardado (informado antes), o campo já vem preenchido.
@@ -139,6 +143,8 @@ export default function AtualizarCadastro() {
 
     if (!documentoValido(docTipo, docNumero)) { setPasso("dados"); return setErro(t("document.errors.invalid")); }
     if (modalidades.length > LIMITE_MODALIDADES) { setPasso("dados"); return setErro(t("accessRequest.errors.modalities")); }
+    const contratoOk = souProfessor ? validarContrato(contrato) : null;
+    if (contratoOk && !contratoOk.ok) { setPasso("dados"); return setErro(t(`accessRequest.contract.errors.${contratoOk.erro}`)); }
 
     setSalvando(true);
     try {
@@ -159,7 +165,7 @@ export default function AtualizarCadastro() {
       batch.update(doc(db, "usuarios", uid), {
         nome: nomeLimpo, telefone: telefoneLimpo, email, loginGoogle: true, cadastroAtualizadoEm: serverTimestamp(), documentoOk: true,
         ...(eraLoginDeUnidade ? { role: "lider" } : {}),
-        ...(souProfessor ? { modalidades: modalidades.trim() } : {}),
+        ...(souProfessor ? { modalidades: modalidades.trim(), tipoContrato: contratoOk.valor.tipoContrato, saverLocais: contratoOk.valor.saverLocais } : {}),
         ...(emailAntigo && emailAntigo !== email ? { emailAntigo } : {}),
       });
       if (souSegundoLider) {
@@ -425,6 +431,7 @@ export default function AtualizarCadastro() {
             <p className="text-[11px] text-zinc-500 ml-1">{t("document.hint")}</p>
           </div>
           {souProfessor && <SeletorModalidades id="atu-modalidades" valor={modalidades} onChange={setModalidades} desabilitado={salvando} />}
+          {souProfessor && <CampoContrato id="atu-contrato" valor={contrato} onChange={setContrato} unidades={unidadesPublicas || []} desabilitado={salvando} />}
           {souLider && (
             <div className="space-y-1.5">
               <span className={classeRotulo}>{t("updateProfile.fields.unitsLeader")}</span>

@@ -55,6 +55,11 @@ service cloud.firestore {
     }
     function papelDoAlvo() { return resource.data.get('role', '').lower(); }
     function papelNovo() { return request.resource.data.get('role', '').lower(); }
+    // CLT ou Saver do professor (src/utils/contrato.js): tipo conhecido e, no máximo, 5 unidades de Saver. O resto é conferido na tela.
+    function contratoValido(d) {
+      return d.get('tipoContrato', 'clt') in ['clt', 'saver']
+        && d.get('saverLocais', []) is list && d.get('saverLocais', []).size() <= 5;
+    }
     function camposAlterados() { return request.resource.data.diff(resource.data).affectedKeys(); }
 
     // Mentor de alguma das unidades (até 5) de uma lista.
@@ -500,8 +505,9 @@ service cloud.firestore {
         // exceto o login antigo "unidade", que vira "lider". Unidade, status e o resto ficam como estão.
         || (request.auth.uid == uid && logado()
             && 'google.com' in request.auth.token.firebase.identities
-            && camposAlterados().hasOnly(['nome', 'telefone', 'email', 'emailAntigo', 'role', 'loginGoogle', 'cadastroAtualizadoEm', 'documentoOk', 'modalidades'])
+            && camposAlterados().hasOnly(['nome', 'telefone', 'email', 'emailAntigo', 'role', 'loginGoogle', 'cadastroAtualizadoEm', 'documentoOk', 'modalidades', 'tipoContrato', 'saverLocais'])
             && request.resource.data.get('modalidades', '') is string && request.resource.data.get('modalidades', '').size() <= 300
+            && contratoValido(request.resource.data)
             && (!('documentoOk' in request.resource.data) || (request.resource.data.documentoOk == true && existsAfter(caminhoDocumentoUsuario(uid))))
             && request.resource.data.loginGoogle == true
             && request.resource.data.nome is string && request.resource.data.nome.size() >= 3 && request.resource.data.nome.size() <= 80
@@ -545,7 +551,8 @@ service cloud.firestore {
         let d = request.resource.data;
         let ids = idsDoPedido(d);
         return d.keys().hasOnly(['nome', 'telefone', 'unidadeId', 'unidadeNome', 'email', 'status', 'criadoEm',
-                                 'papel', 'unidadeIds', 'unidadeNomes', 'tambemProfessor', 'documentoOk', 'modalidades'])
+                                 'papel', 'unidadeIds', 'unidadeNomes', 'tambemProfessor', 'documentoOk', 'modalidades', 'tipoContrato', 'saverLocais'])
+          && contratoValido(d)
           && d.get('documentoOk', true) == true
           && d.status == 'pendente'
           && d.email == request.auth.token.email
