@@ -135,7 +135,7 @@ export function SegundoMentorModal({ principal, professores = [], mentores = [],
       <div onClick={(e) => e.stopPropagation()} className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-h-[90vh] flex flex-col overflow-hidden">
         <div className="p-5 border-b border-slate-100 dark:border-slate-700 flex items-start justify-between gap-3">
           <div>
-            <h3 className="text-lg font-black text-slate-800 dark:text-white flex items-center gap-2"><Users className="w-5 h-5 text-blue-600" /> {temporario ? t("tempLeader.mentor.title") : t("mentorsTab.second.title")}</h3>
+            <h3 className="text-lg font-black text-slate-800 dark:text-white flex items-center gap-2"><Users className="w-5 h-5 text-red-600" /> {temporario ? t("tempLeader.mentor.title") : t("mentorsTab.second.title")}</h3>
             <p className="text-xs text-slate-500 mt-1">{temporario ? t("tempLeader.mentor.help", { mentor: principal.nome }) : t("mentorsTab.second.help", { mentor: principal.nome })}</p>
           </div>
           <button type="button" onClick={onClose} disabled={salvando} className="p-2 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"><X className="w-4 h-4" /></button>
@@ -144,7 +144,7 @@ export function SegundoMentorModal({ principal, professores = [], mentores = [],
           {!temporario && <div className="flex gap-2">
             {[["existente", t("mentorsTab.second.modeExisting")], ["novo", t("mentorsTab.second.modeNew")]].map(([id, rotulo]) => (
               <button key={id} type="button" onClick={() => { setModo(id); setErro(""); }} aria-pressed={modo === id}
-                className={`flex-1 px-3 py-2 rounded-xl text-xs font-black uppercase transition-colors ${modo === id ? "bg-blue-600 text-white" : "bg-slate-100 dark:bg-slate-900 text-slate-500 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"}`}>{rotulo}</button>
+                className={`flex-1 px-3 py-2 rounded-xl text-xs font-black uppercase transition-colors ${modo === id ? "bg-red-600 text-white" : "bg-slate-100 dark:bg-slate-900 text-slate-500 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"}`}>{rotulo}</button>
             ))}
           </div>}
 
@@ -153,14 +153,14 @@ export function SegundoMentorModal({ principal, professores = [], mentores = [],
               <div className="relative">
                 <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input value={busca} onChange={(e) => setBusca(e.target.value)} disabled={salvando} placeholder={t("mentorsTab.second.search")}
-                  className="w-full pl-9 pr-3 py-3 rounded-xl bg-slate-100 dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-blue-500" />
+                  className="w-full pl-9 pr-3 py-3 rounded-xl bg-slate-100 dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-red-500" />
               </div>
               <div className="max-h-52 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-700/50">
                 {lista.length === 0 ? (
                   <p className="p-3 text-xs text-slate-400 font-bold">{donoDoc === "buscando" ? t("mentorsTab.second.docSearching") : donoDoc ? t("mentorsTab.second.docNone") : t("mentorsTab.second.noPeople")}</p>
                 ) : lista.map((c) => (
                   <button type="button" key={c.uid} onClick={() => escolher(c)} disabled={salvando}
-                    className={`w-full text-left p-3 text-sm hover:bg-slate-50 dark:hover:bg-slate-700/30 ${pessoa?.uid === c.uid ? "bg-blue-50 dark:bg-blue-900/20" : ""}`}>
+                    className={`w-full text-left p-3 text-sm hover:bg-slate-50 dark:hover:bg-slate-700/30 ${pessoa?.uid === c.uid ? "bg-red-50 dark:bg-red-900/20" : ""}`}>
                     <span className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5 flex-wrap">
                       {c.nome || "-"}
                       {c.etiquetas.map((e) => <span key={e} className="px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300">{t(`mentorsTab.second.tag.${e}`)}</span>)}
@@ -185,7 +185,7 @@ export function SegundoMentorModal({ principal, professores = [], mentores = [],
                 <label key={rotulo} className="block space-y-1">
                   <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{rotulo}</span>
                   <input type={tipo} value={valor} onChange={(e) => set(e.target.value)} disabled={salvando}
-                    className="w-full px-3 py-3 rounded-xl bg-slate-100 dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-blue-500" />
+                    className="w-full px-3 py-3 rounded-xl bg-slate-100 dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-red-500" />
                 </label>
               ))}
               <p className="text-[11px] text-slate-500">{t("mentorsTab.second.inviteHelp")}</p>
@@ -204,7 +204,7 @@ export function SegundoMentorModal({ principal, professores = [], mentores = [],
             <button type="button" onClick={onClose} disabled={salvando} className="px-4 py-2.5 rounded-xl text-xs font-black uppercase bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200">{t("mentorsTab.modal.cancel")}</button>
             <button type="button" onClick={modo === "existente" ? confirmarExistente : confirmarNovo}
               disabled={salvando || (modo === "existente" && (lendo || !pessoa || !cracha || !!bloqueio))}
-              className="px-5 py-2.5 rounded-xl text-xs font-black uppercase bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-1.5 disabled:opacity-50">
+              className="px-5 py-2.5 rounded-xl text-xs font-black uppercase bg-red-600 hover:bg-red-700 text-white flex items-center gap-1.5 disabled:opacity-50">
               {salvando ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : modo === "existente" ? <Check className="w-3.5 h-3.5" /> : <UserPlus className="w-3.5 h-3.5" />}
               {modo === "existente" ? t("mentorsTab.second.save") : t("mentorsTab.second.invite")}
             </button>

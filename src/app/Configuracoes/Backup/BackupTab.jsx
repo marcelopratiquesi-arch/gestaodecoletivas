@@ -255,7 +255,7 @@ export default function BackupTab() {
       </CabecalhoDaAba>
 
       {statusMsg && (
-          <div className={`p-4 rounded-lg font-bold text-sm flex items-center gap-2 ${statusErro ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"}`}>
+          <div className={`p-4 rounded-lg font-bold text-sm flex items-center gap-2 ${statusErro ? "bg-red-100 text-red-700" : "bg-emerald-100 text-emerald-700"}`}>
             {statusErro ? <TriangleAlert className="w-4 h-4 shrink-0"/> : <CircleCheck className="w-4 h-4 shrink-0"/>}
             {statusMsg}
           </div>
@@ -266,7 +266,7 @@ export default function BackupTab() {
         {/* CARD EXPORTAR */}
         <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
             <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
-                <Download className="w-5 h-5 text-green-600" />
+                <Download className="w-5 h-5 text-emerald-600" />
                 {t('backupTab.exportTitle')}
             </h3>
             <p className="text-sm text-slate-500 mb-6 min-h-[40px]">
@@ -277,11 +277,11 @@ export default function BackupTab() {
                 <button
                     onClick={() => handleExport('json')}
                     disabled={loading}
-                    className="w-full py-3 px-4 border border-blue-200 bg-blue-50/50 dark:bg-blue-900/10 dark:border-blue-800 rounded-lg flex items-center justify-center gap-3 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors font-bold text-blue-700 dark:text-blue-300 disabled:opacity-50"
+                    className="w-full py-3 px-4 border border-red-200 bg-red-50/50 dark:bg-red-900/10 dark:border-red-800 rounded-lg flex items-center justify-center gap-3 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors font-bold text-red-700 dark:text-red-300 disabled:opacity-50"
                 >
                     <FileJson className="w-5 h-5" />
                     {t('backupTab.downloadJson')}
-                    <span className="text-[10px] bg-blue-200 text-blue-800 px-1.5 py-0.5 rounded">{t('backupTab.recommended')}</span>
+                    <span className="text-[10px] bg-red-200 text-red-800 px-1.5 py-0.5 rounded">{t('backupTab.recommended')}</span>
                 </button>
 
                 <button
@@ -289,7 +289,7 @@ export default function BackupTab() {
                     disabled={loading}
                     className="w-full py-3 px-4 border border-slate-300 dark:border-slate-600 rounded-lg flex items-center justify-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors font-bold text-slate-700 dark:text-slate-200 disabled:opacity-50"
                 >
-                    <FileSpreadsheet className="w-5 h-5 text-green-600" />
+                    <FileSpreadsheet className="w-5 h-5 text-emerald-600" />
                     {t('backupTab.downloadExcel')}
                 </button>
             </div>

@@ -46,8 +46,8 @@ export default function FichaDoPedido({ pedido, fichas, pais, podeVerDocumento, 
     return <p className="text-xs text-slate-500 flex items-center gap-1.5"><Link2 className="w-3.5 h-3.5" /> {t("pendingTab.teacher.link.none")}</p>;
   }
   return (
-    <div className="p-3 rounded-xl border border-sky-200 dark:border-sky-900/60 bg-sky-50/50 dark:bg-sky-900/10 space-y-2">
-      <p className="text-xs font-black text-sky-800 dark:text-sky-300 flex items-center gap-1.5"><Link2 className="w-3.5 h-3.5" /> {t("pendingTab.teacher.link.title")}</p>
+    <div className="p-3 rounded-xl border border-red-200 dark:border-red-900/60 bg-red-50/50 dark:bg-red-900/10 space-y-2">
+      <p className="text-xs font-black text-red-800 dark:text-red-300 flex items-center gap-1.5"><Link2 className="w-3.5 h-3.5" /> {t("pendingTab.teacher.link.title")}</p>
       <div className="space-y-1">
         {estado.candidatas.map(({ ficha, campos, bloqueada }) => (
           <label key={ficha.id} className={`flex gap-2 items-start text-xs ${bloqueada ? "opacity-60" : "cursor-pointer"}`}>
@@ -56,7 +56,7 @@ export default function FichaDoPedido({ pedido, fichas, pais, podeVerDocumento, 
             <span className="min-w-0">
               <span className="font-bold text-slate-800 dark:text-slate-100">{ficha.nome || "—"}</span>
               <span className="text-slate-500"> · {[ficha.email, ficha.telefone].filter(Boolean).join(" · ") || "—"}</span>
-              <span className="block text-[10px] text-sky-700 dark:text-sky-400 font-bold">
+              <span className="block text-[10px] text-red-700 dark:text-red-400 font-bold">
                 {t("pendingTab.teacher.link.matches")}: {campos.map((c) => t(`pendingTab.teacher.link.field.${c}`)).join(", ")}
               </span>
               {bloqueada && <span className="block text-[10px] text-red-600 font-bold">{t(`pendingTab.teacher.link.blocked.${bloqueada}`)}</span>}

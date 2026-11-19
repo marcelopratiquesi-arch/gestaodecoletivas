@@ -345,7 +345,7 @@ export function LideresTab() {
       <CabecalhoDaAba abaId="lideres" icone={UserCheck} titulo={t("leadersTab.title")} subtitulo={t("leadersTab.subtitle")}
         numeros={<CaixaDeNumeros abaId="lideres" itens={[
           { id: "total", rotulo: t("leadersTab.filter.all"), valor: kpis.total, onClick: () => setSituacao("todas"), ativo: situacao === "todas" },
-          { id: "com", rotulo: t("leadersTab.filter.with"), valor: kpis.comLider, cor: "text-green-600", onClick: () => setSituacao("com"), ativo: situacao === "com" },
+          { id: "com", rotulo: t("leadersTab.filter.with"), valor: kpis.comLider, cor: "text-emerald-600", onClick: () => setSituacao("com"), ativo: situacao === "com" },
           { id: "sem", rotulo: t("leadersTab.filter.without"), valor: kpis.semLider, cor: "text-red-500", onClick: () => setSituacao("sem"), ativo: situacao === "sem" },
           { id: "conferir", rotulo: t("leadersTab.filter.toCheck"), valor: kpis.aConferir, cor: "text-amber-600", onClick: () => setSituacao("conferir"), ativo: situacao === "conferir" },
         ]} />}>
@@ -379,8 +379,8 @@ export function LideresTab() {
               {podeAcessar && (
                 <button type="button" onClick={() => setMostrarBuscaDoc((v) => !v)} aria-expanded={mostrarBuscaDoc}
                   className={`px-4 py-3 rounded-xl border text-xs font-black uppercase flex items-center justify-center gap-2 transition-colors ${mostrarBuscaDoc
-                    ? "border-teal-500 bg-teal-50 text-teal-700 dark:bg-teal-900/20 dark:text-teal-300"
-                    : "border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-teal-500 hover:text-teal-600"}`}>
+                    ? "border-red-500 bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300"
+                    : "border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-red-500 hover:text-red-600"}`}>
                   <ScanSearch className="w-4 h-4" /> {t("document.search.title")}
                 </button>
               )}
@@ -401,11 +401,11 @@ export function LideresTab() {
             ].map((f) => (
               <button key={f.id} type="button" onClick={() => setSituacao(f.id)} aria-pressed={situacao === f.id}
                 className={`px-3.5 py-2 rounded-lg text-xs font-black uppercase flex items-center gap-2 transition-colors ${situacao === f.id
-                  ? "bg-white dark:bg-slate-700 text-teal-600 shadow-sm"
+                  ? "bg-white dark:bg-slate-700 text-red-600 shadow-sm"
                   : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"}`}>
                 {f.rotulo}
                 <span className={`min-w-[1.5rem] px-1.5 py-0.5 rounded-md text-[10px] text-center ${situacao === f.id
-                  ? "bg-teal-600 text-white"
+                  ? "bg-red-600 text-white"
                   : f.id === "conferir" && f.n > 0 ? "bg-amber-100 text-amber-700" : "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-300"}`}>{f.n}</span>
               </button>
             ))}
@@ -413,7 +413,7 @@ export function LideresTab() {
         </FiltroPadrao>
 
         {loadingCatalogs ? (
-          <div className="py-16 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-teal-500" /></div>
+          <div className="py-16 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-red-500" /></div>
         ) : lista.length === 0 ? (
           <div className="py-16 text-center text-slate-400 font-bold text-sm">
             <Building2 className="w-10 h-10 mx-auto mb-3 opacity-30" /> {t("leadersTab.empty")}
@@ -423,10 +423,10 @@ export function LideresTab() {
             <table className="w-full min-w-[920px] text-left text-sm">
               <thead className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
                 <tr>
-                  <ColunaOrdenavel campo="unidade" rotulo={t("leadersTab.col.unit")} ordenacao={ordenacao} cor="teal" className="w-[18%]" />
-                  <ColunaOrdenavel campo="lider" rotulo={t("leadersTab.col.leader")} ordenacao={ordenacao} cor="teal" />
-                  <ColunaOrdenavel campo="acesso" rotulo={t("tabela.access.column")} ordenacao={ordenacao} cor="teal" className="w-40" />
-                  {role === "admin" && <ColunaOrdenavel campo="mentor" rotulo={t("leadersTab.col.mentor")} ordenacao={ordenacao} cor="teal" className="w-36" />}
+                  <ColunaOrdenavel campo="unidade" rotulo={t("leadersTab.col.unit")} ordenacao={ordenacao} className="w-[18%]" />
+                  <ColunaOrdenavel campo="lider" rotulo={t("leadersTab.col.leader")} ordenacao={ordenacao} />
+                  <ColunaOrdenavel campo="acesso" rotulo={t("tabela.access.column")} ordenacao={ordenacao} className="w-40" />
+                  {role === "admin" && <ColunaOrdenavel campo="mentor" rotulo={t("leadersTab.col.mentor")} ordenacao={ordenacao} className="w-36" />}
                   <th className={`${CLASSE_TITULO} text-right w-44`}>{t("leadersTab.col.actions")}</th>
                 </tr>
               </thead>
@@ -494,7 +494,7 @@ export function LideresTab() {
                         <td className="px-4 py-4">
                           {nomeDoMentor ? (
                             <span title={nomeDoMentor} className="inline-flex items-center gap-1.5 max-w-full px-2 py-1 rounded-md border text-xs font-bold bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-800/60 dark:text-slate-200 dark:border-slate-700">
-                              <User className="w-3.5 h-3.5 shrink-0 text-teal-500" /> <span className="truncate">{nomeDoMentor.split(" ")[0]}</span>
+                              <User className="w-3.5 h-3.5 shrink-0 text-red-500" /> <span className="truncate">{nomeDoMentor.split(" ")[0]}</span>
                             </span>
                           ) : <span className="text-xs text-slate-300">—</span>}
                         </td>
@@ -511,7 +511,7 @@ export function LideresTab() {
                               <BotaoDeLinha abaId="lideres" discreto icone={Edit2} onClick={() => abrirEditar(u)} disabled={ocupado} title={t("leadersTab.edit")} />
                               <BotaoDeLinha abaId="lideres" discreto icone={IdCard} onClick={() => setDocAlvo({ id: u.liderUid, nome: u.liderNome, email: u.liderEmail })} disabled={ocupado} title={t("document.modal.edit")} />
                               {ocupado ? (
-                                <span className="p-2"><Loader2 className="w-4 h-4 animate-spin text-teal-500" /></span>
+                                <span className="p-2"><Loader2 className="w-4 h-4 animate-spin text-red-500" /></span>
                               ) : (
                                 <MenuDeAcoes itens={[
                                   { id: "confirmar", rotulo: t("leadersTab.menu.confirmShort"), icone: BadgeCheck, onClick: () => confirmar(u), oculto: u.liderAConferir !== true },
@@ -587,20 +587,20 @@ export function LideresTab() {
             <label className="block space-y-1">
               <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t("leadersTab.modal.name")}</span>
               <input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} disabled={salvando} maxLength={80}
-                className="w-full p-3 rounded-xl bg-slate-100 dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-teal-500" />
+                className="w-full p-3 rounded-xl bg-slate-100 dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-red-500" />
             </label>
 
             <label className="block space-y-1">
               <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t("leadersTab.modal.email")}</span>
               <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} disabled={salvando || modal.modo === "editar"}
-                className="w-full p-3 rounded-xl bg-slate-100 dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-teal-500 disabled:opacity-70" />
+                className="w-full p-3 rounded-xl bg-slate-100 dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-70" />
               {modal.modo === "editar" && <span className="text-[11px] text-slate-400">{t("leadersTab.modal.emailLocked")}</span>}
             </label>
 
             <label className="block space-y-1">
               <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t("leadersTab.modal.phone")}</span>
               <input value={form.telefone} onChange={(e) => setForm({ ...form, telefone: e.target.value })} disabled={salvando} maxLength={30} placeholder="+55 31 99999-9999"
-                className="w-full p-3 rounded-xl bg-slate-100 dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-teal-500" />
+                className="w-full p-3 rounded-xl bg-slate-100 dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-red-500" />
             </label>
             </div>
 
@@ -620,7 +620,7 @@ export function LideresTab() {
               <label className="block space-y-1">
                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 flex items-center gap-1"><KeyRound className="w-3 h-3" /> {t("leadersTab.modal.password")}</span>
                 <input type="text" value={form.senha} onChange={(e) => setForm({ ...form, senha: e.target.value })} disabled={salvando} autoComplete="new-password"
-                  className="w-full p-3 rounded-xl bg-slate-100 dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-teal-500" />
+                  className="w-full p-3 rounded-xl bg-slate-100 dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-red-500" />
                 <span className="text-[11px] text-slate-400">{t("leadersTab.modal.passwordHint", { min: SENHA_MINIMA })}</span>
               </label>
             )}
@@ -632,7 +632,7 @@ export function LideresTab() {
 
             <div className="flex justify-end gap-2 pt-2">
               <button type="button" onClick={() => setModal(null)} disabled={salvando} className="px-4 py-2.5 rounded-xl text-xs font-black uppercase bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200">{t("leadersTab.modal.cancel")}</button>
-              <button type="submit" disabled={salvando} className="px-5 py-2.5 rounded-xl text-xs font-black uppercase bg-teal-500 hover:bg-teal-600 text-white flex items-center gap-1.5 disabled:opacity-50">
+              <button type="submit" disabled={salvando} className="px-5 py-2.5 rounded-xl text-xs font-black uppercase bg-red-500 hover:bg-red-600 text-white flex items-center gap-1.5 disabled:opacity-50">
                 {salvando ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />} {t("leadersTab.modal.save")}
               </button>
             </div>

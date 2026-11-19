@@ -321,7 +321,7 @@ export function ModalidadesTab() {
       <FiltroPadrao abaId="modalidades" filtro={filtro} mostrar={[]} placeholder={t('modalitiesTab.search')} />
 
       {erro && <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm font-bold flex items-center gap-2"><AlertTriangle className="w-5 h-5"/>{erro}</div>}
-      {sucesso && <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-xl text-green-700 text-sm font-bold flex items-center gap-2"><CheckCircle2 className="w-5 h-5"/>{sucesso}</div>}
+      {sucesso && <div className="mb-4 p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-700 text-sm font-bold flex items-center gap-2"><CheckCircle2 className="w-5 h-5"/>{sucesso}</div>}
 
       {loading ? (
         <div className="flex flex-col gap-3">
@@ -355,21 +355,21 @@ export function ModalidadesTab() {
               {/* 🟢 EDIÇÃO INLINE DA METRAGEM COLOCADA EM DESTAQUE */}
               <div className="flex items-center mx-auto md:mx-0">
                   {editandoIndiceId === m.id ? (
-                      <div className="flex items-center gap-1 animate-in fade-in bg-blue-50 dark:bg-blue-900/20 p-1.5 rounded-lg border border-blue-200 dark:border-blue-800">
-                          <Maximize className="w-4 h-4 text-blue-500 ml-1"/>
+                      <div className="flex items-center gap-1 animate-in fade-in bg-red-50 dark:bg-red-900/20 p-1.5 rounded-lg border border-red-200 dark:border-red-800">
+                          <Maximize className="w-4 h-4 text-red-500 ml-1"/>
                           <input 
                               autoFocus type="number" step="0.5" 
-                              className="px-2 py-1.5 bg-white dark:bg-slate-900 border border-blue-300 dark:border-blue-700 rounded text-sm font-black outline-none w-20 text-slate-800 dark:text-white" 
+                              className="px-2 py-1.5 bg-white dark:bg-slate-900 border border-red-300 dark:border-red-700 rounded text-sm font-black outline-none w-20 text-slate-800 dark:text-white" 
                               value={indiceInline} onChange={(e) => setIndiceInline(e.target.value)} 
                               onKeyDown={(e) => e.key === 'Enter' && salvarIndiceInline(m)} placeholder="m²" 
                           />
-                          <button onClick={() => salvarIndiceInline(m)} className="p-1.5 bg-green-500 text-white rounded hover:bg-green-600 transition-colors"><Check className="w-4 h-4"/></button>
+                          <button onClick={() => salvarIndiceInline(m)} className="p-1.5 bg-emerald-500 text-white rounded hover:bg-emerald-600 transition-colors"><Check className="w-4 h-4"/></button>
                           <button onClick={() => setEditandoIndiceId(null)} className="p-1.5 bg-slate-300 text-slate-600 rounded hover:bg-slate-400 transition-colors"><X className="w-4 h-4"/></button>
                       </div>
                   ) : (
                       <div 
                           onClick={() => { if(!podeEditar) return; setEditandoIndiceId(m.id); setIndiceInline(m.indiceOcupacao || 3); }} 
-                          className={`flex items-center gap-2 p-2 rounded-lg w-fit group/edit text-blue-600 dark:text-blue-400 transition-colors ${podeEditar ? 'cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 border border-transparent hover:border-blue-200 dark:hover:border-blue-800' : ''}`}
+                          className={`flex items-center gap-2 p-2 rounded-lg w-fit group/edit text-red-600 dark:text-red-400 transition-colors ${podeEditar ? 'cursor-pointer hover:bg-red-50 dark:hover:bg-red-900/20 border border-transparent hover:border-red-200 dark:hover:border-red-800' : ''}`}
                           title={podeEditar ? t('modalitiesTab.editSpaceHint') : ""}
                       >
                           <Maximize className="w-4 h-4 opacity-70"/>
@@ -380,7 +380,7 @@ export function ModalidadesTab() {
               </div>
 
               <div className="flex items-center justify-between md:justify-end gap-6 w-full md:w-auto mt-2 md:mt-0 pt-3 md:pt-0 border-t border-slate-100 dark:border-slate-700 md:border-t-0">
-                  <span className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border ${m.status === 'ativa' ? 'bg-green-50 text-green-600 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800' : 'bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'}`}>
+                  <span className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border ${m.status === 'ativa' ? 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800' : 'bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'}`}>
                       {t(`modalitiesTab.status.${m.status}`, m.status)}
                   </span>
 
@@ -409,7 +409,7 @@ export function ModalidadesTab() {
       {/* 🟢 O MODAL REDIMENSIONÁVEL */}
       <ResizableModal 
           isOpen={modalAberto} onClose={() => setModalAberto(false)} 
-          title={editando ? t('modalitiesTab.editTitle') : t('modalitiesTab.newTitle')} icon={Dumbbell} headerColor="bg-orange-50 dark:bg-slate-900 text-orange-600 dark:text-orange-500 border-orange-100 dark:border-slate-800"
+          title={editando ? t('modalitiesTab.editTitle') : t('modalitiesTab.newTitle')} icon={Dumbbell} headerColor="bg-amber-50 dark:bg-slate-900 text-amber-600 dark:text-amber-500 border-amber-100 dark:border-slate-800"
           pos={modalPos} setPos={setModalPos} size={modalSize} setSize={setModalSize} minW={320} minH={450}
       >
         <form onSubmit={salvar} className="p-6 space-y-6 overflow-y-auto custom-scrollbar flex-1 bg-white dark:bg-slate-800">
@@ -417,7 +417,7 @@ export function ModalidadesTab() {
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">{t('modalitiesTab.name')}</label>
             <input
               type="text" value={nome} onChange={(e) => setNome(e.target.value)}
-              className="w-full px-4 py-3.5 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none transition-all text-sm font-bold uppercase"
+              className="w-full px-4 py-3.5 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500 outline-none transition-all text-sm font-bold uppercase"
               placeholder={t('modalitiesTab.namePlaceholder')} autoFocus
             />
           </div>
@@ -430,7 +430,7 @@ export function ModalidadesTab() {
                 <input 
                     type="number" step="0.5" min="1" 
                     value={indiceOcupacao} onChange={(e) => setIndiceOcupacao(e.target.value)} 
-                    className="w-full px-4 py-3.5 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none transition-all text-sm font-black" 
+                    className="w-full px-4 py-3.5 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500 outline-none transition-all text-sm font-black" 
                 />
               </div>
 
@@ -452,7 +452,7 @@ export function ModalidadesTab() {
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">{t('modalitiesTab.initialStatus')}</label>
             <select
               value={status} onChange={(e) => setStatus(e.target.value)}
-              className="w-full px-4 py-3.5 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none text-sm font-bold uppercase appearance-none"
+              className="w-full px-4 py-3.5 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500 outline-none text-sm font-bold uppercase appearance-none"
             >
               <option value="ativa">{t('modalitiesTab.activeVisible')}</option>
               <option value="inativa">{t('modalitiesTab.inactiveHidden')}</option>
@@ -463,7 +463,7 @@ export function ModalidadesTab() {
             <button type="button" onClick={() => setModalAberto(false)} className="flex-1 py-3.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-xs uppercase tracking-widest">
               {t('common.actions.cancel')}
             </button>
-            <button type="submit" disabled={salvando} className="flex-[1.5] py-3.5 rounded-xl bg-orange-600 text-white font-black uppercase tracking-widest shadow-lg shadow-orange-500/30 hover:bg-orange-700 transition-transform active:scale-95 flex items-center justify-center gap-2 text-xs">
+            <button type="submit" disabled={salvando} className="flex-[1.5] py-3.5 rounded-xl bg-amber-600 text-white font-black uppercase tracking-widest shadow-lg shadow-amber-500/30 hover:bg-amber-700 transition-transform active:scale-95 flex items-center justify-center gap-2 text-xs">
               {salvando ? <Loader2 className="w-4 h-4 animate-spin"/> : t('modalitiesTab.save')}
             </button>
           </div>

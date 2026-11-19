@@ -241,7 +241,7 @@ export default function RelatorioRepetidos() {
         <div className="flex flex-wrap gap-2">
           {r && (
             <button onClick={baixarPlanilha} className="py-2 px-3 border border-slate-300 dark:border-slate-600 rounded-lg flex items-center gap-2 text-sm font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700">
-              <FileSpreadsheet className="w-4 h-4 text-green-600" /> {t('backupTab.duplicates.download')}
+              <FileSpreadsheet className="w-4 h-4 text-emerald-600" /> {t('backupTab.duplicates.download')}
             </button>
           )}
           <button onClick={gerar} disabled={estado.carregando} className="py-2 px-3 bg-amber-600 hover:bg-amber-700 text-white rounded-lg flex items-center gap-2 text-sm font-bold disabled:opacity-50">
@@ -307,7 +307,7 @@ export default function RelatorioRepetidos() {
                         </button>
                       )}
                       {soltos.length >= 1 && (
-                        <button onClick={() => setLigando({ fichas, crachas: soltos })} className="py-1 px-2 border border-sky-300 dark:border-sky-700 rounded-lg text-xs font-bold text-sky-700 dark:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-900/20 flex items-center gap-1">
+                        <button onClick={() => setLigando({ fichas, crachas: soltos })} className="py-1 px-2 border border-red-300 dark:border-red-700 rounded-lg text-xs font-bold text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-1">
                           <Link2 className="w-3.5 h-3.5" /> {t('backupTab.link.button')}
                         </button>
                       )}

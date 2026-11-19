@@ -101,7 +101,7 @@ export function ModalidadesDaUnidadeModal({ unidade, modalidades, aulas, basicas
           </div>
           <button
             type="button" disabled={!podeEditar || !configurada || !!gravando} onClick={() => alternar(m)}
-            className={`shrink-0 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border transition-colors flex items-center gap-1.5 ${ligada ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800" : "bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-900 dark:text-slate-400 dark:border-slate-700"} ${podeEditar && configurada ? "hover:opacity-80 cursor-pointer" : "cursor-default opacity-80"}`}
+            className={`shrink-0 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border transition-colors flex items-center gap-1.5 ${ligada ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800" : "bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-900 dark:text-slate-400 dark:border-slate-700"} ${podeEditar && configurada ? "hover:opacity-80 cursor-pointer" : "cursor-default opacity-80"}`}
           >
             {gravando === id && <Loader2 className="w-3 h-3 animate-spin" />}
             {ligada ? t("unitsTab.modalities.enabled") : t("unitsTab.modalities.disabled")}
@@ -130,14 +130,14 @@ export function ModalidadesDaUnidadeModal({ unidade, modalidades, aulas, basicas
         <div className="p-4 space-y-3 overflow-y-auto flex-1">
           {configurada ? (
             <div className="flex gap-3 text-[11px] font-black">
-              <span className="px-3 py-1.5 rounded-lg bg-green-50 text-green-700 border border-green-200">{t("unitsTab.modalities.countEnabled", { count: totalHab })}</span>
+              <span className="px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200">{t("unitsTab.modalities.countEnabled", { count: totalHab })}</span>
               <span className="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-500 border border-slate-200">{t("unitsTab.modalities.countDisabled", { count: Math.max(0, (modalidades || []).filter((m) => m.status !== "inativa").length - totalHab) })}</span>
             </div>
           ) : (
-            <div className="text-[11px] font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded-xl p-3 normal-case space-y-2">
+            <div className="text-[11px] font-bold text-red-700 bg-red-50 border border-red-200 rounded-xl p-3 normal-case space-y-2">
               <p>{t("unitsTab.modalities.notConfiguredNote")}</p>
               {podeEditar && (
-                <button type="button" onClick={configurarPelasAulas} disabled={!!gravando} className="px-3 py-2 rounded-lg bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 flex items-center gap-2">
+                <button type="button" onClick={configurarPelasAulas} disabled={!!gravando} className="px-3 py-2 rounded-lg bg-red-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-red-700 flex items-center gap-2">
                   {gravando === "*" && <Loader2 className="w-3 h-3 animate-spin" />} {t("unitsTab.modalities.startFromClasses")}
                 </button>
               )}
