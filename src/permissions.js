@@ -6,6 +6,8 @@ const PAGE_RULES = {
   relatorio_gerencial: ["admin", "mentor", "lider", "unidade"],
   cronograma: ["admin", "mentor", "lider", "unidade", "professor"],
   validacao_diaria: ["admin", "mentor", "lider", "unidade", "professor"],
+  // Certificados de workshop (o professor envia; quem confere usa a aba Professores das Configurações)
+  certificados: ["professor"],
   validacao_coletiva: ["admin", "mentor"],
   financeiro: ["admin", "mentor"],
   configuracoes: ["admin", "mentor", "lider", "unidade"],

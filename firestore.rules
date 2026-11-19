@@ -802,8 +802,70 @@ service cloud.firestore {
     }
     match /workshops_cadastro/{workshopId} {
       allow read: if adminOuMentor();
-      allow create, update: if adminOuMentor() && workshopCadastroOk(request.resource.data);
+      allow create: if adminOuMentor() && workshopCadastroOk(request.resource.data)
+        && (souAdmin() || request.resource.data.get('totalParticipantes', 0) == 0);
+      // O contador de participantes quem muda é a importação (admin): o mentor não o altera.
+      allow update: if adminOuMentor() && workshopCadastroOk(request.resource.data)
+        && (souAdmin() || request.resource.data.get('totalParticipantes', 0) == resource.data.get('totalParticipantes', 0));
       allow delete: if adminOuMentor() && resource.data.get('totalParticipantes', 0) == 0;
+
+      // Participantes (importados da plataforma de ingressos ou ligados na mão). Têm e-mail e telefone de gente que
+      // pode nem ser professor: só o admin lê e grava.
+      match /participantes/{participanteId} {
+        function participanteOk(d) {
+          return d.keys().hasOnly(['nome', 'email', 'telefone', 'telefone2', 'professorIds', 'status', 'origem',
+                                   'criadoEm', 'criadoPor', 'atualizadoEm', 'atualizadoPor'])
+            && d.nome is string && d.nome.size() <= 150
+            && d.get('email', '') is string && d.get('email', '').size() <= 150
+            && d.get('telefone', '') is string && d.get('telefone', '').size() <= 40
+            && d.get('telefone2', '') is string && d.get('telefone2', '').size() <= 40
+            && d.professorIds is list && d.professorIds.size() <= 12
+            && d.status in ['ligado', 'sem-cadastro']
+            && d.origem in ['importacao', 'manual'];
+        }
+        allow read: if souAdmin();
+        allow create, update: if souAdmin() && participanteOk(request.resource.data);
+        allow delete: if souAdmin();
+      }
+    }
+
+    // ===================== CERTIFICADOS DE WORKSHOP DO PROFESSOR (certificados_professor) =====================
+    // O professor informa o workshop que fez, a data e a FOTO do certificado (JPEG já comprimido, em texto base64,
+    // porque o plano gratuito não tem Storage). Um documento por certificado (id = login + "_" + código curto).
+    // Lê: o dono, o admin, o mentor da unidade e o líder da unidade. Verifica/recusa: esses três (menos o dono).
+    // A foto NUNCA vai para o crachá aberto nem para listas públicas.
+    match /certificados_professor/{cid} {
+      function certVerificador(unidadeId) {
+        return souAdmin()
+          || (logado() && meuPapel() == 'mentor' && mentorDaUnidadeId(unidadeId))
+          || (logado() && meuPapel() in papeisLider() && unidadeId is string && unidadeId in unidadesDoLiderUid(request.auth.uid));
+      }
+      function certValido() {
+        let d = request.resource.data;
+        let cracha = get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data;
+        return logado() && cracha.get('role', '').lower() == 'professor'
+          && d.keys().hasOnly(['uid', 'unidadeId', 'nome', 'workshop', 'dataFeito', 'foto', 'status', 'criadoEm'])
+          && d.uid == request.auth.uid
+          && cid.matches(request.auth.uid + '_[A-Za-z0-9]{4,24}')
+          && d.unidadeId is string && d.unidadeId != '' && d.unidadeId == cracha.get('unidadeId', '')
+          && d.status == 'pendente' && d.criadoEm == request.time
+          && d.nome is string && d.nome.size() >= 3 && d.nome.size() <= 80
+          && d.workshop is string && d.workshop.size() >= 3 && d.workshop.size() <= 120
+          && d.dataFeito is string && d.dataFeito.matches('^20[0-9]{2}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$')
+          && d.foto is string && d.foto.size() >= 200 && d.foto.size() <= 700000
+          && d.foto.matches('data:image/jpeg;base64,.*');
+      }
+
+      allow read: if (logado() && resource.data.uid == request.auth.uid) || certVerificador(resource.data.unidadeId);
+      // O dono envia; e pode corrigir/reenviar enquanto não foi verificado (recusado volta a pendente).
+      allow create: if certValido();
+      allow update: if certValido() && resource.data.uid == request.auth.uid && resource.data.status in ['pendente', 'recusado'];
+      // Admin, mentor ou líder da unidade verifica ou recusa (só os campos da análise).
+      allow update: if resource.data.status == 'pendente' && certVerificador(resource.data.unidadeId)
+        && camposAlterados().hasOnly(['status', 'motivo', 'analisadoPor', 'analisadoPorNome', 'analisadoEm'])
+        && request.resource.data.status in ['verificado', 'recusado'];
+      // Apaga: o dono (se ainda não verificado) ou o admin.
+      allow delete: if (logado() && resource.data.uid == request.auth.uid && resource.data.status != 'verificado') || souAdmin();
     }
 
     // ===================== DEMAIS COLEÇÕES =====================
@@ -812,8 +874,8 @@ service cloud.firestore {
     // Professor não grava nada aqui, só cria registros de auditoria (log da validação e do "Sair").
     // (No Firestore, se QUALQUER regra libera, a ação passa; por isso as exceções precisam estar aqui.)
     match /{colecao}/{resto=**} {
-      allow read: if logado() && !(colecao in ['feriados_propostas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos', 'documentos_ficha', 'documentos_professor', 'contatos_unicos', 'telemetria_leituras', 'workshops_cadastro']);
-      allow write: if logado() && !(colecao in ['feriados', 'feriados_propostas', 'usuarios', 'publico', 'validacoes', 'aulas', 'aulas_publicas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'resumos_mensais', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos', 'professores', 'documentos_ficha', 'documentos_professor', 'contatos_unicos', 'telemetria_leituras', 'workshops_cadastro', 'unidades', 'configuracoes']) && !souProfessor();
+      allow read: if logado() && !(colecao in ['feriados_propostas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos', 'documentos_ficha', 'documentos_professor', 'contatos_unicos', 'telemetria_leituras', 'workshops_cadastro', 'certificados_professor']);
+      allow write: if logado() && !(colecao in ['feriados', 'feriados_propostas', 'usuarios', 'publico', 'validacoes', 'aulas', 'aulas_publicas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'resumos_mensais', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos', 'professores', 'documentos_ficha', 'documentos_professor', 'contatos_unicos', 'telemetria_leituras', 'workshops_cadastro', 'certificados_professor', 'unidades', 'configuracoes']) && !souProfessor();
       allow create: if logado() && colecao in ['auditoria_cronograma', 'auditoria_configuracoes'];
     }
   }
