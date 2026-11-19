@@ -8,6 +8,12 @@
     "events": "Eventos"
   },
   "ws": {
+    "fillModality": "Completar modalidad de los profesores",
+    "fillModalityConfirm": "¿Completar la modalidad de los workshops que ya están en los profesores?\n\n{{cadastro}} por el registro de workshops\n{{nome}} por el nombre del workshop (suposición)\n{{sem}} sin forma de saber (quedan como están)",
+    "fillModalityDone": "Modalidad completada en {{n}} profesores.",
+    "fillModalityNothing": "Nada para completar: todos los workshops de los profesores ya tienen modalidad.",
+    "fillModalityError": "No se pudo completar. Probá de nuevo.",
+    "fillModalityLeft": "{{n}} workshops de profesores siguen sin modalidad (el nombre no dice cuál es).",
     "title": "Workshops",
     "subtitle": "Registro e historial por modalidad",
     "quick": "Carga rápida (historial)",

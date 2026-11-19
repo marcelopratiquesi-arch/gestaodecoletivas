@@ -954,13 +954,14 @@ service cloud.firestore {
           && exists(/databases/$(database)/documents/workshops_cadastro/$(d.workshopId))
           && get(/databases/$(database)/documents/workshops_cadastro/$(d.workshopId)).data.status != 'cancelado'
           && get(/databases/$(database)/documents/workshops_cadastro/$(d.workshopId)).data.nome == d.workshop
-          && get(/databases/$(database)/documents/workshops_cadastro/$(d.workshopId)).data.data == d.dataFeito;
+          && get(/databases/$(database)/documents/workshops_cadastro/$(d.workshopId)).data.data == d.dataFeito
+          && (!('modalidade' in d) || d.modalidade == get(/databases/$(database)/documents/workshops_cadastro/$(d.workshopId)).data.modalidade);
       }
       function certValido() {
         let d = request.resource.data;
         let cracha = get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data;
         return logado() && cracha.get('role', '').lower() == 'professor'
-          && d.keys().hasOnly(['uid', 'unidadeId', 'vinculoId', 'workshopId', 'nome', 'workshop', 'dataFeito', 'foto', 'status', 'criadoEm'])
+          && d.keys().hasOnly(['uid', 'unidadeId', 'vinculoId', 'workshopId', 'modalidade', 'nome', 'workshop', 'dataFeito', 'foto', 'status', 'criadoEm'])
           && d.uid == request.auth.uid
           && cid.matches(request.auth.uid + '_[A-Za-z0-9]{4,24}')
           && d.unidadeId is string && d.unidadeId != '' && certUnidadeOk(d, cracha) && certWorkshopOk(d)

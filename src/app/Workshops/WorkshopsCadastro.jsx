@@ -3,10 +3,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
-import { Calendar, Loader2, Plus, X, Copy, Edit, Trash2, Users, ListPlus, Search, Upload } from 'lucide-react';
+import { Calendar, Loader2, Plus, X, Copy, Edit, Trash2, Users, ListPlus, Search, Upload, Award } from 'lucide-react';
 import { useCatalogs } from '../../contexts/CatalogContext';
 import { useAuth } from '../../contexts/AuthContext';
 import ModalWorkshop from './ModalWorkshop';
+import { planejarCompletarModalidade } from '../../utils/completarModalidade';
+import { gravarWorkshopsCompletados } from '../../services/certificadoService';
 import ImportarLista from './ImportarLista';
 import ParticipantesWorkshop from './ParticipantesWorkshop';
 import {
@@ -54,6 +56,21 @@ export default function WorkshopsCadastro() {
   const [rapido, setRapido] = useState(null); // [{...campos}]
   const [salvando, setSalvando] = useState(false);
   const [confirmando, setConfirmando] = useState(null);
+
+  // Admin: completa a modalidade dos workshops antigos que já estão nos professores (zero leituras: usa o que já está carregado).
+  async function completarModalidades() {
+    const plano = planejarCompletarModalidade(professores || [], lista || []);
+    if (plano.gravar.length === 0) {
+      toast(plano.semResposta.length ? t('shop.ws.fillModalityLeft', { n: plano.semResposta.length }) : t('shop.ws.fillModalityNothing'));
+      return;
+    }
+    if (!window.confirm(t('shop.ws.fillModalityConfirm', { cadastro: plano.porCadastro, nome: plano.porNome, sem: plano.semResposta.length }))) return;
+    setSalvando(true);
+    try {
+      await gravarWorkshopsCompletados(plano.gravar);
+      toast.success(t('shop.ws.fillModalityDone', { n: plano.gravar.length }));
+    } catch (e) { console.error(e); toast.error(t('shop.ws.fillModalityError')); } finally { setSalvando(false); }
+  }
 
   const [cpf, setCpf] = useState('');
   const [cpfMsg, setCpfMsg] = useState(null); // { tipo: 'ok'|'aviso', texto }
@@ -186,6 +203,7 @@ export default function WorkshopsCadastro() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
+          {souAdmin && <button type="button" onClick={completarModalidades} disabled={salvando || lista === null} className={`${botao} bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-60`}><Award className="w-4 h-4" /> {t('shop.ws.fillModality')}</button>}
           <button type="button" onClick={abrirRapido} className={`${botao} bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-700`}><ListPlus className="w-4 h-4" /> {t('shop.ws.quick')}</button>
           <button type="button" onClick={abrirNovo} className={`${botao} bg-purple-600 text-white hover:bg-purple-700 shadow-lg shadow-purple-500/20`}><Plus className="w-4 h-4" /> {t('shop.ws.newBtn')}</button>
         </div>

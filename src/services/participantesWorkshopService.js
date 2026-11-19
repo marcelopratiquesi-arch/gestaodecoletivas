@@ -37,7 +37,7 @@ export async function lerParticipantes(workshopId) {
 }
 
 const itemDoWorkshop = (workshop, por) => ({
-  id: idItemWorkshop(workshop.id), workshopId: workshop.id, nome: workshop.nome, data: workshop.data, por, em: new Date().toISOString(),
+  id: idItemWorkshop(workshop.id), workshopId: workshop.id, ...(workshop.modalidade ? { modalidade: workshop.modalidade } : {}), nome: workshop.nome, data: workshop.data, por, em: new Date().toISOString(),
 });
 
 /** Lista de gravações em lotes pequenos. */

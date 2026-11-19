@@ -94,7 +94,7 @@ export default function MeusWorkshops() {
     if (!destino) return setErro(t("certificates.errors.chooseUnit"));
     setProcessando(true);
     try {
-      await enviarCertificado({ uid, unidadeId: destino.unidadeId, vinculoId: destino.vinculoId, nome: userData?.nome || user?.email || "-", workshopId: escolhido.id, workshop: escolhido.nome, dataFeito: escolhido.data, foto });
+      await enviarCertificado({ uid, unidadeId: destino.unidadeId, vinculoId: destino.vinculoId, nome: userData?.nome || user?.email || "-", workshopId: escolhido.id, modalidade: escolhido.modalidade, workshop: escolhido.nome, dataFeito: escolhido.data, foto });
       if (substitui) { try { await apagarCertificado(substitui); } catch (e) { console.error(e); } }
       limpar();
       await carregar();

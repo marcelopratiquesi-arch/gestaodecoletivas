@@ -1,7 +1,7 @@
 // Certificados de workshop do professor (coleção certificados_professor; ver regras no firestore.rules).
 // Um documento por certificado, id = login + "_" + código curto. A foto (JPEG base64) fica só nesse documento.
 // Quem verifica: o líder da unidade, o mentor dela ou o admin.
-import { arrayUnion, collection, deleteDoc, doc, getDocs, query, serverTimestamp, setDoc, updateDoc, where } from "firebase/firestore";
+import { arrayUnion, collection, deleteDoc, doc, getDocs, query, serverTimestamp, setDoc, updateDoc, where, writeBatch } from "firebase/firestore";
 import { db } from "./firebase";
 import { registrarAuditoriaAcesso } from "./auditoriaAcessos";
 
@@ -27,10 +27,10 @@ export async function listarWorkshopsEscolhiveis(hoje) {
 }
 
 /** Envia um certificado do workshop escolhido. O id é fixo (login + workshop): reenviar o mesmo workshop reaproveita o documento. */
-export async function enviarCertificado({ uid, unidadeId, vinculoId, nome, workshopId, workshop, dataFeito, foto }) {
+export async function enviarCertificado({ uid, unidadeId, vinculoId, nome, workshopId, modalidade, workshop, dataFeito, foto }) {
   const cid = `${uid}_${workshopId}`;
   await setDoc(doc(db, "certificados_professor", cid), {
-    uid, unidadeId: String(unidadeId), ...(vinculoId ? { vinculoId: String(vinculoId) } : {}), workshopId, nome, workshop, dataFeito, foto, status: "pendente", criadoEm: serverTimestamp(),
+    uid, unidadeId: String(unidadeId), ...(vinculoId ? { vinculoId: String(vinculoId) } : {}), workshopId, ...(modalidade ? { modalidade } : {}), nome, workshop, dataFeito, foto, status: "pendente", criadoEm: serverTimestamp(),
   });
   return cid;
 }
@@ -57,8 +57,8 @@ export async function listarPendentes({ admin, unidadeIds }) {
  * extras: o cadastro já chega ao vivo pelo CatalogContext. O gestor (líder, mentor ou admin) adiciona; o que
  * o professor envia com foto e o gestor verifica (certificados_professor) também entra aqui ao verificar.
  */
-export async function adicionarWorkshopAoProfessor({ professorId, nome, data, por, id }) {
-  const item = { id: id || codigoCurto(), nome: String(nome).trim(), data, por: String(por || "-").slice(0, 80), em: new Date().toISOString() };
+export async function adicionarWorkshopAoProfessor({ professorId, nome, data, por, id, modalidade }) {
+  const item = { id: id || codigoCurto(), ...(modalidade ? { modalidade } : {}), nome: String(nome).trim(), data, por: String(por || "-").slice(0, 80), em: new Date().toISOString() };
   await updateDoc(doc(db, "professores", String(professorId)), { workshops: arrayUnion(item) });
   return item;
 }
@@ -67,13 +67,22 @@ export async function adicionarWorkshopAoProfessor({ professorId, nome, data, po
  * Certificado verificado de um workshop do cadastro: entra em professores/{id}.workshops com o id "wk_{workshopId}",
  * o mesmo formato da importação (não repete). Vale para todas as fichas ligadas a esse login. `fichas` vem do catálogo.
  */
-export async function registrarWorkshopVerificado({ fichas, workshopId, nome, data, por }) {
+export async function registrarWorkshopVerificado({ fichas, workshopId, modalidade, nome, data, por }) {
   const idItem = `wk_${workshopId}`;
   await Promise.all(fichas.map((f) => {
     const sem = (f.workshops || []).filter((w) => w.id !== idItem);
-    const item = { id: idItem, workshopId, nome, data, por: String(por || "-").slice(0, 80), em: new Date().toISOString() };
+    const item = { id: idItem, workshopId, ...(modalidade ? { modalidade } : {}), nome, data, por: String(por || "-").slice(0, 80), em: new Date().toISOString() };
     return updateDoc(doc(db, "professores", String(f.id)), { workshops: [...sem, item] });
   }));
+}
+
+/** Grava as fichas com a modalidade completada (ver utils/completarModalidade.js), em lotes pequenos. */
+export async function gravarWorkshopsCompletados(gravar) {
+  for (let i = 0; i < gravar.length; i += 10) {
+    const batch = writeBatch(db);
+    gravar.slice(i, i + 10).forEach(({ professorId, workshops }) => batch.update(doc(db, "professores", professorId), { workshops }));
+    await batch.commit();
+  }
 }
 
 export async function removerWorkshopDoProfessor({ professorId, atuais, id }) {
