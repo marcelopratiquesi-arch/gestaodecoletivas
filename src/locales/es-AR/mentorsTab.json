@@ -163,5 +163,21 @@
     "second": "Con 2º mentor",
     "stale": "Sin entrar hace +30 días",
     "never": "Nunca entró"
+  },
+  "row": {
+    "units_one": "{{count}} unidad",
+    "units_other": "{{count}} unidades",
+    "unitsShared_one": "{{count}} del equipo",
+    "unitsShared_other": "{{count}} del equipo",
+    "tempBadge": "Mentor temporal",
+    "covers": "cubre a {{name}}",
+    "coveredBy": "Cubierto por {{name}}",
+    "until": "hasta {{date}}",
+    "duo": "Dupla con {{name}}",
+    "extendOf": "Prorrogar la cobertura de {{name}}",
+    "endOf": "Terminar la cobertura de {{name}}",
+    "extendMine": "Prorrogar la cobertura",
+    "endMine": "Terminar la cobertura",
+    "addPhone": "Agregar nº"
   }
 }

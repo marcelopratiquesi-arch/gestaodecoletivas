@@ -24,7 +24,7 @@
     "inactive": "INATIVO",
     "notInformed": "Adicionar nº",
     "edit": "Editar Completo",
-    "deactivate": "Desactivar",
+    "deactivate": "Desativar",
     "activate": "Ativar",
     "delete": "Excluir Definitivamente"
   },
@@ -163,5 +163,21 @@
     "second": "Com 2º mentor",
     "stale": "Sem entrar há +30 dias",
     "never": "Nunca entrou"
+  },
+  "row": {
+    "units_one": "{{count}} unidade",
+    "units_other": "{{count}} unidades",
+    "unitsShared_one": "{{count}} da equipe",
+    "unitsShared_other": "{{count}} da equipe",
+    "tempBadge": "Mentor temporário",
+    "covers": "cobre {{name}}",
+    "coveredBy": "Coberto por {{name}}",
+    "until": "até {{date}}",
+    "duo": "Dupla com {{name}}",
+    "extendOf": "Prorrogar cobertura de {{name}}",
+    "endOf": "Encerrar cobertura de {{name}}",
+    "extendMine": "Prorrogar a cobertura",
+    "endMine": "Encerrar a cobertura",
+    "addPhone": "Adicionar nº"
   }
 }

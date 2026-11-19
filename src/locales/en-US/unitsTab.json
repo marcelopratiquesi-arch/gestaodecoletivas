@@ -187,5 +187,9 @@
       "done": "Done! {{count}} units configured.",
       "error": "Error saving. Check and try again (what was already saved is not duplicated)."
     }
+  },
+  "row": {
+    "suspend": "Suspend unit",
+    "reactivate": "Reactivate unit"
   }
 }

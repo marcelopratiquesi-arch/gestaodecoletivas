@@ -16,34 +16,23 @@ import LinkUnidade from "../../../centrais/LinkUnidade";
 import { FiltroPadrao } from "../ui/FiltroPadrao";
 import { BotaoDeLinha } from "../ui/BotaoDeLinha";
 import { CabecalhoDaAba, CaixaDeNumeros, BotaoPrincipal, BotaoSecundario } from "../ui/CabecalhoDaAba";
-import { AcoesDoContato } from "../ui/AcoesDoContato";
 import { useFiltroCascata } from "../ui/useFiltroCascata";
 
 import { 
     Building2, MapPin, Edit2, Trash2, AlertTriangle, CheckCircle2, 
-    Dumbbell, Loader2, User, Mail, Lock, Globe, Key, ChevronDown, ChevronUp, Ban, PowerOff, Plus, X, Phone, Check,
+    Dumbbell, Loader2, User, Mail, Lock, Globe, Key, ChevronDown, Ban, PowerOff, Plus, X, Phone, Check,
     Map as MapIcon, Maximize, GripHorizontal, Upload, FileSpreadsheet, ShieldAlert, UserCheck
 } from "lucide-react";
 
-// 🌍 PADRÃO OURO INTERNACIONAL
-const PAIS_CONFIG = {
-  BR: {
-    id: "BR", nome: "Brasil", ddi: "+55",
-    badgeClass: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800"
-  },
-  AR: {
-    id: "AR", nome: "Argentina", ddi: "+54",
-    badgeClass: "bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-900/20 dark:text-sky-400 dark:border-sky-800"
-  },
-  US: {
-    id: "US", nome: "Estados Unidos", ddi: "+1",
-    badgeClass: "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-900/20 dark:text-rose-400 dark:border-rose-800"
-  },
-};
-
-const PAISES = Object.values(PAIS_CONFIG);
-const DDI_MAP = Object.fromEntries(PAISES.map(p => [p.id, p.ddi]));
-const PAIS_DEFAULT = "BR";
+import { CelulaContato } from "../ui/CelulaContato";
+import { CelulaAcesso } from "../ui/CelulaAcesso";
+import { ColunaOrdenavel, CLASSE_TITULO } from "../ui/ColunaOrdenavel";
+import { MenuDeAcoes } from "../ui/MenuDeAcoes";
+import { useOrdenacao } from "../ui/useOrdenacao";
+import { useUltimosAcessos } from "../ui/useUltimosAcessos";
+import { FlagIcon } from "../ui/Bandeira";
+import { PAIS_CONFIG, PAISES, DDI_MAP, PAIS_PADRAO as PAIS_DEFAULT, formatarTelefone, exemploDeTelefone as getPhonePlaceholder } from "../ui/telefone";
+import { paraData } from "../../../utils/ultimoAcesso";
 
 /* ================= LOCALIZAÇÕES (Mapeadas para as Siglas) =================
    ⚠️ O texto de cada item é o que fica gravado na unidade (campo "estado").
@@ -84,87 +73,6 @@ const SIGLAS_UF_BR = {
   "Sergipe": "SE", "Tocantins": "TO"
 };
 const rotuloEstado = (nomeEstado) => SIGLAS_UF_BR[nomeEstado] ? `${nomeEstado} (${SIGLAS_UF_BR[nomeEstado]})` : nomeEstado;
-
-// 🟢 ÍCONES DE BANDEIRA EM SVG PURO
-function FlagIcon({ pais, className = "w-4 h-3" }) {
-  const wrapClass = `${className} rounded-[2px] ring-1 ring-black/10 shrink-0 overflow-hidden inline-block align-middle`;
-
-  if (pais === "BR") {
-    return (
-      <svg viewBox="0 0 20 14" className={wrapClass} preserveAspectRatio="xMidYMid slice">
-        <rect width="20" height="14" fill="#009739"/>
-        <polygon points="10,2 18,7 10,12 2,7" fill="#FEDD00"/>
-        <circle cx="10" cy="7" r="3.1" fill="#012169"/>
-      </svg>
-    );
-  }
-  if (pais === "AR") {
-    return (
-      <svg viewBox="0 0 20 14" className={wrapClass} preserveAspectRatio="xMidYMid slice">
-        <rect width="20" height="14" fill="#ffffff"/>
-        <rect width="20" height="4.66" y="0" fill="#75AADB"/>
-        <rect width="20" height="4.66" y="9.34" fill="#75AADB"/>
-        <circle cx="10" cy="7" r="1.5" fill="#F6B40E" stroke="#85340A" strokeWidth="0.15"/>
-      </svg>
-    );
-  }
-  if (pais === "US") {
-    return (
-      <svg viewBox="0 0 20 14" className={wrapClass} preserveAspectRatio="xMidYMid slice">
-        <rect width="20" height="14" fill="#B22234"/>
-        <rect y="1.077" width="20" height="1.077" fill="#fff"/>
-        <rect y="3.231" width="20" height="1.077" fill="#fff"/>
-        <rect y="5.385" width="20" height="1.077" fill="#fff"/>
-        <rect y="7.538" width="20" height="1.077" fill="#fff"/>
-        <rect y="9.692" width="20" height="1.077" fill="#fff"/>
-        <rect y="11.846" width="20" height="1.077" fill="#fff"/>
-        <rect width="8" height="7.538" fill="#3C3B6E"/>
-      </svg>
-    );
-  }
-  return null;
-}
-
-// ==========================================
-// 🟢 MÁSCARAS INTELIGENTES DE TELEFONE
-// ==========================================
-const formatarTelefone = (valor, pais = PAIS_DEFAULT) => {
-    if (!valor) return "";
-    let v = valor.replace(/\D/g, ''); 
-    
-    if (pais === 'BR') {
-        if (v.startsWith('55')) v = v.slice(2);
-        v = v.slice(0, 11); 
-        if (v.length > 2) v = v.replace(/^(\d{2})(\d)/g, '($1) $2');
-        if (v.length > 7) v = v.replace(/(\d{5})(\d)/, '$1-$2');
-        return v;
-    } 
-    
-    if (pais === 'US') {
-        if (v.startsWith('1') && v.length > 10) v = v.slice(1);
-        v = v.slice(0, 10);
-        if (v.length > 3) v = v.replace(/^(\d{3})(\d)/, '($1) $2');
-        if (v.length > 6) v = v.replace(/^(\(\d{3}\)\s\d{3})(\d)/, '$1-$2');
-        return v;
-    }
-
-    if (pais === 'AR') {
-        if (v.startsWith('54')) v = v.slice(2);
-        v = v.slice(0, 11); 
-        if (v.length > 1) v = v.replace(/^(\d{1})(\d)/, '$1 $2');
-        if (v.length > 3) v = v.replace(/^(\d{1})\s(\d{2})(\d)/, '$1 $2 $3');
-        if (v.length > 7) v = v.replace(/^(\d{1})\s(\d{2})\s(\d{4})(\d)/, '$1 $2 $3-$4');
-        return v;
-    }
-
-    return v;
-};
-
-const getPhonePlaceholder = (pais = PAIS_DEFAULT) => {
-    if (pais === 'US') return "(000) 000-0000";
-    if (pais === 'AR') return "9 11 0000-0000";
-    return "(00) 00000-0000";
-};
 
 const getCenterPos = (modalWidth, modalHeight) => {
     if (typeof window === 'undefined') return { x: 50, y: 50 };
@@ -289,7 +197,6 @@ export function UnidadesTab() {
   });
   const [loading, setLoading] = useState(true);
   
-  const [sortConfig, setSortConfig] = useState({ field: 'nome', direction: 'asc' });
   
   const [modalUnidadeAberto, setModalUnidadeAberto] = useState(false);
   const [modalPos, setModalPos] = useState({ x: 0, y: 0 });
@@ -391,20 +298,23 @@ export function UnidadesTab() {
       nomeMentor, nomeLider,
   });
 
-  const unidadesProcessadas = useMemo(() => {
-      return [...filtro.resultado].sort((a, b) => {
-          let valA = (a[sortConfig.field] || "").toLowerCase(); let valB = (b[sortConfig.field] || "").toLowerCase();
-          if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
-          if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
-          return 0;
-      });
-  }, [filtro.resultado, sortConfig]);
+  // Coluna "Acesso": último acesso do líder e do login antigo da unidade (enquanto existir). 1 leitura por crachá por sessão.
+  const uidsDeAcesso = useMemo(() => unidadesBase.flatMap(u => [u.liderUid, u.uidLogin && !u.loginAntigoDesligado ? u.uidLogin : null]), [unidadesBase]);
+  const { acessoDe, carregando: carregandoAcessos } = useUltimosAcessos(uidsDeAcesso);
+  const msDoAcesso = useCallback((uid) => paraData(acessoDe(uid))?.getTime() || 0, [acessoDe]);
 
-  const handleSort = (field) => { setSortConfig(prev => ({ field, direction: prev.field === field && prev.direction === 'asc' ? 'desc' : 'asc' })); };
-  const SortIcon = ({ field }) => {
-      if (sortConfig.field !== field) return <div className="w-4 h-4 opacity-20"><ChevronDown className="w-3 h-3"/></div>;
-      return sortConfig.direction === 'asc' ? <ChevronUp className="w-3 h-3 text-red-500"/> : <ChevronDown className="w-3 h-3 text-red-500"/>;
-  };
+  // Todas as colunas ordenam (A→Z / Z→A). Responsável ordena pelo NOME do mentor (antes ia pelo código).
+  const colunas = useMemo(() => ({
+      status: (u) => u.status || "",
+      nome: (u) => u.nome || "",
+      local: (u) => u.enderecoCompleto || "",
+      modalidades: (u) => unidadeTemVinculo(u) ? idsHabilitados(u).length : -1,
+      estado: (u) => u.estado || "",
+      responsavel: (u) => nomeMentor(u.mentorId) || "",
+      acesso: (u) => Math.max(msDoAcesso(u.liderUid), u.loginAntigoDesligado ? 0 : msDoAcesso(u.uidLogin)),
+  }), [nomeMentor, msDoAcesso]);
+  const ordem = useOrdenacao(filtro.resultado, colunas, { inicial: { campo: "nome", direcao: "asc" } });
+  const unidadesProcessadas = ordem.ordenada;
 
   // 🔒 Senhas das unidades gravadas no banco (legíveis publicamente): o admin apaga de uma vez.
   const unidadesComSenhaGravada = useMemo(() => unidadesBase.filter(u => u.senhaPainel !== undefined), [unidadesBase]);
@@ -848,35 +758,24 @@ export function UnidadesTab() {
         {/* === TABELA DE ALTA DENSIDADE === */}
         <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
-            <table className="w-full text-left min-w-[1000px]">
-              <thead className="bg-slate-100 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
+            <table className="w-full text-left min-w-[1180px]">
+              <thead className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
                 <tr>
-                  <th className="px-3 py-2.5 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider cursor-pointer w-24" onClick={() => handleSort('status')}>
-                      <div className="flex items-center gap-1.5">{t('unitsTab.table.status', 'Status')} <SortIcon field="status"/></div>
-                  </th>
-                  <th className="px-3 py-2.5 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('nome')}>
-                      <div className="flex items-center gap-1.5">{t('unitsTab.table.unit', 'Unidade')} <SortIcon field="nome"/></div>
-                  </th>
-                  <th className="px-3 py-2.5 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider w-80">
-                      {t('unitsTab.table.location', 'Local')}
-                  </th>
-                  <th className="px-3 py-2.5 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                      {t('unitsTab.modalities.column')}
-                  </th>
-                  <th className="px-3 py-2.5 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('estado')}>
-                      <div className="flex items-center gap-1.5">{t('unitsTab.extra.region')} <SortIcon field="estado"/></div>
-                  </th>
-                  <th className="px-3 py-2.5 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('mentorId')}>
-                      <div className="flex items-center gap-1.5">{t('unitsTab.table.responsible', 'Responsável')} <SortIcon field="mentorId"/></div>
-                  </th>
-                  <th className="px-3 py-2.5 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-right">{t('unitsTab.table.actions', 'Ações')}</th>
+                  <ColunaOrdenavel campo="status" rotulo={t('unitsTab.table.status', 'Status')} ordenacao={ordem} cor="red" className="w-24" />
+                  <ColunaOrdenavel campo="nome" rotulo={t('unitsTab.table.unit', 'Unidade')} ordenacao={ordem} cor="red" />
+                  <ColunaOrdenavel campo="local" rotulo={t('unitsTab.table.location', 'Local')} ordenacao={ordem} cor="red" className="w-72" />
+                  <ColunaOrdenavel campo="modalidades" rotulo={t('unitsTab.modalities.column')} ordenacao={ordem} cor="red" />
+                  <ColunaOrdenavel campo="estado" rotulo={t('unitsTab.extra.region')} ordenacao={ordem} cor="red" />
+                  <ColunaOrdenavel campo="responsavel" rotulo={t('unitsTab.table.responsible', 'Responsável')} ordenacao={ordem} cor="red" />
+                  <ColunaOrdenavel campo="acesso" rotulo={t('tabela.access.column')} ordenacao={ordem} cor="red" className="w-40" />
+                  <th className={`${CLASSE_TITULO} text-right w-28`}>{t('unitsTab.table.actions', 'Ações')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
                 {loading ? (
-                    <tr><td colSpan="7" className="py-8 text-center"><Loader2 className="w-6 h-6 animate-spin text-red-500 mx-auto mb-2"/><p className="text-slate-400 font-bold text-xs uppercase">{t('unitsTab.extra.syncing')}</p></td></tr>
+                    <tr><td colSpan="8" className="py-8 text-center"><Loader2 className="w-6 h-6 animate-spin text-red-500 mx-auto mb-2"/><p className="text-slate-400 font-bold text-xs uppercase">{t('unitsTab.extra.syncing')}</p></td></tr>
                 ) : unidadesProcessadas.length === 0 ? (
-                    <tr><td colSpan="7" className="py-8 text-center text-slate-400 font-bold text-xs uppercase"><Building2 className="w-6 h-6 mx-auto mb-2 opacity-20"/> {t('unitsTab.emptyState', 'Nenhuma unidade encontrada.')}</td></tr>
+                    <tr><td colSpan="8" className="py-8 text-center text-slate-400 font-bold text-xs uppercase"><Building2 className="w-6 h-6 mx-auto mb-2 opacity-20"/> {t('unitsTab.emptyState', 'Nenhuma unidade encontrada.')}</td></tr>
                 ) : (
                   unidadesProcessadas.map(u => {
                     let paisAtual = u.pais || PAIS_DEFAULT;
@@ -885,10 +784,9 @@ export function UnidadesTab() {
                     if (paisAtual === "Estados Unidos") paisAtual = "US";
                     
                     const paisDDI = DDI_MAP[paisAtual]; 
-                    const telefoneExibicao = u.telefone && !u.telefone.startsWith('+') && paisDDI ? `${paisDDI} ${u.telefone}` : (u.telefone || "");
 
                     return (
-                    <tr key={u.id} className={`transition-colors group ${u.status === 'inativa' ? 'bg-slate-50 dark:bg-slate-900/30 opacity-70' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}>
+                    <tr key={u.id} className={`align-top transition-colors group ${u.status === 'inativa' ? 'bg-slate-50 dark:bg-slate-900/30 opacity-70' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}>
                       
                       <td className="px-3 py-2">
                           <div className="flex items-center gap-1.5">
@@ -914,25 +812,17 @@ export function UnidadesTab() {
                                   <button onClick={() => setEditandoTelefoneId(null)} className="p-1 bg-slate-200 text-slate-600 rounded hover:bg-slate-400 transition-colors"><X className="w-3 h-3"/></button>
                               </div>
                           ) : (
-                              <div className="flex items-center gap-1 group/edit w-fit">
-                                  <Phone className={`w-3 h-3 ${u.telefone ? 'text-green-500 dark:text-green-400' : 'text-slate-300 dark:text-slate-600'}`}/>
-                                  <span className={`font-mono text-xs font-bold flex items-center gap-1 ${u.telefone ? 'text-slate-700 dark:text-slate-300' : 'text-slate-400 dark:text-slate-500 italic text-[10px]'}`}>
-                                    {u.telefone ? (
-                                        <>
-                                            <span className={`inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded border ${PAIS_CONFIG[paisAtual]?.badgeClass}`}>
-                                                <FlagIcon pais={paisAtual} /> {paisAtual}
-                                            </span>
-                                            {telefoneExibicao}
-                                        </>
-                                    ) : t('unitsTab.table.notInformed', "Add Whatsapp")}
-                                  </span>
-                                  {u.telefone && <AcoesDoContato telefone={u.telefone} pais={paisAtual} />}
-                                  <Edit2 onClick={() => { setEditandoTelefoneId(u.id); setTelefoneInline(u.telefone ? u.telefone.replace(paisDDI, '').trim() : ""); }} className="w-3 h-3 text-blue-500 opacity-0 group-hover/edit:opacity-100 cursor-pointer transition-opacity ml-1"/>
-                              </div>
+                              <CelulaContato telefone={u.telefone} pais={paisAtual}
+                                  aoEditarTelefone={() => { setEditandoTelefoneId(u.id); setTelefoneInline(u.telefone ? u.telefone.replace(paisDDI, '').trim() : ""); }}
+                                  semTelefone={
+                                      <button type="button" onClick={() => { setEditandoTelefoneId(u.id); setTelefoneInline(""); }} className="inline-flex items-center gap-1 text-[10px] italic text-slate-400 hover:text-red-600 transition-colors">
+                                          <Phone className="w-3 h-3"/> {t('unitsTab.table.notInformed', "Add Whatsapp")}
+                                      </button>
+                                  } />
                           )}
                         </div>
                         {u.liderUid ? (
-                            <div className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1 normal-case" title={u.liderEmail}><UserCheck className="w-3 h-3"/> {t('unitsTab.leader.label', { name: u.liderNome })}</div>
+                            <div className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1 normal-case" title={u.liderEmail}><UserCheck className="w-3 h-3"/> <span className="uppercase">{t('unitsTab.leader.label', { name: u.liderNome })}</span></div>
                         ) : (
                             <div className="text-[10px] font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1 italic"><UserCheck className="w-3 h-3"/> {t('unitsTab.leader.none')}</div>
                         )}
@@ -1020,18 +910,32 @@ export function UnidadesTab() {
                       </td>
 
                       <td className="px-3 py-2">
-                        <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300 text-xs font-bold bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 px-2 py-1 rounded-md w-fit">
-                          <User className="w-3 h-3 text-blue-500"/>
-                          {role === "admin" ? (mentores.find(m=>m.id===u.mentorId)?.nome?.split(' ')[0] || t('unitsTab.table.notInformed', "N/A")) : t('unitsTab.table.you', "Você")}
+                        <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300 text-xs font-bold uppercase bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 px-2 py-1 rounded-md w-fit whitespace-nowrap" title={nomeMentor(u.mentorId) || ""}>
+                          <User className="w-3 h-3 text-red-500"/>
+                          {role === "admin" ? (nomeMentor(u.mentorId)?.split(' ')[0] || t('unitsTab.table.notInformed', "N/A")) : t('unitsTab.table.you', "Você")}
                         </div>
                       </td>
 
-                      <td className="px-3 py-2 text-right">
-                          <div className="flex gap-1 justify-end opacity-50 group-hover:opacity-100 transition-opacity">
-                              <BotaoDeLinha abaId="unidades" compacto icone={Edit2} onClick={() => abrirEditarUnidade(u)} title={t('unitsTab.table.edit', "Editar Unidade")} />
-                              <BotaoDeLinha abaId="unidades" compacto tipo={u.status === "ativa" ? "desativar" : "ativar"} icone={u.status === "ativa" ? PowerOff : CheckCircle2} onClick={() => alternarStatus(u)}
-                                  title={u.status === "ativa" ? "Suspender" : "Reativar"} />
-                              <BotaoDeLinha abaId="unidades" compacto tipo="perigo" icone={Trash2} onClick={() => excluir(u)} title={t('unitsTab.table.delete', "Excluir")} />
+                      {/* ACESSO: do líder e do login antigo da unidade (enquanto existir) */}
+                      <td className="px-3 py-2">
+                        {u.liderUid && <CelulaAcesso rotulo={t('tabela.access.leader')} quando={acessoDe(u.liderUid)} como={u.liderTipo === 'senha' ? 'senha' : 'google'} carregando={carregandoAcessos} />}
+                        {u.uidLogin && !u.loginAntigoDesligado && (
+                          <div className={u.liderUid ? "mt-2 pt-2 border-t border-dashed border-slate-200 dark:border-slate-700" : ""}>
+                            <CelulaAcesso rotulo={t('tabela.access.unitLogin')} quando={acessoDe(u.uidLogin)} carregando={carregandoAcessos} />
+                          </div>
+                        )}
+                        {!u.liderUid && (!u.uidLogin || u.loginAntigoDesligado) && <span className="text-xs text-slate-300">—</span>}
+                      </td>
+
+                      {/* AÇÕES: Editar à vista; o resto no menu ⋯ (excluir sempre por último, em vermelho) */}
+                      <td className="px-3 py-2">
+                          <div className="flex gap-1.5 justify-end items-center">
+                              <BotaoDeLinha abaId="unidades" discreto icone={Edit2} onClick={() => abrirEditarUnidade(u)} title={t('unitsTab.table.edit', "Editar Unidade")} />
+                              <MenuDeAcoes itens={[
+                                  { id: 'modalidades', rotulo: t('unitsTab.modalities.manage'), icone: Dumbbell, onClick: () => setModalidadesUnidadeId(u.id) },
+                                  { id: 'status', rotulo: u.status === "ativa" ? t('unitsTab.row.suspend') : t('unitsTab.row.reactivate'), icone: u.status === "ativa" ? PowerOff : CheckCircle2, onClick: () => alternarStatus(u) },
+                                  { id: 'excluir', rotulo: t('unitsTab.table.delete', "Excluir"), icone: Trash2, tipo: 'perigo', onClick: () => excluir(u) },
+                              ]} />
                           </div>
                       </td>
                     </tr>

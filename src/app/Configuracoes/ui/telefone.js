@@ -5,10 +5,19 @@ export const PAIS_PADRAO = "BR";
 
 // ATENÇÃO: classes escritas por extenso de propósito (o Tailwind só enxerga texto inteiro).
 export const PAIS_CONFIG = {
-  BR: { id: "BR", ddi: "+55", badgeClass: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800" },
-  AR: { id: "AR", ddi: "+54", badgeClass: "bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-900/20 dark:text-sky-400 dark:border-sky-800" },
-  US: { id: "US", ddi: "+1", badgeClass: "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-900/20 dark:text-rose-400 dark:border-rose-800" },
+  BR: { id: "BR", nome: "Brasil", ddi: "+55", badgeClass: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800" },
+  AR: { id: "AR", nome: "Argentina", ddi: "+54", badgeClass: "bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-900/20 dark:text-sky-400 dark:border-sky-800" },
+  US: { id: "US", nome: "Estados Unidos", ddi: "+1", badgeClass: "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-900/20 dark:text-rose-400 dark:border-rose-800" },
 };
+export const PAISES = Object.values(PAIS_CONFIG);
+export const DDI_MAP = Object.fromEntries(PAISES.map((p) => [p.id, p.ddi]));
+
+// Exemplo do formato, para o campo vazio.
+export function exemploDeTelefone(pais = PAIS_PADRAO) {
+  if (pais === "US") return "(000) 000-0000";
+  if (pais === "AR") return "9 11 0000-0000";
+  return "(00) 00000-0000";
+}
 
 // Máscara do número (sem o DDI) por país.
 export function formatarTelefone(valor, pais = PAIS_PADRAO) {

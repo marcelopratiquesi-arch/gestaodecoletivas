@@ -163,5 +163,21 @@
     "second": "With 2nd mentor",
     "stale": "Not in for 30+ days",
     "never": "Never signed in"
+  },
+  "row": {
+    "units_one": "{{count}} unit",
+    "units_other": "{{count}} units",
+    "unitsShared_one": "{{count}} shared",
+    "unitsShared_other": "{{count}} shared",
+    "tempBadge": "Temporary mentor",
+    "covers": "covers {{name}}",
+    "coveredBy": "Covered by {{name}}",
+    "until": "until {{date}}",
+    "duo": "Paired with {{name}}",
+    "extendOf": "Extend coverage of {{name}}",
+    "endOf": "End coverage of {{name}}",
+    "extendMine": "Extend coverage",
+    "endMine": "End coverage",
+    "addPhone": "Add number"
   }
 }
