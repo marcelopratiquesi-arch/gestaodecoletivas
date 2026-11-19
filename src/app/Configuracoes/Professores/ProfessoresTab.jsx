@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
 import LinkCentral from "../../../centrais/LinkCentral";
-import { ehLider, unidadesDoLider } from '../../../permissions';
+import { ehLider, unidadesDoLider, escopoMentor } from '../../../permissions';
 import PedidosProfessor from "../Pendencias/PedidosProfessor";
 import { BuscaDocumento } from "../Documento/DocumentoModal";
 import { FiltroPadrao } from "../ui/FiltroPadrao";
@@ -141,6 +141,7 @@ export function ProfessoresTab() {
   // ===== PERMISSÕES E ESCOPO =====
   const role = useMemo(() => String(userData?.role || "").trim().toLowerCase(), [userData?.role]);
   const userId = useMemo(() => userData?.id || userData?.uid, [userData]);
+  const escopoId = escopoMentor(userData); // id que vale como "mentor das unidades" (2º mentor usa o do 1º)
 
   const podeVer = ["admin", "mentor", "lider", "unidade"].includes(role);
   const podeEditar = ["admin", "mentor", "lider", "unidade"].includes(role);
@@ -228,10 +229,10 @@ export function ProfessoresTab() {
   // ==========================================
   const minhasUnidades = useMemo(() => {
       if (role === 'admin') return unidades;
-      if (role === 'mentor') return unidades.filter(u => u.mentorId === userId);
+      if (role === 'mentor') return unidades.filter(u => u.mentorId === escopoId);
       if (ehLider(role)) { const minhas = unidadesDoLider(userData); return unidades.filter(u => minhas.includes(String(u.id))); }
       return [];
-  }, [unidades, role, userId, userData]);
+  }, [unidades, role, userData, escopoId]);
 
   const meusVinculos = useMemo(() => {
       const idsUnidades = minhasUnidades.map(u => u.id);

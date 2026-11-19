@@ -27,7 +27,7 @@ import { invalidarCacheInicio } from '../../services/cacheInicio';
 import { useValidacoesDoProfessor, meuProfessorId } from '../../hooks/useValidacoesDoProfessor';
 import { useMediaAlunos, numeroEstranho } from '../../hooks/useMediaAlunos';
 import { useTranslation } from 'react-i18next';
-import { ehLider, unidadesDoLider } from '../../permissions';
+import { ehLider, unidadesDoLider, escopoMentor } from '../../permissions';
 
 // --- HELPERS ---
 const getTodayStr = hojeLocal;
@@ -165,6 +165,7 @@ export default function ValidacaoDiariaPage() {
   // --- PERMISSÕES ---
   const role = useMemo(() => String(userData?.role || "").trim().toLowerCase(), [userData?.role]);
   const userId = useMemo(() => userData?.id || userData?.uid, [userData]);
+  const escopoId = escopoMentor(userData); // id que vale como "mentor das unidades" (2º mentor usa o do 1º)
   // Líder pode comandar mais de uma unidade: lista em texto ("id1,id2") para servir de dependência estável.
   const unidadesLiderKey = useMemo(() => unidadesDoLider(userData).join(","), [userData]);
   const liderDeVarias = ehLider(role) && unidadesLiderKey.includes(",");
@@ -221,7 +222,7 @@ export default function ValidacaoDiariaPage() {
     let unitsData = [...(globalCatalogs.unidades || [])];
     
     if (role === 'mentor') {
-      unitsData = unitsData.filter(u => u.mentorId === userId);
+      unitsData = unitsData.filter(u => u.mentorId === escopoId);
     } else if (ehLider(role)) {
       const minhas = new Set(unidadesLiderKey.split(","));
       unitsData = unitsData.filter(u => minhas.has(String(u.id)));
@@ -237,7 +238,7 @@ export default function ValidacaoDiariaPage() {
     }
 
     return { ...globalCatalogs, unidades: unitsData };
-  }, [globalCatalogs, loadingCatalogs, role, userId, unidadesLiderKey, userData]);
+  }, [globalCatalogs, loadingCatalogs, role, unidadesLiderKey, userData, escopoId]);
 
   // --- PERÍODO NA TELA E VALIDAÇÕES DO PROFESSOR ---
   const periodo = useMemo(() => {

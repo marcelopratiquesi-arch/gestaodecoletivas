@@ -1,3 +1,4 @@
+import { escopoMentor } from "../../../permissions.js";
 // Aba "Líderes": quem responde por cada unidade. A unidade é só um cadastro (nome, endereço...);
 // quem entra no sistema é o LÍDER, com login pessoal. Cada unidade tem até 2 líderes, e uma pessoa pode ser
 // líder de várias unidades (ver saidaDoLider.js).
@@ -60,6 +61,7 @@ export function LideresTab() {
 
   const role = String(userData?.role || "").trim().toLowerCase();
   const userId = userData?.id || userData?.uid;
+  const escopoId = escopoMentor(userData); // id que vale como "mentor das unidades" (2º mentor usa o do 1º)
   const meuNome = userData?.nome || userData?.email || "Admin";
   const podeAcessar = role === "admin" || role === "mentor";
 
@@ -82,8 +84,8 @@ export function LideresTab() {
 
   const minhasUnidades = useMemo(() => {
     const todas = catalogs?.unidades || [];
-    return role === "admin" ? todas : todas.filter((u) => u.mentorId === userId);
-  }, [catalogs?.unidades, role, userId]);
+    return role === "admin" ? todas : todas.filter((u) => u.mentorId === escopoId);
+  }, [catalogs?.unidades, role, escopoId]);
 
   // Selo "possível repetido" (mesmo telefone de outra pessoa): compara os líderes das unidades que a tela já tem.
   const registrosRepetidos = useMemo(() => {

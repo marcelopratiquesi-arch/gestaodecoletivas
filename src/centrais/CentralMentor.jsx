@@ -26,7 +26,7 @@ import EmBreve from './pecas/EmBreve';
 import { Campo, Vazio, EstadoCarga, SeletorDeMes } from './pecas/Basicos';
 import { GraficoBarras, EvolucaoMeses } from './pecas/Graficos';
 import { BOTAO_PRINCIPAL, BOTAO_BRANCO, TH, TD, SELO_ATIVO, SELO_INATIVO } from './pecas/cores';
-import { QuadroEmDia, TabelaProfessores } from './secoes';
+import { QuadroEmDia, TabelaProfessores, UltimoAcessoTexto } from './secoes';
 import LinkCentral from './LinkCentral';
 import { iniciais } from './contato';
 import { atalhoTelaCompleta, telasPermitidas, caminhos } from './atalhos';
@@ -396,7 +396,7 @@ export default function CentralMentor({ id: mentorId, z, textoVoltar, onFechar, 
         <Campo rotulo={t('centrais.cadastro.acesso')} falta={mentor.loginGoogle !== true}>
           {mentor.loginGoogle === true ? t('centrais.acessoGoogle') : t('centrais.mentor.loginAntigo')}
         </Campo>
-        <Campo rotulo={t('centrais.ultimoAcessoRotulo')}><EmBreve /></Campo>
+        <Campo rotulo={t('centrais.ultimoAcessoRotulo')}><UltimoAcessoTexto quando={mentor.ultimoAcesso} /></Campo>
       </div>
       {pode.cfgMentores && (
         <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">

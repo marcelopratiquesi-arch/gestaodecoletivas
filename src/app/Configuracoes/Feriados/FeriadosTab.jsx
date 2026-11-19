@@ -1,3 +1,4 @@
+import { escopoMentor } from "../../../permissions.js";
 import React, { useState, useEffect, useMemo } from 'react';
 import { db } from '../../../services/firebase';
 import { useAuth } from "../../../contexts/AuthContext"; // Importado para Auditoria
@@ -28,6 +29,7 @@ export function FeriadosTab() {
   const { catalogs, loadingCatalogs } = useCatalogs();
   const { t } = useTranslation();
   const userId = userData?.id || userData?.uid;
+  const escopoId = escopoMentor(userData); // id que vale como "mentor das unidades" (2º mentor usa o do 1º)
   // Só o admin cria feriado de verdade. O mentor envia uma PROPOSTA (feriados_propostas) e o admin aprova ou recusa.
   const ehAdmin = String(userData?.role || '').trim().toLowerCase() === 'admin';
   const escoposDisponiveis = ehAdmin ? ESCOPOS_FERIADO : ESCOPOS_DO_MENTOR;
@@ -55,9 +57,9 @@ export function FeriadosTab() {
   // O mentor só enxerga (e propõe para) as unidades dele.
   const unidades = useMemo(
       () => (catalogs?.unidades || [])
-          .filter(u => ehAdmin || u.mentorId === userId)
+          .filter(u => ehAdmin || u.mentorId === escopoId)
           .sort((a, b) => (a.nome || '').localeCompare(b.nome || '')),
-      [catalogs?.unidades, ehAdmin, userId]
+      [catalogs?.unidades, ehAdmin, escopoId]
   );
   const estadosDisponiveis = useMemo(
       () => [...new Set(unidades.map(u => u.estado).filter(Boolean))].sort(),

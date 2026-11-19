@@ -15,7 +15,7 @@ import {
 import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
 import { DIAS_SEMANA_GRADE, formatWeekday, getCurrencySymbol } from '../../utils/formatters';
 import { useLocation, useSearchParams } from 'react-router-dom';
-import { ehLider, unidadesDoLider } from '../../permissions';
+import { ehLider, unidadesDoLider, escopoMentor } from '../../permissions';
 import { valorDaAulaValido, aulaRepetida, validarCorteNovaFase, diaAnterior, professorPodeReceberAula } from '../../utils/cronogramaRegras';
 import { ehCancelamentoAutomaticoDeFeriado } from '../../utils/feriados';
 import { espelharAula, espelharMudanca, removerAulaPublica } from '../../services/aulasPublicas';
@@ -165,6 +165,7 @@ export default function CronogramaPage() {
   // --- PERMISSÕES ---
   const role = useMemo(() => String(userData?.role || "").trim().toLowerCase(), [userData?.role]);
   const userId = useMemo(() => userData?.id || userData?.uid, [userData]);
+  const escopoId = escopoMentor(userData); // id que vale como "mentor das unidades" (2º mentor usa o do 1º)
   const isReadOnly = role === 'professor';
 
   // --- DADOS GLOBAIS E DE TELA ---
@@ -226,7 +227,7 @@ export default function CronogramaPage() {
   // Aplicando ACL
   const availableUnits = useMemo(() => {
       if (role === 'admin') return catalogs.unidades;
-      if (role === 'mentor') return catalogs.unidades.filter(u => u.mentorId === userId);
+      if (role === 'mentor') return catalogs.unidades.filter(u => u.mentorId === escopoId);
       if (ehLider(role)) { const minhas = unidadesDoLider(userData); return catalogs.unidades.filter(u => minhas.includes(String(u.id))); }
       if (role === 'professor') {
           // Mesmo caminho das regras do banco: ficha ligada pelo crachá (professorId) ou pelo login da ficha.
@@ -237,7 +238,7 @@ export default function CronogramaPage() {
           return catalogs.unidades.filter(u => minhasUnidadesIds.includes(String(u.id)));
       }
       return [];
-  }, [catalogs, role, userId, userData]);
+  }, [catalogs, role, userId, userData, escopoId]);
 
   // Abrir já filtrado numa unidade: /app/cronograma?unidade=ID (atalho da Central da Unidade e do Radar).
   // Só vale para unidade que a pessoa pode ver; aplicado uma vez por chegada, depois o filtro é livre.

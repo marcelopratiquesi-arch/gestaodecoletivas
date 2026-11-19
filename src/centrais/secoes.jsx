@@ -9,6 +9,7 @@ import EmBreve from './pecas/EmBreve';
 import { Vazio } from './pecas/Basicos';
 import { ROTULO, TH, TD, SELO_ATIVO, SELO_INATIVO } from './pecas/cores';
 import LinkCentral from './LinkCentral';
+import { resumoDoAcesso } from '../utils/ultimoAcesso';
 import { formatWeekday, formatNumber, formatCurrency } from '../utils/formatters';
 
 // ---------- Está tudo em dia? ----------
@@ -160,12 +161,19 @@ export function CartaoPessoa({ icone: Icone, papel, nome, vazio, link = null, ch
   );
 }
 
-// "Último acesso: Em breve" (o sistema ainda não guarda esse dado).
-export function UltimoAcesso() {
+// Data e hora do último acesso ("12/11/2026 · 14:32 (hoje)"); sem o dado, "Em breve".
+export function UltimoAcessoTexto({ quando }) {
+  const { i18n } = useTranslation();
+  const ac = resumoDoAcesso(quando, i18n.language);
+  return ac ? <span className="text-slate-700 dark:text-slate-200">{ac.dia} · {ac.hora} ({ac.relativo})</span> : <EmBreve />;
+}
+
+// "Último acesso: ..." (só o mentor tem o dado por enquanto; os demais mostram "Em breve").
+export function UltimoAcesso({ quando }) {
   const { t } = useTranslation();
   return (
     <p className="mt-1 flex items-center gap-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-      {t('centrais.ultimoAcesso')} <EmBreve />
+      {t('centrais.ultimoAcesso')} <UltimoAcessoTexto quando={quando} />
     </p>
   );
 }

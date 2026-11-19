@@ -1,3 +1,4 @@
+import { escopoMentor } from "../../../permissions.js";
 // Documento de identificação (CPF/DNI/SSN) de um líder ou mentor, visto e corrigido por quem tem direito:
 //  - admin: de todo mundo;  - mentor: dos líderes das unidades dele;  - cada pessoa: o próprio (tela obrigatória).
 // O banco é quem decide (firestore.rules: usuarios/{uid}/privado/documento). A auditoria registra QUE o documento
@@ -154,8 +155,8 @@ function CartaoDoDocumento({ r, aoLiberar, aoEscolherPessoa, aoCadastrar, aoIrPa
   const [docAlvo, setDocAlvo] = useState(null);
   const [excluindo, setExcluindo] = useState(false);
   const [erro, setErro] = useState("");
-  const meuId = userData?.id || userData?.uid;
-  const minhasUnidades = (catalogs?.unidades || []).filter((u) => u.mentorId === meuId).map((u) => String(u.id));
+  const escopoId = escopoMentor(userData); // id que vale como "mentor das unidades" (2º mentor usa o do 1º)
+  const minhasUnidades = (catalogs?.unidades || []).filter((u) => u.mentorId === escopoId).map((u) => String(u.id));
   const remocao = r.cracha ? avaliarRemocao(r.cracha, r.uid, catalogs?.professores || [], { souAdmin, minhasUnidades }) : null;
 
   const nome = r.cracha?.nome || r.pedido?.nome || r.pedido?.email || t("document.search.unknownName");

@@ -1,3 +1,4 @@
+import { escopoMentor } from "../../permissions.js";
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCatalogs } from '../../contexts/CatalogContext'; 
@@ -262,6 +263,7 @@ export default function PerformanceFinanceiraPage() {
   const { t } = useTranslation();
   const role = String(userData?.role || "").toLowerCase();
   const userId = userData?.id || userData?.uid;
+  const escopoId = escopoMentor(userData); // id que vale como "mentor das unidades" (2º mentor usa o do 1º)
 
   // 🟢 INJEÇÃO DA MEMÓRIA GLOBAL (FASE 3)
   const { catalogs: globalCatalogs, loadingCatalogs } = useCatalogs();
@@ -295,11 +297,11 @@ export default function PerformanceFinanceiraPage() {
       let mentoresData = [...(globalCatalogs.mentores || [])]; 
 
       if (role === 'mentor') {
-          unitsData = unitsData.filter(u => u.mentorId === userId);
+          unitsData = unitsData.filter(u => u.mentorId === escopoId);
       }
       
       return { unidades: unitsData, mentores: mentoresData };
-  }, [globalCatalogs, loadingCatalogs, role, userId]);
+  }, [globalCatalogs, loadingCatalogs, role, escopoId]);
 
   // --- OPÇÕES PARA MULTI-SELECT ---
   const mentoresOptions = useMemo(() => {
