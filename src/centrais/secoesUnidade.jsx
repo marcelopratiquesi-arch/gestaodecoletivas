@@ -7,7 +7,7 @@
 import { useTranslation } from 'react-i18next';
 import {
   BarChart3, Users, CalendarDays, ShieldCheck, UserCheck, Settings, MapPin, Phone, Mail, Ruler, Info, Pencil, ExternalLink,
-  TrendingUp, Wallet,
+  TrendingUp, Wallet, Timer,
 } from 'lucide-react';
 import Quadro from './pecas/Quadro';
 import Contato from './pecas/Contato';
@@ -17,6 +17,8 @@ import { GraficoBarras, EvolucaoMeses } from './pecas/Graficos';
 import LinkCentral from './LinkCentral';
 import { BOTAO_BRANCO } from './pecas/cores';
 import { QuadroEmDia, TabelaProfessores, GradeSemanal, CartaoPessoa, UltimoAcesso } from './secoes';
+import { SeloDoPrazo } from '../app/Configuracoes/Lideres/TemporariosSecao';
+import { diaDoFim, fimDoTemporario } from '../utils/temporario';
 import { atalhoTelaCompleta, caminhos } from './atalhos';
 import { formatCurrency, formatDate, formatNumber, formatPercent } from '../utils/formatters';
 
@@ -214,6 +216,19 @@ export function SecaoEquipe({ d, comLink = false }) {
             <UltimoAcesso />
           </CartaoPessoa>
         )}
+
+        {(d.temporarios || []).map((c) => (
+          <CartaoPessoa key={c.id} icone={Timer} papel={t('tempLeader.title')} nome={c.nome || c.email}>
+            <p className="flex flex-wrap items-center gap-2 text-[11px] font-bold text-slate-500 dark:text-slate-400">
+              {t('tempLeader.central.until', { date: diaDoFim(fimDoTemporario(c)) })} <SeloDoPrazo fim={fimDoTemporario(c)} />
+            </p>
+            {c.telefone
+              ? <Contato icone={Phone} texto={c.telefone} copiar whatsapp pais={c.pais || unidade.pais} />
+              : <Contato icone={Phone} texto={t('centrais.unidade.info.liderSemTelefone')} falta />}
+            {c.email && <Contato icone={Mail} texto={c.email} copiar />}
+            <UltimoAcesso quando={c.ultimoAcesso} />
+          </CartaoPessoa>
+        ))}
       </div>
     </Quadro>
   );
