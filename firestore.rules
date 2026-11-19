@@ -802,8 +802,31 @@ service cloud.firestore {
     }
     match /workshops_cadastro/{workshopId} {
       allow read: if adminOuMentor();
-      allow create, update: if adminOuMentor() && workshopCadastroOk(request.resource.data);
+      allow create: if adminOuMentor() && workshopCadastroOk(request.resource.data)
+        && (souAdmin() || request.resource.data.get('totalParticipantes', 0) == 0);
+      // O contador de participantes quem muda é a importação (admin): o mentor não o altera.
+      allow update: if adminOuMentor() && workshopCadastroOk(request.resource.data)
+        && (souAdmin() || request.resource.data.get('totalParticipantes', 0) == resource.data.get('totalParticipantes', 0));
       allow delete: if adminOuMentor() && resource.data.get('totalParticipantes', 0) == 0;
+
+      // Participantes (importados da plataforma de ingressos ou ligados na mão). Têm e-mail e telefone de gente que
+      // pode nem ser professor: só o admin lê e grava.
+      match /participantes/{participanteId} {
+        function participanteOk(d) {
+          return d.keys().hasOnly(['nome', 'email', 'telefone', 'telefone2', 'professorIds', 'status', 'origem',
+                                   'criadoEm', 'criadoPor', 'atualizadoEm', 'atualizadoPor'])
+            && d.nome is string && d.nome.size() <= 150
+            && d.get('email', '') is string && d.get('email', '').size() <= 150
+            && d.get('telefone', '') is string && d.get('telefone', '').size() <= 40
+            && d.get('telefone2', '') is string && d.get('telefone2', '').size() <= 40
+            && d.professorIds is list && d.professorIds.size() <= 12
+            && d.status in ['ligado', 'sem-cadastro']
+            && d.origem in ['importacao', 'manual'];
+        }
+        allow read: if souAdmin();
+        allow create, update: if souAdmin() && participanteOk(request.resource.data);
+        allow delete: if souAdmin();
+      }
     }
 
     // ===================== DEMAIS COLEÇÕES =====================

@@ -1,11 +1,14 @@
 // Sub-aba "Workshops" da Loja & Eventos: cadastro (nome, modalidade, data, local, situação, titular),
 // duplicar, cadastro rápido do histórico, filtros. Participantes e financeiro ficam em outras etapas.
 import React, { useEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
-import { Calendar, Loader2, Plus, X, Copy, Edit, Trash2, Users, ListPlus, Search } from 'lucide-react';
+import { Calendar, Loader2, Plus, X, Copy, Edit, Trash2, Users, ListPlus, Search, Upload } from 'lucide-react';
 import { useCatalogs } from '../../contexts/CatalogContext';
+import { useAuth } from '../../contexts/AuthContext';
+import ModalWorkshop from './ModalWorkshop';
+import ImportarLista from './ImportarLista';
+import ParticipantesWorkshop from './ParticipantesWorkshop';
 import {
   ouvirWorkshops, criarWorkshop, atualizarWorkshop, duplicarWorkshop, excluirWorkshop,
   criarWorkshopsEmLote, buscarTitularPorDocumento,
@@ -25,25 +28,16 @@ const input = 'w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 
 const rotulo = 'text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1 block';
 const botao = 'px-5 py-3 rounded-xl font-black text-xs uppercase tracking-wide flex items-center justify-center gap-2 transition-all';
 
-function Modal({ titulo, largo, onClose, children, rodape }) {
-  return createPortal(
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" role="dialog" aria-modal="true">
-      <div className={`bg-white dark:bg-slate-800 w-full ${largo ? 'max-w-4xl' : 'max-w-xl'} rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col max-h-[92vh]`}>
-        <div className="p-5 bg-purple-600 text-white flex justify-between items-center shrink-0">
-          <h3 className="font-black uppercase tracking-widest text-sm">{titulo}</h3>
-          <button type="button" onClick={onClose} className="p-1 hover:bg-white/20 rounded-full" aria-label="Fechar"><X className="w-5 h-5" /></button>
-        </div>
-        <div className="p-6 space-y-4 overflow-y-auto flex-1">{children}</div>
-        <div className="p-5 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-3 bg-slate-50 dark:bg-slate-900 shrink-0 flex-wrap">{rodape}</div>
-      </div>
-    </div>,
-    document.body,
-  );
-}
+const Modal = ModalWorkshop;
 
 export default function WorkshopsCadastro() {
   const { t, i18n } = useTranslation();
-  const { professores } = useCatalogs();
+  const { professores, unidades } = useCatalogs();
+  const { userData } = useAuth();
+  // Participantes e importação têm contato de gente que pode nem ser professor: só o admin.
+  const souAdmin = ['admin', 'administrador', 'master'].includes(String(userData?.role || '').trim().toLowerCase());
+  const [importando, setImportando] = useState(null); // workshop
+  const [verPart, setVerPart] = useState(null); // workshop
   const [lista, setLista] = useState(null);
   const [erroCarga, setErroCarga] = useState(false);
   const [filtroStatus, setFiltroStatus] = useState('todos');
@@ -236,7 +230,14 @@ export default function WorkshopsCadastro() {
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2 shrink-0">
-              <span title={t('shop.ws.participantsHint')} className="flex items-center gap-1 text-[11px] font-bold text-slate-400 border border-dashed border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2"><Users className="w-3.5 h-3.5" /> {t('shop.ws.participants').replace('—', w.totalParticipantes || '—')}</span>
+              {souAdmin ? (
+                <>
+                  <button type="button" onClick={() => setVerPart(w)} className="flex items-center gap-1 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-xs font-black hover:bg-slate-50 dark:hover:bg-slate-700"><Users className="w-3.5 h-3.5" /> {t('shop.ws.participantsBtn', { count: w.totalParticipantes || 0 })}</button>
+                  <button type="button" onClick={() => setImportando(w)} className="flex items-center gap-1 px-3 py-2 rounded-lg bg-purple-600 text-white text-xs font-black hover:bg-purple-700"><Upload className="w-3.5 h-3.5" /> {t('shop.ws.importBtn')}</button>
+                </>
+              ) : (
+                <span className="flex items-center gap-1 text-[11px] font-bold text-slate-400 border border-dashed border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2"><Users className="w-3.5 h-3.5" /> {w.totalParticipantes || 0}</span>
+              )}
               <button type="button" onClick={() => abrirDup(w)} className="flex items-center gap-1 px-3 py-2 rounded-lg border border-purple-300 text-purple-700 dark:text-purple-300 text-xs font-black hover:bg-purple-50 dark:hover:bg-purple-900/30"><Copy className="w-3.5 h-3.5" /> {t('shop.ws.duplicate')}</button>
               <button type="button" onClick={() => abrirEditar(w)} className="flex items-center gap-1 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-xs font-black hover:bg-slate-50 dark:hover:bg-slate-700"><Edit className="w-3.5 h-3.5" /> {t('shop.ws.edit')}</button>
               <button type="button" onClick={() => excluir(w)} className="flex items-center gap-1 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 text-red-600 text-xs font-black hover:bg-red-50 dark:hover:bg-red-900/20"><Trash2 className="w-3.5 h-3.5" /> {confirmando === w.id ? t('shop.ws.confirmDelete') : t('shop.ws.delete')}</button>
@@ -245,6 +246,13 @@ export default function WorkshopsCadastro() {
         ))}
         {visiveis.length === 0 && <div className="py-12 text-center text-slate-400 text-xs font-bold uppercase tracking-widest border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-3xl">{t('shop.ws.none')}</div>}
       </div>
+
+      {importando && (
+        <ImportarLista workshop={importando} professores={professores || []} unidades={unidades || []} onClose={() => setImportando(null)} onVerParticipantes={() => { setVerPart(importando); setImportando(null); }} />
+      )}
+      {verPart && (
+        <ParticipantesWorkshop workshop={lista.find((w) => w.id === verPart.id) || verPart} professores={professores || []} unidades={unidades || []} onClose={() => setVerPart(null)} onImportar={() => { setImportando(verPart); setVerPart(null); }} />
+      )}
 
       {form && (
         <Modal titulo={form.id ? t('shop.ws.formEdit') : t('shop.ws.formNew')} onClose={() => setForm(null)}
