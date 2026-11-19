@@ -7,9 +7,10 @@ import { LIMITE_MANHA_NOITE } from "./limites";
 const reais = (n) => Number(n).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 /** @param {{ sugestao: object|null, carregando: boolean, valorDigitado: string, onUsar: (valor: number) => void, frequencia: {manha:number, noite:number} }} props */
-export default function SugestaoDeValor({ sugestao, carregando, valorDigitado, onUsar, frequencia }) {
+export default function SugestaoDeValor({ sugestao, carregando, valorDigitado, onUsar, frequencia, falhou = false }) {
   const { t } = useTranslation();
   if (carregando) return <p className="text-[11px] text-slate-400 mt-2">{t("priceTable.suggest.loading")}</p>;
+  if (!sugestao && falhou) return <p className="text-[11px] text-rose-500 mt-2">{t("priceTable.suggest.failed")}</p>;
   if (!sugestao) return <p className="text-[11px] text-slate-400 mt-2">{t("priceTable.suggest.none")}</p>;
 
   const digitado = parseFloat(valorDigitado);

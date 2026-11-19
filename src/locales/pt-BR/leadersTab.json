@@ -140,5 +140,38 @@
     "pick": "Escolher pessoa já cadastrada",
     "register": "Cadastrar líder novo",
     "confirmShort": "Confirmar que é a pessoa certa"
+  },
+  "listB": {
+    "unitsCount_one": "{{count}} unidade",
+    "unitsCount_other": "{{count}} unidades",
+    "neverShort": "nunca",
+    "tempShort": "Temporário",
+    "sort": "Ordenar:",
+    "sortUnitAz": "Unidade A→Z",
+    "sortUnitZa": "Unidade Z→A",
+    "sortLeaderAz": "Líder A→Z",
+    "sortAccess": "Acesso mais antigo",
+    "open": "Ver",
+    "chip": {
+      "todas": "Todas",
+      "com": "Com líder",
+      "sem": "Sem líder",
+      "conferir": "A conferir",
+      "temporarios": "Temporários"
+    },
+    "lastAccess": "Último acesso",
+    "copyEmail": "Copiar e-mail",
+    "copyPhone": "Copiar telefone",
+    "call": "Ligar",
+    "back": "Voltar para a lista",
+    "details": "Detalhes da unidade",
+    "close": "Fechar painel",
+    "noLeaderHelp": "Ninguém responde por esta unidade. Escolha alguém que já tem acesso ou cadastre um líder.",
+    "temporary": "Líder temporário",
+    "noTemporary": "Nenhum no momento.",
+    "makePermanent": "Efetivar",
+    "end": "Encerrar",
+    "document": "Documento (CPF)",
+    "pickUnit": "Clique numa unidade para ver os detalhes."
   }
 }

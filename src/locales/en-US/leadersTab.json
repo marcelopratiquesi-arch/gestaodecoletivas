@@ -140,5 +140,38 @@
     "pick": "Choose someone already registered",
     "register": "Register new leader",
     "confirmShort": "Confirm it is the right person"
+  },
+  "listB": {
+    "unitsCount_one": "{{count}} unit",
+    "unitsCount_other": "{{count}} units",
+    "neverShort": "never",
+    "tempShort": "Temporary",
+    "sort": "Sort:",
+    "sortUnitAz": "Unit A→Z",
+    "sortUnitZa": "Unit Z→A",
+    "sortLeaderAz": "Leader A→Z",
+    "sortAccess": "Oldest access",
+    "open": "View",
+    "chip": {
+      "todas": "All",
+      "com": "With leader",
+      "sem": "No leader",
+      "conferir": "To confirm",
+      "temporarios": "Temporary"
+    },
+    "lastAccess": "Last access",
+    "copyEmail": "Copy email",
+    "copyPhone": "Copy phone",
+    "call": "Call",
+    "back": "Back to the list",
+    "details": "Unit details",
+    "close": "Close panel",
+    "noLeaderHelp": "Nobody is responsible for this unit. Choose someone who already has access or register a leader.",
+    "temporary": "Temporary leader",
+    "noTemporary": "None right now.",
+    "makePermanent": "Make permanent",
+    "end": "End",
+    "document": "Document (SSN)",
+    "pickUnit": "Click a unit to see its details."
   }
 }

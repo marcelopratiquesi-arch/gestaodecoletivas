@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { addDoc, collection, doc, serverTimestamp, updateDoc } from "firebase/firestore";
-import { Link2, Loader2, Plus, Search, X, ArrowRightLeft } from "lucide-react";
+import { Loader2, Plus, Search, ArrowRightLeft } from "lucide-react";
 import { db } from "../../../services/firebase";
 import { publicarUnidade } from "../../../services/vitrinePublica";
+import PopupFlutuante from "../../../components/PopupFlutuante";
 
 // Vínculo mentor <-> unidades, visto pelo lado do mentor.
 // A verdade continua sendo UM campo só: unidades/{id}.mentorId (o mesmo que a aba Unidades edita).
@@ -69,17 +70,16 @@ export function UnidadesVinculadasModal({ mentor, mentores, unidades, quem, onCl
   }
 
   return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-slate-800 w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-700 normal-case">
-        <div className="p-5 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 flex justify-between items-start gap-3">
-          <div>
-            <h3 className="font-black text-lg text-slate-800 dark:text-white flex items-center gap-2"><Link2 className="w-5 h-5 text-red-500" /> {t("mentorsTab.linked.title", { name: mentor.nome })}</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{t("mentorsTab.linked.help")}</p>
-          </div>
-          <button onClick={onClose} className="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-400 hover:text-red-500"><X className="w-5 h-5" /></button>
-        </div>
-
-        <div className="p-5 overflow-y-auto space-y-6">
+    <PopupFlutuante
+      titulo={t("mentorsTab.linked.title", { name: mentor.nome })}
+      onFechar={onClose}
+      rotuloFechar={t("mentorsTab.modal.cancel")}
+      chaveMemoria="mentores.popupUnidades"
+      largura={560}
+      altura={640}
+    >
+      <div className="p-5 space-y-6">
+        <p className="text-xs text-slate-500 dark:text-slate-400 -mt-2">{t("mentorsTab.linked.help")}</p>
           {erro && <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100">{erro}</div>}
 
           <section>
@@ -138,7 +138,6 @@ export function UnidadesVinculadasModal({ mentor, mentores, unidades, quem, onCl
             </ul>
           </section>
         </div>
-      </div>
-    </div>
+    </PopupFlutuante>
   );
 }

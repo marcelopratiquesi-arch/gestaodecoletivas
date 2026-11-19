@@ -140,5 +140,38 @@
     "pick": "Elegir una persona ya registrada",
     "register": "Registrar líder nuevo",
     "confirmShort": "Confirmar que es la persona correcta"
+  },
+  "listB": {
+    "unitsCount_one": "{{count}} unidad",
+    "unitsCount_other": "{{count}} unidades",
+    "neverShort": "nunca",
+    "tempShort": "Temporal",
+    "sort": "Ordenar:",
+    "sortUnitAz": "Unidad A→Z",
+    "sortUnitZa": "Unidad Z→A",
+    "sortLeaderAz": "Líder A→Z",
+    "sortAccess": "Acceso más antiguo",
+    "open": "Ver",
+    "chip": {
+      "todas": "Todas",
+      "com": "Con líder",
+      "sem": "Sin líder",
+      "conferir": "A confirmar",
+      "temporarios": "Temporales"
+    },
+    "lastAccess": "Último acceso",
+    "copyEmail": "Copiar correo",
+    "copyPhone": "Copiar teléfono",
+    "call": "Llamar",
+    "back": "Volver a la lista",
+    "details": "Detalles de la unidad",
+    "close": "Cerrar panel",
+    "noLeaderHelp": "Nadie responde por esta unidad. Elegí a alguien que ya tiene acceso o registrá un líder.",
+    "temporary": "Líder temporal",
+    "noTemporary": "Ninguno por ahora.",
+    "makePermanent": "Efectivizar",
+    "end": "Terminar",
+    "document": "Documento (DNI)",
+    "pickUnit": "Hacé clic en una unidad para ver los detalles."
   }
 }

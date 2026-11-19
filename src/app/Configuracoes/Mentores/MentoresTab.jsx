@@ -10,7 +10,7 @@ import { db } from "../../../services/firebase";
 import { registrarAuditoriaAcesso } from "../../../services/auditoriaAcessos";
 import { DocumentoModal, BuscaDocumento } from "../Documento/DocumentoModal";
 import CampoDocumento from "../../../components/acesso/CampoDocumento";
-import { documentoValido, limparDocumento, tipoDocumentoPadrao } from "../../../utils/documento";
+import { documentoValido, limparDocumento, tipoDocumentoPadrao, tipoDocumentoDoPais, formatarDocumento } from "../../../utils/documento";
 
 import { 
     ShieldCheck, Edit2, Trash2, AlertTriangle, CheckCircle2, 
@@ -28,7 +28,7 @@ import { sairDeSegundo, promoverASegundo, prorrogarCobertura, encerrarCobertura 
 import { SeloDoPrazo, PrazoModal } from "../Lideres/TemporariosSecao";
 import { ATALHOS_COBERTURA, diaDoFim } from "../../../utils/temporario";
 import { FiltroPadrao } from "../ui/FiltroPadrao";
-import { CabecalhoDoModal } from "../ui/CabecalhoDoModal";
+import PopupFlutuante from "../../../components/PopupFlutuante";
 import { BotaoDeLinha } from "../ui/BotaoDeLinha";
 import { CabecalhoDaAba, CaixaDeNumeros, BotaoPrincipal, BotaoSecundario } from "../ui/CabecalhoDaAba";
 import { useFiltroCascata } from "../ui/useFiltroCascata";
@@ -231,6 +231,7 @@ export function MentoresTab() {
     setNome(""); 
     setEmail("");
     setPais(PAIS_DEFAULT); // 🟢 RESET DO PAÍS
+    setDocTipo(tipoDocumentoDoPais(PAIS_DEFAULT));
     setTelefone(""); 
     setStatus("ativo");
     setErro(""); 
@@ -592,7 +593,7 @@ export function MentoresTab() {
                         {m.coberturaMentorId && (
                           <div className="rounded-lg border border-red-200 dark:border-red-800 bg-red-50/60 dark:bg-red-900/10 px-2.5 py-1.5 w-fit">
                             <div className="flex items-center gap-1.5 flex-wrap text-xs">
-                              <Selo tipo="tema" abaId="lideres" icone={Timer}>{t('mentorsTab.row.tempBadge')}</Selo>
+                              <Selo tipo="turquesa" icone={Timer}>{t('mentorsTab.row.tempBadge')}</Selo>
                               <span className="font-bold text-slate-700 dark:text-slate-200">{t('mentorsTab.row.covers', { name: nomeDoCoberto(m) })}</span>
                             </div>
                             <div className="mt-1 flex items-center gap-1.5 text-[11px] font-bold text-slate-500">
@@ -605,7 +606,7 @@ export function MentoresTab() {
                         {cobrindoMe.map((c) => (
                           <div key={c.id} className="rounded-lg border border-red-200 dark:border-red-800 bg-red-50/60 dark:bg-red-900/10 px-2.5 py-1.5 w-fit">
                             <div className="flex items-center gap-1.5 flex-wrap text-xs">
-                              <Selo tipo="tema" abaId="lideres" icone={Timer}>{t('mentorsTab.row.tempBadge')}</Selo>
+                              <Selo tipo="turquesa" icone={Timer}>{t('mentorsTab.row.tempBadge')}</Selo>
                               <span className="font-bold text-slate-700 dark:text-slate-200">{t('mentorsTab.row.coveredBy', { name: c.nome })}</span>
                             </div>
                             <div className="mt-1 flex items-center gap-1.5 text-[11px] font-bold text-slate-500">
@@ -709,26 +710,39 @@ export function MentoresTab() {
       {docAlvo && <DocumentoModal alvo={docAlvo} onClose={() => setDocAlvo(null)} />}
 
       {modalAberto && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-800 w-full max-w-lg max-h-[90vh] flex flex-col rounded-2xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-700">
-            <CabecalhoDoModal abaId="mentores" icone={mentorEditando ? Edit2 : ShieldCheck}
-              titulo={mentorEditando ? t('mentorsTab.modal.editTitle', 'Editar Mentor') : t('mentorsTab.modal.newTitle', 'Novo Mentor')}
-              subtitulo={t('mentorsTab.modal.instructions', 'Preencha os dados abaixo.')}
-              onFechar={() => setModalAberto(false)} />
-
-            <form onSubmit={salvar} className="p-6 space-y-5 overflow-y-auto">
+        <PopupFlutuante
+          titulo={mentorEditando ? t('mentorsTab.modal.editTitle', 'Editar Mentor') : t('mentorsTab.modal.newTitle', 'Novo Mentor')}
+          onFechar={() => setModalAberto(false)}
+          bloquearFechar={salvando}
+          rotuloFechar={t('mentorsTab.modal.cancel', 'Cancelar')}
+          chaveMemoria="mentores.popupMentor"
+          largura={520}
+          altura={680}
+          rodape={
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={() => setModalAberto(false)} disabled={salvando} className="px-4 py-2.5 rounded-xl text-xs font-black uppercase bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200 disabled:opacity-50">
+                {t('mentorsTab.modal.cancel', 'Cancelar')}
+              </button>
+              <button type="submit" form="form-mentor" disabled={salvando} className="px-6 py-2.5 rounded-xl text-xs font-black uppercase bg-red-600 hover:bg-red-700 text-white flex items-center gap-2 disabled:opacity-50 transition-transform active:scale-95">
+                {salvando ? <Loader2 className="w-4 h-4 animate-spin" /> : (mentorEditando ? t('mentorsTab.modal.saveEdit', 'Salvar Alterações') : t('mentorsTab.modal.saveNew', 'Concluir Cadastro'))}
+              </button>
+            </div>
+          }
+        >
+          <form id="form-mentor" onSubmit={salvar} className="p-5 space-y-5">
+            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">{t('mentorsTab.modal.instructions', 'Preencha os dados abaixo.')}</p>
               
               {erro && <div className="p-4 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100 flex items-center gap-2"><AlertTriangle className="w-5 h-5 flex-shrink-0"/> {erro}</div>}
               {sucesso && <div className="p-4 bg-emerald-50 text-emerald-600 text-sm rounded-lg border border-emerald-100 flex items-center gap-2"><CheckCircle2 className="w-5 h-5 flex-shrink-0"/> {sucesso}</div>}
 
               <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-1 block">{t('mentorsTab.modal.name', 'Nome do Mentor')}</label>
+                  <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 block">{t('mentorsTab.modal.name', 'Nome do Mentor')}</label>
                   <div className="relative">
                       <User className="absolute left-4 top-3.5 w-4 h-4 text-slate-400"/>
                       <input 
                           value={nome} 
                           onChange={e=>setNome(e.target.value)} 
-                          className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-red-500 rounded-xl text-sm font-bold outline-none dark:text-white" 
+                          className="w-full pl-11 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 focus:border-red-500 focus:ring-2 focus:ring-red-100 rounded-xl text-sm font-bold text-slate-800 dark:text-white uppercase outline-none dark:text-white" 
                           placeholder={t('mentorsTab.extra.fullNamePlaceholder')} 
                       />
                   </div>
@@ -737,12 +751,17 @@ export function MentoresTab() {
               {/* 🟢 PAÍS (nome completo) E STATUS */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-1 block">{t('mentorsTab.modal.country', 'País')}</label>
+                      <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 block">{t('mentorsTab.modal.country', 'País')}</label>
                       <div className="relative">
                           <select 
                               value={pais} 
-                              onChange={e => { setPais(e.target.value); setTelefone(formatarTelefone(telefone, e.target.value)); }}
-                              className="w-full pl-4 pr-10 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-red-500 rounded-xl text-sm font-bold outline-none appearance-none dark:text-white"
+                              onChange={e => {
+                                  const novoPais = e.target.value;
+                                  setPais(novoPais);
+                                  setTelefone(formatarTelefone(telefone, novoPais));
+                                  if (!mentorEditando) { const novoTipo = tipoDocumentoDoPais(novoPais); setDocTipo(novoTipo); setDocNumero(formatarDocumento(novoTipo, limparDocumento(docNumero))); }
+                              }}
+                              className="w-full pl-4 pr-10 py-3 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 focus:border-red-500 focus:ring-2 focus:ring-red-100 rounded-xl text-sm font-bold text-slate-800 dark:text-white uppercase outline-none appearance-none dark:text-white"
                           >
                               {PAISES.map(p => <option key={p.id} value={p.id}>{t(`common.countries.${p.id}`, p.nome)}</option>)}
                           </select>
@@ -751,12 +770,12 @@ export function MentoresTab() {
                   </div>
                   {mentorEditando && (
                   <div>
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-1 block">{t('mentorsTab.modal.status', 'Status')}</label>
+                      <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 block">{t('mentorsTab.modal.status', 'Status')}</label>
                       <div className="relative">
                           <select 
                               value={status} 
                               onChange={e=>setStatus(e.target.value)} 
-                              className="w-full pl-4 pr-10 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-red-500 rounded-xl text-sm font-bold outline-none appearance-none dark:text-white"
+                              className="w-full pl-4 pr-10 py-3 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 focus:border-red-500 focus:ring-2 focus:ring-red-100 rounded-xl text-sm font-bold text-slate-800 dark:text-white uppercase outline-none appearance-none dark:text-white"
                           >
                               <option value="ativo">✅ {t('mentorsTab.modal.statusActive', 'ATIVO')}</option>
                               <option value="inativo">🚫 {t('mentorsTab.modal.statusInactive', 'INATIVO')}</option>
@@ -769,7 +788,7 @@ export function MentoresTab() {
 
               {/* 🟢 WHATSAPP COM MÁSCARA DINÂMICA POR PAÍS */}
               <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-1 flex items-center justify-between">
+                  <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 flex items-center justify-between">
                       <span>{t('mentorsTab.modal.phone', 'WhatsApp')}</span>
                       <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border font-black ${PAIS_CONFIG[pais]?.badgeClass}`}>
                           <FlagIcon pais={pais} /> {DDI_MAP[pais]}
@@ -780,7 +799,7 @@ export function MentoresTab() {
                       <input 
                           value={telefone} 
                           onChange={e=>setTelefone(formatarTelefone(e.target.value, pais))} 
-                          className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-red-500 rounded-xl text-sm font-bold outline-none dark:text-white" 
+                          className="w-full pl-11 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 focus:border-red-500 focus:ring-2 focus:ring-red-100 rounded-xl text-sm font-bold text-slate-800 dark:text-white uppercase outline-none dark:text-white" 
                           placeholder={getPhonePlaceholder(pais)}
                       />
                   </div>
@@ -788,20 +807,20 @@ export function MentoresTab() {
 
               {!mentorEditando && (
                 <div className="space-y-1">
-                  <CampoDocumento claro id="convite-documento" tipo={docTipo} onTipo={setDocTipo} valor={docNumero} onValor={setDocNumero} desabilitado={salvando} />
+                  <CampoDocumento key={pais} claro id="convite-documento" tipoDoPais={tipoDocumentoDoPais(pais)} tipo={docTipo} onTipo={setDocTipo} valor={docNumero} onValor={setDocNumero} desabilitado={salvando} />
                   <p className="text-[11px] text-slate-400 ml-1">{t("document.invite.hint")}</p>
                 </div>
               )}
 
               <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-1 block">{mentorEditando ? t('mentorsTab.modal.email', 'Login (E-mail)') : t('mentorsTab.invite.googleEmail')}</label>
+                  <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 block">{mentorEditando ? t('mentorsTab.modal.email', 'Login (E-mail)') : t('mentorsTab.invite.googleEmail')}</label>
                   <div className="relative">
                       <Mail className="absolute left-4 top-3.5 w-4 h-4 text-slate-400"/>
                       <input 
                           value={email} 
                           onChange={e=>setEmail(e.target.value)} 
                           disabled={!!mentorEditando} 
-                          className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-red-500 rounded-xl text-sm font-bold outline-none disabled:opacity-50 dark:text-white" 
+                          className="w-full pl-11 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 focus:border-red-500 focus:ring-2 focus:ring-red-100 rounded-xl text-sm font-bold text-slate-800 dark:text-white uppercase outline-none disabled:opacity-50 dark:text-white" 
                           placeholder={mentorEditando ? "mentor@pratique.com" : "nome@gmail.com"}
                       />
                   </div>
@@ -810,25 +829,8 @@ export function MentoresTab() {
                   )}
               </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-700 mt-6">
-                  <button 
-                      type="button" 
-                      onClick={()=>setModalAberto(false)} 
-                      className="px-6 py-3 rounded-xl font-bold text-xs uppercase text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-                  >
-                      {t('mentorsTab.modal.cancel', 'Cancelar')}
-                  </button>
-                  <button 
-                      type="submit" 
-                      disabled={salvando} 
-                      className="px-8 py-3 bg-red-600 text-white rounded-xl font-bold text-xs uppercase hover:bg-red-700 flex items-center gap-2 transition-transform active:scale-95 disabled:opacity-50"
-                  >
-                      {salvando ? <Loader2 className="w-4 h-4 animate-spin" /> : (mentorEditando ? t('mentorsTab.modal.saveEdit', 'Salvar Alterações') : t('mentorsTab.modal.saveNew', 'Concluir Cadastro'))}
-                  </button>
-              </div>
-            </form>
-          </div>
-        </div>
+          </form>
+        </PopupFlutuante>
       )}
     </div>
   );
