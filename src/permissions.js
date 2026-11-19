@@ -1,3 +1,4 @@
+import { temporarioVencido } from "./utils/temporario";
 // src/permissions.js
 // Professor de coletiva: só Cronograma (das unidades em que está vinculado),
 // Validação Diária (das aulas dele) e o Link do Aluno (/horarios, público). Mais nada.
@@ -56,7 +57,8 @@ export function getHomePath(userData) {
 // Mesma regra de logado() no firestore.rules: papel "bloqueado" ou mentor com status "inativo" = sem acesso.
 export function crachaSemAcesso(cracha) {
   const papel = String(cracha?.role || "").trim().toLowerCase();
-  return papel === "bloqueado" || (papel === "mentor" && cracha?.status === "inativo");
+  // Líder temporário com o prazo vencido também fica sem acesso (o banco recusa igual: crachaAtivo()).
+  return papel === "bloqueado" || (papel === "mentor" && cracha?.status === "inativo") || temporarioVencido(cracha);
 }
 // Recado para a tela de entrada mostrar "seu acesso está desativado" depois que o sistema desconecta.
 export const AVISO_SEM_ACESSO = "pratique_aviso_sem_acesso";

@@ -3,6 +3,7 @@ import { onAuthStateChanged, signOut, unlink } from "firebase/auth";
 import { doc, getDoc, updateDoc, deleteDoc, collection, addDoc, serverTimestamp } from "firebase/firestore"; // 🟢 Importações do X-9
 import { auth, db } from "../services/firebase"; // ✅ caminho correto
 import { crachaSemAcesso, professorDeLoginAntigo, AVISO_SEM_ACESSO, AVISO_PROFESSOR_LOGIN_ANTIGO } from "../permissions";
+import { temporarioVencido } from "../utils/temporario";
 
 const AuthContext = createContext(null);
 
@@ -131,6 +132,19 @@ export function AuthProvider({ children }) {
     const unsub = onAuthStateChanged(auth, carregarCracha);
     return () => unsub();
   }, [carregarCracha]);
+
+  // Líder temporário: quando o prazo acaba com o sistema aberto, sai sozinho (o banco já recusa tudo depois do prazo).
+  useEffect(() => {
+    if (!userData?.temporarioAte) return undefined;
+    const conferir = () => {
+      if (!temporarioVencido(userData)) return;
+      try { sessionStorage.setItem(AVISO_SEM_ACESSO, "1"); } catch { /* sem aviso, mas sai igual */ }
+      signOut(auth).catch((e) => console.error(e));
+    };
+    const timer = setInterval(conferir, 60 * 1000);
+    document.addEventListener("visibilitychange", conferir);
+    return () => { clearInterval(timer); document.removeEventListener("visibilitychange", conferir); };
+  }, [userData]);
 
   // Chamado pela tela de pedido de acesso quando o pedido é aprovado (lê o crachá de novo).
   const recarregarCracha = useCallback(() => carregarCracha(auth.currentUser), [carregarCracha]);

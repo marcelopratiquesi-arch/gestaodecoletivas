@@ -25,6 +25,7 @@ import LinkUnidade from "../../../centrais/LinkUnidade";
 import LinkCentral from "../../../centrais/LinkCentral";
 import { tirarLiderDaUnidade, camposAoLiberarVaga, textoDaSaida, dadosDaVaga } from "./saidaDoLider";
 import { TornarLiderModal } from "./TornarLiderModal";
+import { TemporariosSecao } from "./TemporariosSecao";
 import { FiltroPadrao } from "../ui/FiltroPadrao";
 import { CabecalhoDoModal } from "../ui/CabecalhoDoModal";
 import { BotaoDeLinha } from "../ui/BotaoDeLinha";
@@ -337,6 +338,10 @@ export function LideresTab() {
           <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" /> {t("leadersTab.checkBanner", { count: kpis.aConferir })}
         </p>
       )}
+
+      {/* LÍDERES TEMPORÁRIOS (convite pelo e-mail do Google, com prazo) */}
+      <TemporariosSecao role={role} escopoId={escopoId} unidades={catalogs?.unidades || []}
+        quem={{ id: userId, nome: meuNome, email: userData?.email }} registrarAuditoria={registrarAuditoria} />
 
       {/* LISTA DE UNIDADES E SEUS LÍDERES */}
       <div className="space-y-4">
