@@ -1,0 +1,35 @@
+{
+  "title": "Meu cadastro",
+  "subtitle": "Mude o seu contrato (CLT ou Saver, unidades e horários). O líder da sua unidade, o seu mentor ou o administrador confere antes de valer.",
+  "current": "O que vale hoje",
+  "noFicha": "Seu nome ainda não está ligado a um cadastro da grade. Peça ao líder da sua unidade.",
+  "change": "Pedir mudança",
+  "approvalHint": "A mudança só vale depois que o líder, o mentor ou o administrador aprovar.",
+  "send": "Enviar pedido",
+  "resend": "Trocar o pedido",
+  "cancelRequest": "Desistir do pedido",
+  "reason": "Motivo: {{reason}}",
+  "status": {
+    "pendente": "Aguardando conferência",
+    "aprovado": "Aprovado: já vale para você",
+    "recusado": "Recusado"
+  },
+  "errors": {
+    "load": "Não foi possível carregar o seu pedido.",
+    "same": "Você não mudou nada em relação ao que vale hoje.",
+    "noUnit": "Seu cadastro ainda não tem unidade. Peça ao líder da sua unidade.",
+    "send": "Não foi possível enviar. Tente de novo."
+  },
+  "review": {
+    "title": "Atualizações de contrato para conferir",
+    "subtitle": "Professores pediram para mudar CLT ou Saver. Aprovado, a mudança entra no cadastro e vale para o valor da aula.",
+    "before": "Hoje",
+    "after": "Pedido",
+    "approve": "Aprovar",
+    "refuse": "Recusar",
+    "approveConfirm": "Aprovar a mudança de {{name}}?\n\n{{value}}",
+    "refusePrompt": "Motivo da recusa para {{name}} (opcional):",
+    "noFicha": "Este professor ainda não está ligado a um cadastro da grade. Ligue antes de aprovar.",
+    "error": "Não foi possível concluir. Tente de novo."
+  }
+}

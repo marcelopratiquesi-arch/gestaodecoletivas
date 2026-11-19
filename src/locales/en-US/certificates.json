@@ -12,7 +12,9 @@
     "unitPlaceholder": "Choose the unit",
     "unitHint": "The leader and mentor of this unit will check the certificate.",
     "photo": "Certificate photo",
-    "workshopHint": "Can't find your workshop? Ask your leader or mentor to register it."
+    "workshopHint": "Can't find your workshop? Ask your leader or mentor to register it.",
+    "modality": "Workshop modality",
+    "modalityPlaceholder": "Choose the modality"
   },
   "choosePhoto": "Choose photo",
   "changePhoto": "Change photo",
@@ -41,7 +43,8 @@
     "delete": "Could not delete.",
     "load": "Could not load your certificates.",
     "choose": "Choose the workshop you attended.",
-    "loadList": "Could not load the workshop list."
+    "loadList": "Could not load the workshop list.",
+    "modality": "Choose the workshop modality."
   },
   "manager": {
     "button": "Workshops (certificates)",

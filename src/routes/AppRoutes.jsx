@@ -12,6 +12,7 @@ import Home from "../pages/home";
 import ConfiguracoesPage from "../app/Configuracoes"; 
 import ValidacaoDiaria from "../app/ValidacaoDiaria";
 import MeusWorkshops from "../pages/MeusWorkshops";
+import MeuCadastro from "../pages/MeuCadastro";
 import CronogramaPage from "../app/Cronograma/index"; 
 import RelatorioPage from "../app/Relatorios"; 
 import ValidacaoColetivaPage from "../app/ValidacaoColetiva"; 
@@ -97,6 +98,7 @@ export default function AppRoutes() {
           
           {/* Meus workshops (certificados do professor) */}
           <Route path="certificados" element={<RoleRoute pageKey="certificados"><MeusWorkshops /></RoleRoute>} />
+          <Route path="meu-cadastro" element={<RoleRoute pageKey="meu_cadastro"><MeuCadastro /></RoleRoute>} />
 
           {/* Validação Coletiva */}
           <Route 

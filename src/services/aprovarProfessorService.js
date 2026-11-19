@@ -62,6 +62,7 @@ export async function aprovarProfessorPedido({ pedido, unidade, ficha = null, do
     nome: pedido.nome, email: pedido.email, telefone: pedido.telefone,
     role: 'professor', unidadeId: String(unidade.id), status: 'ativo', loginGoogle: true,
     ...(pedido.modalidades ? { modalidades: pedido.modalidades } : {}),
+    ...(pedido.tipoContrato ? { tipoContrato: pedido.tipoContrato, saverLocais: pedido.saverLocais || [] } : {}),
     ...(idFicha ? { professorId: idFicha } : {}),
     criadoPor: quem.id, criadoEm: serverTimestamp(),
   });
@@ -70,6 +71,8 @@ export async function aprovarProfessorPedido({ pedido, unidade, ficha = null, do
     const levar = podeLevarDocumento && documento && !ficha.documentoOk;
     batch.update(doc(db, 'professores', idFicha), {
       uidLogin: pedido.id, updatedAt: serverTimestamp(), ...(levar ? { documentoOk: true } : {}),
+      // O que o professor informou (CLT ou Saver) vale para a ficha; o gestor ajusta depois em Professores, se preciso.
+      ...(pedido.tipoContrato ? { tipoContrato: pedido.tipoContrato, saverLocais: pedido.saverLocais || [] } : {}),
     });
     if (levar) {
       documentoDaFichaNoLote(batch, { professorId: idFicha, tipo: documento.tipo, numero: documento.numero, marcarFicha: false });

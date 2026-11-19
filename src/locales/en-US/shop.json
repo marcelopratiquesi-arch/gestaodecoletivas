@@ -8,6 +8,12 @@
     "events": "Events"
   },
   "ws": {
+    "fillModality": "Fill in teachers' modality",
+    "fillModalityConfirm": "Fill in the modality of the workshops already on teachers' profiles?\n\n{{cadastro}} from the workshop registry\n{{nome}} from the workshop name (guess)\n{{sem}} cannot be found (left as is)",
+    "fillModalityDone": "Modality filled in for {{n}} teachers.",
+    "fillModalityNothing": "Nothing to fill in: all teachers' workshops already have a modality.",
+    "fillModalityError": "Could not complete. Try again.",
+    "fillModalityLeft": "{{n}} teacher workshops still have no modality (the name doesn't say which).",
     "title": "Workshops",
     "subtitle": "Registry and history by modality",
     "quick": "Quick entry (history)",

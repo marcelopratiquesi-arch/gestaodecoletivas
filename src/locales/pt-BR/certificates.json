@@ -12,7 +12,9 @@
     "unitPlaceholder": "Escolha a unidade",
     "unitHint": "O líder e o mentor dessa unidade vão conferir o certificado.",
     "photo": "Foto do certificado",
-    "workshopHint": "Não achou o seu workshop? Peça ao líder ou mentor para cadastrá-lo."
+    "workshopHint": "Não achou o seu workshop? Peça ao líder ou mentor para cadastrá-lo.",
+    "modality": "Modalidade do workshop",
+    "modalityPlaceholder": "Escolha a modalidade"
   },
   "choosePhoto": "Escolher foto",
   "changePhoto": "Trocar foto",
@@ -41,7 +43,8 @@
     "delete": "Não foi possível apagar.",
     "load": "Não foi possível carregar os seus certificados.",
     "choose": "Escolha o workshop que você fez.",
-    "loadList": "Não foi possível carregar a lista de workshops."
+    "loadList": "Não foi possível carregar a lista de workshops.",
+    "modality": "Escolha a modalidade do workshop."
   },
   "manager": {
     "button": "Workshops (certificados)",

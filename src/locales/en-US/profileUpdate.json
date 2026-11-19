@@ -1,0 +1,35 @@
+{
+  "title": "My profile",
+  "subtitle": "Change your contract (CLT or Saver, units and hours). Your unit leader, your mentor or the administrator checks it before it takes effect.",
+  "current": "What applies today",
+  "noFicha": "Your name is not linked to a schedule record yet. Ask your unit leader.",
+  "change": "Request a change",
+  "approvalHint": "The change only takes effect after the leader, mentor or administrator approves.",
+  "send": "Send request",
+  "resend": "Replace request",
+  "cancelRequest": "Withdraw request",
+  "reason": "Reason: {{reason}}",
+  "status": {
+    "pendente": "Waiting for review",
+    "aprovado": "Approved: already applies to you",
+    "recusado": "Refused"
+  },
+  "errors": {
+    "load": "Could not load your request.",
+    "same": "You didn't change anything from what applies today.",
+    "noUnit": "Your profile has no unit yet. Ask your unit leader.",
+    "send": "Could not send. Try again."
+  },
+  "review": {
+    "title": "Contract updates to review",
+    "subtitle": "Teachers asked to change CLT or Saver. Once approved, the change goes into the record and applies to class pay.",
+    "before": "Today",
+    "after": "Request",
+    "approve": "Approve",
+    "refuse": "Refuse",
+    "approveConfirm": "Approve {{name}}'s change?\n\n{{value}}",
+    "refusePrompt": "Reason for refusing {{name}} (optional):",
+    "noFicha": "This teacher is not linked to a schedule record yet. Link it before approving.",
+    "error": "Could not finish. Try again."
+  }
+}
