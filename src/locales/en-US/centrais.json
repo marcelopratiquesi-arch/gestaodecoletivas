@@ -74,7 +74,8 @@
     "telefone": "Phone",
     "pais": "Country",
     "acesso": "System access",
-    "cpf": "Tax ID (CPF)"
+    "cpf": "Tax ID (CPF)",
+    "documento": "Document"
   },
   "emDia": {
     "titulo": "Is everything up to date?",
@@ -340,7 +341,11 @@
         "falta": "{{n}} class(es) from the last 7 days not validated in their units.",
         "acao": "Validate now"
       }
-    }
+    },
+    "primeiro": "1st mentor",
+    "segundo": "2nd mentor",
+    "segundoDe": "2nd mentor of {{nome}}",
+    "equipeMentoresTitulo": "Mentor team"
   },
   "professor": {
     "rotulo": "Teacher Hub",

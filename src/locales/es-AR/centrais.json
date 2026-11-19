@@ -74,7 +74,8 @@
     "telefone": "Teléfono",
     "pais": "País",
     "acesso": "Acceso al sistema",
-    "cpf": "CPF"
+    "cpf": "CPF",
+    "documento": "Documento"
   },
   "emDia": {
     "titulo": "¿Está todo al día?",
@@ -340,7 +341,11 @@
         "falta": "{{n}} clase(s) de los últimos 7 días sin validar en sus sedes.",
         "acao": "Validar ahora"
       }
-    }
+    },
+    "primeiro": "1º mentor",
+    "segundo": "2º mentor",
+    "segundoDe": "2º mentor de {{nome}}",
+    "equipeMentoresTitulo": "Mentores del equipo"
   },
   "professor": {
     "rotulo": "Central del Profesor",
