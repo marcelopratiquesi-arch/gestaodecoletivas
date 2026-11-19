@@ -187,6 +187,10 @@ describe('workshop escolhido da lista do cadastro', () => {
     await assertFails(enviar('profA', { workshop: 'Texto livre qualquer' }));
     await assertFails(enviar('profA', { dataFeito: '2025-05-11' }));
   });
+  it('a modalidade enviada precisa ser a do cadastro (ou nem vir)', async () => {
+    await assertSucceeds(enviar('profA', { modalidade: 'Jump' }));
+    await assertFails(enviar('profB', { modalidade: 'Power Core', unidadeId: 'uniB' }));
+  });
   it('o id fixo impede repetir: o mesmo id só se corrige antes de verificado', async () => {
     await assertSucceeds(enviar('profA'));
     await env.withSecurityRulesDisabled(async (ctx) => {

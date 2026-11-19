@@ -21,6 +21,8 @@ import {
 } from "../components/acesso/AcessoUI";
 import CampoDocumento from "../components/acesso/CampoDocumento";
 import SeletorModalidades from "../components/acesso/SeletorModalidades";
+import CampoContrato from "../components/acesso/CampoContrato";
+import { contratoVazio, validarContrato } from "../utils/contrato";
 import { documentoValido, formatarDocumento, tipoDocumentoPadrao } from "../utils/documento";
 import { documentoNoLote, gravarComAviso, lerDocumentoDoPedido, ERRO_DOCUMENTO_EM_USO } from "../services/documentoService";
 import { sincronizarEAvisar } from "../services/contatoService";
@@ -50,6 +52,7 @@ export default function SolicitarAcesso() {
   const [unidadeIds, setUnidadeIds] = useState([]);
   const [tambemProfessor, setTambemProfessor] = useState(false);
   const [modalidades, setModalidades] = useState(""); // professor: modalidades escolhidas (texto "Zumba, Pilates")
+  const [contrato, setContrato] = useState(contratoVazio()); // professor: CLT ou Saver (e onde/quando)
   const [docTipo, setDocTipo] = useState(() => tipoDocumentoPadrao(i18n.language));
   const [docNumero, setDocNumero] = useState("");
   const [docAnterior, setDocAnterior] = useState(null); // documento do pedido anterior (se refizer o pedido)
@@ -154,6 +157,7 @@ export default function SolicitarAcesso() {
     setUnidadeIds((v) => (v.length ? v : idsDoPedido(pedido)));
     setTambemProfessor((v) => v || !!pedido?.tambemProfessor);
     setModalidades((v) => v || pedido?.modalidades || "");
+    setContrato((v) => (v.tipoContrato === "clt" && pedido?.tipoContrato === "saver" ? { tipoContrato: "saver", saverLocais: pedido.saverLocais || [] } : v));
     setPapel((v) => v || (FUNCOES_PEDIDO.includes(pedido?.papel) ? pedido.papel : pedido ? "lider" : lerPapelPedido()));
   }, [precisaFormulario, pedido, user]);
 
@@ -166,6 +170,8 @@ export default function SolicitarAcesso() {
     if (modalidades.length > LIMITE_MODALIDADES) return setErro(t("accessRequest.errors.modalities"));
     if (papel === "professor" && !modalidades.trim()) return setErro(t("accessRequest.errors.modalitiesRequired"));
     if (!documentoValido(docTipo, docNumero)) return setErro(t("document.errors.invalid"));
+    const contratoOk = papel === "professor" ? validarContrato(contrato) : null;
+    if (contratoOk && !contratoOk.ok) return setErro(t(`accessRequest.contract.errors.${contratoOk.erro}`));
 
     setEnviando(true);
     try {
@@ -181,6 +187,7 @@ export default function SolicitarAcesso() {
         unidadeNomes: ids.map((id) => porId.get(id)?.nome || ""),
         tambemProfessor: papel === "lider" && tambemProfessor,
         ...(papel === "professor" && modalidades.trim() ? { modalidades: modalidades.trim() } : {}),
+        ...(contratoOk ? { tipoContrato: contratoOk.valor.tipoContrato, saverLocais: contratoOk.valor.saverLocais } : {}),
         email: user.email,
         status: "pendente",
         documentoOk: true, // o número fica na gaveta privada do pedido, nunca aqui
@@ -358,6 +365,9 @@ export default function SolicitarAcesso() {
         </p>
         {papel === "professor" && (
           <SeletorModalidades id="pedido-modalidades" valor={modalidades} onChange={setModalidades} desabilitado={enviando} />
+        )}
+        {papel === "professor" && (
+          <CampoContrato id="pedido-contrato" valor={contrato} onChange={setContrato} unidades={unidades || []} desabilitado={enviando} />
         )}
 
         <div className="space-y-1">

@@ -8,6 +8,12 @@
     "events": "Eventos"
   },
   "ws": {
+    "fillModality": "Completar modalidade dos professores",
+    "fillModalityConfirm": "Completar a modalidade dos workshops que já estão nos professores?\n\n{{cadastro}} pelo cadastro de workshops\n{{nome}} pelo nome do workshop (palpite)\n{{sem}} sem como descobrir (ficam como estão)",
+    "fillModalityDone": "Modalidade completada em {{n}} professores.",
+    "fillModalityNothing": "Nada a completar: todos os workshops dos professores já têm modalidade.",
+    "fillModalityError": "Não foi possível completar. Tente de novo.",
+    "fillModalityLeft": "{{n}} workshops de professores continuam sem modalidade (o nome não indica qual é).",
     "title": "Workshops",
     "subtitle": "Cadastro e histórico por modalidade",
     "quick": "Cadastro rápido (histórico)",

@@ -39,7 +39,6 @@ const TELAS = {
   '/app/pratique-play': 'pratiquePlay',
   '/app/comunicacao': 'comunicados',
   '/app/ociosidade': 'radarGrade',
-  '/app/workshops': 'lojaEventos',
   '/app/auditoria': 'auditoria',
   '/app/acessos': 'acessos',
 };

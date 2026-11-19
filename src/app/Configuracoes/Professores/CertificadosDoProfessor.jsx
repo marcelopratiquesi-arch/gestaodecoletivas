@@ -11,6 +11,7 @@ import { useCatalogs } from "../../../contexts/CatalogContext";
 import { adicionarWorkshopAoProfessor, removerWorkshopDoProfessor } from "../../../services/certificadoService";
 import { registrarAuditoriaAcesso } from "../../../services/auditoriaAcessos";
 import { dataDoWorkshopValida } from "../../../utils/imagem";
+import { MODALIDADES_WORKSHOP } from "../../../utils/workshopCadastro";
 
 const campo = "w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 dark:text-white outline-none focus:border-red-500";
 const hojeISO = () => {
@@ -30,6 +31,7 @@ export default function CertificadosDoProfessor({ professor, onClose }) {
 
   const [nome, setNome] = useState("");
   const [data, setData] = useState("");
+  const [modalidade, setModalidade] = useState("");
   const [processando, setProcessando] = useState(false);
   const [erro, setErro] = useState("");
 
@@ -37,17 +39,18 @@ export default function CertificadosDoProfessor({ professor, onClose }) {
     e.preventDefault();
     setErro("");
     if (nome.trim().length < 3) return setErro(t("certificates.errors.name"));
+    if (!modalidade) return setErro(t("certificates.errors.modality"));
     if (!dataDoWorkshopValida(data)) return setErro(t("certificates.errors.date"));
     setProcessando(true);
     try {
-      await adicionarWorkshopAoProfessor({ professorId: professor.id, nome, data, por: quem });
+      await adicionarWorkshopAoProfessor({ professorId: professor.id, nome, data, por: quem, modalidade });
       try {
         await registrarAuditoriaAcesso({
           tipoAcao: "NOVA", descricao: "Workshop adicionado ao professor.", unidadeNome: "-", quem: userData,
           detalhes: `Workshop: ${nome.trim()} (${data})`, alvo: { id: professor.id, nome: professor.nome },
         });
       } catch (err) { console.error("Falha ao gravar auditoria", err); }
-      setNome(""); setData("");
+      setNome(""); setData(""); setModalidade("");
     } catch (err) {
       console.error(err);
       setErro(t("certificates.errors.save"));
@@ -77,6 +80,13 @@ export default function CertificadosDoProfessor({ professor, onClose }) {
           <h4 className="font-black text-sm text-slate-800 dark:text-white">{t("certificates.manager.add")}</h4>
           <input value={nome} onChange={(e) => setNome(e.target.value)} maxLength={120} className={campo} placeholder={t("certificates.fields.workshopPlaceholder")} aria-label={t("certificates.fields.workshop")} />
           <div className="space-y-1">
+            <label htmlFor="ws-modalidade" className="text-[10px] font-black uppercase tracking-wider text-slate-500">{t("certificates.fields.modality")}</label>
+            <select id="ws-modalidade" value={modalidade} onChange={(e) => setModalidade(e.target.value)} className={campo}>
+              <option value="">{t("certificates.fields.modalityPlaceholder")}</option>
+              {MODALIDADES_WORKSHOP.map((m) => <option key={m} value={m}>{m}</option>)}
+            </select>
+          </div>
+          <div className="space-y-1">
             <label htmlFor="ws-data" className="text-[10px] font-black uppercase tracking-wider text-slate-500">{t("certificates.manager.dateLabel")}</label>
             <input id="ws-data" type="date" value={data} max={hojeISO()} min="2000-01-01" onChange={(e) => setData(e.target.value)} className={campo} />
           </div>
@@ -94,7 +104,7 @@ export default function CertificadosDoProfessor({ professor, onClose }) {
           ) : lista.map((w) => (
             <div key={w.id} className="p-3 rounded-xl border border-slate-200 dark:border-slate-700 flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="font-black text-sm text-slate-800 dark:text-white break-words">{w.nome}</p>
+                <p className="font-black text-sm text-slate-800 dark:text-white break-words">{w.nome}{w.modalidade && <span className="ml-2 text-[10px] font-black uppercase px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-500 align-middle">{w.modalidade}</span>}</p>
                 <p className="text-xs text-slate-500">{w.data?.split("-").reverse().join("/")} · {t("certificates.manager.by", { name: w.por })}</p>
               </div>
               <button type="button" disabled={processando} onClick={() => apagar(w)} className="p-2 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30" title={t("certificates.delete")}>

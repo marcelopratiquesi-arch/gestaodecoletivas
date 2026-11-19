@@ -1,0 +1,35 @@
+{
+  "title": "Mi registro",
+  "subtitle": "Cambiá tu contrato (CLT o Saver, sedes y horarios). El líder de tu sede, tu mentor o el administrador lo revisa antes de que valga.",
+  "current": "Lo que vale hoy",
+  "noFicha": "Tu nombre todavía no está vinculado a un registro de la grilla. Pedíselo al líder de tu sede.",
+  "change": "Pedir cambio",
+  "approvalHint": "El cambio solo vale después de que el líder, el mentor o el administrador lo apruebe.",
+  "send": "Enviar pedido",
+  "resend": "Reemplazar pedido",
+  "cancelRequest": "Retirar el pedido",
+  "reason": "Motivo: {{reason}}",
+  "status": {
+    "pendente": "Esperando revisión",
+    "aprovado": "Aprobado: ya vale para vos",
+    "recusado": "Rechazado"
+  },
+  "errors": {
+    "load": "No se pudo cargar tu pedido.",
+    "same": "No cambiaste nada respecto de lo que vale hoy.",
+    "noUnit": "Tu registro todavía no tiene sede. Pedíselo al líder de tu sede.",
+    "send": "No se pudo enviar. Probá de nuevo."
+  },
+  "review": {
+    "title": "Actualizaciones de contrato para revisar",
+    "subtitle": "Profesores pidieron cambiar CLT o Saver. Aprobado, el cambio entra en el registro y vale para el valor de la clase.",
+    "before": "Hoy",
+    "after": "Pedido",
+    "approve": "Aprobar",
+    "refuse": "Rechazar",
+    "approveConfirm": "¿Aprobar el cambio de {{name}}?\n\n{{value}}",
+    "refusePrompt": "Motivo del rechazo para {{name}} (opcional):",
+    "noFicha": "Este profesor todavía no está vinculado a un registro de la grilla. Vinculalo antes de aprobar.",
+    "error": "No se pudo completar. Probá de nuevo."
+  }
+}

@@ -78,6 +78,11 @@ service cloud.firestore {
     }
     function papelDoAlvo() { return resource.data.get('role', '').lower(); }
     function papelNovo() { return request.resource.data.get('role', '').lower(); }
+    // CLT ou Saver do professor (src/utils/contrato.js): tipo conhecido e, no máximo, 5 unidades de Saver. O resto é conferido na tela.
+    function contratoValido(d) {
+      return d.get('tipoContrato', 'clt') in ['clt', 'saver']
+        && d.get('saverLocais', []) is list && d.get('saverLocais', []).size() <= 5;
+    }
     function camposAlterados() { return request.resource.data.diff(resource.data).affectedKeys(); }
 
     // Mentor de alguma das unidades (até 5) de uma lista.
@@ -291,11 +296,11 @@ service cloud.firestore {
       allow write: if souAdmin();
     }
     // Ficha do professor (Etapa 2 das regras por unidade). Mentor e líder criam e editam só os campos de CONTATO e de
-    // vínculo com o login (nome, e-mail, país, telefone, status, uidLogin, documentoOk, workshops e as marcas de data);
+    // vínculo com o login (nome, e-mail, país, telefone, status, uidLogin, documentoOk, workshops, contrato CLT/Saver e as marcas de data);
     // qualquer outro campo, e apagar a ficha, é só do admin (que também junta fichas e liga crachás).
     function camposDeFichaDoProfessor() {
       return ['nome', 'email', 'pais', 'telefone', 'status', 'documentoOk', 'uidLogin', 'workshops',
-              'updatedAt', 'createdAt', 'createdBy', 'roleCreator'];
+              'updatedAt', 'createdAt', 'createdBy', 'roleCreator', 'tipoContrato', 'saverLocais'];
     }
     match /professores/{professorId} {
       allow read: if logado();
@@ -577,8 +582,9 @@ service cloud.firestore {
         // exceto o login antigo "unidade", que vira "lider". Unidade, status e o resto ficam como estão.
         || (request.auth.uid == uid && logado()
             && 'google.com' in request.auth.token.firebase.identities
-            && camposAlterados().hasOnly(['nome', 'telefone', 'email', 'emailAntigo', 'role', 'loginGoogle', 'cadastroAtualizadoEm', 'documentoOk', 'modalidades'])
+            && camposAlterados().hasOnly(['nome', 'telefone', 'email', 'emailAntigo', 'role', 'loginGoogle', 'cadastroAtualizadoEm', 'documentoOk', 'modalidades', 'tipoContrato', 'saverLocais'])
             && request.resource.data.get('modalidades', '') is string && request.resource.data.get('modalidades', '').size() <= 300
+            && contratoValido(request.resource.data)
             && (!('documentoOk' in request.resource.data) || (request.resource.data.documentoOk == true && existsAfter(caminhoDocumentoUsuario(uid))))
             && request.resource.data.loginGoogle == true
             && request.resource.data.nome is string && request.resource.data.nome.size() >= 3 && request.resource.data.nome.size() <= 80
@@ -622,7 +628,8 @@ service cloud.firestore {
         let d = request.resource.data;
         let ids = idsDoPedido(d);
         return d.keys().hasOnly(['nome', 'telefone', 'unidadeId', 'unidadeNome', 'email', 'status', 'criadoEm',
-                                 'papel', 'unidadeIds', 'unidadeNomes', 'tambemProfessor', 'documentoOk', 'modalidades'])
+                                 'papel', 'unidadeIds', 'unidadeNomes', 'tambemProfessor', 'documentoOk', 'modalidades', 'tipoContrato', 'saverLocais'])
+          && contratoValido(d)
           && d.get('documentoOk', true) == true
           && d.status == 'pendente'
           && d.email == request.auth.token.email
@@ -1006,6 +1013,52 @@ service cloud.firestore {
       }
     }
 
+    // Crachá antigo sem unidade: a unidade vem de um vínculo do próprio professor (vinculoId no certificado).
+    // O vínculo precisa ser dele (professorId do crachá ou cadastro com uidLogin = este login) e da mesma unidade.
+    function certVinculoDoProfessor(d, cracha, v) {
+      return string(v.get('unidadeId', '')) == d.unidadeId
+        && (v.get('professorId', '') == cracha.get('professorId', '#')
+            || get(/databases/$(database)/documents/professores/$(v.get('professorId', '#'))).data.get('uidLogin', '') == request.auth.uid);
+    }
+    function certUnidadeOk(d, cracha) {
+      return d.unidadeId == cracha.get('unidadeId', '')
+        || (d.get('vinculoId', '') is string && d.get('vinculoId', '') != ''
+            && exists(/databases/$(database)/documents/vinculos/$(d.vinculoId))
+            && certVinculoDoProfessor(d, cracha, get(/databases/$(database)/documents/vinculos/$(d.vinculoId)).data));
+    }
+
+    // ===================== ATUALIZAÇÃO DE CONTRATO DO PROFESSOR (atualizacoes_professor) =====================
+    // O professor pede a mudança de CLT/Saver (unidades e horários) em "Meu cadastro". Um pedido por login (id = login).
+    // Lê: o dono, o admin, o mentor da unidade e o líder da unidade. Aprova ou recusa: esses três (menos o dono).
+    // Aprovado, quem aprova grava o contrato na ficha (professores/{id}); o professor nunca grava a ficha.
+    match /atualizacoes_professor/{uid} {
+      function atuVerificador(unidadeId) {
+        return souAdmin()
+          || (logado() && meuPapel() == 'mentor' && mentorDaUnidadeId(unidadeId))
+          || (logado() && meuPapel() in papeisLider() && unidadeId is string && unidadeId in unidadesDoLiderUid(request.auth.uid));
+      }
+      function atuValida() {
+        let d = request.resource.data;
+        let cracha = get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data;
+        return logado() && request.auth.uid == uid && cracha.get('role', '').lower() == 'professor'
+          && d.keys().hasOnly(['uid', 'nome', 'unidadeId', 'vinculoId', 'tipoContrato', 'saverLocais', 'status', 'criadoEm'])
+          && d.uid == request.auth.uid
+          && d.status == 'pendente' && d.criadoEm == request.time
+          && d.nome is string && d.nome.size() >= 3 && d.nome.size() <= 80
+          && d.unidadeId is string && d.unidadeId != '' && certUnidadeOk(d, cracha)
+          && d.tipoContrato in ['clt', 'saver']
+          && d.saverLocais is list && d.saverLocais.size() <= 5
+          && (d.tipoContrato == 'saver' ? d.saverLocais.size() >= 1 : d.saverLocais.size() == 0);
+      }
+      allow read: if (logado() && request.auth.uid == uid) || atuVerificador(resource.data.unidadeId);
+      allow create: if atuValida();
+      allow update: if atuValida() && resource.data.uid == request.auth.uid;
+      allow update: if resource.data.status == 'pendente' && atuVerificador(resource.data.unidadeId)
+        && camposAlterados().hasOnly(['status', 'motivo', 'analisadoPor', 'analisadoPorNome', 'analisadoEm'])
+        && request.resource.data.status in ['aprovado', 'recusado'];
+      allow delete: if (logado() && request.auth.uid == uid) || souAdmin();
+    }
+
     // ===================== CERTIFICADOS DE WORKSHOP DO PROFESSOR (certificados_professor) =====================
     // O professor informa o workshop que fez, a data e a FOTO do certificado (JPEG já comprimido, em texto base64,
     // porque o plano gratuito não tem Storage). Um documento por certificado (id = login + "_" + código curto).
@@ -1017,19 +1070,6 @@ service cloud.firestore {
           || (logado() && meuPapel() == 'mentor' && mentorDaUnidadeId(unidadeId))
           || (logado() && meuPapel() in papeisLider() && unidadeId is string && unidadeId in unidadesDoLiderUid(request.auth.uid));
       }
-      // Crachá antigo sem unidade: a unidade vem de um vínculo do próprio professor (vinculoId no certificado).
-      // O vínculo precisa ser dele (professorId do crachá ou cadastro com uidLogin = este login) e da mesma unidade.
-      function certVinculoDoProfessor(d, cracha, v) {
-        return string(v.get('unidadeId', '')) == d.unidadeId
-          && (v.get('professorId', '') == cracha.get('professorId', '#')
-              || get(/databases/$(database)/documents/professores/$(v.get('professorId', '#'))).data.get('uidLogin', '') == request.auth.uid);
-      }
-      function certUnidadeOk(d, cracha) {
-        return d.unidadeId == cracha.get('unidadeId', '')
-          || (d.get('vinculoId', '') is string && d.get('vinculoId', '') != ''
-              && exists(/databases/$(database)/documents/vinculos/$(d.vinculoId))
-              && certVinculoDoProfessor(d, cracha, get(/databases/$(database)/documents/vinculos/$(d.vinculoId)).data));
-      }
       // O professor escolhe um workshop JÁ CADASTRADO: o id do certificado é login + "_" + id do workshop (não repete),
       // o workshop precisa existir, não estar cancelado, e nome/data são os do cadastro.
       function certWorkshopOk(d) {
@@ -1038,13 +1078,14 @@ service cloud.firestore {
           && exists(/databases/$(database)/documents/workshops_cadastro/$(d.workshopId))
           && get(/databases/$(database)/documents/workshops_cadastro/$(d.workshopId)).data.status != 'cancelado'
           && get(/databases/$(database)/documents/workshops_cadastro/$(d.workshopId)).data.nome == d.workshop
-          && get(/databases/$(database)/documents/workshops_cadastro/$(d.workshopId)).data.data == d.dataFeito;
+          && get(/databases/$(database)/documents/workshops_cadastro/$(d.workshopId)).data.data == d.dataFeito
+          && (!('modalidade' in d) || d.modalidade == get(/databases/$(database)/documents/workshops_cadastro/$(d.workshopId)).data.modalidade);
       }
       function certValido() {
         let d = request.resource.data;
         let cracha = get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data;
         return logado() && cracha.get('role', '').lower() == 'professor'
-          && d.keys().hasOnly(['uid', 'unidadeId', 'vinculoId', 'workshopId', 'nome', 'workshop', 'dataFeito', 'foto', 'status', 'criadoEm'])
+          && d.keys().hasOnly(['uid', 'unidadeId', 'vinculoId', 'workshopId', 'modalidade', 'nome', 'workshop', 'dataFeito', 'foto', 'status', 'criadoEm'])
           && d.uid == request.auth.uid
           && cid.matches(request.auth.uid + '_[A-Za-z0-9]{4,24}')
           && d.unidadeId is string && d.unidadeId != '' && certUnidadeOk(d, cracha) && certWorkshopOk(d)
@@ -1115,8 +1156,8 @@ service cloud.firestore {
     // (No Firestore, se QUALQUER regra libera, a ação passa; por isso as coleções com regra própria precisam estar na
     // lista de exceções de leitura e de escrita aqui embaixo.)
     match /{colecao}/{resto=**} {
-      allow read: if logado() && !(colecao in ['feriados_propostas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos', 'documentos_ficha', 'documentos_professor', 'contatos_unicos', 'telemetria_leituras', 'tabela_precos', 'workshops_cadastro', 'certificados_professor', 'indicadores_mensais', 'auditoria_financeiro', 'unipower_stock', 'unipower_workshops', 'unipower_transacoes']);
-      allow write: if souAdmin() && !(colecao in ['feriados', 'feriados_propostas', 'usuarios', 'publico', 'validacoes', 'aulas', 'aulas_publicas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'resumos_mensais', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos', 'professores', 'documentos_ficha', 'documentos_professor', 'contatos_unicos', 'telemetria_leituras', 'tabela_precos', 'workshops_cadastro', 'certificados_professor', 'unidades', 'configuracoes', 'vinculos']);
+      allow read: if logado() && !(colecao in ['feriados_propostas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos', 'documentos_ficha', 'documentos_professor', 'contatos_unicos', 'telemetria_leituras', 'tabela_precos', 'workshops_cadastro', 'certificados_professor', 'atualizacoes_professor', 'indicadores_mensais', 'auditoria_financeiro', 'unipower_stock', 'unipower_workshops', 'unipower_transacoes']);
+      allow write: if souAdmin() && !(colecao in ['feriados', 'feriados_propostas', 'usuarios', 'publico', 'validacoes', 'aulas', 'aulas_publicas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'resumos_mensais', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos', 'professores', 'documentos_ficha', 'documentos_professor', 'contatos_unicos', 'telemetria_leituras', 'tabela_precos', 'workshops_cadastro', 'certificados_professor', 'atualizacoes_professor', 'unidades', 'configuracoes', 'vinculos']);
     }
   }
 }

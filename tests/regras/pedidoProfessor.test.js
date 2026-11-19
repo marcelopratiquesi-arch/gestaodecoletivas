@@ -54,6 +54,32 @@ describe('pedido de professor', () => {
   });
 });
 
+describe('CLT ou Saver no pedido de professor', () => {
+  const saver = { tipoContrato: 'saver', saverLocais: [{ unidadeId: 'uniA', horarios: [{ dia: 1, ini: '06:00', fim: '10:00' }] }] };
+  it('pedido como Saver (e como CLT) passa', async () => {
+    await assertSucceeds(setDoc(doc(google('nova', 'novata@gmail.com'), 'solicitacoes_acesso/nova'), pedidoProf(saver)));
+    await assertSucceeds(setDoc(doc(google('nova2', 'novata@gmail.com'), 'solicitacoes_acesso/nova2'), pedidoProf({ tipoContrato: 'clt', saverLocais: [] })));
+  });
+  it('NÃO aceita tipo desconhecido nem mais de 5 unidades de Saver', async () => {
+    const db = google('nova', 'novata@gmail.com');
+    await assertFails(setDoc(doc(db, 'solicitacoes_acesso/nova'), pedidoProf({ tipoContrato: 'estagio' })));
+    const seis = Array.from({ length: 6 }, (_, i) => ({ unidadeId: `u${i}`, horarios: [] }));
+    await assertFails(setDoc(doc(db, 'solicitacoes_acesso/nova'), pedidoProf({ tipoContrato: 'saver', saverLocais: seis })));
+  });
+  it('a aprovação grava o contrato no crachá e na ficha', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'solicitacoes_acesso/novata'), pedidoProf(saver));
+      await setDoc(doc(ctx.firestore(), 'professores/fichaC'), { nome: 'CARLA', status: 'ativo' });
+    });
+    const db = como('liderA');
+    const b = writeBatch(db);
+    b.set(doc(db, 'usuarios', 'novata'), { nome: 'Carla', email: 'novata@gmail.com', telefone: '1', role: 'professor', unidadeId: 'uniA', status: 'ativo', loginGoogle: true, ...saver, professorId: 'fichaC' });
+    b.update(doc(db, 'professores', 'fichaC'), { uidLogin: 'novata', ...saver });
+    b.update(doc(db, 'solicitacoes_acesso', 'novata'), { status: 'aprovado', analisadoPor: 'liderA', analisadoEm: serverTimestamp() });
+    await assertSucceeds(b.commit());
+  });
+});
+
 describe('quem lê e aprova pedido de professor', () => {
   const lista = (db) => getDocs(query(collection(db, 'solicitacoes_acesso'), where('papel', '==', 'professor'), where('status', '==', 'pendente')));
   const aprovar = (uid, id = 'novata') => {

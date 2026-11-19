@@ -9,12 +9,13 @@ const PAGE_RULES = {
   validacao_diaria: ["admin", "mentor", "lider", "unidade", "professor"],
   // Certificados de workshop (o professor envia; quem confere usa a aba Professores das Configurações)
   certificados: ["professor"],
+  // Meu cadastro (o professor pede a mudança de CLT/Saver; líder, mentor ou admin conferem na aba Professores)
+  meu_cadastro: ["professor"],
   validacao_coletiva: ["admin", "mentor"],
   financeiro: ["admin", "mentor"],
   configuracoes: ["admin", "mentor", "lider", "unidade"],
   pratique_play: ["admin", "mentor", "lider", "unidade"],
-  // Acesso à Loja e Workshops (Gestão Financeira e Stock)
-  workshops: ["admin", "mentor"]
+  // Loja & Workshops virou uma aba de Configurações (só admin); o endereço /app/workshops só redireciona para lá.
 };
 
 // Líder: perfil novo que substitui o antigo "unidade". Durante a transição os dois valem igual.

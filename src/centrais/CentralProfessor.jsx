@@ -31,6 +31,7 @@ import { CampoDocumento, CampoUltimoAcesso } from './CamposDaPessoa';
 import { lerDocumento } from '../services/documentoService';
 import { lerDocumentoDaFicha } from '../services/documentoFichaService';
 import LinkCentral from './LinkCentral';
+import { resumoContrato } from '../utils/contrato';
 import { iniciais } from './contato';
 import { atalhoTelaCompleta, telasPermitidas, caminhos } from './atalhos';
 import { acessoCentral, unidadesVisiveis, ehOProprioProfessor } from './acessos';
@@ -418,6 +419,9 @@ export default function CentralProfessor({ id: professorId, z, textoVoltar, onFe
         <Campo rotulo={t('centrais.professor.cadastradoEm')}>{professor.createdAt ? formatDate(professor.createdAt) : t('centrais.naoInformado')}</Campo>
         <Campo rotulo={t('centrais.abas.unidades')} falta={unidades.length === 0}>
           {unidades.length > 0 ? unidades.map((u) => u.unidade.nome).join(', ') : t('centrais.professor.semUnidade')}
+        </Campo>
+        <Campo rotulo={t('accessRequest.contract.record')}>
+          {resumoContrato(professor, (id) => unidadePorId.get(String(id))?.nome || id)}
         </Campo>
         <Campo rotulo={t('centrais.professor.modalidades')}>
           {modalidades.length > 0 ? modalidades.map((m) => m.nome).join(', ') : t('centrais.semAulaNaGrade')}

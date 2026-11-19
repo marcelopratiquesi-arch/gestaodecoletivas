@@ -12,6 +12,7 @@ import Home from "../pages/home";
 import ConfiguracoesPage from "../app/Configuracoes"; 
 import ValidacaoDiaria from "../app/ValidacaoDiaria";
 import MeusWorkshops from "../pages/MeusWorkshops";
+import MeuCadastro from "../pages/MeuCadastro";
 import CronogramaPage from "../app/Cronograma/index"; 
 import RelatorioPage from "../app/Relatorios"; 
 import ValidacaoColetivaPage from "../app/ValidacaoColetiva"; 
@@ -26,7 +27,6 @@ import ControleAcessosPage from "../app/ControleAcessos";
 import OciosidadePage from "../app/Ociosidade"; // Importação do Radar de Grade
 
 // 🟢 IMPORTAÇÃO DA LOJA E WORKSHOPS
-import WorkshopsPage from "../app/Workshops"; 
 
 export default function AppRoutes() {
   return (
@@ -97,6 +97,7 @@ export default function AppRoutes() {
           
           {/* Meus workshops (certificados do professor) */}
           <Route path="certificados" element={<RoleRoute pageKey="certificados"><MeusWorkshops /></RoleRoute>} />
+          <Route path="meu-cadastro" element={<RoleRoute pageKey="meu_cadastro"><MeuCadastro /></RoleRoute>} />
 
           {/* Validação Coletiva */}
           <Route 
@@ -142,15 +143,8 @@ export default function AppRoutes() {
             } 
           />
 
-          {/* 🟢 NOVA ROTA: LOJA & WORKSHOPS */}
-          <Route 
-            path="workshops" 
-            element={
-              <RoleRoute pageKey="workshops">
-                <WorkshopsPage />
-              </RoleRoute>
-            } 
-          />
+          {/* Loja & Workshops agora é uma aba de Configurações (só admin): o endereço antigo leva para lá. */}
+          <Route path="workshops" element={<Navigate to="/app/configuracoes" state={{ aba: "workshops" }} replace />} />
           
           {/* Configurações */}
           <Route 

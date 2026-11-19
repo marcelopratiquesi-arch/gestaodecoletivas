@@ -55,7 +55,7 @@ export default function CertificadosAVerificar() {
         // Verificado: o workshop entra na lista do professor (vale para todas as unidades dele).
         const fichas = (catalogs?.professores || []).filter((p) => p.uidLogin && String(p.uidLogin) === String(c.uid));
         try {
-          if (c.workshopId) await registrarWorkshopVerificado({ fichas, workshopId: c.workshopId, nome: c.workshop, data: c.dataFeito, por: meuNome });
+          if (c.workshopId) await registrarWorkshopVerificado({ fichas, workshopId: c.workshopId, modalidade: c.modalidade, nome: c.workshop, data: c.dataFeito, por: meuNome });
           else if (fichas[0]) await adicionarWorkshopAoProfessor({ professorId: fichas[0].id, nome: c.workshop, data: c.dataFeito, por: meuNome, id: c.id });
         } catch (err) { console.error("Não foi possível incluir na lista do professor", err); }
       }

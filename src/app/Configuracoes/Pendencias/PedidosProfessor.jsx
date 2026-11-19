@@ -16,6 +16,7 @@ import { usePedidosProfessor } from "./usePedidosProfessor";
 import FichaDoPedido from "./FichaDoPedido";
 import { aprovarProfessorPedido } from "../../../services/aprovarProfessorService";
 import { normalizarPais } from "../../../utils/feriados";
+import { resumoContrato } from "../../../utils/contrato";
 import { avisoDeConflito, confirmarSeContatoEmUso } from "../../../services/contatoService";
 
 const formatarData = (ts, idioma) => {
@@ -129,6 +130,9 @@ export default function PedidosProfessor() {
                 {!unidade && <p className="text-xs text-red-500 font-bold ml-6">{t("pendingTab.unitNotFound")}</p>}
                 <p className="text-xs text-slate-500 ml-6">
                   {t("pendingTab.teacher.modalities")}: <b>{p.modalidades || t("pendingTab.teacher.noModalities")}</b>
+                </p>
+                <p className="text-xs text-slate-500 ml-6">
+                  {t("accessRequest.contract.pending")}: <b>{resumoContrato(p, (id) => (catalogs?.unidades || []).find((u) => String(u.id) === String(id))?.nome || id)}</b>
                 </p>
                 <p className="text-xs text-emerald-600 dark:text-emerald-400 font-bold ml-6">{t("pendingTab.teacher.documentOk")}</p>
               </div>
