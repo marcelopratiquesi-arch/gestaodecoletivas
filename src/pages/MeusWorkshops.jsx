@@ -1,0 +1,169 @@
+// "Meus workshops": o professor informa o workshop que fez, a data e a foto do certificado.
+// A foto é reduzida no aparelho e guardada no próprio documento (ver utils/imagem.js). O líder da unidade,
+// o mentor dela ou o admin verifica (aba Professores). Recusado: o professor corrige e reenvia.
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { Award, Camera, CheckCircle2, Clock, Loader2, Trash2, XCircle, AlertTriangle } from "lucide-react";
+import { useAuth } from "../contexts/AuthContext";
+import { apagarCertificado, enviarCertificado, listarMeusCertificados } from "../services/certificadoService";
+import { comprimirImagem, dataDoWorkshopValida } from "../utils/imagem";
+
+const ESTILO = {
+  pendente: { cor: "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300", Icone: Clock },
+  verificado: { cor: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300", Icone: CheckCircle2 },
+  recusado: { cor: "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300", Icone: XCircle },
+};
+const campo = "w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 dark:text-white outline-none focus:border-red-500";
+
+const hojeISO = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+
+export default function MeusWorkshops() {
+  const { t } = useTranslation();
+  const { user, userData } = useAuth();
+  const uid = user?.uid;
+  const unidadeId = userData?.unidadeId;
+  const arquivoRef = useRef(null);
+
+  const [lista, setLista] = useState(null);
+  const [workshop, setWorkshop] = useState("");
+  const [dataFeito, setDataFeito] = useState("");
+  const [foto, setFoto] = useState("");
+  const [reenviando, setReenviando] = useState(null); // id do recusado que está sendo corrigido
+  const [processando, setProcessando] = useState(false);
+  const [erro, setErro] = useState("");
+  const [ampliada, setAmpliada] = useState("");
+
+  const carregar = useCallback(async () => {
+    if (!uid) return;
+    try { setLista(await listarMeusCertificados(uid)); }
+    catch (e) { console.error(e); setLista([]); setErro(t("certificates.errors.load")); }
+  }, [uid, t]);
+  useEffect(() => { carregar(); }, [carregar]);
+
+  async function escolherFoto(e) {
+    const arquivo = e.target.files?.[0];
+    e.target.value = "";
+    if (!arquivo) return;
+    setErro(""); setProcessando(true);
+    try { setFoto(await comprimirImagem(arquivo)); }
+    catch (err) {
+      console.error(err);
+      setErro(t(err?.message === "NAO_E_IMAGEM" ? "certificates.errors.notImage" : "certificates.errors.photo"));
+    } finally { setProcessando(false); }
+  }
+
+  function limpar() { setWorkshop(""); setDataFeito(""); setFoto(""); setReenviando(null); }
+
+  async function enviar(e) {
+    e.preventDefault();
+    setErro("");
+    if (workshop.trim().length < 3) return setErro(t("certificates.errors.name"));
+    if (!dataDoWorkshopValida(dataFeito)) return setErro(t("certificates.errors.date"));
+    if (!foto) return setErro(t("certificates.errors.noPhoto"));
+    setProcessando(true);
+    try {
+      await enviarCertificado({ uid, id: reenviando, unidadeId, nome: userData?.nome || user?.email || "-", workshop, dataFeito, foto });
+      limpar();
+      await carregar();
+    } catch (err) {
+      console.error(err);
+      setErro(t("certificates.errors.save"));
+    } finally { setProcessando(false); }
+  }
+
+  function corrigir(c) {
+    setReenviando(c.id); setWorkshop(c.workshop); setDataFeito(c.dataFeito); setFoto(c.foto); setErro("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  async function apagar(c) {
+    if (!window.confirm(t("certificates.deleteConfirm", { name: c.workshop }))) return;
+    try { await apagarCertificado(c.id); await carregar(); } catch (err) { console.error(err); setErro(t("certificates.errors.delete")); }
+  }
+
+  return (
+    <div className="p-4 md:p-8 max-w-3xl mx-auto space-y-6">
+      <div>
+        <h1 className="text-2xl font-black text-slate-800 dark:text-white flex items-center gap-3">
+          <span className="p-2 bg-red-600 text-white rounded-lg"><Award className="w-6 h-6" /></span>
+          {t("certificates.title")}
+        </h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">{t("certificates.subtitle")}</p>
+      </div>
+
+      {!unidadeId ? (
+        <div className="flex gap-2 text-sm text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-xl p-4">
+          <AlertTriangle className="w-5 h-5 shrink-0" /> {t("certificates.noUnit")}
+        </div>
+      ) : (
+        <form onSubmit={enviar} className="p-5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm space-y-4">
+          <h2 className="font-black text-slate-800 dark:text-white">{reenviando ? t("certificates.fix") : t("certificates.add")}</h2>
+          <div className="space-y-1">
+            <label htmlFor="cert-workshop" className="text-[10px] font-black uppercase tracking-wider text-slate-500">{t("certificates.fields.workshop")}</label>
+            <input id="cert-workshop" value={workshop} onChange={(e) => setWorkshop(e.target.value)} maxLength={120} className={campo} placeholder={t("certificates.fields.workshopPlaceholder")} />
+          </div>
+          <div className="space-y-1">
+            <label htmlFor="cert-data" className="text-[10px] font-black uppercase tracking-wider text-slate-500">{t("certificates.fields.date")}</label>
+            <input id="cert-data" type="date" value={dataFeito} max={hojeISO()} min="2000-01-01" onChange={(e) => setDataFeito(e.target.value)} className={campo} />
+          </div>
+          <div className="space-y-2">
+            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">{t("certificates.fields.photo")}</span>
+            <input ref={arquivoRef} type="file" accept="image/*" onChange={escolherFoto} className="hidden" />
+            {foto && <img src={foto} alt={t("certificates.fields.photo")} className="max-h-64 rounded-xl border border-slate-200 dark:border-slate-700" />}
+            <button type="button" disabled={processando} onClick={() => arquivoRef.current?.click()}
+              className="px-4 py-2.5 rounded-xl text-xs font-black uppercase bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200 flex items-center gap-2 disabled:opacity-50">
+              <Camera className="w-4 h-4" /> {foto ? t("certificates.changePhoto") : t("certificates.choosePhoto")}
+            </button>
+            <p className="text-[11px] text-slate-400">{t("certificates.photoHint")}</p>
+          </div>
+          {erro && <p className="text-xs font-bold text-red-600 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-lg p-3">{erro}</p>}
+          <div className="flex justify-end gap-2">
+            {reenviando && <button type="button" onClick={limpar} disabled={processando} className="px-4 py-2.5 rounded-xl text-xs font-black uppercase bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200">{t("certificates.cancel")}</button>}
+            <button type="submit" disabled={processando} className="px-5 py-2.5 rounded-xl text-xs font-black uppercase bg-red-600 hover:bg-red-700 text-white flex items-center gap-2 disabled:opacity-50">
+              {processando && <Loader2 className="w-4 h-4 animate-spin" />} {t("certificates.send")}
+            </button>
+          </div>
+        </form>
+      )}
+
+      <div className="space-y-3">
+        <h2 className="text-lg font-black text-slate-800 dark:text-white">{t("certificates.sent")}</h2>
+        {lista === null ? (
+          <div className="py-8 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-red-500" /></div>
+        ) : lista.length === 0 ? (
+          <p className="text-sm text-slate-400 font-bold py-4">{t("certificates.empty")}</p>
+        ) : lista.map((c) => {
+          const { cor, Icone } = ESTILO[c.status] || ESTILO.pendente;
+          return (
+            <div key={c.id} className="p-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex gap-4">
+              <button type="button" onClick={() => setAmpliada(c.foto)} className="shrink-0">
+                <img src={c.foto} alt="" className="w-20 h-20 object-cover rounded-lg border border-slate-200 dark:border-slate-700" />
+              </button>
+              <div className="min-w-0 flex-1 space-y-1">
+                <p className="font-black text-slate-800 dark:text-white break-words">{c.workshop}</p>
+                <p className="text-xs text-slate-500">{c.dataFeito?.split("-").reverse().join("/")}</p>
+                <span className={`inline-flex items-center gap-1 text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${cor}`}>
+                  <Icone className="w-3 h-3" /> {t(`certificates.status.${c.status}`)}
+                </span>
+                {c.status === "recusado" && c.motivo && <p className="text-xs text-red-600 dark:text-red-400 font-bold">{t("certificates.reason", { reason: c.motivo })}</p>}
+                <div className="flex gap-2 pt-1">
+                  {c.status === "recusado" && <button type="button" onClick={() => corrigir(c)} className="text-xs font-black uppercase text-red-600 hover:underline">{t("certificates.resend")}</button>}
+                  {c.status !== "verificado" && <button type="button" onClick={() => apagar(c)} className="text-xs font-black uppercase text-slate-400 hover:text-red-600 flex items-center gap-1"><Trash2 className="w-3 h-3" /> {t("certificates.delete")}</button>}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {ampliada && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" onClick={() => setAmpliada("")}>
+          <img src={ampliada} alt="" className="max-h-full max-w-full rounded-xl" />
+        </div>
+      )}
+    </div>
+  );
+}

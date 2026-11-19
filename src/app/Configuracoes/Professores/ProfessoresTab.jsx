@@ -18,7 +18,7 @@ import { chaveTelefone, emailDeMentira, emailFormatoValido, fichasParecidas, lim
 import { 
   UserPlus, Edit2, Trash2, Link as LinkIcon, Loader2, Search, ScanSearch, CheckCircle2, 
   X, Mail, Phone, PlusCircle, User, AlertTriangle, ChevronDown, 
-  ChevronUp, ArrowDown, ArrowRight, DownloadCloud, Layers, Ban, ShieldCheck, MapPin, IdCard
+  ChevronUp, ArrowDown, ArrowRight, DownloadCloud, Layers, Ban, ShieldCheck, MapPin, IdCard, Award
 } from "lucide-react";
 import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
 import LinkCentral from "../../../centrais/LinkCentral";
@@ -34,6 +34,8 @@ import SeloRepetido from "../ui/SeloRepetido";
 import { useSelosRepetidos } from "../ui/useSelosRepetidos";
 import JuntarFichasModal from "../Backup/JuntarFichasModal";
 import { liberarContatos, sincronizarEAvisar } from "../../../services/contatoService";
+import CertificadosAVerificar from "./CertificadosAVerificar";
+import CertificadosDoProfessor from "./CertificadosDoProfessor";
 
 // 🌍 PADRÃO OURO INTERNACIONAL — mesma identidade visual usada em MentoresTab
 const PAIS_CONFIG = {
@@ -167,6 +169,7 @@ export function ProfessoresTab() {
   // Modais
   const [novoVinculo, setNovoVinculo] = useState(null); // { profInicial } = janela "Adicionar professor" (pelo documento)
   const [modalFormAberto, setModalFormAberto] = useState(false);
+  const [profWorkshops, setProfWorkshops] = useState(null); // professor cujos workshops (certificados) estão abertos
 
   // Fluxo de Cadastro
   const [profEditando, setProfEditando] = useState(null);
@@ -337,7 +340,7 @@ export function ProfessoresTab() {
       return links.map(v => {
           const u = unidades.find(uni => String(uni.id) === String(v.unidadeId));
           const podeMexer = role === 'admin' || minhasUnidades.some(mu => String(mu.id) === String(u?.id));
-          return u ? { id: v.id, nome: u.nome, vinculoId: v.id, podeMexer } : null;
+          return u ? { id: v.id, nome: u.nome, vinculoId: v.id, podeMexer, unidadeId: String(u.id) } : null;
       }).filter(Boolean);
   };
 
@@ -582,6 +585,7 @@ export function ProfessoresTab() {
     <div className="p-6 animate-fade-in max-w-7xl mx-auto space-y-6 uppercase">
       {/* PEDIDOS DE ACESSO DE PROFESSORES (login pessoal pelo Google) */}
       <PedidosProfessor />
+      <CertificadosAVerificar />
       {/* HEADER E KPIS */}
       <CabecalhoDaAba abaId="professores" icone={UserPlus} titulo={t('teachersTab.title', 'Gestão de Professores')} subtitulo={t('teachersTab.subtitle', 'Controle de base e vínculos com as unidades.')}
         numeros={<CaixaDeNumeros abaId="professores" itens={[
@@ -713,6 +717,7 @@ export function ProfessoresTab() {
                                     <div className="flex gap-2 justify-end opacity-40 group-hover:opacity-100 transition-opacity">
                                         {podeEditar && (
                                             <>
+                                                <BotaoDeLinha abaId="professores" tipo="perigo" icone={Award} onClick={() => setProfWorkshops(p)} title={t('certificates.manager.button')} />
                                                 <BotaoDeLinha abaId="professores" tipo={!isTelefoneValido ? "perigo" : "editar"} className={!isTelefoneValido ? "animate-pulse" : ""} icone={Edit2} onClick={() => abrirEdicao(p)} title={t('teachersTab.extra.editData')} />
                                                 <BotaoDeLinha abaId="professores" tipo={p.status === "ativo" ? "desativar" : "ativar"} icone={p.status === "ativo" ? Ban : CheckCircle2} onClick={() => alternarStatusProf(p)}
                                                     title={p.status === "ativo" ? t('teachersTab.extra.deactivateProfile') : t('teachersTab.extra.activateProfile')} />
@@ -923,6 +928,13 @@ export function ProfessoresTab() {
             </form>
           </div>
         </div>
+      )}
+
+      {profWorkshops && (
+        <CertificadosDoProfessor
+          professor={profWorkshops}
+          onClose={() => setProfWorkshops(null)}
+        />
       )}
     </div>
   );
