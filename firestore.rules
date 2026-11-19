@@ -290,13 +290,40 @@ service cloud.firestore {
       allow read: if logado();
       allow write: if souAdmin();
     }
+    // Ficha do professor (Etapa 2 das regras por unidade). Mentor e líder criam e editam só os campos de CONTATO e de
+    // vínculo com o login (nome, e-mail, país, telefone, status, uidLogin, documentoOk, workshops e as marcas de data);
+    // qualquer outro campo, e apagar a ficha, é só do admin (que também junta fichas e liga crachás).
+    function camposDeFichaDoProfessor() {
+      return ['nome', 'email', 'pais', 'telefone', 'status', 'documentoOk', 'uidLogin', 'workshops',
+              'updatedAt', 'createdAt', 'createdBy', 'roleCreator'];
+    }
     match /professores/{professorId} {
       allow read: if logado();
       // "documentoOk" só vale com o documento guardado na gaveta privada da ficha (documentos_ficha).
-      allow create, update: if logado() && !souProfessor()
+      allow create: if logado() && !souProfessor()
+        && (souAdmin() || request.resource.data.keys().hasOnly(camposDeFichaDoProfessor()))
         && (request.resource.data.get('documentoOk', false) != true
             || existsAfter(/databases/$(database)/documents/documentos_ficha/$(professorId)));
-      allow delete: if logado() && !souProfessor();
+      allow update: if logado() && !souProfessor()
+        && (souAdmin() || camposAlterados().hasOnly(camposDeFichaDoProfessor()))
+        && (request.resource.data.get('documentoOk', false) != true
+            || existsAfter(/databases/$(database)/documents/documentos_ficha/$(professorId)));
+      allow delete: if souAdmin();
+    }
+
+    // Vínculo professor × unidade (Etapa 2). Cria e apaga: admin, mentor da unidade e líder da unidade. Nunca se edita
+    // (só o admin, ao juntar fichas). Lê quem está logado.
+    function podeMexerNaUnidade(unidadeId) {
+      return unidadeId is string && unidadeId != '' && logado()
+        && ((meuPapel() == 'mentor' && mentorDaUnidadeId(unidadeId)) || liderDestaUnidade(unidadeId));
+    }
+    match /vinculos/{vinculoId} {
+      allow read: if logado();
+      allow create: if souAdmin()
+        || (request.resource.data.keys().hasOnly(['professorId', 'unidadeId', 'status', 'createdAt'])
+            && podeMexerNaUnidade(request.resource.data.get('unidadeId', '')));
+      allow update: if souAdmin();
+      allow delete: if souAdmin() || podeMexerNaUnidade(resource.data.get('unidadeId', ''));
     }
 
     // ===================== FERIADOS =====================
@@ -1048,7 +1075,7 @@ service cloud.firestore {
     // (No Firestore, se QUALQUER regra libera, a ação passa; por isso as exceções precisam estar aqui.)
     match /{colecao}/{resto=**} {
       allow read: if logado() && !(colecao in ['feriados_propostas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos', 'documentos_ficha', 'documentos_professor', 'contatos_unicos', 'telemetria_leituras', 'tabela_precos', 'workshops_cadastro', 'certificados_professor']);
-      allow write: if logado() && !(colecao in ['feriados', 'feriados_propostas', 'usuarios', 'publico', 'validacoes', 'aulas', 'aulas_publicas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'resumos_mensais', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos', 'professores', 'documentos_ficha', 'documentos_professor', 'contatos_unicos', 'telemetria_leituras', 'tabela_precos', 'workshops_cadastro', 'certificados_professor', 'unidades', 'configuracoes']) && !souProfessor();
+      allow write: if logado() && !(colecao in ['feriados', 'feriados_propostas', 'usuarios', 'publico', 'validacoes', 'aulas', 'aulas_publicas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'resumos_mensais', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos', 'professores', 'documentos_ficha', 'documentos_professor', 'contatos_unicos', 'telemetria_leituras', 'tabela_precos', 'workshops_cadastro', 'certificados_professor', 'unidades', 'configuracoes', 'vinculos']) && !souProfessor();
       allow create: if logado() && colecao in ['auditoria_cronograma', 'auditoria_configuracoes'];
     }
   }
