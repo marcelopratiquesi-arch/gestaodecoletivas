@@ -450,7 +450,7 @@ export function LideresTab() {
                           <div className="space-y-3">
                             <div className="space-y-1">
                               <div className="flex items-center gap-1.5 flex-wrap">
-                                <LinkCentral tipo="lider" alvo={u} className="font-black text-slate-800 dark:text-slate-100">{u.liderNome || "-"}</LinkCentral>
+                                <LinkCentral tipo="lider" alvo={u} className="font-black text-slate-800 dark:text-slate-100 uppercase">{u.liderNome || "-"}</LinkCentral>
                                 <SeloRepetido selo={selosRepetidos.get(`cracha:${u.liderUid}`)} detalheDe={(o) => o.email || ""} />
                                 {u.liderAConferir === true && <Selo tipo="aviso" icone={AlertTriangle}>{t("leadersTab.toCheck")}</Selo>}
                               </div>
@@ -459,7 +459,7 @@ export function LideresTab() {
                             {u.lider2Uid && (
                               <div className="pt-3 border-t border-dashed border-slate-200 dark:border-slate-700 space-y-1">
                                 <div className="flex items-center gap-1.5 flex-wrap">
-                                  <LinkCentral tipo="lider2" alvo={u} className="font-black text-slate-800 dark:text-slate-100">{u.lider2Nome || "-"}</LinkCentral>
+                                  <LinkCentral tipo="lider2" alvo={u} className="font-black text-slate-800 dark:text-slate-100 uppercase">{u.lider2Nome || "-"}</LinkCentral>
                                   <SeloRepetido selo={selosRepetidos.get(`cracha:${u.lider2Uid}`)} detalheDe={(o) => o.email || ""} />
                                   <Selo tipo="tema" abaId="lideres">{t("leadersTab.second.badge")}</Selo>
                                 </div>

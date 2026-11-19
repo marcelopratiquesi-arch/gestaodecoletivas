@@ -9,6 +9,10 @@
       "google": "Google",
       "senha": "Email and password",
       "antigo": "Old login"
-    }
-  }
+    },
+    "noLogin": "No login",
+    "leader": "Leader",
+    "unitLogin": "Unit login"
+  },
+  "editPhone": "Edit number"
 }

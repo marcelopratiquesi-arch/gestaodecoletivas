@@ -8,13 +8,13 @@ import {
 // No 1º acesso pelo Google com esse e-mail, a pessoa entra direto como mentor (pages/SolicitarAcesso).
 import { db } from "../../../services/firebase";
 import { registrarAuditoriaAcesso } from "../../../services/auditoriaAcessos";
-import { BotaoDocumento, DocumentoModal, BuscaDocumento } from "../Documento/DocumentoModal";
+import { DocumentoModal, BuscaDocumento } from "../Documento/DocumentoModal";
 import CampoDocumento from "../../../components/acesso/CampoDocumento";
 import { documentoValido, limparDocumento, tipoDocumentoPadrao } from "../../../utils/documento";
 
 import { 
     ShieldCheck, Edit2, Trash2, AlertTriangle, CheckCircle2, 
-    Loader2, User, Mail, ChevronDown, ChevronUp, Ban, PowerOff, Plus, X, Phone, Check, Clock, Link2, ScanSearch, Users, ArrowUpCircle, UserMinus, Timer
+    Loader2, User, Mail, Ban, IdCard, CalendarClock, PowerOff, Plus, X, Phone, Check, Clock, Link2, ScanSearch, Users, ArrowUpCircle, UserMinus, Timer
 } from "lucide-react";
 
 const EMAIL_VALIDO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -27,119 +27,22 @@ import { segundoDe, principalDe, conviteDe, coberturasDe } from "./segundoMentor
 import { sairDeSegundo, promoverASegundo, prorrogarCobertura, encerrarCobertura } from "./acoesSegundoMentor";
 import { SeloDoPrazo, PrazoModal } from "../Lideres/TemporariosSecao";
 import { ATALHOS_COBERTURA, diaDoFim } from "../../../utils/temporario";
-import { resumoDoAcesso } from "../../../utils/ultimoAcesso";
 import { FiltroPadrao } from "../ui/FiltroPadrao";
 import { CabecalhoDoModal } from "../ui/CabecalhoDoModal";
 import { BotaoDeLinha } from "../ui/BotaoDeLinha";
 import { CabecalhoDaAba, CaixaDeNumeros, BotaoPrincipal, BotaoSecundario } from "../ui/CabecalhoDaAba";
-import { AcoesDoContato } from "../ui/AcoesDoContato";
 import { useFiltroCascata } from "../ui/useFiltroCascata";
 import SeloRepetido from "../ui/SeloRepetido";
 import { useSelosRepetidos } from "../ui/useSelosRepetidos";
 import { mensagemSeContatoEmUso, sincronizarEAvisar } from "../../../services/contatoService";
-
-// 🌍 PADRÃO OURO INTERNACIONAL — cada país com sua cor de identidade
-const PAIS_CONFIG = {
-  BR: {
-    id: "BR", nome: "Brasil", ddi: "+55",
-    badgeClass: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800"
-  },
-  AR: {
-    id: "AR", nome: "Argentina", ddi: "+54",
-    badgeClass: "bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-900/20 dark:text-sky-400 dark:border-sky-800"
-  },
-  US: {
-    id: "US", nome: "Estados Unidos", ddi: "+1",
-    badgeClass: "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-900/20 dark:text-rose-400 dark:border-rose-800"
-  },
-};
-
-const PAISES = Object.values(PAIS_CONFIG);
-const DDI_MAP = Object.fromEntries(PAISES.map(p => [p.id, p.ddi]));
-
-// 🟢 ÍCONES DE BANDEIRA EM SVG PURO (não depende de fonte de emoji — nunca vira "BR BR" no Windows)
-function FlagIcon({ pais, className = "w-4 h-3" }) {
-  const wrapClass = `${className} rounded-[2px] ring-1 ring-black/10 shrink-0 overflow-hidden inline-block align-middle`;
-
-  if (pais === "BR") {
-    return (
-      <svg viewBox="0 0 20 14" className={wrapClass} preserveAspectRatio="xMidYMid slice">
-        <rect width="20" height="14" fill="#009739"/>
-        <polygon points="10,2 18,7 10,12 2,7" fill="#FEDD00"/>
-        <circle cx="10" cy="7" r="3.1" fill="#012169"/>
-      </svg>
-    );
-  }
-  if (pais === "AR") {
-    return (
-      <svg viewBox="0 0 20 14" className={wrapClass} preserveAspectRatio="xMidYMid slice">
-        <rect width="20" height="14" fill="#ffffff"/>
-        <rect width="20" height="4.66" y="0" fill="#75AADB"/>
-        <rect width="20" height="4.66" y="9.34" fill="#75AADB"/>
-        <circle cx="10" cy="7" r="1.5" fill="#F6B40E" stroke="#85340A" strokeWidth="0.15"/>
-      </svg>
-    );
-  }
-  if (pais === "US") {
-    return (
-      <svg viewBox="0 0 20 14" className={wrapClass} preserveAspectRatio="xMidYMid slice">
-        <rect width="20" height="14" fill="#B22234"/>
-        <rect y="1.077" width="20" height="1.077" fill="#fff"/>
-        <rect y="3.231" width="20" height="1.077" fill="#fff"/>
-        <rect y="5.385" width="20" height="1.077" fill="#fff"/>
-        <rect y="7.538" width="20" height="1.077" fill="#fff"/>
-        <rect y="9.692" width="20" height="1.077" fill="#fff"/>
-        <rect y="11.846" width="20" height="1.077" fill="#fff"/>
-        <rect width="8" height="7.538" fill="#3C3B6E"/>
-      </svg>
-    );
-  }
-  return null;
-}
-
-const PAIS_DEFAULT = "BR"; // 🟢 Fallback padrão quando o mentor não tem país definido
-
-// ==========================================
-// 🟢 MÁSCARAS INTELIGENTES DE TELEFONE POR PAÍS
-// (mesmo padrão usado em UnidadesTab: Brasil / Argentina / Estados Unidos)
-// ==========================================
-const formatarTelefone = (valor, pais = PAIS_DEFAULT) => {
-    if (!valor) return "";
-    let v = valor.replace(/\D/g, ''); // Remove tudo que não é número
-
-    if (pais === 'BR') {
-        if (v.startsWith('55')) v = v.slice(2);
-        v = v.slice(0, 11);
-        if (v.length > 2) v = v.replace(/^(\d{2})(\d)/g, '($1) $2');
-        if (v.length > 7) v = v.replace(/(\d{5})(\d)/, '$1-$2');
-        return v;
-    }
-
-    if (pais === 'US') {
-        if (v.startsWith('1') && v.length > 10) v = v.slice(1);
-        v = v.slice(0, 10);
-        if (v.length > 3) v = v.replace(/^(\d{3})(\d)/, '($1) $2');
-        if (v.length > 6) v = v.replace(/^(\(\d{3}\)\s\d{3})(\d)/, '$1-$2');
-        return v;
-    }
-
-    if (pais === 'AR') {
-        if (v.startsWith('54')) v = v.slice(2);
-        v = v.slice(0, 11);
-        if (v.length > 1) v = v.replace(/^(\d{1})(\d)/, '$1 $2');
-        if (v.length > 3) v = v.replace(/^(\d{1})\s(\d{2})(\d)/, '$1 $2 $3');
-        if (v.length > 7) v = v.replace(/^(\d{1})\s(\d{2})\s(\d{4})(\d)/, '$1 $2 $3-$4');
-        return v;
-    }
-
-    return v;
-};
-
-const getPhonePlaceholder = (pais = PAIS_DEFAULT) => {
-    if (pais === 'US') return "(000) 000-0000";
-    if (pais === 'AR') return "9 11 0000-0000";
-    return "(00) 00000-0000";
-};
+import { CelulaContato } from "../ui/CelulaContato";
+import { CelulaAcesso } from "../ui/CelulaAcesso";
+import { ColunaOrdenavel, CLASSE_TITULO } from "../ui/ColunaOrdenavel";
+import { MenuDeAcoes } from "../ui/MenuDeAcoes";
+import { Selo } from "../ui/Selo";
+import { useOrdenacao } from "../ui/useOrdenacao";
+import { FlagIcon } from "../ui/Bandeira";
+import { PAIS_CONFIG, PAISES, DDI_MAP, PAIS_PADRAO as PAIS_DEFAULT, formatarTelefone, exemploDeTelefone as getPhonePlaceholder } from "../ui/telefone";
 
 export function MentoresTab() {
   const { userData } = useAuth();
@@ -167,7 +70,6 @@ export function MentoresTab() {
   const [situacao, setSituacao] = useState("todos"); // todos | com | sem | segundo | parado | nunca (filtro próprio da aba, ao lado do status)
   const [statusFiltro, setStatusFiltro] = useState("ativo"); // abre SEMPRE com os ativos; "" = todos | ativo | inativo (clique nos números do topo)
   const [mostrarBuscaDoc, setMostrarBuscaDoc] = useState(false); // busca por CPF/DNI/SSN (esta aba já é só admin)
-  const [sortConfig, setSortConfig] = useState({ field: 'nome', direction: 'asc' });
   const [modalAberto, setModalAberto] = useState(false);
   
   // Feedback
@@ -302,33 +204,17 @@ export function MentoresTab() {
   })), [mentores]);
   const selosRepetidos = useSelosRepetidos(registrosRepetidos);
 
-  const mentoresProcessados = useMemo(() => {
-      return [...filtro.resultado].sort((a, b) => {
-          if (sortConfig.field === 'ultimoAcesso') {
-              // sem registro = 0 → aparece primeiro na ordem crescente (quem está há mais tempo sem entrar)
-              const diff = (a.ultimoAcesso?.toMillis?.() || 0) - (b.ultimoAcesso?.toMillis?.() || 0);
-              return sortConfig.direction === 'asc' ? diff : -diff;
-          }
-          let valA = (a[sortConfig.field] || "").toLowerCase();
-          let valB = (b[sortConfig.field] || "").toLowerCase();
-
-          if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
-          if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
-          return 0;
-      });
-  }, [filtro.resultado, sortConfig]);
-
-  const handleSort = (field) => {
-      setSortConfig(prev => ({ 
-          field, 
-          direction: prev.field === field && prev.direction === 'asc' ? 'desc' : 'asc' 
-      }));
-  };
-
-  const SortIcon = ({ field }) => {
-      if (sortConfig.field !== field) return <div className="w-4 h-4 opacity-20"><ChevronDown className="w-3 h-3"/></div>;
-      return sortConfig.direction === 'asc' ? <ChevronUp className="w-3 h-3 text-blue-500"/> : <ChevronDown className="w-3 h-3 text-blue-500"/>;
-  };
+  // Todas as colunas ordenam (A→Z / Z→A). Abre por nome, de A a Z.
+  // Acesso: quem nunca entrou = 0 → aparece primeiro no A→Z (quem está há mais tempo sem entrar).
+  const colunas = useMemo(() => ({
+      status: (m) => m.status || '',
+      nome: (m) => m.nome || '',
+      contato: (m) => m.email || '',
+      unidades: (m) => unidadesDe(m).length,
+      acesso: (m) => m.ultimoAcesso?.toMillis?.() || 0,
+  }), [unidadesDe]);
+  const ordenacao = useOrdenacao(filtro.resultado, colunas, { inicial: { campo: 'nome', direcao: 'asc' } });
+  const mentoresProcessados = ordenacao.ordenada;
 
   const kpis = useMemo(() => {
       const ativos = mentores.filter(m => m.status === 'ativo').length;
@@ -567,18 +453,6 @@ export function MentoresTab() {
     }
   }
 
-  // Data e hora do último acesso (sempre visíveis) + "há X dias" colorido.
-  const blocoDeAcesso = (pessoa) => {
-    const ac = resumoDoAcesso(pessoa.ultimoAcesso, i18n.language);
-    if (!ac) return <span className="text-slate-400 font-medium normal-case">{t('mentorsTab.table.neverSeen', 'Sem registro')}</span>;
-    const cor = ac.cor === 'emerald' ? 'text-emerald-600 dark:text-emerald-400' : ac.cor === 'amber' ? 'text-amber-600 dark:text-amber-400' : 'text-red-600 dark:text-red-400';
-    return (
-      <div title={ac.dataHora}>
-        <div className="font-bold text-slate-700 dark:text-slate-200 normal-case">{ac.dia} · {ac.hora}</div>
-        <div className={`text-[11px] font-bold normal-case ${cor}`}>{ac.relativo}</div>
-      </div>
-    );
-  };
 
   // Barreira de Segurança Final
   if (!podeAcessar) return <div className="p-8 text-center text-slate-500 font-bold">{t('mentorsTab.restricted', 'Acesso Restrito: Apenas Administradores.')}</div>;
@@ -655,25 +529,17 @@ export function MentoresTab() {
       )}
 
       {/* TABELA */}
-      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden shadow-sm">
+      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden shadow-sm normal-case">
         <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead className="bg-slate-100 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
+          <table className="w-full min-w-[980px] text-left">
+            <thead className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
               <tr>
-                <th className="p-4 text-xs font-bold text-slate-500 uppercase cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors w-28" onClick={() => handleSort('status')}>
-                    <div className="flex items-center gap-2">{t('mentorsTab.table.status', 'Status')} <SortIcon field="status"/></div>
-                </th>
-                <th className="p-4 text-xs font-bold text-slate-500 uppercase cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('nome')}>
-                    <div className="flex items-center gap-2">{t('mentorsTab.table.name', 'Mentor')} <SortIcon field="nome"/></div>
-                </th>
-                <th className="p-4 text-xs font-bold text-slate-500 uppercase cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('telefone')}>
-                    <div className="flex items-center gap-2">{t('mentorsTab.table.phone', 'WhatsApp')} <SortIcon field="telefone"/></div>
-                </th>
-                <th className="p-4 text-xs font-bold text-slate-500 uppercase">{t('mentorsTab.linked.column', 'Unidades')}</th>
-                <th className="p-4 text-xs font-bold text-slate-500 uppercase cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('ultimoAcesso')}>
-                    <div className="flex items-center gap-2">{t('mentorsTab.table.access', 'Acesso')} <SortIcon field="ultimoAcesso"/></div>
-                </th>
-                <th className="p-4 text-xs font-bold text-slate-500 uppercase text-right">{t('mentorsTab.table.actions', 'Ações')}</th>
+                <ColunaOrdenavel campo="status" rotulo={t('mentorsTab.table.status', 'Status')} ordenacao={ordenacao} cor="blue" className="w-28" />
+                <ColunaOrdenavel campo="nome" rotulo={t('mentorsTab.table.name', 'Mentor')} ordenacao={ordenacao} cor="blue" />
+                <ColunaOrdenavel campo="contato" rotulo={t('teachersTab.table.contact', 'Contato')} ordenacao={ordenacao} cor="blue" className="w-[26%]" />
+                <ColunaOrdenavel campo="unidades" rotulo={t('mentorsTab.linked.column', 'Unidades')} ordenacao={ordenacao} cor="blue" className="w-36" />
+                <ColunaOrdenavel campo="acesso" rotulo={t('tabela.access.column')} ordenacao={ordenacao} cor="blue" className="w-40" />
+                <th className={`${CLASSE_TITULO} text-right w-40`}>{t('mentorsTab.table.actions', 'Ações')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
@@ -691,149 +557,141 @@ export function MentoresTab() {
                       </td>
                   </tr>
               ) : mentoresProcessados.map(m => {
-                  const paisAtual = m.pais || PAIS_DEFAULT; // 🟢 FALLBACK: Brasil se o mentor não tiver país definido
+                  const paisAtual = m.pais || PAIS_DEFAULT; // sem país definido = Brasil
                   const paisDDI = DDI_MAP[paisAtual];
-                  // 🟢 CORREÇÃO DO BUG "+55 +55": só prefixa o DDI se o telefone salvo ainda não tiver um "+" embutido (dado legado)
-                  const telefoneExibicao = m.telefone && !m.telefone.startsWith('+') && paisDDI ? `${paisDDI} ${m.telefone}` : (m.telefone || "");
-                  
+                  const ativo = m.status === 'ativo';
+                  const principal = m.mentorPrincipalId ? principalDe(mentores, m) : null;
+                  const segundo = !m.mentorPrincipalId ? segundoDe(mentores, m.id) : null;
+                  const convite = !m.mentorPrincipalId && !segundo ? conviteDe(convites, m.id) : null;
+                  const cobrindoMe = coberturasDe(coberturas, m.id); // quem cobre as unidades deste mentor
+                  const nUnidades = unidadesDe(m).length;
+                  const editarTelefone = () => { setEditandoTelefoneId(m.id); setTelefoneInline(m.telefone ? m.telefone.replace(paisDDI, '').trim() : ""); };
+
                   return (
-                  <tr key={m.id} className={`transition-colors group ${m.status === 'inativo' ? 'bg-slate-50 dark:bg-slate-900/30 opacity-75 grayscale-[0.5]' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}>
-                    
+                  <tr key={m.id} className={`align-top transition-colors ${ativo ? 'hover:bg-slate-50/70 dark:hover:bg-slate-800/50' : 'bg-slate-50 dark:bg-slate-900/30 opacity-75 grayscale-[0.5]'}`}>
+
                     {/* STATUS */}
-                    <td className="p-4">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wide border ${m.status === 'ativo' ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800' : 'bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'}`}>
-                        {m.status === 'ativo' ? <CheckCircle2 className="w-3 h-3"/> : <Ban className="w-3 h-3"/>} {m.status === 'ativo' ? t('mentorsTab.table.active', 'ATIVO') : t('mentorsTab.table.inactive', 'INATIVO')}
+                    <td className="px-4 py-4">
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wide border ${ativo ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800' : 'bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'}`}>
+                        {ativo ? <CheckCircle2 className="w-3 h-3"/> : <Ban className="w-3 h-3"/>} {ativo ? t('mentorsTab.table.active', 'ATIVO') : t('mentorsTab.table.inactive', 'INATIVO')}
                       </span>
                     </td>
 
-                    {/* NOME E EMAIL */}
-                    <td className="p-4">
-                      <LinkCentral tipo="mentor" alvo={m} className="font-black text-slate-800 dark:text-white text-base">{m.nome}</LinkCentral>
-                      <SeloRepetido selo={selosRepetidos.get(`cracha:${m.id}`)} detalheDe={(o) => o.email || ""} />
-                      {m.mentorPrincipalId && (
-                        <span className="ml-2 inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-md bg-violet-50 text-violet-700 border border-violet-200 dark:bg-violet-900/20 dark:text-violet-300 dark:border-violet-800 normal-case align-middle">
-                          <Users className="w-3 h-3"/> {t('mentorsTab.second.badge', { name: principalDe(mentores, m)?.nome || '-' })}
-                        </span>
-                      )}
-                      {!m.mentorPrincipalId && segundoDe(mentores, m.id) && (
-                        <div className="text-[11px] font-bold text-violet-600 dark:text-violet-300 normal-case mt-0.5 flex items-center gap-1">
-                          <Users className="w-3 h-3"/> {t('mentorsTab.second.has', { name: segundoDe(mentores, m.id).nome })}
-                        </div>
-                      )}
-                      {!m.mentorPrincipalId && !segundoDe(mentores, m.id) && conviteDe(convites, m.id) && (
-                        <div className="text-[11px] font-bold text-amber-600 dark:text-amber-400 normal-case mt-0.5 flex items-center gap-1">
-                          <Clock className="w-3 h-3"/> {t('mentorsTab.second.pending', { name: conviteDe(convites, m.id).nome })}
-                        </div>
-                      )}
-                      {coberturasDe(coberturas, m.id).map((c) => (
-                        <div key={c.id} className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] font-bold text-teal-700 dark:text-teal-300 normal-case">
-                          <Timer className="w-3 h-3"/> {t('tempLeader.mentor.has', { name: c.nome })} <SeloDoPrazo fim={c.coberturaAte} />
-                          <span className="text-slate-500">{t('tempLeader.until', { date: diaDoFim(c.coberturaAte, i18n.language) })}</span>
-                          <button type="button" onClick={() => setPrazoAlvo(c)} className="px-1.5 py-0.5 rounded-md bg-teal-50 hover:bg-teal-100 dark:bg-teal-900/20 text-[10px] font-black uppercase">{t('tempLeader.extend')}</button>
-                          <button type="button" onClick={() => encerrarCoberturaDe(c)} className="px-1.5 py-0.5 rounded-md bg-red-50 hover:bg-red-100 dark:bg-red-900/20 text-red-600 text-[10px] font-black uppercase">{t('tempLeader.mentor.end')}</button>
-                        </div>
-                      ))}
-                      {m.coberturaMentorId && (
-                        <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] font-bold text-teal-700 dark:text-teal-300 normal-case">
-                          <Timer className="w-3 h-3"/> {t('tempLeader.mentor.badge', { name: nomeDoCoberto(m) })} <SeloDoPrazo fim={m.coberturaAte} />
-                        </div>
-                      )}
-                      <div className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5 flex items-center gap-1">
-                          <Mail className="w-3 h-3"/> {m.email}
+                    {/* MENTOR: nome + etiquetas (2º mentor, dupla, temporário) */}
+                    <td className="px-4 py-4">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <LinkCentral tipo="mentor" alvo={m} className="font-black text-slate-800 dark:text-white text-base uppercase">{m.nome}</LinkCentral>
+                        <SeloRepetido selo={selosRepetidos.get(`cracha:${m.id}`)} detalheDe={(o) => o.email || ""} />
+                      </div>
+                      <div className="mt-1.5 space-y-1.5">
+                        {principal && <div><Selo tipo="tema" abaId="mentores" icone={Users}>{t('mentorsTab.second.badge', { name: principal.nome || '-' })}</Selo></div>}
+                        {segundo && <div><Selo tipo="tema" abaId="mentores" icone={Users}>{t('mentorsTab.row.duo', { name: segundo.nome })}</Selo></div>}
+                        {convite && <div><Selo tipo="aviso" icone={Clock}>{t('mentorsTab.second.pending', { name: convite.nome })}</Selo></div>}
+
+                        {/* Este mentor está COBRINDO outro (mentor temporário) */}
+                        {m.coberturaMentorId && (
+                          <div className="rounded-lg border border-teal-200 dark:border-teal-800 bg-teal-50/60 dark:bg-teal-900/10 px-2.5 py-1.5 w-fit">
+                            <div className="flex items-center gap-1.5 flex-wrap text-xs">
+                              <Selo tipo="tema" abaId="lideres" icone={Timer}>{t('mentorsTab.row.tempBadge')}</Selo>
+                              <span className="font-bold text-slate-700 dark:text-slate-200">{t('mentorsTab.row.covers', { name: nomeDoCoberto(m) })}</span>
+                            </div>
+                            <div className="mt-1 flex items-center gap-1.5 text-[11px] font-bold text-slate-500">
+                              {t('mentorsTab.row.until', { date: diaDoFim(m.coberturaAte, i18n.language) })} <SeloDoPrazo fim={m.coberturaAte} />
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Outras pessoas COBRINDO as unidades deste mentor */}
+                        {cobrindoMe.map((c) => (
+                          <div key={c.id} className="rounded-lg border border-teal-200 dark:border-teal-800 bg-teal-50/60 dark:bg-teal-900/10 px-2.5 py-1.5 w-fit">
+                            <div className="flex items-center gap-1.5 flex-wrap text-xs">
+                              <Selo tipo="tema" abaId="lideres" icone={Timer}>{t('mentorsTab.row.tempBadge')}</Selo>
+                              <span className="font-bold text-slate-700 dark:text-slate-200">{t('mentorsTab.row.coveredBy', { name: c.nome })}</span>
+                            </div>
+                            <div className="mt-1 flex items-center gap-1.5 text-[11px] font-bold text-slate-500">
+                              {t('mentorsTab.row.until', { date: diaDoFim(c.coberturaAte, i18n.language) })} <SeloDoPrazo fim={c.coberturaAte} />
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </td>
 
-                    {/* EDIÇÃO INLINE DO TELEFONE COM DDI + MÁSCARA POR PAÍS */}
-                    <td className="p-4">
+                    {/* CONTATO: e-mail + telefone (o lápis edita o número ali mesmo) */}
+                    <td className="px-4 py-4">
                         {editandoTelefoneId === m.id ? (
-                            <div className="flex items-center gap-1 bg-white dark:bg-slate-900 border border-blue-300 dark:border-blue-500/50 rounded-lg pl-2 pr-1 ring-2 ring-blue-500/20 w-fit animate-in fade-in zoom-in duration-200">
-                                <span className={`inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded border ${PAIS_CONFIG[paisAtual]?.badgeClass}`}>
-                                    <FlagIcon pais={paisAtual} /> {paisAtual}
-                                </span>
-                                <input 
-                                    autoFocus 
-                                    className="py-1.5 w-32 text-sm font-mono font-bold outline-none bg-transparent dark:text-white ml-1" 
-                                    value={telefoneInline} 
-                                    onChange={(e) => setTelefoneInline(formatarTelefone(e.target.value, paisAtual))} 
-                                    onKeyDown={(e) => e.key === 'Enter' && salvarTelefoneInline(m)} 
-                                    placeholder={getPhonePlaceholder(paisAtual)} 
-                                />
-                                <button onClick={() => salvarTelefoneInline(m)} className="p-1 bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400 rounded-md hover:bg-green-600 hover:text-white transition-colors" title={t('common.actions.save')}>
-                                    <Check className="w-3.5 h-3.5"/>
-                                </button>
-                                <button onClick={() => setEditandoTelefoneId(null)} className="p-1 bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400 rounded-md hover:bg-slate-300 transition-colors" title={t('common.actions.cancel')}>
-                                    <X className="w-3.5 h-3.5"/>
-                                </button>
+                            <div className="space-y-1">
+                                <CelulaContato email={m.email} />
+                                <div className="flex items-center gap-1 bg-white dark:bg-slate-900 border border-blue-300 dark:border-blue-500/50 rounded-lg pl-2 pr-1 ring-2 ring-blue-500/20 w-fit">
+                                    <span className={`inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded border ${PAIS_CONFIG[paisAtual]?.badgeClass}`}>
+                                        <FlagIcon pais={paisAtual} /> {paisDDI}
+                                    </span>
+                                    <input
+                                        autoFocus
+                                        className="py-1.5 w-32 text-sm font-mono font-bold outline-none bg-transparent dark:text-white ml-1"
+                                        value={telefoneInline}
+                                        onChange={(e) => setTelefoneInline(formatarTelefone(e.target.value, paisAtual))}
+                                        onKeyDown={(e) => { if (e.key === 'Enter') salvarTelefoneInline(m); if (e.key === 'Escape') setEditandoTelefoneId(null); }}
+                                        placeholder={getPhonePlaceholder(paisAtual)}
+                                    />
+                                    <button onClick={() => salvarTelefoneInline(m)} className="p-1 bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400 rounded-md hover:bg-green-600 hover:text-white transition-colors" title={t('common.actions.save')}>
+                                        <Check className="w-3.5 h-3.5"/>
+                                    </button>
+                                    <button onClick={() => setEditandoTelefoneId(null)} className="p-1 bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400 rounded-md hover:bg-slate-300 transition-colors" title={t('common.actions.cancel')}>
+                                        <X className="w-3.5 h-3.5"/>
+                                    </button>
+                                </div>
                             </div>
                         ) : (
-                            <div 
-                                onClick={() => { setEditandoTelefoneId(m.id); setTelefoneInline(m.telefone ? m.telefone.replace(paisDDI, '').trim() : ""); }} 
-                                className="flex items-center gap-2 cursor-pointer p-1.5 -ml-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors group/edit w-fit" 
-                                title={t('mentorsTab.extra.quickEdit')}
-                            >
-                                <Phone className={`w-3.5 h-3.5 ${m.telefone ? 'text-green-500 dark:text-green-400' : 'text-slate-300 dark:text-slate-600'}`}/>
-                                <span className={`font-mono text-sm font-bold flex items-center gap-1.5 ${m.telefone ? 'text-slate-700 dark:text-slate-300' : 'text-slate-400 dark:text-slate-500 italic font-normal text-xs'}`}>
-                                    {m.telefone ? (
-                                      <>
-                                        <span className={`inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded border ${PAIS_CONFIG[paisAtual]?.badgeClass}`}>
-                                            <FlagIcon pais={paisAtual} /> {paisAtual}
-                                        </span>
-                                        {telefoneExibicao}
-                                      </>
-                                    ) : t('mentorsTab.table.notInformed', 'Adicionar nº')}
-                                </span>
-                                <Edit2 className="w-3 h-3 text-slate-400 opacity-0 group-hover/edit:opacity-100 transition-opacity ml-1"/>
-                            </div>
+                            <CelulaContato email={m.email} telefone={m.telefone} pais={paisAtual} aoEditarTelefone={editarTelefone}
+                                semTelefone={
+                                    <button type="button" onClick={editarTelefone} className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-blue-600 transition-colors">
+                                        <Phone className="w-3.5 h-3.5"/> {t('mentorsTab.row.addPhone')}
+                                    </button>
+                                } />
                         )}
-                        {m.telefone && editandoTelefoneId !== m.id && <div className="mt-0.5"><AcoesDoContato telefone={m.telefone} pais={paisAtual} /></div>}
                     </td>
-                    
-                    {/* UNIDADES VINCULADAS: abre o modal de vínculo */}
-                    <td className="p-4">
+
+                    {/* UNIDADES: o número abre o vínculo (o 2º mentor usa as do 1º) */}
+                    <td className="px-4 py-4">
                       {m.mentorPrincipalId ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-black bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300" title={t('mentorsTab.second.sameUnits', { name: principalDe(mentores, m)?.nome || '-' })}>
-                          <Link2 className="w-3.5 h-3.5"/> {todasUnidades.filter(u => u.mentorId === m.mentorPrincipalId).length} <span className="font-medium normal-case">{t('mentorsTab.second.shared')}</span>
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300 whitespace-nowrap" title={t('mentorsTab.second.sameUnits', { name: principal?.nome || '-' })}>
+                          <Link2 className="w-3.5 h-3.5"/> {t('mentorsTab.row.unitsShared', { count: nUnidades })}
                         </span>
                       ) : (
-                        <button onClick={() => setVinculoAlvo(m)} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-black bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white dark:bg-blue-900/30 dark:text-blue-400 transition-colors" title={t('mentorsTab.linked.manage')}>
-                          <Link2 className="w-3.5 h-3.5"/> {todasUnidades.filter(u => u.mentorId === m.id).length}
+                        <button onClick={() => setVinculoAlvo(m)} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-50 text-blue-700 hover:bg-blue-600 hover:text-white dark:bg-blue-900/30 dark:text-blue-300 transition-colors whitespace-nowrap" title={t('mentorsTab.linked.manage')}>
+                          <Link2 className="w-3.5 h-3.5"/> {t('mentorsTab.row.units', { count: nUnidades })}
                         </button>
                       )}
                     </td>
 
-                    {/* ACESSO: data e hora do último acesso (sempre visíveis) + "há X dias" colorido */}
-                    <td className="p-4 text-xs whitespace-nowrap">
-                      {blocoDeAcesso(m)}
-                      {!m.mentorPrincipalId && segundoDe(mentores, m.id) && (
-                        <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-700">
-                          <div className="text-[10px] font-black text-violet-600 dark:text-violet-300 normal-case">{t('mentorsTab.second.accessOf', { name: segundoDe(mentores, m.id).nome })}</div>
-                          {blocoDeAcesso(segundoDe(mentores, m.id))}
+                    {/* ACESSO: do mentor e, se tiver, do 2º mentor */}
+                    <td className="px-4 py-4">
+                      <CelulaAcesso quando={m.ultimoAcesso} />
+                      {segundo && (
+                        <div className="mt-3 pt-3 border-t border-dashed border-slate-200 dark:border-slate-700">
+                          <CelulaAcesso rotulo={segundo.nome} quando={segundo.ultimoAcesso} />
                         </div>
                       )}
                     </td>
 
-                    {/* AÇÕES */}
-                    <td className="p-4 text-right">
-                        <div className="flex gap-2 justify-end opacity-40 group-hover:opacity-100 transition-opacity">
-                            {!m.mentorPrincipalId && !segundoDe(mentores, m.id) && !conviteDe(convites, m.id) && m.status === 'ativo' && (
-                                <BotaoDeLinha abaId="mentores" icone={Users} onClick={() => setSegundoAlvo(m)} title={t('mentorsTab.second.add')} />
-                            )}
-                            {m.mentorPrincipalId && (
-                                <BotaoDeLinha abaId="mentores" tipo="ativar" icone={ArrowUpCircle} onClick={() => tornarPrimeiro(m)} title={t('mentorsTab.second.makeFirst')} />
-                            )}
-                            {m.mentorPrincipalId && (
-                                <BotaoDeLinha abaId="mentores" tipo="desativar" icone={UserMinus} onClick={() => removerSegundo(m)} title={t('mentorsTab.second.remove')} />
-                            )}
-                            {!m.mentorPrincipalId && m.status === 'ativo' && (
-                                <BotaoDeLinha abaId="mentores" icone={Timer} onClick={() => setTemporarioAlvo(m)} title={t('tempLeader.mentor.add')} />
-                            )}
-                            <BotaoDocumento onClick={() => setDocAlvo({ id: m.id, nome: m.nome, email: m.email })} />
-                            <BotaoDeLinha abaId="mentores" icone={Edit2} onClick={() => abrirModalEditar(m)} title={t('mentorsTab.table.edit', 'Editar Completo')} />
-                            <BotaoDeLinha abaId="mentores" tipo={m.status === "ativo" ? "desativar" : "ativar"} icone={m.status === "ativo" ? PowerOff : CheckCircle2} onClick={() => alternarStatus(m)}
-                                title={m.status === "ativo" ? t('mentorsTab.table.deactivate', 'Desactivar') : t('mentorsTab.table.activate', 'Ativar')} />
-                            {!m.mentorPrincipalId && (
-                                <BotaoDeLinha abaId="mentores" tipo="perigo" icone={Trash2} onClick={() => excluir(m)} title={t('mentorsTab.table.delete', 'Excluir Definitivamente')} />
-                            )}
+                    {/* AÇÕES: Editar e Documento à vista; o resto no menu ⋯ (excluir sempre por último, em vermelho) */}
+                    <td className="px-4 py-4">
+                        <div className="flex gap-1.5 justify-end items-center">
+                            <BotaoDeLinha abaId="mentores" discreto icone={Edit2} onClick={() => abrirModalEditar(m)} title={t('mentorsTab.table.edit', 'Editar Completo')} />
+                            <BotaoDeLinha abaId="mentores" discreto icone={IdCard} onClick={() => setDocAlvo({ id: m.id, nome: m.nome, email: m.email })} title={t('document.modal.edit')} />
+                            <MenuDeAcoes itens={[
+                                { id: 'unidades', rotulo: t('mentorsTab.linked.manage'), icone: Link2, onClick: () => setVinculoAlvo(m), oculto: !!m.mentorPrincipalId },
+                                { id: 'segundo', rotulo: t('mentorsTab.second.add'), icone: Users, onClick: () => setSegundoAlvo(m), oculto: !!m.mentorPrincipalId || !!segundo || !!convite || !ativo },
+                                { id: 'primeiro', rotulo: t('mentorsTab.second.makeFirst'), icone: ArrowUpCircle, onClick: () => tornarPrimeiro(m), oculto: !m.mentorPrincipalId },
+                                { id: 'temporario', rotulo: t('tempLeader.mentor.add'), icone: Timer, onClick: () => setTemporarioAlvo(m), oculto: !!m.mentorPrincipalId || !ativo },
+                                { id: 'prorrogar-meu', rotulo: t('mentorsTab.row.extendMine'), icone: CalendarClock, onClick: () => setPrazoAlvo(m), oculto: !m.coberturaMentorId },
+                                ...cobrindoMe.map((c) => ({ id: `prorrogar-${c.id}`, rotulo: t('mentorsTab.row.extendOf', { name: c.nome }), icone: CalendarClock, onClick: () => setPrazoAlvo(c) })),
+                                { id: 'status', rotulo: ativo ? t('mentorsTab.table.deactivate', 'Desativar') : t('mentorsTab.table.activate', 'Ativar'), icone: ativo ? PowerOff : CheckCircle2, onClick: () => alternarStatus(m) },
+                                { id: 'encerrar-meu', rotulo: t('mentorsTab.row.endMine'), icone: Timer, tipo: 'perigo', onClick: () => encerrarCoberturaDe(m), oculto: !m.coberturaMentorId },
+                                ...cobrindoMe.map((c) => ({ id: `encerrar-${c.id}`, rotulo: t('mentorsTab.row.endOf', { name: c.nome }), icone: Timer, tipo: 'perigo', onClick: () => encerrarCoberturaDe(c) })),
+                                { id: 'tirar-segundo', rotulo: t('mentorsTab.second.remove'), icone: UserMinus, tipo: 'perigo', onClick: () => removerSegundo(m), oculto: !m.mentorPrincipalId },
+                                { id: 'excluir', rotulo: t('mentorsTab.table.delete', 'Excluir Definitivamente'), icone: Trash2, tipo: 'perigo', onClick: () => excluir(m), oculto: !!m.mentorPrincipalId },
+                            ]} />
                         </div>
                     </td>
                   </tr>

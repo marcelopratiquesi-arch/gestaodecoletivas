@@ -187,5 +187,9 @@
       "done": "¡Listo! {{count}} unidades configuradas.",
       "error": "Error al guardar. Revisá y probá de nuevo (lo ya guardado no se duplica)."
     }
+  },
+  "row": {
+    "suspend": "Suspender unidad",
+    "reactivate": "Reactivar unidad"
   }
 }

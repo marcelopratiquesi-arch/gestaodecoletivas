@@ -187,5 +187,9 @@
       "done": "Pronto! {{count}} unidades configuradas.",
       "error": "Erro ao gravar. Nada pela metade: confira e tente de novo (o que já foi gravado não duplica)."
     }
+  },
+  "row": {
+    "suspend": "Suspender unidade",
+    "reactivate": "Reativar unidade"
   }
 }

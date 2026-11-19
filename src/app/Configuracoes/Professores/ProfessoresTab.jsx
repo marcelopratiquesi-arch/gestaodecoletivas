@@ -19,8 +19,8 @@ import { chaveTelefone, emailDeMentira, emailFormatoValido, fichasParecidas, lim
 // TODOS OS ÍCONES IMPORTADOS CORRETAMENTE
 import { 
   UserPlus, Edit2, Trash2, Link as LinkIcon, Loader2, Search, ScanSearch, CheckCircle2, 
-  X, Mail, Phone, PlusCircle, User, AlertTriangle, ChevronDown, 
-  ChevronUp, ArrowDown, ArrowRight, DownloadCloud, Layers, Ban, ShieldCheck, MapPin, IdCard, Award
+  X, Mail, Phone, PlusCircle, User, AlertTriangle, ChevronDown,
+  ArrowDown, ArrowRight, DownloadCloud, Layers, Ban, ShieldCheck, MapPin, IdCard, Award
 } from "lucide-react";
 import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
 import LinkCentral from "../../../centrais/LinkCentral";
@@ -31,7 +31,6 @@ import { FiltroPadrao } from "../ui/FiltroPadrao";
 import { CabecalhoDoModal } from "../ui/CabecalhoDoModal";
 import { BotaoDeLinha } from "../ui/BotaoDeLinha";
 import { CabecalhoDaAba, CaixaDeNumeros, BotaoPrincipal, BotaoSecundario } from "../ui/CabecalhoDaAba";
-import { AcoesDoContato } from "../ui/AcoesDoContato";
 import { useFiltroCascata } from "../ui/useFiltroCascata";
 import SeloRepetido from "../ui/SeloRepetido";
 import { useSelosRepetidos } from "../ui/useSelosRepetidos";
@@ -41,104 +40,16 @@ import CertificadosAVerificar from "./CertificadosAVerificar";
 import AtualizacoesAConferir from "./AtualizacoesAConferir";
 import CertificadosDoProfessor from "./CertificadosDoProfessor";
 
-// 🌍 PADRÃO OURO INTERNACIONAL — mesma identidade visual usada em MentoresTab
-const PAIS_CONFIG = {
-  BR: {
-    id: "BR", nome: "Brasil", ddi: "+55",
-    badgeClass: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800"
-  },
-  AR: {
-    id: "AR", nome: "Argentina", ddi: "+54",
-    badgeClass: "bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-900/20 dark:text-sky-400 dark:border-sky-800"
-  },
-  US: {
-    id: "US", nome: "Estados Unidos", ddi: "+1",
-    badgeClass: "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-900/20 dark:text-rose-400 dark:border-rose-800"
-  },
-};
-
-const PAISES = Object.values(PAIS_CONFIG);
-const DDI_MAP = Object.fromEntries(PAISES.map(p => [p.id, p.ddi]));
-const PAIS_DEFAULT = "BR";
-
-// 🟢 ÍCONES DE BANDEIRA EM SVG PURO (idêntico ao usado em MentoresTab — não depende de fonte de emoji)
-function FlagIcon({ pais, className = "w-4 h-3" }) {
-  const wrapClass = `${className} rounded-[2px] ring-1 ring-black/10 shrink-0 overflow-hidden inline-block align-middle`;
-
-  if (pais === "BR") {
-    return (
-      <svg viewBox="0 0 20 14" className={wrapClass} preserveAspectRatio="xMidYMid slice">
-        <rect width="20" height="14" fill="#009739"/>
-        <polygon points="10,2 18,7 10,12 2,7" fill="#FEDD00"/>
-        <circle cx="10" cy="7" r="3.1" fill="#012169"/>
-      </svg>
-    );
-  }
-  if (pais === "AR") {
-    return (
-      <svg viewBox="0 0 20 14" className={wrapClass} preserveAspectRatio="xMidYMid slice">
-        <rect width="20" height="14" fill="#ffffff"/>
-        <rect width="20" height="4.66" y="0" fill="#75AADB"/>
-        <rect width="20" height="4.66" y="9.34" fill="#75AADB"/>
-        <circle cx="10" cy="7" r="1.5" fill="#F6B40E" stroke="#85340A" strokeWidth="0.15"/>
-      </svg>
-    );
-  }
-  if (pais === "US") {
-    return (
-      <svg viewBox="0 0 20 14" className={wrapClass} preserveAspectRatio="xMidYMid slice">
-        <rect width="20" height="14" fill="#B22234"/>
-        <rect y="1.077" width="20" height="1.077" fill="#fff"/>
-        <rect y="3.231" width="20" height="1.077" fill="#fff"/>
-        <rect y="5.385" width="20" height="1.077" fill="#fff"/>
-        <rect y="7.538" width="20" height="1.077" fill="#fff"/>
-        <rect y="9.692" width="20" height="1.077" fill="#fff"/>
-        <rect y="11.846" width="20" height="1.077" fill="#fff"/>
-        <rect width="8" height="7.538" fill="#3C3B6E"/>
-      </svg>
-    );
-  }
-  return null;
-}
-
-// --- MÁSCARA INTELIGENTE DE TELEFONE POR PAÍS (mesmo padrão de MentoresTab) ---
-const formatarTelefone = (valor, pais = PAIS_DEFAULT) => {
-    if (!valor) return "";
-    let v = valor.replace(/\D/g, '');
-
-    if (pais === 'BR') {
-        if (v.startsWith('55')) v = v.slice(2);
-        v = v.slice(0, 11);
-        if (v.length > 2) v = v.replace(/^(\d{2})(\d)/g, '($1) $2');
-        if (v.length > 7) v = v.replace(/(\d{5})(\d)/, '$1-$2');
-        return v;
-    }
-
-    if (pais === 'US') {
-        if (v.startsWith('1') && v.length > 10) v = v.slice(1);
-        v = v.slice(0, 10);
-        if (v.length > 3) v = v.replace(/^(\d{3})(\d)/, '($1) $2');
-        if (v.length > 6) v = v.replace(/^(\(\d{3}\)\s\d{3})(\d)/, '$1-$2');
-        return v;
-    }
-
-    if (pais === 'AR') {
-        if (v.startsWith('54')) v = v.slice(2);
-        v = v.slice(0, 11);
-        if (v.length > 1) v = v.replace(/^(\d{1})(\d)/, '$1 $2');
-        if (v.length > 3) v = v.replace(/^(\d{1})\s(\d{2})(\d)/, '$1 $2 $3');
-        if (v.length > 7) v = v.replace(/^(\d{1})\s(\d{2})\s(\d{4})(\d)/, '$1 $2 $3-$4');
-        return v;
-    }
-
-    return v;
-};
-
-const getPhonePlaceholder = (pais = PAIS_DEFAULT) => {
-    if (pais === 'US') return "(000) 000-0000";
-    if (pais === 'AR') return "9 11 0000-0000";
-    return "(00) 00000-0000";
-};
+import { CelulaContato } from "../ui/CelulaContato";
+import { CelulaAcesso } from "../ui/CelulaAcesso";
+import { ColunaOrdenavel, CLASSE_TITULO } from "../ui/ColunaOrdenavel";
+import { MenuDeAcoes } from "../ui/MenuDeAcoes";
+import { Selo } from "../ui/Selo";
+import { useOrdenacao } from "../ui/useOrdenacao";
+import { useUltimosAcessos } from "../ui/useUltimosAcessos";
+import { FlagIcon } from "../ui/Bandeira";
+import { PAIS_CONFIG, PAISES, DDI_MAP, PAIS_PADRAO as PAIS_DEFAULT, formatarTelefone, exemploDeTelefone as getPhonePlaceholder } from "../ui/telefone";
+import { paraData } from "../../../utils/ultimoAcesso";
 
 export function ProfessoresTab() {
   const { userData } = useAuth();
@@ -168,7 +79,6 @@ export function ProfessoresTab() {
   // UX: Paginação e Ordenação
   const [itensVisiveis, setItensVisiveis] = useState(20);
   const [mostrarBuscaDoc, setMostrarBuscaDoc] = useState(false); // busca por CPF/DNI/SSN (admin e mentor; o banco limita o mentor às unidades dele)
-  const [ordenacao, setOrdenacao] = useState({ campo: 'nome', direcao: 'asc' });
 
   // Modais
   const [novoVinculo, setNovoVinculo] = useState(null); // { profInicial } = janela "Adicionar professor" (pelo documento)
@@ -288,22 +198,24 @@ export function ProfessoresTab() {
   // ==========================================
   // 3. PROCESSADOR VISUAL (BUSCA, PAÍS E ORDENAÇÃO)
   // ==========================================
-  const professoresProcessados = useMemo(() => {
-    return [...filtro.resultado].sort((a, b) => {
-        let valA, valB;
-        if (ordenacao.campo === 'unidades') {
-            valA = vinculos.filter(v => v.professorId === a.id).length;
-            valB = vinculos.filter(v => v.professorId === b.id).length;
-        } else {
-            valA = (a[ordenacao.campo] || "").toString().toLowerCase();
-            valB = (b[ordenacao.campo] || "").toString().toLowerCase();
-        }
-
-        if (valA < valB) return ordenacao.direcao === 'asc' ? -1 : 1;
-        if (valA > valB) return ordenacao.direcao === 'asc' ? 1 : -1;
-        return 0;
-    });
-  }, [filtro.resultado, vinculos, ordenacao]);
+  // Todas as colunas ordenam (A→Z / Z→A). Abre por nome, de A a Z.
+  // Acesso: só quem tem login; nunca entrou / sem login = 0 → primeiro no A→Z.
+  const uidsDeAcesso = useMemo(() => meusProfessores.map(p => p.uidLogin), [meusProfessores]);
+  const { acessoDe, carregando: carregandoAcessos } = useUltimosAcessos(uidsDeAcesso);
+  const qtdVinculos = useMemo(() => {
+      const mapa = {};
+      vinculos.forEach(v => { mapa[v.professorId] = (mapa[v.professorId] || 0) + 1; });
+      return mapa;
+  }, [vinculos]);
+  const colunas = useMemo(() => ({
+      status: (p) => p.status || "",
+      nome: (p) => p.nome || "",
+      contato: (p) => p.email || "",
+      unidades: (p) => qtdVinculos[p.id] || 0,
+      acesso: (p) => paraData(acessoDe(p.uidLogin))?.getTime() || 0,
+  }), [qtdVinculos, acessoDe]);
+  const ordem = useOrdenacao(filtro.resultado, colunas, { inicial: { campo: "nome", direcao: "asc" } });
+  const professoresProcessados = ordem.ordenada;
 
   const professoresVisiveis = useMemo(() => {
       return professoresProcessados.slice(0, itensVisiveis);
@@ -312,18 +224,6 @@ export function ProfessoresTab() {
   const handleCarregarMais = (qtd) => {
       if (qtd === 'todos') setItensVisiveis(professoresProcessados.length);
       else setItensVisiveis(prev => prev + qtd);
-  };
-
-  const handleOrdenar = (campo) => {
-      setOrdenacao(prev => ({
-          campo,
-          direcao: prev.campo === campo && prev.direcao === 'asc' ? 'desc' : 'asc'
-      }));
-  };
-
-  const SortIcon = ({ campo }) => {
-      if (ordenacao.campo !== campo) return <div className="w-4 h-4 opacity-20"><ChevronDown className="w-3 h-3"/></div>;
-      return ordenacao.direcao === 'asc' ? <ChevronUp className="w-3 h-3 text-green-500"/> : <ChevronDown className="w-3 h-3 text-green-500"/>;
   };
 
   const kpis = useMemo(() => {
@@ -655,127 +555,120 @@ export function ProfessoresTab() {
         {loading && <div className="absolute inset-0 bg-white/80 dark:bg-slate-900/80 z-10 flex items-center justify-center backdrop-blur-sm"><Loader2 className="w-8 h-8 animate-spin text-green-600"/></div>}
         
         <div className="overflow-x-auto">
-            <table className="w-full text-left">
-                <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
+            <table className="w-full min-w-[1000px] text-left">
+                <thead className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
                     <tr>
-                        <th className="p-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors w-24 select-none" onClick={() => handleOrdenar('status')}>
-                            <div className="flex items-center gap-2">{t('teachersTab.table.status', 'Status')} <SortIcon campo="status" /></div>
-                        </th>
-                        <th className="p-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors select-none" onClick={() => handleOrdenar('nome')}>
-                            <div className="flex items-center gap-2">{t('teachersTab.table.teacher', 'Professor')} <SortIcon campo="nome" /></div>
-                        </th>
-                        <th className="p-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors select-none" onClick={() => handleOrdenar('email')}>
-                            <div className="flex items-center gap-2">{t('teachersTab.table.contact', 'Contato')} <SortIcon campo="email" /></div>
-                        </th>
-                        <th className="p-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors select-none" onClick={() => handleOrdenar('unidades')}>
-                            <div className="flex items-center gap-2">{t('teachersTab.table.units', 'Unidades Vinculadas')} <SortIcon campo="unidades" /></div>
-                        </th>
-                        <th className="p-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-right">{t('teachersTab.table.actions', 'Ações')}</th>
+                        <ColunaOrdenavel campo="status" rotulo={t('teachersTab.table.status', 'Status')} ordenacao={ordem} cor="green" className="w-28" />
+                        <ColunaOrdenavel campo="nome" rotulo={t('teachersTab.table.teacher', 'Professor')} ordenacao={ordem} cor="green" />
+                        <ColunaOrdenavel campo="contato" rotulo={t('teachersTab.table.contact', 'Contato')} ordenacao={ordem} cor="green" className="w-[24%]" />
+                        <ColunaOrdenavel campo="unidades" rotulo={t('teachersTab.table.units', 'Unidades Vinculadas')} ordenacao={ordem} cor="green" className="w-[22%]" />
+                        <ColunaOrdenavel campo="acesso" rotulo={t('tabela.access.column')} ordenacao={ordem} cor="green" className="w-36" />
+                        <th className={`${CLASSE_TITULO} text-right w-32`}>{t('teachersTab.table.actions', 'Ações')}</th>
                     </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50 text-sm">
                     {professoresVisiveis.map(p => {
                         const units = getUnidadesVinculadas(p.id);
-                        
-                        // LÓGICA DE AUDITORIA DE TELEFONE (Acha os errados para envio de WaSeller)
+                        // Telefone com menos de 10 dígitos = errado (aparece em vermelho para ser corrigido).
                         const isTelefoneValido = p.telefone && p.telefone.replace(/\D/g, '').length >= 10;
-                        const paisAtual = p.pais || PAIS_DEFAULT; // 🟢 Fallback: Brasil se o professor não tiver país definido
-                        const paisDDI = DDI_MAP[paisAtual];
-                        
+                        const paisAtual = p.pais || PAIS_DEFAULT; // sem país definido = Brasil
+                        const ativo = p.status === 'ativo';
+                        const qtdWorkshops = Array.isArray(p.workshops) ? p.workshops.length : 0;
+
                         return (
-                            <tr key={p.id} className={`transition-colors group ${p.status === 'inativo' ? 'bg-slate-50 dark:bg-slate-900/30 opacity-75 grayscale-[0.5]' : 'hover:bg-slate-50 dark:hover:bg-slate-700/30'}`}>
-                                <td className="p-4">
-                                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wide border ${p.status === 'ativo' ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800' : 'bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'}`}>
-                                        {p.status === 'ativo' ? <CheckCircle2 className="w-3 h-3"/> : <Ban className="w-3 h-3"/>} {p.status === 'ativo' ? t('teachersTab.table.active', 'ATIVO') : t('teachersTab.table.inactive', 'INATIVO')}
+                            <tr key={p.id} className={`align-top transition-colors ${ativo ? 'hover:bg-slate-50/70 dark:hover:bg-slate-700/30' : 'bg-slate-50 dark:bg-slate-900/30 opacity-75 grayscale-[0.5]'}`}>
+                                {/* STATUS */}
+                                <td className="px-4 py-4">
+                                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wide border ${ativo ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800' : 'bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'}`}>
+                                        {ativo ? <CheckCircle2 className="w-3 h-3"/> : <Ban className="w-3 h-3"/>} {ativo ? t('teachersTab.table.active', 'ATIVO') : t('teachersTab.table.inactive', 'INATIVO')}
                                     </span>
                                 </td>
-                                <td className="p-4 font-black text-slate-800 dark:text-white text-base">
-                                    <LinkCentral tipo="professor" alvo={p}>{p.nome}</LinkCentral>
-                                    <SeloRepetido
-                                        selo={selosRepetidos.get(`professor:${p.id}`)}
-                                        detalheDe={(o) => getUnidadesVinculadas(o.id).map(u => u.nome).join(', ') || o.email || ''}
-                                        onJuntar={role === 'admin' ? () => {
-                                            const s = selosRepetidos.get(`professor:${p.id}`);
-                                            const ids = new Set([String(p.id), ...(s?.mesma || []).map(o => String(o.id))]);
-                                            setJuntandoFichas(meusProfessores.filter(x => ids.has(String(x.id))).map(x => ({ ...x, id: String(x.id) })));
-                                        } : undefined}
-                                    />
-                                    {p.documentoOk && (
-                                        <span className="ml-2 inline-flex items-center gap-1 align-middle text-[9px] font-black px-1.5 py-0.5 rounded border border-green-200 bg-green-50 text-green-700 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400" title={t('teachersTab.cpf.hasDocument')}>
-                                            <IdCard className="w-3 h-3" /> {t('teachersTab.cpf.badge')}
-                                        </span>
+
+                                {/* PROFESSOR: nome + etiquetas (documento, workshops) */}
+                                <td className="px-4 py-4">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                        <LinkCentral tipo="professor" alvo={p} className="font-black text-slate-800 dark:text-white uppercase">{p.nome}</LinkCentral>
+                                        <SeloRepetido
+                                            selo={selosRepetidos.get(`professor:${p.id}`)}
+                                            detalheDe={(o) => getUnidadesVinculadas(o.id).map(u => u.nome).join(', ') || o.email || ''}
+                                            onJuntar={role === 'admin' ? () => {
+                                                const s = selosRepetidos.get(`professor:${p.id}`);
+                                                const ids = new Set([String(p.id), ...(s?.mesma || []).map(o => String(o.id))]);
+                                                setJuntandoFichas(meusProfessores.filter(x => ids.has(String(x.id))).map(x => ({ ...x, id: String(x.id) })));
+                                            } : undefined}
+                                        />
+                                    </div>
+                                    {(p.documentoOk || qtdWorkshops > 0) && (
+                                        <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
+                                            {p.documentoOk && <Selo tipo="tema" abaId="professores" icone={IdCard} title={t('teachersTab.cpf.hasDocument')}>{t('teachersTab.cpf.badge')}</Selo>}
+                                            {qtdWorkshops > 0 && (
+                                                <button type="button" onClick={() => setProfWorkshops(p)} title={t('teachersTab.workshopsBadgeTip')}>
+                                                    <Selo tipo="aviso" icone={Award}>{t('teachersTab.workshopsBadge', { count: qtdWorkshops })}</Selo>
+                                                </button>
+                                            )}
+                                        </div>
                                     )}
-                                    {(() => {
-                                        const qtd = Array.isArray(p.workshops) ? p.workshops.length : 0;
-                                        return (
-                                            <button type="button" onClick={() => setProfWorkshops(p)} title={t('teachersTab.workshopsBadgeTip')}
-                                                className={`ml-2 inline-flex items-center gap-1 align-middle text-[9px] font-black px-1.5 py-0.5 rounded border transition-colors ${qtd > 0 ? 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-900/20 dark:border-amber-800 dark:text-amber-400' : 'border-slate-200 bg-slate-50 text-slate-400 hover:bg-slate-100 dark:bg-slate-800 dark:border-slate-700'}`}>
-                                                <Award className="w-3 h-3" /> {t('teachersTab.workshopsBadge', { count: qtd })}
-                                            </button>
-                                        );
-                                    })()}
                                 </td>
-                                <td className="p-4">
-                                    <div className="flex flex-col gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400">
-                                        <span className="flex items-center gap-1"><Mail className="w-3.5 h-3.5 text-blue-500"/> {p.email}</span>
-                                        
-                                        {/* 🟢 A ETIQUETA VISUAL DO TELEFONE COM BANDEIRA + PAÍS + DDI */}
-                                        {isTelefoneValido ? (
-                                            <span className="flex items-center gap-1 text-slate-600 dark:text-slate-300">
-                                                <Phone className="w-3.5 h-3.5 text-green-500"/> 
-                                                <span className={`inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded border ${PAIS_CONFIG[paisAtual]?.badgeClass}`}>
-                                                    <FlagIcon pais={paisAtual} /> {paisAtual}
-                                                </span>
-                                                {paisDDI} {p.telefone}
-                                                <AcoesDoContato telefone={p.telefone} pais={paisAtual} />
-                                            </span>
-                                        ) : (
-                                            <span className="flex items-center gap-1 text-red-600 dark:text-red-400 font-bold bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 px-2 py-0.5 rounded-md w-fit" title={t('teachersTab.extra.phoneInvalidHint')}>
+
+                                {/* CONTATO: e-mail + telefone (número errado aparece em vermelho) */}
+                                <td className="px-4 py-4">
+                                    <CelulaContato email={p.email} telefone={isTelefoneValido ? p.telefone : ''} pais={paisAtual}
+                                        semTelefone={
+                                            <span className="inline-flex items-center gap-1 text-xs text-red-600 dark:text-red-400 font-bold bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 px-2 py-0.5 rounded-md whitespace-nowrap" title={t('teachersTab.extra.phoneInvalidHint')}>
                                                 <AlertTriangle className="w-3.5 h-3.5"/> {p.telefone || t('teachersTab.table.notInformed', 'Sem Telefone')}
                                             </span>
-                                        )}
-                                    </div>
+                                        } />
                                 </td>
-                                <td className="p-4">
-                                    <div className="flex flex-wrap gap-2 items-center">
+
+                                {/* UNIDADES VINCULADAS */}
+                                <td className="px-4 py-4">
+                                    <div className="flex flex-wrap gap-1.5 items-center">
                                         {units.length > 0 ? units.map(u => (
-                                            <span key={u.vinculoId} className="pl-3 pr-1 py-1.5 border border-slate-200 dark:border-slate-600 rounded-lg text-xs font-bold flex items-center gap-2 bg-slate-50 dark:bg-slate-800/50 text-slate-700 dark:text-slate-300">
-                                                <MapPin className="w-3 h-3 text-red-500"/> {u.nome}
+                                            <span key={u.vinculoId} className="pl-2 pr-1 py-1 border border-slate-200 dark:border-slate-600 rounded-md text-[11px] font-bold uppercase flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800/50 text-slate-700 dark:text-slate-300">
+                                                <MapPin className="w-3 h-3 text-red-500 shrink-0"/> {u.nome}
                                                 {u.podeMexer && (
-                                                    <button type="button" onClick={() => removerVinculo(u.vinculoId, u.nome, p.nome)} className="p-1 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-md text-slate-400 hover:text-red-600 transition-colors" title={t('teachersTab.messages.removeLinkConfirm', 'Remover Desta Unidade')}>
+                                                    <button type="button" onClick={() => removerVinculo(u.vinculoId, u.nome, p.nome)} className="p-0.5 hover:bg-red-100 dark:hover:bg-red-900/40 rounded text-slate-400 hover:text-red-600 transition-colors" title={t('teachersTab.messages.removeLinkConfirm', 'Remover Desta Unidade')}>
                                                         <X className="w-3 h-3" />
                                                     </button>
                                                 )}
                                             </span>
                                         )) : <span className="text-slate-400 text-xs italic font-medium">{t('teachersTab.table.noLinks', 'Nenhum vínculo.')}</span>}
-                                        
+
                                         {podeEditar && (
-                                            <button type="button" onClick={() => setNovoVinculo({ profInicial: p })} className="p-2 bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors" title={t('teachersTab.extra.linkOtherUnit')}>
+                                            <button type="button" onClick={() => setNovoVinculo({ profInicial: p })} className="p-1 rounded-md text-slate-400 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors" title={t('teachersTab.extra.linkOtherUnit')}>
                                                 <PlusCircle className="w-4 h-4"/>
                                             </button>
                                         )}
                                     </div>
                                 </td>
-                                <td className="p-4 text-right">
-                                    <div className="flex gap-2 justify-end opacity-40 group-hover:opacity-100 transition-opacity">
+
+                                {/* ACESSO: só quem já tem login no sistema */}
+                                <td className="px-4 py-4">
+                                    {p.uidLogin
+                                        ? <CelulaAcesso quando={acessoDe(p.uidLogin)} carregando={carregandoAcessos} />
+                                        : <span className="text-[11px] font-bold text-slate-400 whitespace-nowrap">{t('tabela.access.noLogin')}</span>}
+                                </td>
+
+                                {/* AÇÕES: Editar à vista; o resto no menu ⋯ (excluir sempre por último, em vermelho) */}
+                                <td className="px-4 py-4">
+                                    <div className="flex gap-1.5 justify-end items-center">
                                         {podeEditar && (
-                                            <>
-                                                <BotaoDeLinha abaId="professores" tipo="perigo" icone={Award} onClick={() => setProfWorkshops(p)} title={t('certificates.manager.button')} />
-                                                <BotaoDeLinha abaId="professores" tipo={!isTelefoneValido ? "perigo" : "editar"} className={!isTelefoneValido ? "animate-pulse" : ""} icone={Edit2} onClick={() => abrirEdicao(p)} title={t('teachersTab.extra.editData')} />
-                                                <BotaoDeLinha abaId="professores" tipo={p.status === "ativo" ? "desativar" : "ativar"} icone={p.status === "ativo" ? Ban : CheckCircle2} onClick={() => alternarStatusProf(p)}
-                                                    title={p.status === "ativo" ? t('teachersTab.extra.deactivateProfile') : t('teachersTab.extra.activateProfile')} />
-                                            </>
+                                            <BotaoDeLinha abaId="professores" discreto={isTelefoneValido} tipo={isTelefoneValido ? "editar" : "perigo"} icone={Edit2} onClick={() => abrirEdicao(p)}
+                                                title={isTelefoneValido ? t('teachersTab.extra.editData') : t('teachersTab.extra.phoneInvalidHint')} />
                                         )}
-                                        {podeExcluir && (
-                                            <BotaoDeLinha abaId="professores" tipo="perigo" icone={Trash2} onClick={() => excluirProfessorTotal(p)} title={t('teachersTab.extra.deleteNetwork')} />
-                                        )}
+                                        <MenuDeAcoes itens={[
+                                            { id: 'workshops', rotulo: t('certificates.manager.button'), icone: Award, onClick: () => setProfWorkshops(p), oculto: !podeEditar },
+                                            { id: 'vincular', rotulo: t('teachersTab.extra.linkOtherUnit'), icone: PlusCircle, onClick: () => setNovoVinculo({ profInicial: p }), oculto: !podeEditar },
+                                            { id: 'status', rotulo: ativo ? t('teachersTab.extra.deactivateProfile') : t('teachersTab.extra.activateProfile'), icone: ativo ? Ban : CheckCircle2, onClick: () => alternarStatusProf(p), oculto: !podeEditar },
+                                            { id: 'excluir', rotulo: t('teachersTab.extra.deleteNetwork'), icone: Trash2, tipo: 'perigo', onClick: () => excluirProfessorTotal(p), oculto: !podeExcluir },
+                                        ]} />
                                     </div>
                                 </td>
                             </tr>
                         )
                     })}
                     {professoresProcessados.length === 0 && !loading && (
-                        <tr><td colSpan="5" className="p-12 text-center text-slate-400 font-bold"><User className="w-12 h-12 mx-auto mb-3 opacity-20"/> {t('teachersTab.emptyState', 'Nenhum professor encontrado.')}</td></tr>
+                        <tr><td colSpan="6" className="p-12 text-center text-slate-400 font-bold"><User className="w-12 h-12 mx-auto mb-3 opacity-20"/> {t('teachersTab.emptyState', 'Nenhum professor encontrado.')}</td></tr>
                     )}
                 </tbody>
             </table>
