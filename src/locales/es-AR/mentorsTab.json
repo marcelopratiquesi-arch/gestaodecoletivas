@@ -150,6 +150,7 @@
     "remove": "Quitar de 2º mentor",
     "removeConfirm": "¿Quitar a {{name}} de 2º mentor de {{mentor}}?\n\nSi era líder o profesor, vuelve a serlo.",
     "promoteConfirm": "{{name}} pasa a ser el 1º mentor y recibe {{count}} unidad(es) de {{mentor}}.\n{{mentor}} queda sin unidades (puede recibir otras después).\n\n¿Confirmar?",
-    "leavesConfirm": "{{mentor}} tiene un 2º mentor ({{name}}).\n\nAl salir, {{name}} asume todas las unidades. ¿Confirmar?"
+    "leavesConfirm": "{{mentor}} tiene un 2º mentor ({{name}}).\n\nAl salir, {{name}} asume todas las unidades. ¿Confirmar?",
+    "accessOf": "Acceso de {{name}}"
   }
 }

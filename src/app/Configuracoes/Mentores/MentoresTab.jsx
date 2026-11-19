@@ -240,7 +240,7 @@ export function MentoresTab() {
   const filtro = useFiltroCascata(mentores, {
       getPais: (m) => m.pais || PAIS_DEFAULT,
       getEstados: (m) => estadosDoMentor[m.mentorPrincipalId || m.id] || [],
-      textoBusca: (m) => [m.nome, m.email, m.telefone],
+      textoBusca: (m) => [m.nome, m.email, m.telefone, principalDe(mentores, m)?.nome, segundoDe(mentores, m.id)?.nome], // o 2º mentor aparece junto do 1º na busca
       extra: soDoStatus,
   });
 
@@ -484,6 +484,19 @@ export function MentoresTab() {
     }
   }
 
+  // Data e hora do último acesso (sempre visíveis) + "há X dias" colorido.
+  const blocoDeAcesso = (pessoa) => {
+    const ac = resumoDoAcesso(pessoa.ultimoAcesso, i18n.language);
+    if (!ac) return <span className="text-slate-400 font-medium normal-case">{t('mentorsTab.table.neverSeen', 'Sem registro')}</span>;
+    const cor = ac.cor === 'emerald' ? 'text-emerald-600 dark:text-emerald-400' : ac.cor === 'amber' ? 'text-amber-600 dark:text-amber-400' : 'text-red-600 dark:text-red-400';
+    return (
+      <div title={ac.dataHora}>
+        <div className="font-bold text-slate-700 dark:text-slate-200 normal-case">{ac.dia} · {ac.hora}</div>
+        <div className={`text-[11px] font-bold normal-case ${cor}`}>{ac.relativo}</div>
+      </div>
+    );
+  };
+
   // Barreira de Segurança Final
   if (!podeAcessar) return <div className="p-8 text-center text-slate-500 font-bold">{t('mentorsTab.restricted', 'Acesso Restrito: Apenas Administradores.')}</div>;
 
@@ -671,17 +684,13 @@ export function MentoresTab() {
 
                     {/* ACESSO: data e hora do último acesso (sempre visíveis) + "há X dias" colorido */}
                     <td className="p-4 text-xs whitespace-nowrap">
-                      {(() => {
-                        const ac = resumoDoAcesso(m.ultimoAcesso, i18n.language);
-                        if (!ac) return <span className="text-slate-400 font-medium normal-case">{t('mentorsTab.table.neverSeen', 'Sem registro')}</span>;
-                        const cor = ac.cor === 'emerald' ? 'text-emerald-600 dark:text-emerald-400' : ac.cor === 'amber' ? 'text-amber-600 dark:text-amber-400' : 'text-red-600 dark:text-red-400';
-                        return (
-                          <div title={ac.dataHora}>
-                            <div className="font-bold text-slate-700 dark:text-slate-200 normal-case">{ac.dia} · {ac.hora}</div>
-                            <div className={`text-[11px] font-bold normal-case ${cor}`}>{ac.relativo}</div>
-                          </div>
-                        );
-                      })()}
+                      {blocoDeAcesso(m)}
+                      {!m.mentorPrincipalId && segundoDe(mentores, m.id) && (
+                        <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-700">
+                          <div className="text-[10px] font-black text-violet-600 dark:text-violet-300 normal-case">{t('mentorsTab.second.accessOf', { name: segundoDe(mentores, m.id).nome })}</div>
+                          {blocoDeAcesso(segundoDe(mentores, m.id))}
+                        </div>
+                      )}
                     </td>
 
                     {/* AÇÕES */}
