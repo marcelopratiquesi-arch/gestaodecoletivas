@@ -2,7 +2,7 @@ import { useState, useMemo, Suspense, lazy } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { 
   Building2, Users, Dumbbell, CalendarDays, 
-  ShieldCheck, Database, LayoutDashboard, Loader2, Headphones, UserCheck
+  ShieldCheck, Database, LayoutDashboard, Loader2, Headphones, UserCheck, ShoppingBag
 } from "lucide-react";
 import { usePedidosPendentes } from "./Pendencias/usePedidosPendentes";
 import { useCatalogs } from "../../contexts/CatalogContext";
@@ -18,6 +18,8 @@ const ModalidadesTab = lazy(() => import('./Modalidades/ModalidadesTab').then(mo
 const ProfessoresTab = lazy(() => import('./Professores/ProfessoresTab').then(module => ({ default: module.ProfessoresTab })));
 const FeriadosTab = lazy(() => import('./Feriados/FeriadosTab').then(module => ({ default: module.FeriadosTab })));
 const BackupTab = lazy(() => import('./Backup/BackupTab'));
+// Loja & Eventos / Workshops (antes ficava no Cofre do menu lateral; agora é uma aba de Configurações, só do admin).
+const WorkshopsTab = lazy(() => import('../Workshops'));
 const LideresTab = lazy(() => import('./Lideres/LideresTab').then(module => ({ default: module.LideresTab })));
 
 // 🟢 NOVA ABA: PRATIQUE PLAY
@@ -48,7 +50,7 @@ export default function ConfiguracoesPage() {
 
   // 🟢 Abas agora reagem ao idioma em tempo real
   const tabs = useMemo(() => [
-    // Ordem: Mentores, Líderes, Professores, Unidades, Modalidades, Feriados, Pratique Play, Backup.
+    // Ordem: Mentores, Líderes, Professores, Unidades, Modalidades, Feriados, Workshops, Pratique Play, Backup.
     // Os pedidos de acesso pelo Google ficam dentro da aba Líderes (o número vermelho mostra quantos aguardam).
     { id: "mentores", label: t('settingsPage.tabs.mentores', 'Mentores'), icon: ShieldCheck, roles: ["admin"] },
     { id: "lideres", label: t('settingsPage.tabs.lideres'), icon: UserCheck, roles: ["admin", "mentor"], contador: totalPendencias + lideresAConferir },
@@ -56,6 +58,7 @@ export default function ConfiguracoesPage() {
     { id: "unidades", label: t('settingsPage.tabs.unidades', 'Unidades'), icon: Building2, roles: ["admin", "mentor"] },
     { id: "modalidades", label: t('settingsPage.tabs.modalidades', 'Modalidades'), icon: Dumbbell, roles: ["admin", "mentor"] },
     { id: "feriados", label: t('settingsPage.tabs.feriados', 'Feriados'), icon: CalendarDays, roles: ["admin", "mentor"] },
+    { id: "workshops", label: t('settingsPage.tabs.workshops', 'Workshops'), icon: ShoppingBag, roles: ["admin"] },
     { id: "pratique-play", label: t('settingsPage.tabs.pratiquePlay', 'Pratique Play'), icon: Headphones, roles: ["admin"] },
     { id: "backup", label: t('settingsPage.tabs.backup', 'Backup'), icon: Database, roles: ["admin"] },
   ], [t, totalPendencias, lideresAConferir]);
@@ -157,6 +160,7 @@ export default function ConfiguracoesPage() {
                 {activeTab === "modalidades" && allowedTabs.some(t => t.id === 'modalidades') && <ModalidadesTab />}
                 {activeTab === "professores" && allowedTabs.some(t => t.id === 'professores') && <ProfessoresTab />}
                 {activeTab === "feriados" && allowedTabs.some(t => t.id === 'feriados') && <FeriadosTab />}
+                {activeTab === "workshops" && allowedTabs.some(t => t.id === 'workshops') && <WorkshopsTab />}
                 {activeTab === "pratique-play" && allowedTabs.some(t => t.id === 'pratique-play') && <PratiquePlayTab />}
                 {activeTab === "backup" && allowedTabs.some(t => t.id === 'backup') && <BackupTab />}
             </div>
