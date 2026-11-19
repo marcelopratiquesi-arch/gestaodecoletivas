@@ -9,6 +9,8 @@ import { useLocation, useSearchParams } from 'react-router-dom';
 import { deduplicarValidacoes } from '../../utils/validacoes';
 import { feriadoNoDia, normalizarPais } from '../../utils/feriados';
 import { valorDaValidacao } from '../../utils/valores';
+import AbaValores from './AbaValores';
+import { podeVerTabelaPrecos } from '../../utils/tabelaPrecos';
 import { DIAS_SEMANA as diasSemanaMap, getDiaSemana, formatCurrency, formatDate, formatWeekday, formatCancelReason } from '../../utils/formatters';
 
 import {
@@ -1001,9 +1003,20 @@ export default function RelatorioPage() {
                       >
                           <AlignJustify className="w-4 h-4"/> {t('reports.table.detailed', 'Detalhado')}
                       </button>
+                      {podeVerTabelaPrecos(role) && (
+                          <button
+                              onClick={() => { setViewMode('valores'); setExpandedRowId(null); }}
+                              className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-xs font-bold uppercase transition-all ${viewMode === 'valores' ? 'bg-slate-100 dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-700'}`}
+                          >
+                              <DollarSign className="w-4 h-4"/> {t('reports.values.tab')}
+                          </button>
+                      )}
                   </div>
               </div>
 
+              {viewMode === 'valores' && podeVerTabelaPrecos(role) ? (
+                <AbaValores linhas={processamentoBase} mapas={mapas} validacoes={validacoesRealtime} periodo={period} hojeISO={getTodayStr()} />
+              ) : (<>
               {/* 🟢 TABELA DE DADOS COM CORES CONDICIONAIS */}
               <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
                 <div className="overflow-x-auto">
@@ -1212,6 +1225,7 @@ export default function RelatorioPage() {
                       </button>
                   </div>
               )}
+              </>)}
           </div>
         </>
       )}
