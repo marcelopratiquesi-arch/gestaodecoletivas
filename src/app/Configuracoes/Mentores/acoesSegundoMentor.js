@@ -1,12 +1,23 @@
 // Gravações do 2º mentor (só o admin chama; o banco já deixa o admin gravar crachás e unidades).
-import { doc, serverTimestamp, setDoc, updateDoc, writeBatch } from "firebase/firestore";
+import { doc, serverTimestamp, setDoc, Timestamp, updateDoc, writeBatch } from "firebase/firestore";
 import { db } from "../../../services/firebase";
 import { publicarUnidade } from "../../../services/vitrinePublica";
-import { camposAoEntrar, camposAoPromover, camposAoSair } from "./segundoMentor";
+import { camposAoEntrar, camposAoPromover, camposAoSair, camposDaCobertura, camposSemCobertura } from "./segundoMentor";
 
 // Pessoa que já tem login: vira 2º mentor (líder continua líder; o papel de antes fica guardado).
 export async function entrarComoSegundo({ cracha, uid, principalId }) {
   await updateDoc(doc(db, "usuarios", uid), { ...camposAoEntrar(cracha, principalId), atualizadoEm: serverTimestamp() });
+}
+
+// COBERTURA (mentor temporário): acesso extra às unidades do mentor até "fim". Só o admin (o banco confere).
+export function darCobertura({ uid, principalId, fim }) {
+  return updateDoc(doc(db, "usuarios", uid), { ...camposDaCobertura(principalId, fim), atualizadoEm: serverTimestamp() });
+}
+export function prorrogarCobertura(uid, fim) {
+  return updateDoc(doc(db, "usuarios", uid), { coberturaAte: Timestamp.fromDate(fim), atualizadoEm: serverTimestamp() });
+}
+export function encerrarCobertura(uid) {
+  return updateDoc(doc(db, "usuarios", uid), { ...camposSemCobertura(), atualizadoEm: serverTimestamp() });
 }
 
 // Pessoa nova: convite pelo e-mail do Google, já marcado como 2º mentor do principal (o crachá nasce no 1º acesso).

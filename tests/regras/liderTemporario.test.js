@@ -82,10 +82,10 @@ describe('convite de líder temporário', () => {
     await assertFails(setDoc(noConvite(como('mentor1')), convite({ unidadeId: 'uniB', unidadeIds: ['uniB'] })));
     await assertFails(setDoc(noConvite(como('mentor1')), convite({ unidadeIds: ['uniA', 'uniB'] })));
   });
-  it('prazo: não pode estar no passado nem passar de 61 dias', async () => {
+  it('prazo: não pode estar no passado; sem máximo prático (só o limite técnico de 10 anos)', async () => {
     await assertFails(setDoc(noConvite(como('mentor1')), convite({ temporarioAte: daqui(-1) })));
-    await assertFails(setDoc(noConvite(como('mentor1')), convite({ temporarioAte: daqui(90) })));
-    await assertSucceeds(setDoc(noConvite(como('mentor1')), convite({ temporarioAte: daqui(60) })));
+    await assertSucceeds(setDoc(noConvite(como('mentor1')), convite({ temporarioAte: daqui(365) })));
+    await assertFails(setDoc(noConvite(como('mentor1')), convite({ temporarioAte: daqui(4000) })));
   });
   it('o mentor cancela o convite dele, mas não o de outro mentor', async () => {
     await conviteNoBanco();
@@ -169,9 +169,10 @@ describe('mentor e admin cuidam do líder temporário', () => {
     await assertSucceeds(updateDoc(doc(como('mentor1'), 'usuarios/temp1'), { temporarioAte: daqui(30) }));
     await assertSucceeds(updateDoc(doc(como('mentor1'), 'usuarios/temp1'), { temporarioAte: Timestamp.now() }));
   });
-  it('não prorroga além de 61 dias nem mexe em outra coisa junto', async () => {
+  it('prorroga por quanto quiser (até 10 anos), mas não mexe em outra coisa junto', async () => {
     await temporarioNoBanco('temp1');
-    await assertFails(updateDoc(doc(como('mentor1'), 'usuarios/temp1'), { temporarioAte: daqui(100) }));
+    await assertSucceeds(updateDoc(doc(como('mentor1'), 'usuarios/temp1'), { temporarioAte: daqui(365) }));
+    await assertFails(updateDoc(doc(como('mentor1'), 'usuarios/temp1'), { temporarioAte: daqui(4000) }));
     await assertFails(updateDoc(doc(como('mentor1'), 'usuarios/temp1'), { temporarioAte: daqui(30), role: 'mentor' }));
     await assertFails(updateDoc(doc(como('mentor1'), 'usuarios/temp1'), { temporarioAte: daqui(30), unidadeIds: ['uniA', 'uniB'] }));
   });

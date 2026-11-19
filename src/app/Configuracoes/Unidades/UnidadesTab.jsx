@@ -1,4 +1,4 @@
-import { escopoMentor } from "../../../permissions.js";
+import { escopoMentor, escoposMentor } from "../../../permissions.js";
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useCatalogs } from "../../../contexts/CatalogContext";
@@ -351,7 +351,7 @@ export function UnidadesTab() {
     setLoading(true);
     
     const ref = collection(db, "unidades");
-    const qUnidades = role === "admin" ? ref : query(ref, where("mentorId", "==", escopoId));
+    const qUnidades = role === "admin" ? ref : query(ref, where("mentorId", "in", escoposMentor(userData)));
     
     const unsubUnidades = onSnapshot(qUnidades, (snap) => {
         setUnidadesBase(snap.docs.map(d => ({ id: d.id, ...d.data() })));
@@ -366,7 +366,7 @@ export function UnidadesTab() {
         });
     }
     return () => { unsubUnidades(); unsubMentores(); };
-  }, [role, userId, podeAcessar, escopoId]);
+  }, [role, userId, podeAcessar, userData]);
 
   // Filtro padrão (busca + país → estado → mentor → líder), no navegador sobre as unidades já carregadas.
   // Unidades antigas podem ter o país escrito por extenso ("Brasil"); aqui tudo vira a sigla (BR/AR/US).

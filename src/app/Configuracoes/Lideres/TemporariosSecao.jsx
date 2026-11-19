@@ -12,7 +12,7 @@ import {
   MAX_UNIDADES_TEMPORARIO, cancelarConvite, convidarTemporario, efetivar, encerrar,
   lerConvitesPendentes, lerTemporarios, prorrogar, unidadesQueEuPosso, validarConvite,
 } from "./liderTemporario";
-import { ATALHOS_DIAS, DIAS_MAXIMOS, diaDoFim, diasRestantes, fimDoDia, fimDoTemporario, fimPorDias, hojeBrasilia, nivelDoAviso, somarDias } from "../../../utils/temporario";
+import { ATALHOS_DIAS, DIAS_LIMITE_TECNICO, diaDoFim, diasRestantes, fimDoDia, fimDoTemporario, fimPorDias, hojeBrasilia, nivelDoAviso, somarDias } from "../../../utils/temporario";
 
 const COR_NIVEL = {
   vencido: "bg-red-50 text-red-700 border-red-300 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800",
@@ -32,7 +32,7 @@ export function SeloDoPrazo({ fim, className = "" }) {
   return <span className={`inline-block px-2 py-0.5 rounded-md border text-[10px] font-black uppercase ${COR_NIVEL[nivel]} ${className}`}>{texto}</span>;
 }
 
-export function TemporariosSecao({ role, escopoId, unidades, quem, pedirAtualizar, registrarAuditoria }) {
+export function TemporariosSecao({ role, escopos, unidades, quem, pedirAtualizar, registrarAuditoria }) {
   const { t, i18n } = useTranslation();
   const [temporarios, setTemporarios] = useState([]);
   const [convites, setConvites] = useState([]);
@@ -48,14 +48,14 @@ export function TemporariosSecao({ role, escopoId, unidades, quem, pedirAtualiza
   const carregar = useCallback(async () => {
     setCarregando(true); setErro("");
     try {
-      const [tem, con] = await Promise.all([lerTemporarios({ role, escopoId, unidades }), lerConvitesPendentes({ role, escopoId })]);
+      const [tem, con] = await Promise.all([lerTemporarios({ role, escopos, unidades }), lerConvitesPendentes({ role, escopos })]);
       setTemporarios(tem.sort((a, b) => (fimDoTemporario(a)?.getTime() || 0) - (fimDoTemporario(b)?.getTime() || 0)));
       setConvites(con);
     } catch (e) {
       console.error(e);
       setErro(t("tempLeader.errors.load"));
     } finally { setCarregando(false); }
-  }, [role, escopoId, unidades, t]);
+  }, [role, escopos, unidades, t]);
 
   useEffect(() => { carregar(); }, [carregar]);
 
@@ -192,7 +192,7 @@ export function TemporariosSecao({ role, escopoId, unidades, quem, pedirAtualiza
       )}
 
       {convidando && (
-        <ConviteModal role={role} escopoId={escopoId} unidades={unidades} quem={quem}
+        <ConviteModal role={role} escopos={escopos} unidades={unidades} quem={quem}
           onFechar={() => setConvidando(false)}
           onCriado={async (dados) => {
             setConvidando(false);
@@ -212,21 +212,22 @@ export function TemporariosSecao({ role, escopoId, unidades, quem, pedirAtualiza
 }
 
 // ---------- Escolha do prazo: atalhos em dias (hoje é o dia 1) ou uma data ----------
-function SeletorDePrazo({ fim, onFim, desabilitado }) {
+const ROTULO_PRESET = { 90: "m3", 180: "m6", 365: "y1" };
+export function SeletorDePrazo({ fim, onFim, desabilitado, atalhos = ATALHOS_DIAS }) {
   const { t } = useTranslation();
   const hoje = hojeBrasilia();
-  const ultimoPermitido = somarDias(hoje, DIAS_MAXIMOS - 1);
+  const ultimoPermitido = somarDias(hoje, DIAS_LIMITE_TECNICO);
   const dataAtual = fim ? hojeBrasilia(fim.getTime()) : "";
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap gap-1.5">
-        {ATALHOS_DIAS.map((d) => {
+        {atalhos.map((d) => {
           const alvo = fimPorDias(d);
           const ativo = fim && alvo.getTime() === fim.getTime();
           return (
             <button key={d} type="button" disabled={desabilitado} onClick={() => onFim(alvo)}
               className={`px-3 py-2 rounded-lg text-xs font-black uppercase border transition-colors ${ativo ? "bg-teal-600 text-white border-teal-600" : "border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-teal-500"}`}>
-              {t("tempLeader.days", { count: d })}
+              {ROTULO_PRESET[d] && atalhos !== ATALHOS_DIAS ? t(`tempLeader.preset.${ROTULO_PRESET[d]}`) : t("tempLeader.days", { count: d })}
             </button>
           );
         })}
@@ -234,20 +235,20 @@ function SeletorDePrazo({ fim, onFim, desabilitado }) {
       <input type="date" value={dataAtual} min={hoje} max={ultimoPermitido} disabled={desabilitado}
         onChange={(e) => onFim(e.target.value ? fimDoDia(e.target.value) : null)}
         className="w-full p-3 rounded-xl bg-slate-100 dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-teal-500" />
-      <p className="text-[11px] text-slate-400">{t("tempLeader.deadlineHint", { max: DIAS_MAXIMOS })}</p>
+      <p className="text-[11px] text-slate-400">{t("tempLeader.deadlineHint")}</p>
     </div>
   );
 }
 
-function PrazoModal({ cracha, onFechar, onSalvar }) {
+export function PrazoModal({ cracha, onFechar, onSalvar, abaId = "lideres", atalhos = ATALHOS_DIAS }) {
   const { t } = useTranslation();
-  const [fim, setFim] = useState(fimPorDias(30));
+  const [fim, setFim] = useState(fimPorDias(atalhos === ATALHOS_DIAS ? 30 : 60));
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={onFechar}>
       <div onClick={(e) => e.stopPropagation()} className="w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-2xl overflow-hidden">
-        <CabecalhoDoModal abaId="lideres" icone={Timer} titulo={t("tempLeader.extendTitle", { name: cracha.nome })} onFechar={onFechar} />
+        <CabecalhoDoModal abaId={abaId} icone={Timer} titulo={t("tempLeader.extendTitle", { name: cracha.nome })} onFechar={onFechar} />
         <div className="p-5 space-y-4">
-          <SeletorDePrazo fim={fim} onFim={setFim} />
+          <SeletorDePrazo fim={fim} onFim={setFim} atalhos={atalhos} />
           <div className="flex justify-end gap-2">
             <button type="button" onClick={onFechar} className="px-4 py-2.5 rounded-xl text-xs font-black uppercase bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200">{t("tempLeader.cancel")}</button>
             <button type="button" disabled={!fim} onClick={() => { if (fim.getTime() > Date.now()) onSalvar(fim); }}
@@ -265,7 +266,7 @@ function PrazoModal({ cracha, onFechar, onSalvar }) {
 const NOME_PAIS = { Brasil: "BR", Argentina: "AR", "Estados Unidos": "US" };
 const paisDa = (u) => NOME_PAIS[u?.pais] || u?.pais || "BR";
 
-function ConviteModal({ role, escopoId, unidades, quem, onFechar, onCriado }) {
+function ConviteModal({ role, escopos, unidades, quem, onFechar, onCriado }) {
   const { t } = useTranslation();
   const [form, setForm] = useState({ email: "", nome: "", telefone: "" });
   const [escolhidas, setEscolhidas] = useState([]);
@@ -274,7 +275,7 @@ function ConviteModal({ role, escopoId, unidades, quem, onFechar, onCriado }) {
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
 
-  const minhas = useMemo(() => unidadesQueEuPosso({ role, escopoId, unidades }), [role, escopoId, unidades]);
+  const minhas = useMemo(() => unidadesQueEuPosso({ role, escopos, unidades }), [role, escopos, unidades]);
   const visiveis = useMemo(() => {
     const q = busca.trim().toLowerCase();
     return minhas.filter((u) => !q || `${u.nome} ${u.estado || ""}`.toLowerCase().includes(q)).slice(0, 60);
@@ -289,8 +290,8 @@ function ConviteModal({ role, escopoId, unidades, quem, onFechar, onCriado }) {
     const dasUnidades = escolhidas.map((id) => unidades.find((u) => u.id === id)).filter(Boolean);
     setSalvando(true);
     try {
-      // O mentor "dono" do convite: o do escopo dele (mentor logado) ou o mentor da 1ª unidade (admin).
-      const mentorId = role === "admin" ? dasUnidades[0]?.mentorId || "" : escopoId;
+      // O mentor "dono" do convite: o mentor da 1ª unidade (o banco confere que é um mentor que o convidante enxerga).
+      const mentorId = dasUnidades[0]?.mentorId || "";
       const email = await convidarTemporario({ ...form, pais: paisDa(dasUnidades[0]), unidadeIds: escolhidas, fim, mentorId, quem });
       await onCriado({ ...form, email, fim, unidades: dasUnidades });
     } catch (err) {

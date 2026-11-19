@@ -1,4 +1,4 @@
-import { escopoMentor } from "../../../permissions.js";
+import { ehDoMeuEscopo } from "../../../permissions.js";
 // Pedidos de acesso de quem entrou pelo Google (aparece no topo da aba Líderes).
 // - Pedido de LÍDER (até 5 unidades): o admin aprova todas; o mentor aprova as unidades DELE (as de outro
 //   mentor ficam de fora e ele pode acrescentar depois pela aba Líderes). Cada unidade tem até 2 líderes:
@@ -39,7 +39,6 @@ export function PendenciasTab() {
   const role = String(userData?.role || "").trim().toLowerCase();
   const souAdmin = role === "admin";
   const userId = userData?.id || userData?.uid;
-  const escopoId = escopoMentor(userData); // id que vale como "mentor das unidades" (2º mentor usa o do 1º)
   const meuNome = userData?.nome || userData?.email || "Admin";
   const todasUnidades = catalogs?.unidades || [];
   const unidadesDoPedido = (p) => idsDoPedido(p).map((id) => todasUnidades.find((u) => u.id === id)).filter(Boolean);
@@ -72,7 +71,7 @@ export function PendenciasTab() {
   async function aprovarLider(p) {
     const unidades = unidadesDoPedido(p);
     if (!unidades.length) return alert(t("pendingTab.unitNotFound"));
-    const minhas = souAdmin ? unidades : unidades.filter((u) => u.mentorId === escopoId);
+    const minhas = souAdmin ? unidades : unidades.filter((u) => ehDoMeuEscopo(userData, u.mentorId));
     const deFora = unidades.filter((u) => !minhas.includes(u));
     if (!minhas.length) return alert(t("pendingTab.notYourUnit"));
 
@@ -200,7 +199,7 @@ export function PendenciasTab() {
   async function aprovarExtra(x) {
     const unidade = todasUnidades.find((u) => u.id === x.unidadeId);
     if (!unidade) return alert(t("pendingTab.unitNotFound"));
-    if (!souAdmin && unidade.mentorId !== escopoId) return alert(t("pendingTab.notYourUnit"));
+    if (!souAdmin && !ehDoMeuEscopo(userData, unidade.mentorId)) return alert(t("pendingTab.notYourUnit"));
     const escolha = escolherVaga(unidade, { id: x.uid, nome: x.nome });
     if (!escolha) return;
     setProcessando(x.id);
@@ -392,7 +391,7 @@ export function PendenciasTab() {
                   <p className="text-[10px] font-black uppercase text-slate-400">{t(ehMentor ? "pendingTab.mentorOf" : "pendingTab.leaderOfUnits")}</p>
                   {ids.map((id, i) => {
                     const unidade = todasUnidades.find((u) => u.id === id);
-                    const minha = souAdmin || unidade?.mentorId === escopoId;
+                    const minha = souAdmin || ehDoMeuEscopo(userData, unidade?.mentorId);
                     const liderAtual = unidade?.liderUid && unidade.liderUid !== p.id ? (unidade.liderNome || unidade.liderEmail) : null;
                     return (
                       <div key={id}>

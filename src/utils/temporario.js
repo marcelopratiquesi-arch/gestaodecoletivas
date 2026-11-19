@@ -6,8 +6,10 @@ import { paraData } from "./ultimoAcesso";
 const FUSO = "America/Sao_Paulo";
 const MS_DIA = 86400000;
 
-export const DIAS_MAXIMOS = 60; // prazo máximo de um convite (o banco aceita até 61 por causa do fim do dia)
-export const ATALHOS_DIAS = [7, 15, 30, 60];
+// Sem prazo máximo: quem concede escolhe a data (o banco só impõe o limite técnico de 10 anos).
+export const ATALHOS_DIAS = [7, 15, 30, 60, 90];
+export const ATALHOS_COBERTURA = [60, 90, 180, 365]; // mentor temporário: padrão 60 dias; 3 meses, 6 meses, 1 ano
+export const DIAS_LIMITE_TECNICO = 3600;
 
 // "AAAA-MM-DD" do dia de Brasília em que `agora` cai.
 export function hojeBrasilia(agora = Date.now()) {

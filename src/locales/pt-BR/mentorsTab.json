@@ -131,7 +131,10 @@
       "noLogin": "Essa pessoa ainda não tem login no sistema.",
       "blocked": "Essa pessoa está sem acesso (bloqueada).",
       "admin": "Admin já tem acesso total.",
-      "alreadyMentor": "Essa pessoa já é mentor."
+      "alreadyMentor": "Essa pessoa já é mentor.",
+      "alreadySecond": "Esta pessoa já é 2º mentor de outro mentor.",
+      "mentorWithUnits": "Este mentor já tem unidades próprias e perderia o acesso a elas como 2º mentor fixo. Use o botão Mentor temporário (cobertura): ele continua com as unidades dele e ganha as deste mentor por um prazo.",
+      "self": "Um mentor não pode cobrir ele mesmo."
     },
     "confirm": "Colocar {{name}} como 2º mentor de {{mentor}}?",
     "done": "{{name}} agora é 2º mentor.",
