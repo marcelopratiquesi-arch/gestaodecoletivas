@@ -32,7 +32,11 @@ const Modal = ModalWorkshop;
 
 export default function WorkshopsCadastro() {
   const { t, i18n } = useTranslation();
-  const { professores, unidades } = useCatalogs();
+  // O contexto entrega { catalogs: { professores, unidades, ... } }. (Antes lia "professores" direto do contexto,
+  // que não existe: a lista vinha vazia e a importação não achava ninguém no cadastro.)
+  const { catalogs } = useCatalogs();
+  const professores = catalogs?.professores;
+  const unidades = catalogs?.unidades;
   const { userData } = useAuth();
   // Participantes e importação têm contato de gente que pode nem ser professor: só o admin.
   const souAdmin = ['admin', 'administrador', 'master'].includes(String(userData?.role || '').trim().toLowerCase());
