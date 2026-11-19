@@ -65,7 +65,8 @@
     "equipe": "Equipe",
     "unidades": "Unidades",
     "aulas": "Aulas",
-    "cadastro": "Cadastro"
+    "cadastro": "Cadastro",
+    "workshops": "Workshops"
   },
   "cadastro": {
     "nome": "Nome",
@@ -73,7 +74,8 @@
     "telefone": "Telefone",
     "pais": "País",
     "acesso": "Acesso ao sistema",
-    "cpf": "CPF"
+    "cpf": "CPF",
+    "documento": "Documento"
   },
   "emDia": {
     "titulo": "Está tudo em dia?",
@@ -88,7 +90,8 @@
     "aulasDadas": "Aulas dadas no período",
     "recebeu": "Recebeu no período",
     "situacao": "Situação",
-    "semContato": "Sem contato"
+    "semContato": "Sem contato",
+    "workshops": "Workshops"
   },
   "avisos": {
     "naoEncontrado": "Não encontrei esse cadastro.",
@@ -339,7 +342,11 @@
         "falta": "{{n}} aula(s) dos últimos 7 dias sem validar nas unidades dele.",
         "acao": "Validar agora"
       }
-    }
+    },
+    "primeiro": "1º mentor",
+    "segundo": "2º mentor",
+    "segundoDe": "2º mentor de {{nome}}",
+    "equipeMentoresTitulo": "Mentores da equipe"
   },
   "professor": {
     "rotulo": "Central do Professor",
@@ -373,7 +380,9 @@
       "ultimaAula": "Última aula dada",
       "aulasNoPeriodo": "{{n}} aula(s) dada(s) no período",
       "umaUnidade": "Unidade vinculada",
-      "cadastro": "Situação do cadastro"
+      "cadastro": "Situação do cadastro",
+      "workshops": "Workshops",
+      "workshopsVazio": "Nenhum workshop registrado"
     },
     "emDia": {
       "ativo": {
@@ -411,6 +420,15 @@
         "falta": "{{n}} aula(s) dele neste mês sem validar.",
         "acao": "Abrir a validação"
       }
+    },
+    "workshops": {
+      "titulo": "Workshops que o professor fez",
+      "vazio": "Nenhum workshop registrado para este professor ainda.",
+      "nota": "Valem para todas as unidades dele.",
+      "por": "adicionado por {{nome}}",
+      "editar": "Adicionar ou remover workshops",
+      "ultimo": "Último: {{nome}}",
+      "colPor": "Adicionado por"
     }
   }
 }

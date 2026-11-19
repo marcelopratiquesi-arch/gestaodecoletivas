@@ -1,0 +1,69 @@
+{
+  "title": "Mis workshops",
+  "subtitle": "Contanos qué workshops hiciste. Subí la foto del certificado: el líder de tu sede, tu mentor o el administrador lo revisa y lo marca como verificado.",
+  "noUnit": "Tu perfil todavía no tiene sede. Pedile al líder de tu sede que ajuste tu acceso.",
+  "add": "Enviar un certificado",
+  "fix": "Corregir y reenviar",
+  "fields": {
+    "workshop": "Nombre del workshop",
+    "workshopPlaceholder": "Elegí el workshop",
+    "date": "Fecha en que lo hiciste",
+    "unit": "Sede que verifica",
+    "unitPlaceholder": "Elegí la sede",
+    "unitHint": "El líder y el mentor de esta sede van a revisar el certificado.",
+    "photo": "Foto del certificado",
+    "workshopHint": "¿No encontrás tu workshop? Pedile al líder o al mentor que lo registre."
+  },
+  "choosePhoto": "Elegir foto",
+  "changePhoto": "Cambiar foto",
+  "photoHint": "Podés sacar la foto con el celular. Se reduce sola. Dejá el nombre y la fecha bien legibles.",
+  "send": "Enviar",
+  "cancel": "Cancelar",
+  "sent": "Certificados enviados",
+  "empty": "Todavía no enviaste ningún certificado.",
+  "status": {
+    "pendente": "Esperando revisión",
+    "verificado": "Verificado",
+    "recusado": "Rechazado"
+  },
+  "reason": "Motivo: {{reason}}",
+  "resend": "Corregir y reenviar",
+  "delete": "Borrar",
+  "deleteConfirm": "¿Borrar el certificado \"{{name}}\"?",
+  "errors": {
+    "chooseUnit": "Elegí la sede que va a verificar.",
+    "name": "Escribí el nombre del workshop (al menos 3 letras).",
+    "date": "Elegí la fecha en que hiciste el workshop (no puede ser futura).",
+    "noPhoto": "Elegí la foto del certificado.",
+    "notImage": "Este archivo no es una imagen. Elegí una foto.",
+    "photo": "No se pudo preparar esta foto. Probá con otra.",
+    "save": "No se pudo enviar. Probá de nuevo.",
+    "delete": "No se pudo borrar.",
+    "load": "No se pudieron cargar tus certificados.",
+    "choose": "Elegí el workshop que hiciste.",
+    "loadList": "No se pudo cargar la lista de workshops."
+  },
+  "manager": {
+    "button": "Workshops (certificados)",
+    "title": "Workshops de {{name}}",
+    "subtitle": "Valen para todas las sedes del profesor. Agregá el workshop que hizo y la fecha de finalización.",
+    "add": "Agregar certificado",
+    "addButton": "Agregar",
+    "empty": "Este profesor todavía no tiene certificados.",
+    "dateLabel": "Fecha de finalización",
+    "by": "agregado por {{name}}"
+  },
+  "review": {
+    "title": "Certificados de workshop para revisar",
+    "subtitle": "Los profesores enviaron la foto del certificado. Revisá el nombre, el workshop y la fecha en la foto.",
+    "enlarge": "Ampliar la foto",
+    "doneOn": "Hecho el {{date}}",
+    "verify": "Verificar",
+    "refuse": "Rechazar",
+    "verifyConfirm": "¿Confirmás que el certificado de {{name}} (\"{{workshop}}\") es correcto?",
+    "refusePrompt": "¿Rechazar el certificado \"{{workshop}}\" de {{name}}?\n\nEscribí el motivo (el profesor lo va a ver):",
+    "error": "No se pudo guardar la revisión."
+  },
+  "loadingList": "Cargando workshops...",
+  "alreadyListed": "ya figura"
+}

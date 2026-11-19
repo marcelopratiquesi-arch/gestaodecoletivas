@@ -1,0 +1,91 @@
+{
+  "title": "Temporary leaders",
+  "subtitle": "Invite by Google e-mail, with units and a deadline. When the deadline passes, access is cut automatically. It does not use the 1st or 2nd leader slot.",
+  "invite": "Invite temporary leader",
+  "empty": "No temporary leaders yet.",
+  "expiringSoon": "{{count}} expiring within 7 days",
+  "until": "Until {{date}} 23:59",
+  "inviteUntil": "Invite valid until {{date}}",
+  "status": {
+    "expired": "Expired",
+    "today": "Expires today",
+    "days_one": "{{count}} day left",
+    "days_other": "{{count}} days left",
+    "waiting": "Waiting for 1st login"
+  },
+  "extend": "Extend",
+  "reactivate": "Reactivate",
+  "makePermanent": "Make permanent",
+  "endNow": "End now",
+  "cancelInvite": "Cancel invite",
+  "confirmEnd": "End {{name}} access now? They lose access immediately (you can reactivate later).",
+  "confirmMakePermanent": "Make {{name}} a regular leader (no deadline)? They become 1st or 2nd leader of the units.",
+  "confirmCancel": "Cancel the invite for {{email}}?",
+  "extendTitle": "Deadline for {{name}}",
+  "save": "Save",
+  "cancel": "Cancel",
+  "send": "Send invite",
+  "days_one": "{{count}} day",
+  "days_other": "{{count}} days",
+  "deadlineHint": "Today counts as day 1 and access lasts until 11:59 PM (Brasília) on the last day. You pick the date and can extend later.",
+  "modalTitle": "Invite temporary leader",
+  "modalSubtitle": "The person signs in with Google using the e-mail below and lands as leader of the chosen units.",
+  "sectionPerson": "Person",
+  "sectionUnits": "Units ({{count}}/{{max}})",
+  "sectionDeadline": "Deadline",
+  "field": {
+    "email": "Google e-mail",
+    "name": "Name",
+    "phone": "WhatsApp"
+  },
+  "emailHint": "It must be the Google account the person will sign in with. People who already have access do not need an invite.",
+  "searchUnit": "Search unit",
+  "noUnits": "No units available.",
+  "errors": {
+    "load": "Could not load temporary leaders.",
+    "action": "Could not complete.",
+    "save": "Could not send the invite.",
+    "email": "Enter a valid e-mail.",
+    "name": "Enter the name (at least 3 letters).",
+    "phone": "Enter the WhatsApp number.",
+    "unit": "Choose at least one unit.",
+    "tooMany": "At most {{max}} units.",
+    "past": "Choose a deadline that has not passed.",
+    "noSlot": "Unit {{unit}} already has 2 leaders. Free a slot before making permanent."
+  },
+  "banner": {
+    "today": "Your temporary access ends TODAY at 11:59 PM.",
+    "days_one": "Your temporary access ends in {{count}} day ({{date}}).",
+    "days_other": "Your temporary access ends in {{count}} days ({{date}}).",
+    "help": "To continue, ask your mentor to extend it."
+  },
+  "chip": "Temporary until {{date}}",
+  "central": {
+    "title": "Temporary leaders",
+    "until": "Until {{date}}"
+  },
+  "preset": {
+    "m3": "3 months",
+    "m6": "6 months",
+    "y1": "1 year"
+  },
+  "mentor": {
+    "add": "Temporary mentor (deadline-based cover)",
+    "title": "Temporary mentor",
+    "help": "Gives access to {{mentor}} units for a set period, with the same access (including units they receive later). The person stays who they are: a mentor keeps their own units too. Several people can cover the same mentor. Only the admin can grant it.",
+    "keeps": "Stays {{role}} and gains access to this mentor units until the deadline.",
+    "confirm": "Give {{name}} access to {{mentor}} units until {{date}} 11:59 PM? After that date they go back to their previous access automatically.",
+    "done": "{{name}} now covers the units until the deadline.",
+    "badge": "Covering {{name}}",
+    "has": "Cover: {{name}}",
+    "end": "End cover",
+    "endConfirm": "End {{name}} cover of {{mentor}} units now? They go back to their previous access.",
+    "chip": "Covers {{nome}} until {{date}}",
+    "coverLabel": "Temporary mentor (until {{date}})",
+    "coverField": "Temporary mentor",
+    "bannerTitleToday": "Your mentor cover ends TODAY at 11:59 PM.",
+    "bannerTitleDays_one": "Your mentor cover ends in {{count}} day ({{date}}).",
+    "bannerTitleDays_other": "Your mentor cover ends in {{count}} days ({{date}}).",
+    "bannerHelp": "After that date you go back to your normal access. To continue, ask the administrator to extend it."
+  }
+}

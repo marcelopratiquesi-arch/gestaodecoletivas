@@ -5,13 +5,12 @@ import { collection, onSnapshot, query, where } from "firebase/firestore";
 import { db } from "../../../services/firebase";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useCatalogs } from "../../../contexts/CatalogContext";
-import { unidadesDoLider } from "../../../permissions";
+import { unidadesDoLider, ehDoMeuEscopo } from "../../../permissions";
 
 export function usePedidosProfessor() {
   const { userData } = useAuth();
   const { catalogs } = useCatalogs();
   const role = String(userData?.role || "").trim().toLowerCase();
-  const userId = userData?.id || userData?.uid;
   const podeVer = ["admin", "mentor", "lider", "unidade"].includes(role);
   const [todos, setTodos] = useState([]);
   const [carregando, setCarregando] = useState(true);
@@ -32,10 +31,10 @@ export function usePedidosProfessor() {
     if (role === "admin") return todos;
     const unidades = catalogs?.unidades || [];
     const minhas = role === "mentor"
-      ? new Set(unidades.filter((u) => u.mentorId === userId).map((u) => String(u.id)))
+      ? new Set(unidades.filter((u) => ehDoMeuEscopo(userData, u.mentorId)).map((u) => String(u.id)))
       : new Set(unidadesDoLider(userData).map(String));
     return todos.filter((p) => minhas.has(String(p.unidadeId)));
-  }, [podeVer, todos, role, catalogs?.unidades, userId, userData]);
+  }, [podeVer, todos, role, catalogs?.unidades, userData]);
 
   return { pedidos, carregando: podeVer && carregando };
 }

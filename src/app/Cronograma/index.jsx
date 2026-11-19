@@ -3,7 +3,7 @@ import {
   Calendar, Clock, Plus, Filter, 
   Search, Trash2, Edit2, X, Check, 
   MapPin, Loader2, AlertTriangle, Users,
-  DollarSign, Globe, ChevronRight, List, ChevronDown, User, CalendarDays, History, ArrowRightLeft 
+  DollarSign, Globe, ChevronRight, List, ChevronDown, User, CalendarDays, History, ArrowRightLeft, BadgeDollarSign
 } from 'lucide-react';
 
 import { useAuth } from '../../contexts/AuthContext'; 
@@ -15,13 +15,15 @@ import {
 import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
 import { DIAS_SEMANA_GRADE, formatWeekday, getCurrencySymbol } from '../../utils/formatters';
 import { useLocation, useSearchParams } from 'react-router-dom';
-import { ehLider, unidadesDoLider } from '../../permissions';
+import { ehLider, unidadesDoLider, ehDoMeuEscopo } from '../../permissions';
 import { valorDaAulaValido, aulaRepetida, validarCorteNovaFase, diaAnterior, professorPodeReceberAula } from '../../utils/cronogramaRegras';
 import { ehCancelamentoAutomaticoDeFeriado } from '../../utils/feriados';
 import { espelharAula, espelharMudanca, removerAulaPublica } from '../../services/aulasPublicas';
 import { podeVerHistorico, aulasDoHistorico } from '../../utils/historicoAulas';
 import HistoricoAulas from './HistoricoAulas';
 import { modalidadeHabilitada } from '../../utils/modalidadesPorUnidade';
+import { podeVerTabelaPrecos } from '../../utils/tabelaPrecos';
+import TabelaPrecosModal from '../../components/TabelaPrecos/TabelaPrecosModal';
 
 // --- FUNÇÕES UTILITÁRIAS ---
 const getTodayStr = () => new Date().toLocaleDateString('en-CA');
@@ -166,6 +168,9 @@ export default function CronogramaPage() {
   const role = useMemo(() => String(userData?.role || "").trim().toLowerCase(), [userData?.role]);
   const userId = useMemo(() => userData?.id || userData?.uid, [userData]);
   const isReadOnly = role === 'professor';
+  // Tabela de preços (valor por aula x pulseira): admin edita; mentor e líder só consultam; professor não vê.
+  const podeVerPrecos = podeVerTabelaPrecos(role);
+  const [precosAberta, setPrecosAberta] = useState(false);
 
   // --- DADOS GLOBAIS E DE TELA ---
   const [saving, setSaving] = useState(false);
@@ -226,7 +231,7 @@ export default function CronogramaPage() {
   // Aplicando ACL
   const availableUnits = useMemo(() => {
       if (role === 'admin') return catalogs.unidades;
-      if (role === 'mentor') return catalogs.unidades.filter(u => u.mentorId === userId);
+      if (role === 'mentor') return catalogs.unidades.filter(u => ehDoMeuEscopo(userData, u.mentorId));
       if (ehLider(role)) { const minhas = unidadesDoLider(userData); return catalogs.unidades.filter(u => minhas.includes(String(u.id))); }
       if (role === 'professor') {
           // Mesmo caminho das regras do banco: ficha ligada pelo crachá (professorId) ou pelo login da ficha.
@@ -752,8 +757,21 @@ export default function CronogramaPage() {
             </div>
           )}
 
+          {podeVerPrecos && (
+            <>
+              <button
+                type="button"
+                onClick={() => setPrecosAberta(true)}
+                className="h-12 px-5 rounded-xl font-bold text-xs uppercase flex items-center gap-2 whitespace-nowrap border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors"
+              >
+                <BadgeDollarSign className="w-4 h-4" /> {t('priceTable.open')}
+              </button>
+              <TabelaPrecosModal aberto={precosAberta} onFechar={() => setPrecosAberta(false)} />
+            </>
+          )}
+
           {!isReadOnly && !emHistorico && (
-            <button 
+            <button
                 onClick={openNewModal}
                 disabled={!selectedUnit}
                 className={`

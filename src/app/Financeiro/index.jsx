@@ -1,3 +1,4 @@
+import { ehDoMeuEscopo } from "../../permissions.js";
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCatalogs } from '../../contexts/CatalogContext'; 
@@ -295,11 +296,11 @@ export default function PerformanceFinanceiraPage() {
       let mentoresData = [...(globalCatalogs.mentores || [])]; 
 
       if (role === 'mentor') {
-          unitsData = unitsData.filter(u => u.mentorId === userId);
+          unitsData = unitsData.filter(u => ehDoMeuEscopo(userData, u.mentorId));
       }
       
       return { unidades: unitsData, mentores: mentoresData };
-  }, [globalCatalogs, loadingCatalogs, role, userId]);
+  }, [globalCatalogs, loadingCatalogs, role, userData]);
 
   // --- OPÇÕES PARA MULTI-SELECT ---
   const mentoresOptions = useMemo(() => {

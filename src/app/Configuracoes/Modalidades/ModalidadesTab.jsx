@@ -15,13 +15,15 @@ import {
 import { useCatalogs } from "../../../contexts/CatalogContext";
 import { modalidadeEmUso } from "../../../utils/modalidadesPorUnidade";
 import { db } from "../../../services/firebase";
-import { CabecalhoDaAba, BotaoPrincipal } from "../ui/CabecalhoDaAba";
+import { CabecalhoDaAba, BotaoPrincipal, BotaoSecundario } from "../ui/CabecalhoDaAba";
+import TabelaPrecosModal from "../../../components/TabelaPrecos/TabelaPrecosModal";
+import { podeVerTabelaPrecos } from "../../../utils/tabelaPrecos";
 import { BotaoDeLinha } from "../ui/BotaoDeLinha";
 import { FiltroPadrao } from "../ui/FiltroPadrao";
 import { useFiltroCascata } from "../ui/useFiltroCascata";
 import { 
   Dumbbell, Plus, Edit2, Trash2, Power, 
-  CheckCircle2, AlertTriangle, Loader2, Palette, Maximize,
+  CheckCircle2, AlertTriangle, Loader2, Palette, Maximize, BadgeDollarSign,
   X, Check, GripHorizontal, Star
 } from "lucide-react";
 
@@ -133,7 +135,9 @@ export function ModalidadesTab() {
   const userId = useMemo(() => userData?.id || userData?.uid || null, [userData?.id, userData?.uid]);
 
   const podeVer = ["admin", "mentor", "lider", "unidade"].includes(role);
-  const podeEditar = role === "admin"; 
+  const podeEditar = role === "admin";
+  // Tabela de preços (valor por aula x pulseira): admin edita; mentor e líder só consultam.
+  const [precosAberta, setPrecosAberta] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [modalidades, setModalidades] = useState([]);
@@ -309,8 +313,10 @@ export function ModalidadesTab() {
     <div className="p-6 animate-fade-in max-w-[1200px] mx-auto space-y-6">
       
       <CabecalhoDaAba abaId="modalidades" icone={Dumbbell} titulo={t('modalitiesTab.title')} subtitulo={t('modalitiesTab.subtitle')}>
+        {podeVerTabelaPrecos(role) && <BotaoSecundario icone={BadgeDollarSign} onClick={() => setPrecosAberta(true)}>{t('priceTable.open')}</BotaoSecundario>}
         {podeEditar && <BotaoPrincipal abaId="modalidades" icone={Plus} onClick={abrirNova}>{t('modalitiesTab.new')}</BotaoPrincipal>}
       </CabecalhoDaAba>
+      <TabelaPrecosModal aberto={precosAberta} onFechar={() => setPrecosAberta(false)} />
 
       <FiltroPadrao abaId="modalidades" filtro={filtro} mostrar={[]} placeholder={t('modalitiesTab.search')} />
 

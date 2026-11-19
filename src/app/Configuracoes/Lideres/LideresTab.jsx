@@ -1,3 +1,4 @@
+import { escoposMentor, ehDoMeuEscopo } from "../../../permissions.js";
 // Aba "Líderes": quem responde por cada unidade. A unidade é só um cadastro (nome, endereço...);
 // quem entra no sistema é o LÍDER, com login pessoal. Cada unidade tem até 2 líderes, e uma pessoa pode ser
 // líder de várias unidades (ver saidaDoLider.js).
@@ -15,7 +16,7 @@ import { useTranslation } from "react-i18next";
 import {
   IdCard, UserCheck, UserPlus, UserX, Search, Loader2, Building2, Mail, Phone, Edit2, X, Check, KeyRound, AlertTriangle, BadgeCheck, UserCog, ScanSearch,
 } from "lucide-react";
-import { db, auth } from "../../../services/firebase";
+import { db } from "../../../services/firebase";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useCatalogs } from "../../../contexts/CatalogContext";
 import { PendenciasTab } from "../Pendencias/PendenciasTab";
@@ -24,10 +25,12 @@ import LinkUnidade from "../../../centrais/LinkUnidade";
 import LinkCentral from "../../../centrais/LinkCentral";
 import { tirarLiderDaUnidade, camposAoLiberarVaga, textoDaSaida, dadosDaVaga } from "./saidaDoLider";
 import { TornarLiderModal } from "./TornarLiderModal";
+import { TemporariosSecao } from "./TemporariosSecao";
 import { FiltroPadrao } from "../ui/FiltroPadrao";
 import { CabecalhoDoModal } from "../ui/CabecalhoDoModal";
 import { BotaoDeLinha } from "../ui/BotaoDeLinha";
 import { CabecalhoDaAba, CaixaDeNumeros, BotaoPrincipal, BotaoSecundario } from "../ui/CabecalhoDaAba";
+import { AcoesDoContato } from "../ui/AcoesDoContato";
 import { useFiltroCascata } from "../ui/useFiltroCascata";
 import SeloRepetido from "../ui/SeloRepetido";
 import { useSelosRepetidos } from "../ui/useSelosRepetidos";
@@ -60,6 +63,7 @@ export function LideresTab() {
 
   const role = String(userData?.role || "").trim().toLowerCase();
   const userId = userData?.id || userData?.uid;
+  const escopos = useMemo(() => escoposMentor(userData), [userData]); // mentores cujas unidades eu enxergo (o meu + o da cobertura)
   const meuNome = userData?.nome || userData?.email || "Admin";
   const podeAcessar = role === "admin" || role === "mentor";
 
@@ -82,8 +86,8 @@ export function LideresTab() {
 
   const minhasUnidades = useMemo(() => {
     const todas = catalogs?.unidades || [];
-    return role === "admin" ? todas : todas.filter((u) => u.mentorId === userId);
-  }, [catalogs?.unidades, role, userId]);
+    return role === "admin" ? todas : todas.filter((u) => ehDoMeuEscopo(userData, u.mentorId));
+  }, [catalogs?.unidades, role, userData]);
 
   // Selo "possível repetido" (mesmo telefone de outra pessoa): compara os líderes das unidades que a tela já tem.
   const registrosRepetidos = useMemo(() => {
@@ -310,33 +314,6 @@ export function LideresTab() {
     } finally { setProcessando(null); }
   }
 
-  // Admin ou mentor que também é o líder da unidade: marca a si mesmo como líder, sem criar outra conta.
-  // O crachá dele não muda (continua admin/mentor); só a unidade passa a apontar para ele.
-  async function assumir(unidade) {
-    const temOutroLider = !!unidade.liderUid && unidade.liderUid !== userId;
-    const pergunta = temOutroLider
-      ? t("leadersTab.assumeReplaceQuestion", { unit: unidade.nome, current: unidade.liderNome || unidade.liderEmail })
-      : t("leadersTab.assumeQuestion", { unit: unidade.nome });
-    if (!window.confirm(pergunta)) return;
-    setProcessando(unidade.id);
-    try {
-      const entraPeloGoogle = (auth.currentUser?.providerData || []).some((p) => p.providerId === "google.com");
-      const batch = writeBatch(db);
-      if (temOutroLider) await tirarLiderAtual(batch, unidade, t("leadersTab.replacedReason", { name: meuNome }));
-      batch.update(doc(db, "unidades", unidade.id), {
-        liderUid: userId, liderNome: meuNome, liderEmail: userData?.email || auth.currentUser?.email || "",
-        liderTelefone: userData?.telefone || "", liderTipo: entraPeloGoogle ? "google" : "senha",
-        liderDesde: serverTimestamp(), liderAConferir: deleteField(),
-      });
-      await batch.commit();
-      await registrarAuditoria("NOVA", `${role === "admin" ? "Admin" : "Mentor"} marcou a si mesmo como líder da unidade.`, unidade.nome,
-        `${meuNome}${temOutroLider ? ` substituiu ${unidade.liderNome || unidade.liderEmail}` : ""}`);
-    } catch (err) {
-      console.error(err);
-      alert(t("leadersTab.errors.assume") + " " + (err.message || ""));
-    } finally { setProcessando(null); }
-  }
-
   if (!podeAcessar) return null;
 
   const rotuloAcesso = {
@@ -371,6 +348,10 @@ export function LideresTab() {
           <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" /> {t("leadersTab.checkBanner", { count: kpis.aConferir })}
         </p>
       )}
+
+      {/* LÍDERES TEMPORÁRIOS (convite pelo e-mail do Google, com prazo) */}
+      <TemporariosSecao role={role} escopos={escopos} unidades={catalogs?.unidades || []}
+        quem={{ id: userId, nome: meuNome, email: userData?.email }} registrarAuditoria={registrarAuditoria} />
 
       {/* LISTA DE UNIDADES E SEUS LÍDERES */}
       <div className="space-y-4">
@@ -453,7 +434,7 @@ export function LideresTab() {
                               )}
                             </p>
                             <p className="text-[11px] text-slate-500 flex items-center gap-1"><Mail className="w-3 h-3" /> {u.liderEmail || "-"}</p>
-                            {u.liderTelefone && <p className="text-[11px] text-slate-500 flex items-center gap-1"><Phone className="w-3 h-3" /> {u.liderTelefone}</p>}
+                            {u.liderTelefone && <p className="text-[11px] text-slate-500 flex items-center gap-1"><Phone className="w-3 h-3" /> {u.liderTelefone} <AcoesDoContato telefone={u.liderTelefone} pais={u.pais} /></p>}
                             {u.lider2Uid && (
                               <div className="mt-2 pt-2 border-t border-dashed border-slate-200 dark:border-slate-700 space-y-0.5">
                                 <p className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 flex-wrap">
@@ -466,7 +447,7 @@ export function LideresTab() {
                                     className="p-1 rounded-md text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"><UserX className="w-3.5 h-3.5" /></button>
                                 </p>
                                 <p className="text-[11px] text-slate-500 flex items-center gap-1"><Mail className="w-3 h-3" /> {u.lider2Email || "-"}</p>
-                                {u.lider2Telefone && <p className="text-[11px] text-slate-500 flex items-center gap-1"><Phone className="w-3 h-3" /> {u.lider2Telefone}</p>}
+                                {u.lider2Telefone && <p className="text-[11px] text-slate-500 flex items-center gap-1"><Phone className="w-3 h-3" /> {u.lider2Telefone} <AcoesDoContato telefone={u.lider2Telefone} pais={u.pais} /></p>}
                               </div>
                             )}
                           </div>
@@ -484,10 +465,6 @@ export function LideresTab() {
                       )}
                       <td className="p-4">
                         <div className="flex justify-end gap-2">
-                          {u.liderUid !== userId && (
-                            <button onClick={() => assumir(u)} disabled={ocupado} title={t("leadersTab.assume")}
-                              className="p-2 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200 hover:bg-amber-50 hover:text-amber-600 disabled:opacity-50"><UserCog className="w-4 h-4" /></button>
-                          )}
                           {u.liderUid ? (
                             <>
                               {u.liderAConferir === true && (

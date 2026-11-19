@@ -8,7 +8,7 @@
 import { aulaNaGradeDoDia, situacaoDaAula, SITUACAO, somarDias, datasEntre } from '../utils/agendaAulas';
 import { deduplicarValidacoes } from '../utils/validacoes';
 import { getDiaSemana, DIAS_SEMANA_GRADE } from '../utils/formatters';
-import { ehLider, unidadesDoLider } from '../permissions';
+import { ehLider, unidadesDoLider, ehDoMeuEscopo } from '../permissions';
 import { valorDaValidacao } from '../utils/valores';
 
 // Pendências: hoje e os 6 dias anteriores (mesma janela da Página de Início).
@@ -25,9 +25,8 @@ export const ehAdmin = (role) => ['admin', 'administrador', 'master'].includes(t
 export function acessoUnidade(userData, unidade) {
   if (!userData || !unidade) return null;
   const papel = papelDe(userData);
-  const meuId = userData.id || userData.uid;
   if (ehAdmin(papel)) return 'editar';
-  if (papel === 'mentor') return unidade.mentorId && unidade.mentorId === meuId ? 'editar' : null;
+  if (papel === 'mentor') return ehDoMeuEscopo(userData, unidade.mentorId) ? 'editar' : null;
   if (ehLider(papel)) return unidadesDoLider(userData).includes(String(unidade.id)) ? 'ver' : null;
   return null;
 }

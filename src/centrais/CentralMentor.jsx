@@ -10,7 +10,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Building2, Users, UserCheck, ListChecks, LayoutGrid, LayoutList, IdCard, Phone, Mail, Eye, Info, Pencil, Globe,
-  Wallet, TrendingUp, BarChart3,
+  Wallet, TrendingUp, BarChart3, ShieldCheck,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useCatalogs } from '../contexts/CatalogContext';
@@ -26,15 +26,21 @@ import EmBreve from './pecas/EmBreve';
 import { Campo, Vazio, EstadoCarga, SeletorDeMes } from './pecas/Basicos';
 import { GraficoBarras, EvolucaoMeses } from './pecas/Graficos';
 import { BOTAO_PRINCIPAL, BOTAO_BRANCO, TH, TD, SELO_ATIVO, SELO_INATIVO } from './pecas/cores';
-import { QuadroEmDia, TabelaProfessores } from './secoes';
+import { QuadroEmDia, TabelaProfessores, CartaoPessoa, UltimoAcesso } from './secoes';
+import { CampoDocumento, CampoUltimoAcesso } from './CamposDaPessoa';
+import { lerDocumento } from '../services/documentoService';
 import LinkCentral from './LinkCentral';
 import { iniciais } from './contato';
 import { atalhoTelaCompleta, telasPermitidas, caminhos } from './atalhos';
 import { acessoCentral, tipoDaVaga } from './acessos';
 import { useValidacoesDasUnidades, useFechamentosMensais } from './useValidacoesDaUnidade';
-import { DIAS_JANELA_PENDENCIAS, periodoDoMes, liderDaVaga } from './contasUnidade';
+import { DIAS_JANELA_PENDENCIAS, periodoDoMes, liderDaVaga, ehAdmin } from './contasUnidade';
 import { mesesDoTrimestre, limitesDoMes, gastoPorUnidade, gastoPorUnidadeDoResumo, totaisPorMoeda } from './contasValores';
 import { linhasDoMentor, professoresDoMentor, aValidarPorUnidade, itensEmDiaMentor } from './contasPessoas';
+import { useCoberturasDoMentor } from './useCoberturasDoMentor';
+import { SeloDoPrazo } from '../app/Configuracoes/Lideres/TemporariosSecao';
+import { coberturaAtiva } from '../permissions';
+import { diaDoFim } from '../utils/temporario';
 
 const doisDigitos = (n) => String(n).padStart(2, '0');
 const ABAS_COM_VALORES = ['valores', 'panorama'];
@@ -119,10 +125,20 @@ export default function CentralMentor({ id: mentorId, z, textoVoltar, onFechar, 
   }, [meses, mesDeHoje, hoje, fechamentos, leitura0.validacoes, leitura1.validacoes, leitura2.validacoes, aulasTodas, unidades]);
   const erroValores = erroFechamentos || leitura0.erro || leitura1.erro || leitura2.erro;
 
+  // Mentor temporário (cobertura): quem tem acesso extra às unidades deste mentor (qualquer papel).
+  const coberturas = useCoberturasDoMentor(mentor?.id, !!mentor);
+
   if (!mentor || !acesso) return null;
 
   const pode = telasPermitidas(userData);
   const ativo = mentor.status === 'ativo';
+  // Equipe de mentores: o 2º mentor (espelho do 1º) e, na ficha do 2º, o 1º mentor.
+  const segundo = catalogs.mentores.find((m) => m.mentorPrincipalId === mentor.id) || null;
+  // Mentor temporário (cobertura): quem tem acesso extra às unidades deste mentor até uma data (qualquer papel).
+  const cobreOutro = coberturaAtiva(mentor) ? catalogs.mentores.find((m) => m.id === mentor.coberturaMentorId) || null : null;
+  const principal2 = mentor.mentorPrincipalId ? catalogs.mentores.find((m) => m.id === mentor.mentorPrincipalId) || null : null;
+  // CPF/DNI/SSN do mentor: o admin e o próprio mentor (é o que o banco libera).
+  const podeVerDocumento = ehAdmin(userData?.role) || mentor.id === (userData?.id || userData?.uid);
   const faltam = itens.filter((i) => !i.ok).length;
   // Uma linha por líder: o 1º e, se houver, o 2º líder de cada unidade.
   const comLider = linhas.flatMap(({ unidade }) => [1, 2].map((vaga) => ({ unidade, lider: liderDaVaga(unidade, vaga) })).filter((x) => x.lider));
@@ -131,6 +147,8 @@ export default function CentralMentor({ id: mentorId, z, textoVoltar, onFechar, 
 
   const selos = [
     { texto: t('centrais.papel.mentor'), cor: 'blue' },
+    mentor.mentorPrincipalId && { texto: t('centrais.mentor.segundoDe', { nome: principal2?.nome || '-' }), cor: 'violet' },
+    cobreOutro && { texto: t('tempLeader.mentor.chip', { nome: cobreOutro.nome, date: diaDoFim(mentor.coberturaAte) }), cor: 'amber' },
     { texto: ativo ? t('centrais.ativo') : t('centrais.inativo'), cor: ativo ? 'emerald' : 'slate' },
     faltam > 0
       ? { texto: t('centrais.selos.faltam', { n: faltam }), cor: 'amber' }
@@ -325,8 +343,27 @@ export default function CentralMentor({ id: mentorId, z, textoVoltar, onFechar, 
     </Quadro>
   );
 
+  const cartaoMentor = (m, papel) => (
+    <CartaoPessoa key={m.id} icone={ShieldCheck} papel={papel} nome={m.nome} link={{ tipo: 'mentor', alvo: m }}>
+      {m.telefone
+        ? <Contato icone={Phone} texto={m.telefone} copiar whatsapp pais={m.pais} />
+        : <Contato icone={Phone} texto={t('centrais.unidade.info.mentorSemTelefone')} falta />}
+      {m.email && <Contato icone={Mail} texto={m.email} copiar />}
+      <UltimoAcesso quando={m.ultimoAcesso} />
+    </CartaoPessoa>
+  );
+
   const equipe = (
     <>
+      {(segundo || principal2 || coberturas.length > 0) && (
+        <Quadro titulo={t('centrais.mentor.equipeMentoresTitulo')} icone={ShieldCheck} acao={atalhoTelaCompleta(t, pode.cfgMentores, caminhos.configuracoes(irPara, 'mentores'))}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {principal2 && cartaoMentor(principal2, t('centrais.mentor.primeiro'))}
+            {segundo && cartaoMentor(segundo, t('centrais.mentor.segundo'))}
+            {coberturas.map((c) => cartaoMentor(c, t('tempLeader.mentor.coverLabel', { date: diaDoFim(c.coberturaAte) })))}
+          </div>
+        </Quadro>
+      )}
       <Quadro
         titulo={t('centrais.mentor.lideresTitulo')}
         icone={UserCheck}
@@ -396,7 +433,17 @@ export default function CentralMentor({ id: mentorId, z, textoVoltar, onFechar, 
         <Campo rotulo={t('centrais.cadastro.acesso')} falta={mentor.loginGoogle !== true}>
           {mentor.loginGoogle === true ? t('centrais.acessoGoogle') : t('centrais.mentor.loginAntigo')}
         </Campo>
-        <Campo rotulo={t('centrais.ultimoAcessoRotulo')}><EmBreve /></Campo>
+        <CampoDocumento pode={podeVerDocumento} chave={mentor.id} leitor={lerDocumento} />
+        <CampoUltimoAcesso quando={mentor.ultimoAcesso} uid={mentor.id} />
+        {principal2 && (
+          <Campo rotulo={t('centrais.mentor.primeiro')}><LinkCentral tipo="mentor" alvo={principal2}>{principal2.nome}</LinkCentral></Campo>
+        )}
+        {coberturas.map((c) => (
+          <Campo key={c.id} rotulo={t('tempLeader.mentor.coverField')}><LinkCentral tipo="mentor" alvo={c}>{c.nome}</LinkCentral> <SeloDoPrazo fim={c.coberturaAte} /></Campo>
+        ))}
+        {segundo && (
+          <Campo rotulo={t('centrais.mentor.segundo')}><LinkCentral tipo="mentor" alvo={segundo}>{segundo.nome}</LinkCentral></Campo>
+        )}
       </div>
       {pode.cfgMentores && (
         <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">

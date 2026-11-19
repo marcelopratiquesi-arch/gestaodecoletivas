@@ -1,0 +1,69 @@
+{
+  "title": "My workshops",
+  "subtitle": "Tell us which workshops you took. Upload a photo of the certificate: your unit leader, your mentor or the administrator checks it and marks it as verified.",
+  "noUnit": "Your profile has no unit yet. Ask your unit leader to adjust your access.",
+  "add": "Send a certificate",
+  "fix": "Fix and resend",
+  "fields": {
+    "workshop": "Workshop name",
+    "workshopPlaceholder": "Choose the workshop",
+    "date": "Date you took it",
+    "unit": "Unit that verifies",
+    "unitPlaceholder": "Choose the unit",
+    "unitHint": "The leader and mentor of this unit will check the certificate.",
+    "photo": "Certificate photo",
+    "workshopHint": "Can't find your workshop? Ask your leader or mentor to register it."
+  },
+  "choosePhoto": "Choose photo",
+  "changePhoto": "Change photo",
+  "photoHint": "You can take the photo with your phone. It is shrunk automatically. Keep the name and date easy to read.",
+  "send": "Send",
+  "cancel": "Cancel",
+  "sent": "Certificates sent",
+  "empty": "You haven't sent any certificate yet.",
+  "status": {
+    "pendente": "Waiting for review",
+    "verificado": "Verified",
+    "recusado": "Refused"
+  },
+  "reason": "Reason: {{reason}}",
+  "resend": "Fix and resend",
+  "delete": "Delete",
+  "deleteConfirm": "Delete the certificate \"{{name}}\"?",
+  "errors": {
+    "chooseUnit": "Choose the unit that will verify it.",
+    "name": "Write the workshop name (at least 3 letters).",
+    "date": "Choose the date you took the workshop (it cannot be in the future).",
+    "noPhoto": "Choose the certificate photo.",
+    "notImage": "This file is not an image. Choose a photo.",
+    "photo": "Could not prepare this photo. Try another one.",
+    "save": "Could not send. Try again.",
+    "delete": "Could not delete.",
+    "load": "Could not load your certificates.",
+    "choose": "Choose the workshop you attended.",
+    "loadList": "Could not load the workshop list."
+  },
+  "manager": {
+    "button": "Workshops (certificates)",
+    "title": "{{name}}'s workshops",
+    "subtitle": "They count for all of the teacher’s units. Add the workshop they took and the completion date.",
+    "add": "Add certificate",
+    "addButton": "Add",
+    "empty": "No certificates for this teacher yet.",
+    "dateLabel": "Completion date",
+    "by": "added by {{name}}"
+  },
+  "review": {
+    "title": "Workshop certificates to review",
+    "subtitle": "Teachers uploaded a certificate photo. Check the name, workshop and date in the photo.",
+    "enlarge": "Enlarge photo",
+    "doneOn": "Taken on {{date}}",
+    "verify": "Verify",
+    "refuse": "Refuse",
+    "verifyConfirm": "Confirm that {{name}}'s certificate (\"{{workshop}}\") is correct?",
+    "refusePrompt": "Refuse {{name}}'s certificate \"{{workshop}}\"?\n\nWrite the reason (the teacher will see it):",
+    "error": "Could not save the review."
+  },
+  "loadingList": "Loading workshops...",
+  "alreadyListed": "already listed"
+}

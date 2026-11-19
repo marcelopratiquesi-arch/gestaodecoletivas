@@ -1,3 +1,4 @@
+import { escopoMentor, escoposMentor } from "../../../permissions.js";
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useCatalogs } from "../../../contexts/CatalogContext";
@@ -15,6 +16,7 @@ import LinkUnidade from "../../../centrais/LinkUnidade";
 import { FiltroPadrao } from "../ui/FiltroPadrao";
 import { BotaoDeLinha } from "../ui/BotaoDeLinha";
 import { CabecalhoDaAba, CaixaDeNumeros, BotaoPrincipal, BotaoSecundario } from "../ui/CabecalhoDaAba";
+import { AcoesDoContato } from "../ui/AcoesDoContato";
 import { useFiltroCascata } from "../ui/useFiltroCascata";
 
 import { 
@@ -263,6 +265,7 @@ export function UnidadesTab() {
   
   const role = useMemo(() => String(userData?.role || "").trim().toLowerCase(), [userData?.role]);
   const userId = useMemo(() => userData?.id || userData?.uid, [userData]);
+  const escopoId = escopoMentor(userData); // id que vale como "mentor das unidades" (2º mentor usa o do 1º)
   const userName = useMemo(() => userData?.nome || t('home.roles.mentor', 'Mentor'), [userData, t]);
   const podeAcessar = role === "admin" || role === "mentor";
 
@@ -348,7 +351,7 @@ export function UnidadesTab() {
     setLoading(true);
     
     const ref = collection(db, "unidades");
-    const qUnidades = role === "admin" ? ref : query(ref, where("mentorId", "==", userId));
+    const qUnidades = role === "admin" ? ref : query(ref, where("mentorId", "in", escoposMentor(userData)));
     
     const unsubUnidades = onSnapshot(qUnidades, (snap) => {
         setUnidadesBase(snap.docs.map(d => ({ id: d.id, ...d.data() })));
@@ -363,7 +366,7 @@ export function UnidadesTab() {
         });
     }
     return () => { unsubUnidades(); unsubMentores(); };
-  }, [role, userId, podeAcessar]);
+  }, [role, userId, podeAcessar, userData]);
 
   // Filtro padrão (busca + país → estado → mentor → líder), no navegador sobre as unidades já carregadas.
   // Unidades antigas podem ter o país escrito por extenso ("Brasil"); aqui tudo vira a sigla (BR/AR/US).
@@ -639,7 +642,7 @@ export function UnidadesTab() {
   function abrirNovaUnidade() {
     setEditando(null); setPais(PAIS_DEFAULT); setEstado(""); setNome(""); setTelefone(""); setStatus("ativa");
     setLinkMaps(""); setMetragem(""); setEndereco("");
-    if (role === 'mentor') setMentorId(userId); else setMentorId("");
+    if (role === 'mentor') setMentorId(escopoId); else setMentorId("");
     setErro(""); setSucesso("");
     setModalPos(getCenterPos(800, 700)); setModalSize({ w: 800, h: 700 }); 
     setModalUnidadeAberto(true);
@@ -923,6 +926,7 @@ export function UnidadesTab() {
                                         </>
                                     ) : t('unitsTab.table.notInformed', "Add Whatsapp")}
                                   </span>
+                                  {u.telefone && <AcoesDoContato telefone={u.telefone} pais={paisAtual} />}
                                   <Edit2 onClick={() => { setEditandoTelefoneId(u.id); setTelefoneInline(u.telefone ? u.telefone.replace(paisDDI, '').trim() : ""); }} className="w-3 h-3 text-blue-500 opacity-0 group-hover/edit:opacity-100 cursor-pointer transition-opacity ml-1"/>
                               </div>
                           )}
@@ -1213,7 +1217,7 @@ export function UnidadesTab() {
                           <div className="relative">
                               <select value={mentorId} onChange={e=>setMentorId(e.target.value)} className="w-full pl-4 pr-10 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-red-500 rounded-xl text-sm font-bold outline-none appearance-none transition-all dark:text-white">
                                   <option value="">{t('unitsTab.modal.select', 'Selecione...')}</option>
-                                  {mentores.map(m=><option key={m.id} value={m.id}>{m.nome}</option>)}
+                                  {mentores.filter(m=>!m.mentorPrincipalId).map(m=><option key={m.id} value={m.id}>{m.nome}</option>)}
                               </select>
                               <ChevronDown className="absolute right-4 top-3.5 w-4 h-4 text-slate-400 pointer-events-none"/>
                           </div>

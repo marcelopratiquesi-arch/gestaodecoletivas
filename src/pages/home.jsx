@@ -13,7 +13,7 @@ import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
 import { getDiaSemana, formatCurrency, formatDate, formatTime, formatWeekday, getCurrencyCode } from "../utils/formatters";
 import { deduplicarValidacoes } from "../utils/validacoes";
 import { valorDaValidacao } from "../utils/valores";
-import { ehLider, unidadesDoLider } from "../permissions";
+import { ehLider, unidadesDoLider, ehDoMeuEscopo } from "../permissions";
 import { feriadoNoDia } from "../utils/feriados";
 import { aulaNaGradeDoDia, situacaoDaAula, SITUACAO, dataLocalStr, somarDias, datasEntre } from "../utils/agendaAulas";
 import { lerCacheInicio, gravarCacheInicio, invalidarCacheInicio } from "../services/cacheInicio";
@@ -223,7 +223,7 @@ export default function Home() {
     const todas = catalogs.unidades || [];
     let unidades = [];
     if (role === 'admin' || role === 'professor') unidades = todas; // professor: recorta pelas aulas dele, logo abaixo
-    else if (role === 'mentor') unidades = todas.filter(u => u.mentorId === userId);
+    else if (role === 'mentor') unidades = todas.filter(u => ehDoMeuEscopo(userData, u.mentorId));
     else if (ehLider(role)) { const minhas = new Set(unidadesLiderKey.split(",")); unidades = todas.filter(u => minhas.has(String(u.id))); }
 
     const unidadesPorId = new Map(unidades.map(u => [String(u.id), u]));
@@ -238,7 +238,7 @@ export default function Home() {
     );
 
     return { unidades, unidadesPorId, aulas, meuProfId };
-  }, [catalogs.unidades, catalogs.professores, catalogs.aulas, role, userId, unidadesLiderKey]);
+  }, [catalogs.unidades, catalogs.professores, catalogs.aulas, role, userId, unidadesLiderKey, userData]);
 
   // 2. DIA DE REFERÊNCIA ("ontem"): o último dia antes de hoje que teve aula de verdade.
   //    Na segunda-feira, se domingo não teve aula, é o sábado; feriado é pulado. O card mostra qual dia é.

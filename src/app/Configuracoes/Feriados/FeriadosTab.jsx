@@ -1,3 +1,4 @@
+import { ehDoMeuEscopo } from "../../../permissions.js";
 import React, { useState, useEffect, useMemo } from 'react';
 import { db } from '../../../services/firebase';
 import { useAuth } from "../../../contexts/AuthContext"; // Importado para Auditoria
@@ -55,9 +56,9 @@ export function FeriadosTab() {
   // O mentor só enxerga (e propõe para) as unidades dele.
   const unidades = useMemo(
       () => (catalogs?.unidades || [])
-          .filter(u => ehAdmin || u.mentorId === userId)
+          .filter(u => ehAdmin || ehDoMeuEscopo(userData, u.mentorId))
           .sort((a, b) => (a.nome || '').localeCompare(b.nome || '')),
-      [catalogs?.unidades, ehAdmin, userId]
+      [catalogs?.unidades, ehAdmin, userData]
   );
   const estadosDisponiveis = useMemo(
       () => [...new Set(unidades.map(u => u.estado).filter(Boolean))].sort(),

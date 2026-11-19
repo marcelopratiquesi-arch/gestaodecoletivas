@@ -18,22 +18,25 @@ import { chaveTelefone, emailDeMentira, emailFormatoValido, fichasParecidas, lim
 import { 
   UserPlus, Edit2, Trash2, Link as LinkIcon, Loader2, Search, ScanSearch, CheckCircle2, 
   X, Mail, Phone, PlusCircle, User, AlertTriangle, ChevronDown, 
-  ChevronUp, ArrowDown, ArrowRight, DownloadCloud, Layers, Ban, ShieldCheck, MapPin, IdCard
+  ChevronUp, ArrowDown, ArrowRight, DownloadCloud, Layers, Ban, ShieldCheck, MapPin, IdCard, Award
 } from "lucide-react";
 import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
 import LinkCentral from "../../../centrais/LinkCentral";
-import { ehLider, unidadesDoLider } from '../../../permissions';
+import { ehLider, unidadesDoLider, ehDoMeuEscopo } from '../../../permissions';
 import PedidosProfessor from "../Pendencias/PedidosProfessor";
 import { BuscaDocumento } from "../Documento/DocumentoModal";
 import { FiltroPadrao } from "../ui/FiltroPadrao";
 import { CabecalhoDoModal } from "../ui/CabecalhoDoModal";
 import { BotaoDeLinha } from "../ui/BotaoDeLinha";
 import { CabecalhoDaAba, CaixaDeNumeros, BotaoPrincipal, BotaoSecundario } from "../ui/CabecalhoDaAba";
+import { AcoesDoContato } from "../ui/AcoesDoContato";
 import { useFiltroCascata } from "../ui/useFiltroCascata";
 import SeloRepetido from "../ui/SeloRepetido";
 import { useSelosRepetidos } from "../ui/useSelosRepetidos";
 import JuntarFichasModal from "../Backup/JuntarFichasModal";
 import { liberarContatos, mensagemSeContatoEmUso, sincronizarEAvisar } from "../../../services/contatoService";
+import CertificadosAVerificar from "./CertificadosAVerificar";
+import CertificadosDoProfessor from "./CertificadosDoProfessor";
 
 // 🌍 PADRÃO OURO INTERNACIONAL — mesma identidade visual usada em MentoresTab
 const PAIS_CONFIG = {
@@ -167,6 +170,7 @@ export function ProfessoresTab() {
   // Modais
   const [novoVinculo, setNovoVinculo] = useState(null); // { profInicial } = janela "Adicionar professor" (pelo documento)
   const [modalFormAberto, setModalFormAberto] = useState(false);
+  const [profWorkshops, setProfWorkshops] = useState(null); // professor cujos workshops (certificados) estão abertos
 
   // Fluxo de Cadastro
   const [profEditando, setProfEditando] = useState(null);
@@ -228,10 +232,10 @@ export function ProfessoresTab() {
   // ==========================================
   const minhasUnidades = useMemo(() => {
       if (role === 'admin') return unidades;
-      if (role === 'mentor') return unidades.filter(u => u.mentorId === userId);
+      if (role === 'mentor') return unidades.filter(u => ehDoMeuEscopo(userData, u.mentorId));
       if (ehLider(role)) { const minhas = unidadesDoLider(userData); return unidades.filter(u => minhas.includes(String(u.id))); }
       return [];
-  }, [unidades, role, userId, userData]);
+  }, [unidades, role, userData]);
 
   const meusVinculos = useMemo(() => {
       const idsUnidades = minhasUnidades.map(u => u.id);
@@ -337,7 +341,7 @@ export function ProfessoresTab() {
       return links.map(v => {
           const u = unidades.find(uni => String(uni.id) === String(v.unidadeId));
           const podeMexer = role === 'admin' || minhasUnidades.some(mu => String(mu.id) === String(u?.id));
-          return u ? { id: v.id, nome: u.nome, vinculoId: v.id, podeMexer } : null;
+          return u ? { id: v.id, nome: u.nome, vinculoId: v.id, podeMexer, unidadeId: String(u.id) } : null;
       }).filter(Boolean);
   };
 
@@ -590,6 +594,7 @@ export function ProfessoresTab() {
     <div className="p-6 animate-fade-in max-w-7xl mx-auto space-y-6 uppercase">
       {/* PEDIDOS DE ACESSO DE PROFESSORES (login pessoal pelo Google) */}
       <PedidosProfessor />
+      <CertificadosAVerificar />
       {/* HEADER E KPIS */}
       <CabecalhoDaAba abaId="professores" icone={UserPlus} titulo={t('teachersTab.title', 'Gestão de Professores')} subtitulo={t('teachersTab.subtitle', 'Controle de base e vínculos com as unidades.')}
         numeros={<CaixaDeNumeros abaId="professores" itens={[
@@ -676,6 +681,15 @@ export function ProfessoresTab() {
                                             <IdCard className="w-3 h-3" /> {t('teachersTab.cpf.badge')}
                                         </span>
                                     )}
+                                    {(() => {
+                                        const qtd = Array.isArray(p.workshops) ? p.workshops.length : 0;
+                                        return (
+                                            <button type="button" onClick={() => setProfWorkshops(p)} title={t('teachersTab.workshopsBadgeTip')}
+                                                className={`ml-2 inline-flex items-center gap-1 align-middle text-[9px] font-black px-1.5 py-0.5 rounded border transition-colors ${qtd > 0 ? 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-900/20 dark:border-amber-800 dark:text-amber-400' : 'border-slate-200 bg-slate-50 text-slate-400 hover:bg-slate-100 dark:bg-slate-800 dark:border-slate-700'}`}>
+                                                <Award className="w-3 h-3" /> {t('teachersTab.workshopsBadge', { count: qtd })}
+                                            </button>
+                                        );
+                                    })()}
                                 </td>
                                 <td className="p-4">
                                     <div className="flex flex-col gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400">
@@ -689,6 +703,7 @@ export function ProfessoresTab() {
                                                     <FlagIcon pais={paisAtual} /> {paisAtual}
                                                 </span>
                                                 {paisDDI} {p.telefone}
+                                                <AcoesDoContato telefone={p.telefone} pais={paisAtual} />
                                             </span>
                                         ) : (
                                             <span className="flex items-center gap-1 text-red-600 dark:text-red-400 font-bold bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 px-2 py-0.5 rounded-md w-fit" title={t('teachersTab.extra.phoneInvalidHint')}>
@@ -721,6 +736,7 @@ export function ProfessoresTab() {
                                     <div className="flex gap-2 justify-end opacity-40 group-hover:opacity-100 transition-opacity">
                                         {podeEditar && (
                                             <>
+                                                <BotaoDeLinha abaId="professores" tipo="perigo" icone={Award} onClick={() => setProfWorkshops(p)} title={t('certificates.manager.button')} />
                                                 <BotaoDeLinha abaId="professores" tipo={!isTelefoneValido ? "perigo" : "editar"} className={!isTelefoneValido ? "animate-pulse" : ""} icone={Edit2} onClick={() => abrirEdicao(p)} title={t('teachersTab.extra.editData')} />
                                                 <BotaoDeLinha abaId="professores" tipo={p.status === "ativo" ? "desativar" : "ativar"} icone={p.status === "ativo" ? Ban : CheckCircle2} onClick={() => alternarStatusProf(p)}
                                                     title={p.status === "ativo" ? t('teachersTab.extra.deactivateProfile') : t('teachersTab.extra.activateProfile')} />
@@ -931,6 +947,13 @@ export function ProfessoresTab() {
             </form>
           </div>
         </div>
+      )}
+
+      {profWorkshops && (
+        <CertificadosDoProfessor
+          professor={profWorkshops}
+          onClose={() => setProfWorkshops(null)}
+        />
       )}
     </div>
   );

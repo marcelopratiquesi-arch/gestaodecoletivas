@@ -1,0 +1,50 @@
+{
+  "open": "Tabla de precios",
+  "title": "Tabla de precios",
+  "subtitle": "Valor por clase, por modalidad y por pulsera (plan de carrera de las clases colectivas).",
+  "edit": "Editar valores",
+  "close": "Cerrar",
+  "cancel": "Cancelar",
+  "save": "Guardar",
+  "saved_one": "Tabla guardada. {{count}} valor modificado.",
+  "saved_other": "Tabla guardada. {{count}} valores modificados.",
+  "noChanges": "No se modificó nada.",
+  "loadError": "No se pudo cargar la tabla de precios. Intentá de nuevo.",
+  "saveError": "No se pudo guardar. Revisá tu conexión e intentá de nuevo.",
+  "invalidValues_one": "{{count}} campo está vacío o es inválido. Usá solo números (ej.: 12,50).",
+  "invalidValues_other": "{{count}} campos están vacíos o son inválidos. Usá solo números (ej.: 12,50).",
+  "hidden": "Oculta",
+  "visible": "Visible",
+  "levels": {
+    "cinza": "Sin workshop",
+    "verde": "Pulsera verde",
+    "vermelha": "Pulsera roja",
+    "preta": "Pulsera negra"
+  },
+  "levelHint": {
+    "cinza": "ningún workshop",
+    "verde": "1 workshop",
+    "vermelha": "2 workshops",
+    "preta": "3 workshops"
+  },
+  "fields": {
+    "qualquer": "Cualquier clase",
+    "academico": "Académicos",
+    "umaAula": "1 clase",
+    "seguidas": "2 a 3 clases"
+  },
+  "rulesTitle": "Cómo leer la tabla",
+  "ruleWorkshop": "La pulsera depende de cuántos workshops hizo la persona. Cada modalidad cuenta como un workshop.",
+  "ruleAcademic": "Académicos: clase dada en el horario de pasantía/trabajo. Los demás valores son para clases fuera de ese horario.",
+  "ruleStreak": "Jump y Dance: \"2 a 3 clases\" vale cuando la persona da clases seguidas el mismo día (ej.: Jump y después Dance).",
+  "blackTitle": "Pulsera negra",
+  "blackIntro": "Además de los 3 workshops, la clase necesita un promedio de alumnos superior a:",
+  "freq": {
+    "manha": "Mañana:",
+    "noite": "Noche:"
+  },
+  "students": "alumnos",
+  "notAutomatic": "Atención: esta tabla es de consulta y edición. Todavía no calcula el pago automáticamente; el valor de cada clase sigue siendo el cargado en el Cronograma.",
+  "lastUpdate": "Última modificación el {{when}} por {{who}}.",
+  "neverSaved": "Valores iniciales del plan de carrera. Todavía no fueron guardados por el administrador."
+}

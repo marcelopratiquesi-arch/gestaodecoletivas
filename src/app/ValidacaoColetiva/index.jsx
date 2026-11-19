@@ -1,3 +1,4 @@
+import { ehDoMeuEscopo } from "../../permissions.js";
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCatalogs } from '../../contexts/CatalogContext'; 
@@ -89,8 +90,8 @@ export default function ValidacaoColetiva() {
       if (!catalogs?.unidades) return [];
       // Unidade inativa não entra: não tem aula esperada, não tem o que cobrar (e deixa de gastar leitura).
       const ativas = catalogs.unidades.filter(u => !u.status || u.status === 'ativa');
-      return isMentor ? ativas.filter(u => u.mentorId === userId) : ativas;
-  }, [catalogs?.unidades, isMentor, userId]);
+      return isMentor ? ativas.filter(u => ehDoMeuEscopo(userData, u.mentorId)) : ativas;
+  }, [catalogs?.unidades, isMentor, userData]);
 
   const estadosOptions = useMemo(() => [...new Set(unidadesBase.map(u => u.estado).filter(Boolean))].sort().map(e => ({ value: e, label: e })), [unidadesBase]);
   // Filtro lembrado de unidade/mentor/estado que não existe mais (unidade desativada, mentor trocado...) é ignorado,
@@ -312,7 +313,7 @@ export default function ValidacaoColetiva() {
         }
 
         return { 
-            id: unidade.id, nome: unidade.nome, telefone: unidade.telefone, pais: unidade.pais, mentorId: unidade.mentorId, 
+            id: unidade.id, nome: unidade.nome, liderNome: unidade.liderNome, telefone: unidade.telefone, pais: unidade.pais, mentorId: unidade.mentorId, 
             mentorNome: usuariosMap[unidade.mentorId]?.nome || t('common.unknown.noMentor'), totalEsperado: totalEsp, totalValidado: totalVal, 
             percentual: pct, pendencias: pends, statusTexto: totalEsp === 0 ? 'AGUARDANDO' : pct === 100 ? 'PARABÉNS!' : 'EM ANDAMENTO', 
             temCronograma: temCronograma,
@@ -487,6 +488,9 @@ export default function ValidacaoColetiva() {
 
   const msgMentorToUnit = (u) => {
       const datas = formatPendencias(u.pendencias);
+      // Com líder cadastrado na unidade, chama pelo primeiro nome; sem líder, mantém a mensagem genérica.
+      const lider = String(u.liderNome || '').trim().split(/\s+/)[0];
+      if (lider) return t('groupValidation.messages.mentorToUnitNamed', { leader: lider.toUpperCase(), unit: u.nome.toUpperCase(), dates: datas });
       return t('groupValidation.messages.mentorToUnit', { unit: u.nome.toUpperCase(), dates: datas });
   };
 

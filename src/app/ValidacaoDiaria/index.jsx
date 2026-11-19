@@ -27,7 +27,7 @@ import { invalidarCacheInicio } from '../../services/cacheInicio';
 import { useValidacoesDoProfessor, meuProfessorId } from '../../hooks/useValidacoesDoProfessor';
 import { useMediaAlunos, numeroEstranho } from '../../hooks/useMediaAlunos';
 import { useTranslation } from 'react-i18next';
-import { ehLider, unidadesDoLider } from '../../permissions';
+import { ehLider, unidadesDoLider, ehDoMeuEscopo } from '../../permissions';
 
 // --- HELPERS ---
 const getTodayStr = hojeLocal;
@@ -221,7 +221,7 @@ export default function ValidacaoDiariaPage() {
     let unitsData = [...(globalCatalogs.unidades || [])];
     
     if (role === 'mentor') {
-      unitsData = unitsData.filter(u => u.mentorId === userId);
+      unitsData = unitsData.filter(u => ehDoMeuEscopo(userData, u.mentorId));
     } else if (ehLider(role)) {
       const minhas = new Set(unidadesLiderKey.split(","));
       unitsData = unitsData.filter(u => minhas.has(String(u.id)));
@@ -237,7 +237,7 @@ export default function ValidacaoDiariaPage() {
     }
 
     return { ...globalCatalogs, unidades: unitsData };
-  }, [globalCatalogs, loadingCatalogs, role, userId, unidadesLiderKey, userData]);
+  }, [globalCatalogs, loadingCatalogs, role, unidadesLiderKey, userData]);
 
   // --- PERÍODO NA TELA E VALIDAÇÕES DO PROFESSOR ---
   const periodo = useMemo(() => {

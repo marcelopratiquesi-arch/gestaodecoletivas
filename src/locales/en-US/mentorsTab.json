@@ -105,5 +105,63 @@
     "noResults": "No units found.",
     "confirmTake": "Unit {{unit}} currently belongs to {{from}}. Move to {{to}}?",
     "saveError": "Could not save."
+  },
+  "second": {
+    "title": "2nd mentor",
+    "help": "{{mentor}}'s 2nd mentor sees and does the same as them in all their units (including ones added later).",
+    "modeExisting": "Already registered",
+    "modeNew": "Invite new e-mail",
+    "search": "Search by name, e-mail or CPF/DNI/SSN...",
+    "docSearching": "Looking up the document...",
+    "docNone": "No one with that document (use \"Invite new e-mail\").",
+    "noPeople": "No one found.",
+    "tag": {
+      "professor": "Teacher",
+      "lider": "Leader",
+      "mentor": "Mentor",
+      "admin": "Admin"
+    },
+    "reading": "Reading the record...",
+    "now": "Today is {{role}}. Will receive mentor access.",
+    "keepsLeader": "Stays leader of: {{units}} (name keeps showing there). If removed as 2nd mentor, goes back to leader only.",
+    "outsideWarning": "Warning: {{units}} is/are not this mentor's unit(s). There the person won't have mentor access (leadership stays).",
+    "errors": {
+      "read": "Could not read the record.",
+      "save": "Could not save.",
+      "noLogin": "This person has no login yet.",
+      "blocked": "This person is blocked.",
+      "admin": "Admin already has full access.",
+      "alreadyMentor": "This person is already a mentor.",
+      "alreadySecond": "This person is already the 2nd mentor of another mentor.",
+      "mentorWithUnits": "This mentor already has their own units and would lose access to them as a fixed 2nd mentor. Use the Temporary mentor button (cover): they keep their units and gain this mentor units for a period.",
+      "self": "A mentor cannot cover themselves."
+    },
+    "confirm": "Make {{name}} the 2nd mentor of {{mentor}}?",
+    "done": "{{name}} is now a 2nd mentor.",
+    "invited": "{{name}} was registered. On first Google sign-in they join as 2nd mentor.",
+    "googleEmail": "Google e-mail",
+    "inviteHelp": "The person signs in with Google using this e-mail and becomes 2nd mentor automatically.",
+    "save": "Make 2nd mentor",
+    "invite": "Register invite",
+    "badge": "2nd mentor of {{name}}",
+    "has": "2nd mentor: {{name}}",
+    "pending": "2nd mentor invited: {{name}} (waiting for first sign-in)",
+    "sameUnits": "Same units as {{name}}",
+    "shared": "team",
+    "add": "Add 2nd mentor",
+    "makeFirst": "Make 1st mentor",
+    "remove": "Remove as 2nd mentor",
+    "removeConfirm": "Remove {{name}} as 2nd mentor of {{mentor}}?\n\nIf they were a leader or teacher, they go back to that.",
+    "promoteConfirm": "{{name}} becomes the 1st mentor and receives {{count}} unit(s) from {{mentor}}.\n{{mentor}} is left with no units (can receive others later).\n\nConfirm?",
+    "leavesConfirm": "{{mentor}} has a 2nd mentor ({{name}}).\n\nOn leaving, {{name}} takes over all units. Confirm?",
+    "accessOf": "{{name}}'s access"
+  },
+  "filter": {
+    "all": "All",
+    "with": "With units",
+    "without": "No units",
+    "second": "With 2nd mentor",
+    "stale": "Not in for 30+ days",
+    "never": "Never signed in"
   }
 }

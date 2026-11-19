@@ -706,3 +706,42 @@ describe('liderança: professor-líder, 2º líder e líder de várias unidades'
     await assertSucceeds(updateDoc(doc(como('admin1'), 'usuarios/prof1'), { role: 'lider', unidadeId: 'uniB', unidadeIds: ['uniB', 'uniA'], professorId: 'p1' }));
   });
 });
+
+// 2º mentor: crachá de mentor com mentorPrincipalId. Enxerga e faz o mesmo que o 1º nas unidades dele (e só nelas).
+describe('2º mentor (espelho do 1º)', () => {
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      await setDoc(doc(db, 'usuarios/segundo1'), { role: 'mentor', status: 'ativo', nome: 'Segundo', mentorPrincipalId: 'mentor1', papelAntesSegundoMentor: 'lider' });
+      await setDoc(doc(db, 'usuarios/semVinculo'), { role: 'mentor', status: 'ativo', nome: 'Sem vínculo' });
+    });
+  });
+  it('o 2º mentor apaga o login de líder de uma unidade do 1º mentor, como o 1º faria', async () => {
+    await assertSucceeds(deleteDoc(doc(como('segundo1'), 'usuarios/liderA')));
+  });
+  it('mentor sem o vínculo não alcança as unidades do mentor1', async () => {
+    await assertFails(deleteDoc(doc(como('semVinculo'), 'usuarios/liderA')));
+  });
+  it('2º mentor do mentor1 não alcança unidades de outro mentor', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'usuarios/liderB'), { role: 'lider', unidadeId: 'uniB', unidadeIds: ['uniB'], nome: 'Líder B' });
+    });
+    await assertFails(deleteDoc(doc(como('segundo1'), 'usuarios/liderB')));
+  });
+  it('mentor comum não se declara 2º de ninguém (só o admin grava o vínculo)', async () => {
+    await assertFails(updateDoc(doc(como('semVinculo'), 'usuarios/semVinculo'), { mentorPrincipalId: 'mentor1' }));
+    await assertSucceeds(updateDoc(doc(como('admin1'), 'usuarios/semVinculo'), { mentorPrincipalId: 'mentor1' }));
+  });
+  it('convite de 2º mentor: o crachá nasce com o vínculo do convite, e só com ele', async () => {
+    await conviteCriado({ mentorPrincipalId: 'mentor1' });
+    await assertFails(aceitar(googleVerificado('novoM', 'novomentor@gmail.com'), 'novoM')); // sem o vínculo
+    await conviteCriado({ mentorPrincipalId: 'mentor1' });
+    await assertFails(aceitar(googleVerificado('novoM', 'novomentor@gmail.com'), 'novoM', crachaDoConvite({ mentorPrincipalId: 'mentor2' })));
+    await conviteCriado({ mentorPrincipalId: 'mentor1' });
+    await assertSucceeds(aceitar(googleVerificado('novoM', 'novomentor@gmail.com'), 'novoM', crachaDoConvite({ mentorPrincipalId: 'mentor1' })));
+  });
+  it('convite comum não deixa o crachá se declarar 2º mentor', async () => {
+    await conviteCriado();
+    await assertFails(aceitar(googleVerificado('novoM', 'novomentor@gmail.com'), 'novoM', crachaDoConvite({ mentorPrincipalId: 'mentor1' })));
+  });
+});

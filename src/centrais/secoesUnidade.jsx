@@ -7,7 +7,7 @@
 import { useTranslation } from 'react-i18next';
 import {
   BarChart3, Users, CalendarDays, ShieldCheck, UserCheck, Settings, MapPin, Phone, Mail, Ruler, Info, Pencil, ExternalLink,
-  TrendingUp, Wallet,
+  TrendingUp, Wallet, Timer,
 } from 'lucide-react';
 import Quadro from './pecas/Quadro';
 import Contato from './pecas/Contato';
@@ -17,6 +17,8 @@ import { GraficoBarras, EvolucaoMeses } from './pecas/Graficos';
 import LinkCentral from './LinkCentral';
 import { BOTAO_BRANCO } from './pecas/cores';
 import { QuadroEmDia, TabelaProfessores, GradeSemanal, CartaoPessoa, UltimoAcesso } from './secoes';
+import { SeloDoPrazo } from '../app/Configuracoes/Lideres/TemporariosSecao';
+import { diaDoFim, fimDoTemporario } from '../utils/temporario';
 import { atalhoTelaCompleta, caminhos } from './atalhos';
 import { formatCurrency, formatDate, formatNumber, formatPercent } from '../utils/formatters';
 
@@ -155,7 +157,7 @@ export function SecaoGrade({ d, comLink = false }) {
 // ---------- Mentor e Líder ----------
 export function SecaoEquipe({ d, comLink = false }) {
   const { t } = useTranslation();
-  const { unidade, mentor } = d;
+  const { unidade, mentor, mentor2 } = d;
   const acao = comLink ? atalhoTelaCompleta(t, d.pode.cfgLideres, caminhos.configuracoes(d.irPara, 'lideres')) : null;
 
   return (
@@ -166,8 +168,18 @@ export function SecaoEquipe({ d, comLink = false }) {
             ? <Contato icone={Phone} texto={mentor.telefone} copiar whatsapp pais={mentor.pais || unidade.pais} />
             : <Contato icone={Phone} texto={t('centrais.unidade.info.mentorSemTelefone')} falta />}
           {mentor?.email && <Contato icone={Mail} texto={mentor.email} copiar />}
-          <UltimoAcesso />
+          <UltimoAcesso quando={mentor?.ultimoAcesso} />
         </CartaoPessoa>
+
+        {mentor2 && (
+          <CartaoPessoa icone={ShieldCheck} papel={t('centrais.mentor.segundo')} nome={mentor2.nome} link={{ tipo: 'mentor', alvo: mentor2 }}>
+            {mentor2.telefone
+              ? <Contato icone={Phone} texto={mentor2.telefone} copiar whatsapp pais={mentor2.pais || unidade.pais} />
+              : <Contato icone={Phone} texto={t('centrais.unidade.info.mentorSemTelefone')} falta />}
+            {mentor2.email && <Contato icone={Mail} texto={mentor2.email} copiar />}
+            <UltimoAcesso quando={mentor2.ultimoAcesso} />
+          </CartaoPessoa>
+        )}
 
         <CartaoPessoa
           icone={UserCheck}
@@ -204,6 +216,19 @@ export function SecaoEquipe({ d, comLink = false }) {
             <UltimoAcesso />
           </CartaoPessoa>
         )}
+
+        {(d.temporarios || []).map((c) => (
+          <CartaoPessoa key={c.id} icone={Timer} papel={t('tempLeader.title')} nome={c.nome || c.email}>
+            <p className="flex flex-wrap items-center gap-2 text-[11px] font-bold text-slate-500 dark:text-slate-400">
+              {t('tempLeader.central.until', { date: diaDoFim(fimDoTemporario(c)) })} <SeloDoPrazo fim={fimDoTemporario(c)} />
+            </p>
+            {c.telefone
+              ? <Contato icone={Phone} texto={c.telefone} copiar whatsapp pais={c.pais || unidade.pais} />
+              : <Contato icone={Phone} texto={t('centrais.unidade.info.liderSemTelefone')} falta />}
+            {c.email && <Contato icone={Mail} texto={c.email} copiar />}
+            <UltimoAcesso quando={c.ultimoAcesso} />
+          </CartaoPessoa>
+        ))}
       </div>
     </Quadro>
   );

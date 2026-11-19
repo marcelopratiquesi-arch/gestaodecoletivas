@@ -45,7 +45,7 @@
     "optionalHint": "Optional for now: fill it in to complete the record. Kept in a protected area (only admin and mentor see it).",
     "fixHint": "Change only if the number is wrong.",
     "replacesOldLogin": "This record is linked to another login (usually the old password one). Confirming makes it use this person's new login.",
-    "fromLogin":"This ID belongs to the access (login) of {{name}} ({{email}}). Linking it to the schedule record avoids a duplicate."
+    "fromLogin": "This ID belongs to the access (login) of {{name}} ({{email}}). Linking it to the schedule record avoids a duplicate."
   },
   "newLinkBtn": "+ NEW LINK",
   "fixEmailsBtn": "FIX EMAILS",
@@ -134,5 +134,8 @@
     "deactivateProfile": "Deactivate profile",
     "activateProfile": "Activate profile",
     "deleteNetwork": "Delete permanently from the whole network"
-  }
+  },
+  "workshopsBadge_one": "{{count}} workshop",
+  "workshopsBadge_other": "{{count}} workshops",
+  "workshopsBadgeTip": "See this teacher's workshops"
 }

@@ -65,7 +65,8 @@
     "equipe": "Team",
     "unidades": "Units",
     "aulas": "Classes",
-    "cadastro": "Record"
+    "cadastro": "Record",
+    "workshops": "Workshops"
   },
   "cadastro": {
     "nome": "Name",
@@ -73,7 +74,8 @@
     "telefone": "Phone",
     "pais": "Country",
     "acesso": "System access",
-    "cpf": "Tax ID (CPF)"
+    "cpf": "Tax ID (CPF)",
+    "documento": "Document"
   },
   "emDia": {
     "titulo": "Is everything up to date?",
@@ -88,7 +90,8 @@
     "aulasDadas": "Classes taught in the period",
     "recebeu": "Earned in the period",
     "situacao": "Status",
-    "semContato": "No contact"
+    "semContato": "No contact",
+    "workshops": "Workshops"
   },
   "avisos": {
     "naoEncontrado": "I could not find that record.",
@@ -339,7 +342,11 @@
         "falta": "{{n}} class(es) from the last 7 days not validated in their units.",
         "acao": "Validate now"
       }
-    }
+    },
+    "primeiro": "1st mentor",
+    "segundo": "2nd mentor",
+    "segundoDe": "2nd mentor of {{nome}}",
+    "equipeMentoresTitulo": "Mentor team"
   },
   "professor": {
     "rotulo": "Teacher Hub",
@@ -373,7 +380,9 @@
       "ultimaAula": "Last class taught",
       "aulasNoPeriodo": "{{n}} class(es) taught in the period",
       "umaUnidade": "Linked unit",
-      "cadastro": "Record status"
+      "cadastro": "Record status",
+      "workshops": "Workshops",
+      "workshopsVazio": "No workshops recorded"
     },
     "emDia": {
       "ativo": {
@@ -411,6 +420,15 @@
         "falta": "{{n}} of their class(es) this month not validated.",
         "acao": "Open validation"
       }
+    },
+    "workshops": {
+      "titulo": "Workshops the teacher took",
+      "vazio": "No workshops recorded for this teacher yet.",
+      "nota": "They count for all of the teacher’s units.",
+      "por": "added by {{nome}}",
+      "editar": "Add or remove workshops",
+      "ultimo": "Latest: {{nome}}",
+      "colPor": "Added by"
     }
   }
 }

@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { collection, onSnapshot, query, orderBy, where } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { useAuth } from './AuthContext'; // 🟢 1. Importamos o porteiro (Autenticação)
-import { ehLider, unidadesDoLider } from '../permissions';
+import { ehLider, unidadesDoLider, ehDoMeuEscopo } from '../permissions';
 import { definirUsuarioTelemetria } from '../services/telemetriaLeituras';
 
 const CatalogContext = createContext();
@@ -111,14 +111,14 @@ export const CatalogProvider = ({ children }) => {
         if (ehLider(papel)) return unidadesLiderKey ? unidadesLiderKey.split(',') : [];
         if (papel === 'mentor') {
             if (!basePronta) return null;
-            return base.unidades.filter(u => u.mentorId === uid).map(u => String(u.id)).sort();
+            return base.unidades.filter(u => ehDoMeuEscopo(userData, u.mentorId)).map(u => String(u.id)).sort();
         }
         if (papel === 'professor' && meuProfessorId) {
             if (!basePronta) return null;
             return [...new Set(base.meusVinculos.map(v => String(v.unidadeId)).filter(Boolean))].sort();
         }
         return '*'; // admin (e professor antigo sem professorId no crachá: como antes)
-    }, [chaveSessao, uid, papel, unidadesLiderKey, meuProfessorId, basePronta, base.unidades, base.meusVinculos]);
+    }, [chaveSessao, uid, papel, unidadesLiderKey, meuProfessorId, basePronta, base.unidades, base.meusVinculos, userData]);
 
     // Vira texto: as escutas só reabrem quando o conjunto de unidades muda de verdade.
     const chaveEscopo = escopo === null ? null : `${chaveSessao}#${escopo === '*' ? '*' : escopo.join(',')}`;

@@ -1,4 +1,4 @@
-import { ehLider, unidadesDoLider } from '../../permissions';
+import { ehLider, unidadesDoLider, escoposMentor } from '../../permissions';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import { useAuth } from '../../contexts/AuthContext';
@@ -275,7 +275,7 @@ export default function RelatorioPage() {
       setLoading(true);
       try {
         let qUnidades = query(collection(db, 'unidades'), orderBy('nome'));
-        if (role === 'mentor') qUnidades = query(collection(db, 'unidades'), where('mentorId', '==', userId));
+        if (role === 'mentor') qUnidades = query(collection(db, 'unidades'), where("mentorId", "in", escoposMentor(userData)));
         else if (ehLider(role)) qUnidades = query(collection(db, 'unidades'), where(documentId(), 'in', unidadesLiderKey.split(',').slice(0, LIMITE_IN)));
 
         const usersQuery = query(collection(db, 'usuarios'), where('role', '==', 'mentor'));
@@ -304,7 +304,7 @@ export default function RelatorioPage() {
       finally { setLoading(false); }
     };
     loadCatalogs();
-  }, [role, userId, unidadesLiderKey]);
+  }, [role, userId, unidadesLiderKey, userData]);
 
   // Listas Dinâmicas de Filtros (país e estado já vêm padronizados do carregamento)
   const listasFiltros = useMemo(() => {

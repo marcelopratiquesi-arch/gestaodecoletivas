@@ -24,6 +24,7 @@ import SeletorModalidades from "../components/acesso/SeletorModalidades";
 import { documentoValido, formatarDocumento, tipoDocumentoPadrao } from "../utils/documento";
 import { documentoNoLote, gravarComAviso, lerDocumentoDoPedido, ERRO_DOCUMENTO_EM_USO } from "../services/documentoService";
 import { sincronizarEAvisar } from "../services/contatoService";
+import { diaDoFim } from "../utils/temporario";
 import { ICONE_FUNCAO, useUnidadesPublicas, lerPapelPedido, guardarPapelPedido, FUNCOES_PEDIDO, LIMITE_MODALIDADES } from "../components/acesso/acessoDados";
 
 const Carregando = () => (
@@ -75,10 +76,14 @@ export default function SolicitarAcesso() {
     getDoc(doc(db, "convites_acesso", emailGoogle))
       .then((snap) => {
         const c = snap.exists() ? snap.data() : null;
-        setConvite(c?.status === "pendente" && c?.papel === "mentor" ? c : null);
+        // Convite de mentor (admin) ou de líder temporário (admin/mentor; vem com unidades e prazo, e ainda dentro do prazo).
+        const temporarioValido = c?.papel === "lider" && !!c?.temporarioAte && Array.isArray(c?.unidadeIds) && (c.temporarioAte.toMillis?.() || 0) > Date.now();
+        setConvite(c?.status === "pendente" && (c?.papel === "mentor" || temporarioValido) ? c : null);
       })
       .catch(() => setConvite(null));
   }, [uid, userData, emailGoogle]);
+
+  const temporario = convite?.papel === "lider";
 
   async function aceitarConvite() {
     setErro("");
@@ -86,10 +91,18 @@ export default function SolicitarAcesso() {
     try {
       // Cópia exata dos dados do convite (o banco confere campo a campo).
       const batch = writeBatch(db);
-      batch.set(doc(db, "usuarios", uid), {
+      batch.set(doc(db, "usuarios", uid), temporario ? {
+        // Líder temporário: unidades e prazo vêm do convite; o banco corta o acesso sozinho no fim do prazo.
+        nome: convite.nome, email: emailGoogle, telefone: convite.telefone, pais: convite.pais || "",
+        role: "lider", loginGoogle: true, criadoPor: convite.criadoPor, criadoEm: serverTimestamp(),
+        unidadeId: convite.unidadeIds[0], unidadeIds: convite.unidadeIds,
+        temporarioAte: convite.temporarioAte, temporarioDesde: serverTimestamp(),
+      } : {
         nome: convite.nome, email: emailGoogle, telefone: convite.telefone, pais: convite.pais || "",
         role: "mentor", status: "ativo", loginGoogle: true,
         criadoPor: convite.criadoPor, criadoEm: serverTimestamp(),
+        // 2º mentor novo: o convite já diz de qual mentor ele é o 2º.
+        ...(convite.mentorPrincipalId ? { mentorPrincipalId: convite.mentorPrincipalId } : {}),
       });
       batch.update(doc(db, "convites_acesso", emailGoogle), { status: "usado", usadoPor: uid, usadoEm: serverTimestamp() });
       await batch.commit();
@@ -97,12 +110,14 @@ export default function SolicitarAcesso() {
       await sincronizarEAvisar({ dono: { uid }, depois: { email: emailGoogle, telefone: convite.telefone, pais: convite.pais || "BR" } }, t);
       await registrarAuditoriaAcesso({
         tipoAcao: "NOVA",
-        descricao: `Mentor(a) ${convite.nome}: 1º acesso pelo Google (cadastrado pelo admin).`,
+        descricao: temporario
+          ? `Líder temporário(a) ${convite.nome}: 1º acesso pelo Google (até ${diaDoFim(convite.temporarioAte)}).`
+          : `Mentor(a) ${convite.nome}: 1º acesso pelo Google (cadastrado pelo admin).`,
         quem: { id: uid, nome: convite.nome, email: emailGoogle },
         alvo: { id: uid, nome: convite.nome, email: emailGoogle, emailGoogle },
-        papelNovo: "mentor",
+        papelNovo: temporario ? "lider" : "mentor",
         detalhes: `Aprovado por: ${convite.criadoPorNome || "-"} (uid ${convite.criadoPor})`,
-        unidadeNome: "Gestão/Diretoria",
+        unidadeNome: temporario ? (porId.get(convite.unidadeIds?.[0])?.nome || "-") : "Gestão/Diretoria",
       });
       await recarregarCracha();
     } catch (err) {
@@ -117,7 +132,7 @@ export default function SolicitarAcesso() {
   }, [pedido?.status, recarregarCracha]);
 
   const precisaFormulario = pedido === null || pedido?.status === "recusado" || editando;
-  const unidades = useUnidadesPublicas(precisaFormulario || !!pedido);
+  const unidades = useUnidadesPublicas(precisaFormulario || !!pedido || temporario);
   const porId = useMemo(() => new Map((unidades || []).map((u) => [u.id, u])), [unidades]);
 
   // Pedido anterior (recusado ou em edição): traz o documento que já tinha informado.
@@ -203,11 +218,17 @@ export default function SolicitarAcesso() {
             <ShieldCheck className="w-8 h-8 text-blue-500" />
           </div>
           <h2 className="text-xl font-black text-white">{t("accessRequest.invite.title", { name: convite.nome })}</h2>
-          <p className="text-sm text-zinc-400">{t("accessRequest.invite.desc")}</p>
+          <p className="text-sm text-zinc-400">{temporario ? t("accessRequest.invite.descTemp") : t("accessRequest.invite.desc")}</p>
           <div className="text-left bg-zinc-900 border border-zinc-800 rounded-2xl p-4 text-sm space-y-1">
             <p><span className="text-zinc-500">{t("accessRequest.fields.name")}:</span> <b>{convite.nome}</b></p>
             <p><span className="text-zinc-500">{t("accessRequest.fields.phone")}:</span> <b>{convite.telefone}</b></p>
-            <p><span className="text-zinc-500">{t("accessRequest.fields.role")}:</span> <b>{t("accessRequest.invite.role")}</b></p>
+            <p><span className="text-zinc-500">{t("accessRequest.fields.role")}:</span> <b>{temporario ? t("accessRequest.invite.roleTemp") : t("accessRequest.invite.role")}</b></p>
+            {temporario && (
+              <>
+                <p><span className="text-zinc-500">{t("accessRequest.fields.units")}:</span> <b>{convite.unidadeIds.map((id) => porId.get(id)?.nome || id).join(", ")}</b></p>
+                <p><span className="text-zinc-500">{t("accessRequest.invite.until")}:</span> <b>{diaDoFim(convite.temporarioAte, i18n.language)} 23:59</b></p>
+              </>
+            )}
           </div>
           {erro && (
             <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-xs font-medium flex items-center gap-2 text-left">
@@ -215,7 +236,7 @@ export default function SolicitarAcesso() {
             </div>
           )}
           <button type="button" onClick={aceitarConvite} disabled={aceitando} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black uppercase text-sm py-4 rounded-xl flex items-center justify-center gap-2 disabled:opacity-60">
-            {aceitando ? <Loader2 className="w-5 h-5 animate-spin" /> : <ShieldCheck className="w-4 h-4" />} {t("accessRequest.invite.enter")}
+            {aceitando ? <Loader2 className="w-5 h-5 animate-spin" /> : <ShieldCheck className="w-4 h-4" />} {temporario ? t("accessRequest.invite.enterTemp") : t("accessRequest.invite.enter")}
           </button>
           {sair}
         </div>

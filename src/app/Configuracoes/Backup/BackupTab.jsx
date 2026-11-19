@@ -25,6 +25,7 @@ const COLLECTIONS_TO_BACKUP = [
   'indicadores_mensais',
   'pratique_play_faixas',
   'unipower_workshops',       // Loja & Workshops
+  'workshops_cadastro',       // Cadastro novo de workshops (Cofre Master)
   'unipower_transacoes',
   'unipower_stock',
   'auditoria_cronograma',

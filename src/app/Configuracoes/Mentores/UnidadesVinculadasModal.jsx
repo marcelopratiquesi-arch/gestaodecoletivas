@@ -34,7 +34,7 @@ export function UnidadesVinculadasModal({ mentor, mentores, unidades, quem, onCl
   }, [unidades, mentor.id, busca]);
 
   const destinos = useMemo(
-    () => mentores.filter((m) => m.id !== mentor.id && m.status === "ativo").sort((a, b) => (a.nome || "").localeCompare(b.nome || "")),
+    () => mentores.filter((m) => m.id !== mentor.id && m.status === "ativo" && !m.mentorPrincipalId).sort((a, b) => (a.nome || "").localeCompare(b.nome || "")),
     [mentores, mentor.id]
   );
 

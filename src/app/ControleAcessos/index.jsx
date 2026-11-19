@@ -83,7 +83,10 @@ export default function ControleAcessosPage() {
                 }
                 await batch.commit();
             } else {
-                await updateDoc(doc(db, 'usuarios', userId), { role: newRole });
+                // Deixou de ser mentor: se era 2º mentor, solta o vínculo com o 1º (senão voltaria a valer se virar mentor de novo).
+                await updateDoc(doc(db, 'usuarios', userId), alvo?.mentorPrincipalId && oldRole === 'mentor' && newRole !== 'mentor'
+                    ? { role: newRole, mentorPrincipalId: deleteField(), papelAntesSegundoMentor: deleteField(), segundoMentorDesde: deleteField() }
+                    : { role: newRole });
             }
             
             // X-9 EM AÇÃO

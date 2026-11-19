@@ -1,4 +1,4 @@
-import { ehLider, unidadesDoLider } from '../../permissions';
+import { ehLider, unidadesDoLider, ehDoMeuEscopo } from '../../permissions';
 import React, { useState, useEffect, useMemo } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
@@ -18,7 +18,7 @@ import {
   ChevronRight, TrendingUp, Globe, Megaphone, Headphones, Activity,
   Bell, Download, Trash2,
   Lock, ChevronDown, ShoppingBag, Key, FileSearch, Target,
-  X, ArrowRight, Check
+  X, ArrowRight, Check, Award
 } from "lucide-react";
 
 export default function Sidebar({ collapsed }) { 
@@ -85,7 +85,6 @@ export default function Sidebar({ collapsed }) {
   // ECONOMIA DE COTA: antes, a cada 1 minuto, cada pessoa logada baixava TODAS as validações do dia da rede inteira
   // (~300 leituras/minuto por pessoa). Agora escuta ao vivo só as validações de hoje das MINHAS unidades:
   // paga a primeira carga e depois só cada validação nova.
-  const meuId = userData?.uid || userData?.id;
 
   // Hoje (AAAA-MM-DD). O relógio só troca o dia; não lê nada do banco.
   const [hojeStr, setHojeStr] = useState(() => new Date().toLocaleDateString('en-CA'));
@@ -114,13 +113,13 @@ export default function Sidebar({ collapsed }) {
         let isMyResponsibility = false;
         if (role === 'admin') isMyResponsibility = true;
         else if (ehLider(role) && unidadesDoLider(userData).includes(String(aula.unidadeId))) isMyResponsibility = true;
-        else if (role === 'mentor' && unidade?.mentorId === meuId) isMyResponsibility = true;
+        else if (role === 'mentor' && ehDoMeuEscopo(userData, unidade?.mentorId)) isMyResponsibility = true;
         if (!isMyResponsibility) return;
         if (feriadoNoDia(hojeStr, unidade || { id: aula.unidadeId }, catalogs.feriados || [])) return;
         lista.push(aula);
     });
     return lista;
-  }, [loadingCatalogs, hojeStr, catalogs, role, userData, meuId]);
+  }, [loadingCatalogs, hojeStr, catalogs, role, userData]);
 
   // Quais unidades escutar: '*' = rede inteira (admin); senão, as unidades das minhas aulas de hoje.
   // Vira texto para a escuta só reabrir quando o conjunto de unidades mudar de verdade.
@@ -404,6 +403,7 @@ export default function Sidebar({ collapsed }) {
           <div className="space-y-1.5">
               {!collapsed && <p className="px-4 text-[9px] font-black text-slate-400/60 uppercase tracking-widest mb-2">{t('sidebar.sections.operacional', 'Operacional')}</p>}
               <NavItem to="/app/validacao-diaria" icon={CircleCheck} label={t('sidebar.items.validacaoDiaria', 'Validação Diária')} collapsed={collapsed} active={isActive("/app/validacao-diaria")} badge={isProfessor ? pendenciasProfessor : pendencias}/>
+              {isProfessor && <NavItem to="/app/certificados" icon={Award} label={t('sidebar.items.certificados', 'Meus workshops')} collapsed={collapsed} active={isActive("/app/certificados")} />}
               {["admin", "mentor"].includes(role) && <NavItem to="/app/validacao-coletiva" icon={ShieldCheck} label={t('sidebar.items.validacaoColetiva', 'Validação Coletiva')} collapsed={collapsed} active={isActive("/app/validacao-coletiva")} />}
           </div>
 

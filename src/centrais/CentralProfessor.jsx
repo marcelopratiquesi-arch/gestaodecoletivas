@@ -3,11 +3,13 @@
 // Só leitura. Cadastro, vínculos e grade vêm da memória do sistema (zero leituras). Do banco vêm só as
 // validações DELE no trimestre (mês escolhido + os dois anteriores): aulas que deu e aulas dele dadas
 // por substituto. Quem olha só enxerga o que é das unidades que pode ver (mentor: as dele; líder: a própria).
+// Workshops: lista no próprio cadastro do professor (professores/{id}.workshops), valem para todas as unidades
+// dele e também vêm da memória (zero leituras). Adicionar/remover é na aba Professores das Configurações.
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Building2, CalendarDays, History, BadgeCheck, LayoutGrid, LayoutList, IdCard, Phone, Mail, Eye, Info,
-  Pencil, BarChart3, Globe, Wallet, TrendingUp, ListOrdered,
+  Pencil, BarChart3, Globe, Wallet, TrendingUp, ListOrdered, Award,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useCatalogs } from '../contexts/CatalogContext';
@@ -25,6 +27,9 @@ import { Campo, Vazio, Numero, EstadoCarga, SeletorDeMes } from './pecas/Basicos
 import { GraficoBarras, EvolucaoMeses } from './pecas/Graficos';
 import { BOTAO_PRINCIPAL, BOTAO_BRANCO, TH, TD, SELO_ATIVO, SELO_INATIVO } from './pecas/cores';
 import { QuadroEmDia, GradeSemanal } from './secoes';
+import { CampoDocumento, CampoUltimoAcesso } from './CamposDaPessoa';
+import { lerDocumento } from '../services/documentoService';
+import { lerDocumentoDaFicha } from '../services/documentoFichaService';
 import LinkCentral from './LinkCentral';
 import { iniciais } from './contato';
 import { atalhoTelaCompleta, telasPermitidas, caminhos } from './atalhos';
@@ -126,11 +131,18 @@ export default function CentralProfessor({ id: professorId, z, textoVoltar, onFe
   if (!professor || !acesso) return null;
 
   const pode = telasPermitidas(userData);
+  // CPF/DNI/SSN do professor: só admin e mentor leem a gaveta da ficha (o banco confere).
+  const papelDeQuemOlha = String(userData?.role || '').trim().toLowerCase();
+  const podeVerDocumento = ['admin', 'administrador', 'master', 'mentor'].includes(papelDeQuemOlha);
+  const lerDocumentoDaGrade = async (id) => (await lerDocumentoDaFicha(id)) || (professor.uidLogin ? lerDocumento(professor.uidLogin) : null);
   const ativo = professor.status === 'ativo';
   const faltam = itens.filter((i) => !i.ok).length;
   const totalNaSemana = aulasNaSemana(aulas);
   const paisPadrao = professor.pais || unidades[0]?.unidade.pais;
   const ultimaAula = ultimas?.[0]?.data || null;
+  // Workshops que ele fez, do mais novo para o mais antigo.
+  const workshops = [...(Array.isArray(professor.workshops) ? professor.workshops : [])]
+    .sort((a, b) => String(b.data || '').localeCompare(String(a.data || '')));
   const carregando = erro || !resumo;
   const umaMoeda = (lista) => (lista?.valores.length === 1 ? lista.valores[0].valor : null);
 
@@ -167,6 +179,7 @@ export default function CentralProfessor({ id: professorId, z, textoVoltar, onFe
     { id: 'panorama', nome: t('centrais.abas.panorama'), icone: LayoutList },
     { id: 'valores', nome: t('centrais.abas.valores'), icone: Wallet },
     { id: 'aulas', nome: t('centrais.abas.aulas'), icone: CalendarDays },
+    { id: 'workshops', nome: t('centrais.abas.workshops'), icone: Award },
     { id: 'unidades', nome: t('centrais.abas.unidades'), icone: Building2 },
     { id: 'cadastro', nome: t('centrais.abas.cadastro'), icone: IdCard },
   ];
@@ -352,6 +365,41 @@ export default function CentralProfessor({ id: professorId, z, textoVoltar, onFe
     </Quadro>
   );
 
+  const quadroWorkshops = (
+    <Quadro titulo={t('centrais.professor.workshops.titulo')} icone={Award}>
+      {workshops.length === 0 ? <Vazio texto={t('centrais.professor.workshops.vazio')} /> : (
+        <div className="overflow-x-auto -mx-4 px-4">
+          <table className="w-full min-w-[480px] text-[12px]">
+            <thead>
+              <tr className="border-b border-slate-100 dark:border-slate-800">
+                <th className={TH}>{t('centrais.professor.data')}</th>
+                <th className={TH}>{t('centrais.abas.workshops')}</th>
+                <th className={TH}>{t('centrais.professor.workshops.colPor')}</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              {workshops.map((w, i) => (
+                <tr key={w.id || i}>
+                  <td className={`${TD} font-bold text-slate-800 dark:text-white whitespace-nowrap`}>{w.data ? formatDate(w.data) : '—'}</td>
+                  <td className={`${TD} font-semibold text-slate-700 dark:text-slate-200`}>{w.nome}</td>
+                  <td className={`${TD} font-semibold text-slate-500 dark:text-slate-400`}>{w.por || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <p className="mt-3 text-[11px] font-semibold text-slate-400">{t('centrais.professor.workshops.nota')}</p>
+      {pode.cfgProfessores && (
+        <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+          <button type="button" className={BOTAO_BRANCO} onClick={caminhos.configuracoes(irPara, 'professores')}>
+            <Pencil className="w-3.5 h-3.5" /> {t('centrais.professor.workshops.editar')}
+          </button>
+        </div>
+      )}
+    </Quadro>
+  );
+
   const cadastro = (
     <Quadro titulo={t('centrais.professor.cadastroTitulo')} icone={IdCard}>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -374,8 +422,8 @@ export default function CentralProfessor({ id: professorId, z, textoVoltar, onFe
         <Campo rotulo={t('centrais.professor.modalidades')}>
           {modalidades.length > 0 ? modalidades.map((m) => m.nome).join(', ') : t('centrais.semAulaNaGrade')}
         </Campo>
-        <Campo rotulo={t('centrais.cadastro.cpf')}><EmBreve /></Campo>
-        <Campo rotulo={t('centrais.ultimoAcessoRotulo')}><EmBreve /></Campo>
+        <CampoDocumento pode={podeVerDocumento} chave={String(professor.id)} leitor={lerDocumentoDaGrade} />
+        <CampoUltimoAcesso uid={professor.uidLogin} />
       </div>
       {pode.cfgProfessores && (
         <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
@@ -393,7 +441,7 @@ export default function CentralProfessor({ id: professorId, z, textoVoltar, onFe
 
       <SeletorDeMes mes={mes} mesMaximo={mesDeHoje} onTrocar={setMes} periodo={periodo} />
 
-      <div className="mt-3 grid grid-cols-2 lg:grid-cols-5 gap-3">
+      <div className="mt-3 grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
         <Cartao
           icone={Wallet}
           cor="emerald"
@@ -440,6 +488,16 @@ export default function CentralProfessor({ id: professorId, z, textoVoltar, onFe
           onClick={() => setAba('aulas')}
         />
         <Cartao
+          icone={Award}
+          cor="violet"
+          titulo={t('centrais.professor.cartoes.workshops')}
+          valor={formatNumber(workshops.length)}
+          frase={workshops.length > 0
+            ? t('centrais.professor.workshops.ultimo', { nome: workshops[0].nome })
+            : t('centrais.professor.cartoes.workshopsVazio')}
+          onClick={() => setAba('workshops')}
+        />
+        <Cartao
           icone={BadgeCheck}
           cor="emerald"
           titulo={t('centrais.professor.cartoes.cadastro')}
@@ -456,9 +514,10 @@ export default function CentralProfessor({ id: professorId, z, textoVoltar, onFe
 
       <div className="mt-4 space-y-4">
         {aba === 'geral' && <>{principal}{numeros}{emDia}</>}
-        {aba === 'panorama' && <>{numeros}{evolucao}{quadroPorUnidade}{emDia}{quadroUltimas}{quadroGrade}{quadroUnidades}{cadastro}</>}
+        {aba === 'panorama' && <>{numeros}{evolucao}{quadroPorUnidade}{emDia}{quadroUltimas}{quadroGrade}{quadroWorkshops}{quadroUnidades}{cadastro}</>}
         {aba === 'valores' && <>{numeros}{evolucao}{quadroPorUnidade}</>}
         {aba === 'aulas' && <>{quadroUltimas}{quadroGrade}</>}
+        {aba === 'workshops' && quadroWorkshops}
         {aba === 'unidades' && quadroUnidades}
         {aba === 'cadastro' && cadastro}
       </div>
