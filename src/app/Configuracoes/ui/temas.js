@@ -143,6 +143,26 @@ export const TEMAS = {
     marcado: "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300",
     contagem: "bg-purple-600 text-white",
   },
+  "workshops": {
+    cor: "rose",
+    // menu de abas
+    menuAtivo: "border-rose-600 text-rose-600 dark:text-rose-400 dark:border-rose-400 bg-rose-50/50 dark:bg-rose-900/10",
+    menuIconeAtivo: "text-rose-600 dark:text-rose-400",
+    menuContador: "bg-rose-600 text-white",
+    // faixa colorida no alto da área de conteúdo
+    faixa: "border-t-4 border-t-rose-500",
+    // quadradinho do ícone no título
+    iconeTitulo: "bg-rose-600 text-white shadow-md shadow-rose-500/20",
+    // botão principal (ex.: Novo Mentor)
+    botao: "bg-rose-600 hover:bg-rose-700 text-white shadow-lg shadow-rose-500/20",
+    // campo de busca / seletores em foco
+    foco: "focus:outline-none focus:ring-2 focus:ring-rose-500/50 focus:border-rose-500",
+    lupa: "group-focus-within:text-rose-500",
+    // selo/etiqueta suave e botão de filtro marcado
+    suave: "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-900/20 dark:text-rose-300 dark:border-rose-800",
+    marcado: "bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300",
+    contagem: "bg-rose-600 text-white",
+  },
   "backup": {
     cor: "slate",
     // menu de abas
