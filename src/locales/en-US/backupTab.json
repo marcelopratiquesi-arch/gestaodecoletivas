@@ -48,6 +48,7 @@
     "people_one": "{{count}} person",
     "people_other": "{{count}} people",
     "types": {
+      "semTrava": "Not locked (conflicts)",
       "email": "Duplicate email",
       "telefone": "Duplicate phone",
       "nome": "Duplicate name",
@@ -84,7 +85,19 @@
       "id": "Id"
     },
     "cards_one": "{{count}} record",
-    "cards_other": "{{count}} records"
+    "cards_other": "{{count}} records",
+    "searchPlaceholder": "Search by name, e-mail or phone (applies to all lists)",
+    "noMatch": "No one in this list matches the search.",
+    "help": {
+      "semTrava": "The same e-mail or phone on different people: the system cannot lock it. If it is the same person, use \"Merge\" or \"Link\". If they are different people, use \"Fix\" on whoever has the wrong data (or clear the phone).",
+      "mesma": "The same person with more than one record, or with record and badge not linked. Use \"Merge\" or \"Link\".",
+      "outra": "Same phone, very different names: probably a typo or family. Use \"Fix\" on whoever has the wrong phone.",
+      "soNome": "Only the name matches, nothing else in common: usually namesakes. Check; if it is the same person, use \"Merge\".",
+      "telefoneInvalido": "Phone that is not a valid number: use \"Fix\".",
+      "emailInvalido": "Badly formatted e-mail: use \"Fix\".",
+      "emailDeMentira": "Made-up e-mail (e.g. none@...): use \"Fix\" with the real e-mail.",
+      "loginAntigo": "Old logins (password 123456 and unit login): already out of the count, nothing to do."
+    }
   },
   "merge": {
     "button": "Merge records ({{count}})",
@@ -148,5 +161,19 @@
     "otherHint": "Please check: could be a typo or family. They are not the same person.",
     "sameHint": "Looks like the same person on several records:",
     "merge": "Merge records"
+  },
+  "fix": {
+    "button": "Fix",
+    "title": "Fix e-mail / phone",
+    "save": "Save",
+    "done": "Fixed. The list is already updated.",
+    "loginEmail": "This is the Google login e-mail: it does not change here.",
+    "phoneEmpty": "(no phone)",
+    "phoneHint": "Leave blank to clear the phone (e.g. the admin account of the same person).",
+    "emailInvalid": "Invalid or made-up e-mail.",
+    "phoneInvalid": "Invalid phone (check the area code and digits).",
+    "taken": "Not saved: this data already belongs to {{who}}.",
+    "someoneElse": "someone else",
+    "error": "Could not save the fix."
   }
 }

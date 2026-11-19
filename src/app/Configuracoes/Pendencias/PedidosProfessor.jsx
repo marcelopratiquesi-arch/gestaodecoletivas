@@ -16,7 +16,7 @@ import { usePedidosProfessor } from "./usePedidosProfessor";
 import FichaDoPedido from "./FichaDoPedido";
 import { aprovarProfessorPedido } from "../../../services/aprovarProfessorService";
 import { normalizarPais } from "../../../utils/feriados";
-import { avisoDeConflito } from "../../../services/contatoService";
+import { avisoDeConflito, confirmarSeContatoEmUso } from "../../../services/contatoService";
 
 const formatarData = (ts, idioma) => {
   const d = ts?.toDate?.();
@@ -47,6 +47,11 @@ export default function PedidosProfessor() {
       ? t("pendingTab.teacher.link.approveConfirm", { name: p.nome, unit: unidade.nome, record: ficha.nome })
       : t("pendingTab.teacher.approveConfirm", { name: p.nome, unit: unidade.nome });
     if (!window.confirm(pergunta)) return;
+    // Parte B: e-mail/telefone já de outra pessoa (que não é a ficha escolhida) → pergunta antes.
+    if (!(await confirmarSeContatoEmUso({
+      dono: { uid: p.id, professorId: ficha ? String(ficha.id) : undefined },
+      depois: { email: p.email, telefone: p.telefone, pais: normalizarPais(unidade.pais) },
+    }, t))) return;
     setProcessando(p.id);
     let levouDocumento = false;
     let conflitos = [];

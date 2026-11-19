@@ -7,16 +7,18 @@
   },
   "reserve": {
     "button": "Create reservations for current records",
-    "hint": "Saves the e-mail and phone lock for everyone already registered. The conflicts below are the cleanup still needed before blocking duplicates.",
+    "hint": "Saves the e-mail and phone lock for everyone already registered (does not change any record). {{count}} cases are left in the \"Not locked\" list below: after cleaning them up, click again to lock those too.",
     "working": "Creating reservations...",
     "done": "{{created}} reservations created, {{ok}} were already right.",
-    "conflicts": "Conflicts ({{count}}): the same data on different people",
     "taken": "Already reserved for someone else ({{count}})",
     "none": "No conflicts.",
     "error": "Could not create the reservations.",
     "type": {
       "email": "E-mail",
       "tel": "Phone"
-    }
-  }
+    },
+    "conflictsBelow": "{{count}} cases not locked: fix them in the \"Not locked\" list below."
+  },
+  "blocked": "Not saved: {{fields}} is already on another person's record. Check what was typed. If it is the same person, ask the admin to merge the records (Duplicates report, Backup tab).",
+  "approveConfirm": "Warning: {{fields}} of this request is already on another person's record.\n\nIf it is the SAME person (e.g. a leader who also teaches), approve and then link the records in the Duplicates report (Backup tab).\nIf it is someone else, cancel and check the request.\n\nApprove anyway?"
 }
