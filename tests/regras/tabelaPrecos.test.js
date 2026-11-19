@@ -9,7 +9,7 @@ let env;
 beforeAll(async () => {
   env = await initializeTestEnvironment({
     projectId: 'demo-gestao-pratique',
-    firestore: { rules: readFileSync('firestore.rules', 'utf8'), host: '127.0.0.1', port: 8080 },
+    firestore: { rules: readFileSync('firestore.rules', 'utf8'), host: '127.0.0.1', port: Number(globalThis.process?.env?.FIRESTORE_EMULATOR_HOST?.split(':').pop() || 8080) },
   });
 });
 afterAll(async () => { await env?.cleanup(); });
