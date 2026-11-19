@@ -13,7 +13,7 @@ import { Inbox, Check, X, Loader2, Building2, Phone, Mail, User, Clock, ShieldCh
 import { db } from "../../../services/firebase";
 import { registrarAuditoriaAcesso } from "../../../services/auditoriaAcessos";
 import { liberarDocumentoDoPedido } from "../../../services/documentoService";
-import { sincronizarEAvisar } from "../../../services/contatoService";
+import { confirmarSeContatoEmUso, sincronizarEAvisar } from "../../../services/contatoService";
 import { normalizarPais } from "../../../utils/feriados";
 import { publicarUnidades } from "../../../services/vitrinePublica";
 import { useAuth } from "../../../contexts/AuthContext";
@@ -81,6 +81,8 @@ export function PendenciasTab() {
       if (escolha) plano.push({ unidade: u, ...escolha });
     }
     if (!plano.length) return;
+    // Parte B: e-mail/telefone do pedido que já é de outra pessoa → pergunta antes.
+    if (!(await confirmarSeContatoEmUso({ dono: { uid: p.id }, depois: { email: p.email, telefone: p.telefone, pais: normalizarPais(plano[0].unidade.pais) } }, t))) return;
 
     setProcessando(p.id);
     try {
@@ -139,6 +141,7 @@ export function PendenciasTab() {
       name: p.nome,
       units: unidades.map((u) => `${u.nome}${u.mentorId ? ` (${nomeDoMentor(u.mentorId) || t("pendingTab.otherMentor")})` : ""}`).join("\n"),
     }));
+    if (!(await confirmarSeContatoEmUso({ dono: { uid: p.id }, depois: { email: p.email, telefone: p.telefone, pais: normalizarPais(unidades[0]?.pais) } }, t))) return;
 
     setProcessando(p.id);
     try {

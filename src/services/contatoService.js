@@ -1,7 +1,7 @@
 // Reservas de e-mail e telefone: contatos_unicos/{email_x | tel_BR:xx} = { tipo, uid?, professorId? }.
 // Mesmo modelo do documento (documentos_unicos): a reserva de OUTRA pessoa não pode ser tomada (o banco recusa).
-// PARTE A da F3 (agora): a reserva é gravada DEPOIS do salvamento normal e nunca o desfaz — se o dado já é de
-// outra pessoa, a tela só avisa. A Parte B (depois da limpeza dos repetidos) passa a bloquear.
+// PARTE B da F3: as telas conferem ANTES de salvar (conferirContatos) e não salvam e-mail/telefone novo que já é
+// de outra pessoa. Depois de salvar, sincronizarContatos acerta as reservas (e ainda avisa se alguém tomou a chave no meio).
 import { collection, deleteDoc, doc, getDoc, getDocs, limit, query, setDoc, where, writeBatch } from 'firebase/firestore';
 import { db } from './firebase';
 import { chavesDeContato, dadosDaReserva, mesmoDono } from '../utils/contatos';
@@ -98,6 +98,44 @@ export async function sincronizarContatos({ dono, antes = null, depois = null })
   return { conflitos: resultados.filter(Boolean) };
 }
 
+/**
+ * PARTE B: confere ANTES de salvar se o e-mail/telefone NOVO já é de outra pessoa (só as chaves que mudaram:
+ * quem já tinha o dado continua podendo editar o resto do cadastro). dono: { uid?, professorId? } ou {} (cadastro novo).
+ * Devolve { conflitos: [{ id, tipo }] }. Sem permissão para ler = reserva de outra pessoa (a regra deixa ler a
+ * própria e a que não existe). Erro de conexão não bloqueia (a sincronização depois ainda avisa).
+ */
+export async function conferirContatos({ dono = {}, antes = null, depois = null }) {
+  const velhas = new Set(chavesDeContato(antes || {}).map(c => c.id));
+  const novas = chavesDeContato(depois || {}).filter(c => !velhas.has(c.id));
+  const resultados = await Promise.all(novas.map(async ({ id, tipo }) => {
+    try {
+      const { lida, dados } = await lerReserva(id);
+      if (!lida) return { id, tipo };
+      if (!dados) return null;
+      if (mesmoDono(dados, dono) || await fichaLigadaAoDono(dados, dono)) return null;
+      return { id, tipo, dono: dados };
+    } catch (e) {
+      console.error('Não consegui conferir a reserva de e-mail/telefone', id, e);
+      return null;
+    }
+  }));
+  return { conflitos: resultados.filter(Boolean) };
+}
+
+/** Mensagem de bloqueio "não salvo: já é de outra pessoa" (ou '' se está livre). */
+export function bloqueioDeContato(conflitos, t) {
+  const tipos = new Set((conflitos || []).map(c => c.tipo));
+  if (!tipos.size) return '';
+  const campos = tipos.size === 2 ? t('contacts.fields.both') : t(`contacts.fields.${[...tipos][0]}`);
+  return t('contacts.blocked', { fields: campos });
+}
+
+/** Atalho: confere e devolve a mensagem de bloqueio ('' = pode salvar). */
+export async function mensagemSeContatoEmUso(params, t) {
+  const { conflitos } = await conferirContatos(params);
+  return bloqueioDeContato(conflitos, t);
+}
+
 /** Texto do aviso "salvo, mas o e-mail/telefone também é de outra pessoa" (ou '' se não houve conflito). */
 export function avisoDeConflito(conflitos, t) {
   const tipos = new Set((conflitos || []).map(c => c.tipo));
@@ -168,4 +206,16 @@ export async function gravarReservas(reservas) {
     }
   }
   return falhas;
+}
+
+/**
+ * Aprovação de pedido: se o e-mail/telefone do pedido já é de outra pessoa, pergunta antes de aprovar
+ * (pode ser o líder que também dá aula, com a ficha ainda não ligada). Devolve true = pode seguir.
+ */
+export async function confirmarSeContatoEmUso(params, t) {
+  const { conflitos } = await conferirContatos(params);
+  const tipos = new Set(conflitos.map(c => c.tipo));
+  if (!tipos.size) return true;
+  const campos = tipos.size === 2 ? t('contacts.fields.both') : t(`contacts.fields.${[...tipos][0]}`);
+  return window.confirm(t('contacts.approveConfirm', { fields: campos }));
 }

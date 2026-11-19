@@ -36,7 +36,7 @@ import { AcoesDoContato } from "../ui/AcoesDoContato";
 import { useFiltroCascata } from "../ui/useFiltroCascata";
 import SeloRepetido from "../ui/SeloRepetido";
 import { useSelosRepetidos } from "../ui/useSelosRepetidos";
-import { sincronizarEAvisar } from "../../../services/contatoService";
+import { mensagemSeContatoEmUso, sincronizarEAvisar } from "../../../services/contatoService";
 
 // 🌍 PADRÃO OURO INTERNACIONAL — cada país com sua cor de identidade
 const PAIS_CONFIG = {
@@ -384,6 +384,14 @@ export function MentoresTab() {
         if ((mentorEditando.pais || PAIS_DEFAULT) !== pais) mudancas.push(`País: ${mentorEditando.pais || PAIS_DEFAULT} ➔ ${pais}`);
         if (mentorEditando.status !== status) mudancas.push(`Status: ${mentorEditando.status} ➔ ${status}`);
 
+        // Parte B: telefone novo que já é de outra pessoa não é salvo.
+        const bloqueio = await mensagemSeContatoEmUso({
+          dono: { uid: mentorEditando.id },
+          antes: { telefone: mentorEditando.telefone, pais: mentorEditando.pais || PAIS_DEFAULT },
+          depois: { telefone: telefone.trim(), pais },
+        }, t);
+        if (bloqueio) { setSalvando(false); return setErro(bloqueio); }
+
         await updateDoc(doc(db, "usuarios", mentorEditando.id), {
           nome: nome.trim(), 
           pais, // 🟢 SALVA O PAÍS
@@ -412,6 +420,10 @@ export function MentoresTab() {
         if (!jaTem.empty) { setSalvando(false); return setErro(t('mentorsTab.invite.alreadyHasAccess')); }
 
         if (docNumero.trim() && !documentoValido(docTipo, docNumero)) { setSalvando(false); return setErro(t("document.errors.invalid")); }
+
+        // Parte B: e-mail/telefone que já é de outra pessoa não vira convite.
+        const bloqueio = await mensagemSeContatoEmUso({ depois: { email: emailGoogle, telefone: telefone.trim(), pais } }, t);
+        if (bloqueio) { setSalvando(false); return setErro(bloqueio); }
 
         await setDoc(doc(db, "convites_acesso", emailGoogle), {
           // Documento opcional: o mentor novo só o copia para a gaveta privada dele no 1º acesso (pages/InformarDocumento).

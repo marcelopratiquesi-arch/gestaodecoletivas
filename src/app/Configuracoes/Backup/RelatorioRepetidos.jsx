@@ -1,29 +1,56 @@
-// Relatório de repetidos (só admin, só leitura): mesma pessoa com e-mail, telefone ou nome repetido
-// entre professores da grade, crachás e pedidos de acesso. Nunca lê nem mostra documento.
-// Professores e unidades vêm do catálogo já carregado (0 leituras); crachás e pedidos são lidos uma vez, ao clicar.
+// Relatório de repetidos (só admin): mesma pessoa com e-mail, telefone ou nome repetido entre professores
+// da grade, crachás e pedidos de acesso — e a LIMPEZA direto daqui: buscar, juntar fichas, ligar ficha ao
+// crachá e corrigir e-mail/telefone. Nunca lê nem mostra documento.
+// Professores e unidades vêm do catálogo já carregado (0 leituras, atualiza sozinho); crachás e pedidos são
+// lidos uma vez, ao clicar, e acompanham as correções feitas aqui.
 import React, { useMemo, useState } from 'react';
 import { collection, getDocs } from 'firebase/firestore';
 import * as XLSX from 'xlsx';
 import { useTranslation } from 'react-i18next';
-import { Users, Loader2, FileSpreadsheet, Search, TriangleAlert, Merge, Link2 } from 'lucide-react';
+import { Users, Loader2, FileSpreadsheet, Search, TriangleAlert, Merge, Link2, Pencil, X } from 'lucide-react';
 import JuntarFichasModal from './JuntarFichasModal';
 import LigarCrachaModal from './LigarCrachaModal';
 import CriarReservas from './CriarReservas';
+import CorrigirContatoModal from './CorrigirContatoModal';
 import { db } from '../../../services/firebase';
 import { useCatalogs } from '../../../contexts/CatalogContext';
 import { normalizarPais } from '../../../utils/feriados';
 import { formatRole } from '../../../utils/formatters';
-import { acharRepetidos, analisarRepetidos } from '../../../utils/repetidos';
+import { acharRepetidos, analisarRepetidos, normalizarNome } from '../../../utils/repetidos';
+import { planejarReservas } from '../../../utils/contatos';
 
-const TIPOS = ['mesma', 'outra', 'soNome'];
+// Listas de grupos. "Sem trava" vem primeiro: é o que falta limpar para o bloqueio valer para todo mundo.
+const TIPOS = ['semTrava', 'mesma', 'outra', 'soNome'];
+const CORRIGIVEL = new Set(['professor', 'cracha']);
 
-function Item({ item, rotuloOrigem }) {
+// Busca por nome, e-mail ou telefone (só os números), sem ligar para acento e maiúscula.
+const soNumeros = (v) => String(v || '').replace(/\D/g, '');
+function combina(item, busca) {
+  const b = busca.trim();
+  if (!b) return true;
+  const nome = normalizarNome(item.nome);
+  const email = String(item.email || '').toLowerCase();
+  const numeros = soNumeros(b);
+  return nome.includes(normalizarNome(b))
+    || email.includes(b.toLowerCase())
+    || (numeros.length >= 4 && soNumeros(item.telefone).includes(numeros));
+}
+
+function Item({ item, rotuloOrigem, aoCorrigir, t }) {
   return (
-    <li className="text-xs text-slate-600 dark:text-slate-300 flex flex-wrap gap-x-2">
+    <li className="text-xs text-slate-600 dark:text-slate-300 flex flex-wrap items-center gap-x-2 gap-y-1 py-0.5">
       <span className="font-bold text-slate-700 dark:text-slate-200">{rotuloOrigem}</span>
       <span>· {item.nome || '—'}</span>
       {item.detalhe && <span className="text-slate-400">· {item.detalhe}</span>}
       {item.unidade && <span className="text-slate-400">· {item.unidade}</span>}
+      {item.email && <span className="text-slate-500 break-all">· {item.email}</span>}
+      {item.telefone && <span className="text-slate-500">· {item.telefone}</span>}
+      {aoCorrigir && CORRIGIVEL.has(item.origem) && (
+        <button onClick={() => aoCorrigir(item)}
+          className="ml-auto py-0.5 px-2 border border-slate-300 dark:border-slate-600 rounded-md text-[11px] font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-1">
+          <Pencil className="w-3 h-3" /> {t('backupTab.fix.button')}
+        </button>
+      )}
     </li>
   );
 }
@@ -34,9 +61,11 @@ export default function RelatorioRepetidos() {
   // "lidos" guarda só crachás e pedidos (lidos uma vez); os professores vêm sempre do catálogo ao vivo,
   // então depois de juntar fichas o relatório se atualiza sozinho, sem ler de novo.
   const [estado, setEstado] = useState({ carregando: false, erro: false, lidos: null });
-  const [aberto, setAberto] = useState('mesma');
-  const [juntando, setJuntando] = useState(null); // fichas da grade abertas na janela "Juntar fichas"
-  const [ligando, setLigando] = useState(null);   // { fichas, crachas } da janela "Ligar ficha ao crachá"
+  const [aberto, setAberto] = useState('semTrava');
+  const [busca, setBusca] = useState('');
+  const [juntando, setJuntando] = useState(null);   // fichas da grade abertas na janela "Juntar fichas"
+  const [ligando, setLigando] = useState(null);     // { fichas, crachas } da janela "Ligar ficha ao crachá"
+  const [corrigindo, setCorrigindo] = useState(null); // registro aberto na janela "Corrigir"
 
   const unidadePorId = useMemo(
     () => new Map((catalogs?.unidades || []).map(u => [String(u.id), u])),
@@ -105,34 +134,36 @@ export default function RelatorioRepetidos() {
     const { mesmaPessoa, outraPessoa, soNome } = analisarRepetidos(todos);
     const problemas = acharRepetidos(todos).problemas;
     problemas.loginAntigo = estado.lidos.loginsAntigos;
+    // Sem trava = o mesmo e-mail/telefone em pessoas diferentes (o mesmo cálculo do botão "Criar reservas").
+    const { conflitos } = planejarReservas(todos);
+    const valorDaChave = (id) => id.replace(/^email_|^tel_[A-Z]{2}:/, '');
     return {
+      semTrava: conflitos.map(c => ({
+        valor: c.id, titulo: `${t(`contacts.reserve.type.${c.tipo}`)}: ${valorDaChave(c.id)}`, itens: c.itens,
+        pessoas: new Set(c.itens.map(i => `${i.origem}:${i.id}`)).size,
+      })),
       mesma: mesmaPessoa.map((g, n) => ({ valor: `m${n}`, titulo: g.nome, itens: g.itens, fichas: g.itens.filter(i => i.origem === 'professor').length })),
       outra: outraPessoa.map(g => ({ valor: g.valor, titulo: g.itens[0].telefone, itens: g.itens, pessoas: g.grupos.length })),
       soNome: soNome.map(g => ({ valor: g.valor, titulo: g.itens[0].nome, itens: g.itens, pessoas: g.grupos.length })),
       problemas,
       todos,
     };
-  }, [estado.lidos, catalogs?.professores]);
+  }, [estado.lidos, catalogs?.professores, t]);
+
+  const mudarCrachas = (fn) => setEstado(prev => (!prev.lidos ? prev : {
+    ...prev, lidos: { ...prev.lidos, registros: prev.lidos.registros.map(fn) },
+  }));
 
   // Depois de juntar: os crachás guardados aqui passam a apontar para a ficha que ficou (como no banco).
   const aoJuntar = (idPrincipal, idsApagados) => {
     const apagados = new Set(idsApagados.map(String));
-    setEstado(prev => (!prev.lidos ? prev : {
-      ...prev,
-      lidos: {
-        ...prev.lidos,
-        registros: prev.lidos.registros.map(x => (apagados.has(String(x.professorId)) ? { ...x, professorId: idPrincipal } : x)),
-      },
-    }));
+    mudarCrachas(x => (apagados.has(String(x.professorId)) ? { ...x, professorId: idPrincipal } : x));
   };
-
-  const aoLigar = (uid, professorId) => setEstado(prev => (!prev.lidos ? prev : {
-    ...prev,
-    lidos: {
-      ...prev.lidos,
-      registros: prev.lidos.registros.map(x => (x.origem === 'cracha' && x.id === uid ? { ...x, professorId } : x)),
-    },
-  }));
+  const aoLigar = (uid, professorId) => mudarCrachas(x => (x.origem === 'cracha' && x.id === uid ? { ...x, professorId } : x));
+  // Ficha corrigida atualiza sozinha (catálogo ao vivo); crachá corrigido é acertado aqui.
+  const aoCorrigir = (item, novo) => {
+    if (item.origem === 'cracha') mudarCrachas(x => (x.origem === 'cracha' && x.id === item.id ? { ...x, telefone: novo.telefone } : x));
+  };
 
   // Crachás do grupo que ainda não estão ligados a nenhuma das fichas do grupo.
   const crachasSoltos = (itens, fichas) => {
@@ -149,7 +180,6 @@ export default function RelatorioRepetidos() {
     return ids.map(id => professorPorId.get(id)).filter(Boolean).map(p => ({ ...p, id: String(p.id) }));
   };
   const origem = (o) => t(`backupTab.duplicates.origin.${o}`);
-  const valorDoGrupo = (tipo, g) => g.titulo;
 
   const baixarPlanilha = () => {
     const linha = (tipo, valor, item) => ({
@@ -163,7 +193,7 @@ export default function RelatorioRepetidos() {
       [t('backupTab.duplicates.sheet.unit')]: item.unidade || '',
       [t('backupTab.duplicates.sheet.id')]: item.id,
     });
-    const repetidos = TIPOS.flatMap(tipo => r[tipo].flatMap(g => g.itens.map(i => linha(tipo, valorDoGrupo(tipo, g), i))));
+    const repetidos = TIPOS.flatMap(tipo => r[tipo].flatMap(g => g.itens.map(i => linha(tipo, g.titulo, i))));
     const problemas = Object.entries(r.problemas).flatMap(([tipo, itens]) =>
       itens.map(i => linha(tipo, tipo === 'telefoneInvalido' ? i.telefone : (i.email || i.telefone || ''), i)));
     const wb = XLSX.utils.book_new();
@@ -172,22 +202,32 @@ export default function RelatorioRepetidos() {
     XLSX.writeFile(wb, `REPETIDOS_${new Date().toLocaleDateString('en-CA')}.xlsx`);
   };
 
-  const contagens = r ? [
-    ...TIPOS.map(tipo => ({ chave: tipo, n: r[tipo].length, rotulo: t(`backupTab.duplicates.types.${tipo}`) })),
-    ...Object.keys(r.problemas).map(tipo => ({ chave: tipo, n: r.problemas[tipo].length, rotulo: t(`backupTab.duplicates.types.${tipo}`) })),
-  ] : [];
+  // Grupos de cada lista, já filtrados pela busca (o grupo aparece se ALGUÉM dele combina).
+  const gruposDe = (tipo) => {
+    if (!r) return [];
+    if (TIPOS.includes(tipo)) {
+      return r[tipo]
+        .filter(g => g.itens.some(i => combina(i, busca)))
+        .map(g => ({
+          chave: g.valor, titulo: g.titulo, itens: g.itens,
+          extra: tipo === 'mesma' ? t('backupTab.duplicates.cards', { count: g.fichas }) : t('backupTab.duplicates.people', { count: g.pessoas }),
+        }));
+    }
+    return r.problemas[tipo]
+      .filter(i => combina(i, busca))
+      .map((i, n) => ({
+        chave: `${i.origem}_${i.id}_${n}`,
+        titulo: tipo === 'telefoneInvalido' ? i.telefone : tipo === 'loginAntigo' ? (i.email || i.telefone || '—') : i.email,
+        itens: [i],
+      }));
+  };
 
-  const lista = r ? (TIPOS.includes(aberto)
-    ? r[aberto].map(g => ({
-      chave: g.valor, titulo: g.titulo, itens: g.itens,
-      extra: aberto === 'mesma' ? t('backupTab.duplicates.cards', { count: g.fichas }) : t('backupTab.duplicates.people', { count: g.pessoas }),
-    }))
-    : r.problemas[aberto].map((i, n) => ({
-      chave: `${i.origem}_${i.id}_${n}`,
-      titulo: aberto === 'telefoneInvalido' ? i.telefone : aberto === 'loginAntigo' ? (i.email || i.telefone || '—') : i.email,
-      itens: [i],
-    }))
-  ) : [];
+  const contagens = r ? [
+    ...TIPOS.map(tipo => ({ chave: tipo, n: gruposDe(tipo).length, rotulo: t(`backupTab.duplicates.types.${tipo}`) })),
+    ...Object.keys(r.problemas).map(tipo => ({ chave: tipo, n: gruposDe(tipo).length, rotulo: t(`backupTab.duplicates.types.${tipo}`) })),
+  ] : [];
+  const lista = gruposDe(aberto);
+  const podeCorrigir = aberto !== 'loginAntigo';
 
   return (
     <div className="md:col-span-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-6 shadow-sm">
@@ -222,8 +262,20 @@ export default function RelatorioRepetidos() {
           <p className="text-[11px] text-slate-400 mb-3">
             {t('backupTab.duplicates.readSummary', { teachers: (catalogs?.professores || []).length, reads: estado.lidos.total })}
           </p>
-          <CriarReservas registros={r.todos} rotuloOrigem={origem} />
-          <div className="flex flex-wrap gap-2 mb-4">
+          <CriarReservas registros={r.todos} conflitos={r.semTrava.length} />
+
+          <div className="relative mb-3">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input value={busca} onChange={e => setBusca(e.target.value)} placeholder={t('backupTab.duplicates.searchPlaceholder')}
+              className="w-full pl-9 pr-9 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-slate-100" />
+            {busca && (
+              <button onClick={() => setBusca('')} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-700" title={t('common.multiSelect.clear')}>
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          <div className="flex flex-wrap gap-2 mb-2">
             {contagens.map(c => (
               <button key={c.chave} onClick={() => setAberto(c.chave)}
                 className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-colors ${aberto === c.chave
@@ -233,12 +285,14 @@ export default function RelatorioRepetidos() {
               </button>
             ))}
           </div>
+          <p className="text-[11px] text-slate-500 mb-3">{t(`backupTab.duplicates.help.${aberto}`, '')}</p>
+
           {lista.length === 0 ? (
-            <p className="text-sm text-slate-500">{t('backupTab.duplicates.none')}</p>
+            <p className="text-sm text-slate-500">{busca ? t('backupTab.duplicates.noMatch') : t('backupTab.duplicates.none')}</p>
           ) : (
-            <ul className="max-h-[28rem] overflow-y-auto divide-y divide-slate-100 dark:divide-slate-700 border border-slate-200 dark:border-slate-700 rounded-lg">
+            <ul className="max-h-[32rem] overflow-y-auto divide-y divide-slate-100 dark:divide-slate-700 border border-slate-200 dark:border-slate-700 rounded-lg">
               {lista.map(g => {
-                const fichas = aberto === 'mesma' ? fichasDoGrupo(g.itens) : [];
+                const fichas = fichasDoGrupo(g.itens);
                 const soltos = fichas.length ? crachasSoltos(g.itens, fichas) : [];
                 return (
                 <li key={g.chave} className="px-3 py-2">
@@ -259,7 +313,12 @@ export default function RelatorioRepetidos() {
                       )}
                     </div>
                   </div>
-                  <ul className="mt-1 space-y-0.5">{g.itens.map((i, n) => <Item key={`${i.origem}_${i.id}_${n}`} item={i} rotuloOrigem={origem(i.origem)} />)}</ul>
+                  <ul className="mt-1 space-y-0.5">
+                    {g.itens.map((i, n) => (
+                      <Item key={`${i.origem}_${i.id}_${n}`} item={i} rotuloOrigem={origem(i.origem)} t={t}
+                        aoCorrigir={podeCorrigir ? setCorrigindo : null} />
+                    ))}
+                  </ul>
                 </li>
                 );
               })}
@@ -281,6 +340,15 @@ export default function RelatorioRepetidos() {
           crachas={ligando.crachas}
           aoLigar={aoLigar}
           aoFechar={() => setLigando(null)}
+        />
+      )}
+      {corrigindo && (
+        <CorrigirContatoModal
+          item={corrigindo}
+          todos={r?.todos || []}
+          rotuloOrigem={origem}
+          aoCorrigir={aoCorrigir}
+          aoFechar={() => setCorrigindo(null)}
         />
       )}
     </div>

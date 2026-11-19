@@ -48,6 +48,7 @@
     "people_one": "{{count}} persona",
     "people_other": "{{count}} personas",
     "types": {
+      "semTrava": "Sin bloqueo (conflictos)",
       "email": "Correo repetido",
       "telefone": "Teléfono repetido",
       "nome": "Nombre repetido",
@@ -84,7 +85,19 @@
       "id": "Id"
     },
     "cards_one": "{{count}} ficha",
-    "cards_other": "{{count}} fichas"
+    "cards_other": "{{count}} fichas",
+    "searchPlaceholder": "Buscar por nombre, e-mail o teléfono (vale para todas las listas)",
+    "noMatch": "Nadie de esta lista coincide con la búsqueda.",
+    "help": {
+      "semTrava": "El mismo e-mail o teléfono en personas distintas: el sistema no puede bloquearlo. Si es la misma persona, usá \"Unir\" o \"Vincular\". Si son personas distintas, usá \"Corregir\" en quien tiene el dato equivocado (o borrá el teléfono).",
+      "mesma": "La misma persona con más de una ficha, o con ficha y credencial separadas. Usá \"Unir\" o \"Vincular\".",
+      "outra": "Mismo teléfono, nombres muy distintos: probablemente error de tipeo o familia. Usá \"Corregir\" en quien tiene el teléfono equivocado.",
+      "soNome": "Solo el nombre es igual, nada más en común: suelen ser homónimos. Revisá; si es la misma persona, usá \"Unir\".",
+      "telefoneInvalido": "Teléfono que no es un número válido: usá \"Corregir\".",
+      "emailInvalido": "E-mail con formato inválido: usá \"Corregir\".",
+      "emailDeMentira": "E-mail inventado (ej.: notengo@...): usá \"Corregir\" con el e-mail real.",
+      "loginAntigo": "Logins antiguos (contraseña 123456 y login de la unidad): ya están fuera de la cuenta, nada que hacer."
+    }
   },
   "merge": {
     "button": "Unir fichas ({{count}})",
@@ -148,5 +161,19 @@
     "otherHint": "Revisá: puede ser un error de tipeo o familia. No son la misma persona.",
     "sameHint": "Parece ser la misma persona en varias fichas:",
     "merge": "Unir fichas"
+  },
+  "fix": {
+    "button": "Corregir",
+    "title": "Corregir e-mail / teléfono",
+    "save": "Guardar",
+    "done": "Corregido. La lista ya se actualizó.",
+    "loginEmail": "Es el e-mail del login de Google: no cambia acá.",
+    "phoneEmpty": "(sin teléfono)",
+    "phoneHint": "Dejalo en blanco para borrar el teléfono (ej.: la cuenta de admin de la misma persona).",
+    "emailInvalid": "E-mail inválido o inventado.",
+    "phoneInvalid": "Teléfono inválido (revisá el código de área y los números).",
+    "taken": "No se guardó: ese dato ya es de {{who}}.",
+    "someoneElse": "otra persona",
+    "error": "No pude guardar la corrección."
   }
 }

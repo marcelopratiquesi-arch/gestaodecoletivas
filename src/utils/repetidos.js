@@ -74,6 +74,19 @@ export function chaveTelefone(telefone, pais = 'BR') {
 export const normalizarNome = (nome) =>
   String(nome ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim().toUpperCase();
 
+// Nomes parecidos (para quem tem o MESMO telefone): um nome cabe dentro do outro, ignorando de/da/dos/e.
+// Ex.: "Aline Rodrigues Oliveira dos Anjos" ~ "Aline Rodrigues Oliveira Anjos"; "Rayane Vitória Mendes Paranhos" ~
+// "Rayane Vitória Mendes"; "Carlos Alexandre Dias Silva" ~ "Alexandre Dias". Precisa de 2+ palavras em comum.
+const LIGACOES = new Set(['DE', 'DA', 'DO', 'DAS', 'DOS', 'E', 'Y', 'DEL', 'LA']);
+const palavrasDoNome = (nome) => normalizarNome(nome).replace(/[^A-Z ]/g, ' ').split(' ').filter(p => p.length > 1 && !LIGACOES.has(p));
+export function nomesParecidos(a, b) {
+  const pa = new Set(palavrasDoNome(a));
+  const pb = new Set(palavrasDoNome(b));
+  const [menor, maior] = pa.size <= pb.size ? [pa, pb] : [pb, pa];
+  if (menor.size < 2) return menor.size === 1 && maior.size === 1 && [...menor][0] === [...maior][0];
+  return [...menor].every(p => maior.has(p));
+}
+
 // ---------------- Cadastro: fichas com o mesmo e-mail/telefone/nome ----------------
 // Devolve [{ ficha, campos: ['email'|'telefone'|'nome'] }] das fichas (menos `ignorarId`, a própria ao editar)
 // que batem com os dados digitados. E-mail de mentira e telefone inválido não contam.
@@ -207,9 +220,12 @@ export function analisarRepetidos(registros) {
     }
     return m;
   };
-  // Une: mesmo e-mail; mesmo telefone + mesmo nome.
-  for (const m of [porChave('email'), porChave('tel', d => d.nome)]) {
-    for (const itens of m.values()) for (let i = 1; i < itens.length; i++) unir(pessoaDe(itens[0].r), pessoaDe(itens[i].r));
+  // Une: mesmo e-mail; mesmo telefone + nome parecido (um cabe no outro).
+  for (const itens of porChave('email').values()) for (let i = 1; i < itens.length; i++) unir(pessoaDe(itens[0].r), pessoaDe(itens[i].r));
+  for (const itens of porChave('tel').values()) {
+    for (let i = 0; i < itens.length; i++) for (let j = i + 1; j < itens.length; j++) {
+      if (nomesParecidos(itens[i].r.nome, itens[j].r.nome)) unir(pessoaDe(itens[i].r), pessoaDe(itens[j].r));
+    }
   }
 
   const clusterDe = (d) => achar(pessoaDe(d.r));

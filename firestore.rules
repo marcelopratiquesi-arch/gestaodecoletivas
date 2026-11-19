@@ -754,7 +754,14 @@ service cloud.firestore {
       // Grava: líder, mentor e admin; ou a própria pessoa, só com o próprio login.
       function podeGravar(d) { return gestorDeCadastro() || (logado() && d.get('uid', '') == request.auth.uid); }
       function minha() { return autenticado() && resource.data.get('uid', '') == request.auth.uid; }
-      allow get: if gestorDeCadastro() || minha();
+      // A da minha ficha (reserva só da ficha ligada ao meu login) também é minha.
+      function daMinhaFicha() {
+        return autenticado() && resource.data.get('professorId', '') != ''
+          && get(caminhoFicha(resource.data.professorId)).data.get('uidLogin', '') == request.auth.uid;
+      }
+      // Parte B: antes de salvar, a tela confere se o dado está livre. Logado pode saber que NÃO existe reserva
+      // (livre); a de outra pessoa continua fechada (a recusa = "já é de outra pessoa").
+      allow get: if gestorDeCadastro() || (autenticado() && resource == null) || minha() || daMinhaFicha();
       allow list: if souAdmin();
       allow create: if podeGravar(request.resource.data) && formatoOk(request.resource.data);
       // Só a MESMA pessoa atualiza: mantém o login ou a ficha de antes (ex.: junta o login à ficha ligada).

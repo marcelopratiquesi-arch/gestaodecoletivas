@@ -34,7 +34,7 @@ import { useFiltroCascata } from "../ui/useFiltroCascata";
 import SeloRepetido from "../ui/SeloRepetido";
 import { useSelosRepetidos } from "../ui/useSelosRepetidos";
 import JuntarFichasModal from "../Backup/JuntarFichasModal";
-import { liberarContatos, sincronizarEAvisar } from "../../../services/contatoService";
+import { liberarContatos, mensagemSeContatoEmUso, sincronizarEAvisar } from "../../../services/contatoService";
 import CertificadosAVerificar from "./CertificadosAVerificar";
 import CertificadosDoProfessor from "./CertificadosDoProfessor";
 
@@ -428,6 +428,14 @@ export function ProfessoresTab() {
     const mesmoEmail = (!profEditando || emailMudou)
         && fichasParecidas(professoresTotais, { email: emailLimpo }, profEditando?.id).find(a => a.campos.includes('email'));
     if (mesmoEmail) return parar(t('teachersTab.cpf.emailTaken', { name: mesmoEmail.ficha.nome }));
+
+    // Parte B: e-mail/telefone novo que já é de outra pessoa (crachá ou outra ficha) não é salvo.
+    const bloqueio = await mensagemSeContatoEmUso({
+      dono: profEditando ? { professorId: profEditando.id, uid: profEditando.uidLogin } : { uid: uidLoginNovo },
+      antes: profEditando ? { email: profEditando.email, telefone: profEditando.telefone, pais: profEditando.pais } : null,
+      depois: { email: emailMudou || !profEditando ? emailLimpo : profEditando.email, telefone, pais },
+    }, t);
+    if (bloqueio) return parar(bloqueio);
 
     try {
       if (profEditando) {

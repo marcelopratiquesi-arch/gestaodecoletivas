@@ -7,16 +7,18 @@
   },
   "reserve": {
     "button": "Criar reservas dos cadastros atuais",
-    "hint": "Grava a trava de e-mail e telefone para quem já está cadastrado. Os conflitos abaixo são a limpeza que falta antes de bloquear repetidos.",
+    "hint": "Grava a trava de e-mail e telefone para quem já está cadastrado (não muda nenhum cadastro). Faltam {{count}} casos na lista \"Sem trava\" abaixo: depois de limpar, clique de novo para travar também esses.",
     "working": "Criando reservas...",
     "done": "{{created}} reservas criadas, {{ok}} já estavam certas.",
-    "conflicts": "Conflitos ({{count}}): o mesmo dado em pessoas diferentes",
     "taken": "Já reservados para outra pessoa ({{count}})",
     "none": "Nenhum conflito.",
     "error": "Não consegui criar as reservas.",
     "type": {
       "email": "E-mail",
       "tel": "Telefone"
-    }
-  }
+    },
+    "conflictsBelow": "{{count}} casos sem trava: resolva na lista \"Sem trava\" abaixo."
+  },
+  "blocked": "Não salvo: {{fields}} já está no cadastro de outra pessoa. Confira o que foi digitado. Se for a mesma pessoa, peça ao admin para juntar os cadastros (Relatório de repetidos, aba Backup).",
+  "approveConfirm": "Atenção: {{fields}} deste pedido já está no cadastro de outra pessoa.\n\nSe for a MESMA pessoa (ex.: líder que também dá aula), aprove e depois ligue os cadastros no Relatório de repetidos (aba Backup).\nSe for outra pessoa, cancele e confira o pedido.\n\nAprovar mesmo assim?"
 }

@@ -117,3 +117,20 @@ describe('a mesma pessoa junta login e ficha', () => {
     await assertFails(reservar(como('liderA'), EMAIL, { tipo: 'email', uid: 'prof2', professorId: 'f2' }));
   });
 });
+
+describe('parte B: conferir antes de salvar', () => {
+  it('logado vê que o dado está livre (reserva não existe); anônimo não', async () => {
+    await assertSucceeds(getDoc(doc(como('prof1'), 'contatos_unicos', TEL)));
+    await assertSucceeds(getDoc(doc(semCracha(), 'contatos_unicos', TEL)));
+    await assertFails(getDoc(doc(env.unauthenticatedContext().firestore(), 'contatos_unicos', TEL)));
+  });
+  it('reserva só da ficha ligada ao meu login é minha; a de outra ficha não', async () => {
+    await semRegras(async db => {
+      await reservar(db, TEL, { tipo: 'tel', professorId: 'f1' });
+      await reservar(db, EMAIL, { tipo: 'email', professorId: 'f2' });
+    });
+    await assertSucceeds(getDoc(doc(como('prof1'), 'contatos_unicos', TEL)));
+    await assertFails(getDoc(doc(como('prof1'), 'contatos_unicos', EMAIL)));
+    await assertFails(getDoc(doc(como('prof2'), 'contatos_unicos', TEL)));
+  });
+});

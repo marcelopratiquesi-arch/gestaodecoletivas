@@ -39,7 +39,7 @@ import i18n from "../../../i18n";
 import CampoDocumento from "../../../components/acesso/CampoDocumento";
 import { documentoNoLote, gravarComAviso, ERRO_DOCUMENTO_EM_USO, excluirPedidoELiberar, liberarReserva } from "../../../services/documentoService";
 import { documentoValido, tipoDocumentoPadrao } from "../../../utils/documento";
-import { sincronizarEAvisar } from "../../../services/contatoService";
+import { mensagemSeContatoEmUso, sincronizarEAvisar } from "../../../services/contatoService";
 import { normalizarPais } from "../../../utils/feriados";
 
 const SENHA_MINIMA = 6;
@@ -179,6 +179,13 @@ export function LideresTab() {
     if (modal.modo === "editar") {
       setSalvando(true);
       try {
+        // Parte B: telefone novo que já é de outra pessoa não é salvo.
+        const bloqueio = await mensagemSeContatoEmUso({
+          dono: { uid: unidade.liderUid },
+          antes: { telefone: unidade.liderTelefone, pais: normalizarPais(unidade.pais) },
+          depois: { telefone, pais: normalizarPais(unidade.pais) },
+        }, t);
+        if (bloqueio) { setErro(bloqueio); return; }
         const batch = writeBatch(db);
         batch.update(doc(db, "usuarios", unidade.liderUid), { nome, telefone });
         batch.update(doc(db, "unidades", unidade.id), { liderNome: nome, liderTelefone: telefone });
@@ -223,6 +230,9 @@ export function LideresTab() {
       setSalvando(false);
       return setErro(t("document.search.deleteError"));
     }
+    // Parte B: e-mail/telefone que já é de outra pessoa não vira cadastro novo.
+    const bloqueio = await mensagemSeContatoEmUso({ depois: { email, telefone, pais: normalizarPais(unidade.pais) } }, t);
+    if (bloqueio) { setSalvando(false); return setErro(bloqueio); }
     try {
       // Cria a conta de login num "app secundário", para o admin/mentor não ser deslogado.
       appSecundario = initializeApp(getApp().options, `CadastroLider_${Date.now()}`);

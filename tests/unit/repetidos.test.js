@@ -158,3 +158,24 @@ describe('escolhaInicial (aprovação de professor)', () => {
     expect(escolhaInicial([c('a', ['documento'], { bloqueada: 'outroDocumento' })])).toBe('');
   });
 });
+
+describe('nomesParecidos (mesmo telefone)', () => {
+  it('um nome dentro do outro, sem ligar para de/dos e acento', async () => {
+    const { nomesParecidos } = await import('../../src/utils/repetidos');
+    expect(nomesParecidos('ALINE RODRIGUES OLIVEIRA DOS ANJOS', 'Aline Rodrigues Oliveira Anjos')).toBe(true);
+    expect(nomesParecidos('RAYANE VITORIA MENDES PARANHOS', 'Rayane Vitória Mendes')).toBe(true);
+    expect(nomesParecidos('CARLOS ALEXANDRE DIAS SILVA', 'alexandre dias')).toBe(true);
+    expect(nomesParecidos('ANA PAULA DE OLIVEIRA', 'Ana Paula')).toBe(true);
+    expect(nomesParecidos('Ana Paula', 'Carlos Lima')).toBe(false);
+    expect(nomesParecidos('Ana Souza', 'Ana Lima')).toBe(false);
+    expect(nomesParecidos('Ana', 'Ana Lima')).toBe(false);
+  });
+  it('mesmo telefone + nome parecido = mesma pessoa (sugere juntar), não alarme', () => {
+    const r = analisarRepetidos([
+      { origem: 'professor', id: 'p1', nome: 'ALINE RODRIGUES OLIVEIRA DOS ANJOS', email: 'a1@x.com', telefone: '21983515063' },
+      { origem: 'professor', id: 'p2', nome: 'Aline Rodrigues Oliveira Anjos', email: 'a2@x.com', telefone: '21983515063' },
+    ]);
+    expect(r.mesmaPessoa).toHaveLength(1);
+    expect(r.outraPessoa).toHaveLength(0);
+  });
+});

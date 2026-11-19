@@ -7,16 +7,18 @@
   },
   "reserve": {
     "button": "Crear reservas de los registros actuales",
-    "hint": "Graba el bloqueo de e-mail y teléfono para quienes ya están registrados. Los conflictos de abajo son la limpieza que falta antes de bloquear repetidos.",
+    "hint": "Graba el bloqueo de e-mail y teléfono para quienes ya están registrados (no cambia ningún registro). Faltan {{count}} casos en la lista \"Sin bloqueo\" de abajo: después de limpiar, hacé clic de nuevo para bloquear también esos.",
     "working": "Creando reservas...",
     "done": "{{created}} reservas creadas, {{ok}} ya estaban bien.",
-    "conflicts": "Conflictos ({{count}}): el mismo dato en personas diferentes",
     "taken": "Ya reservados para otra persona ({{count}})",
     "none": "Ningún conflicto.",
     "error": "No pude crear las reservas.",
     "type": {
       "email": "E-mail",
       "tel": "Teléfono"
-    }
-  }
+    },
+    "conflictsBelow": "{{count}} casos sin bloqueo: resolvelos en la lista \"Sin bloqueo\" de abajo."
+  },
+  "blocked": "No se guardó: {{fields}} ya está en el registro de otra persona. Revisá lo que escribiste. Si es la misma persona, pedile al admin que una los registros (Informe de repetidos, pestaña Backup).",
+  "approveConfirm": "Atención: {{fields}} de este pedido ya está en el registro de otra persona.\n\nSi es la MISMA persona (ej.: líder que también da clases), aprobá y después vinculá los registros en el Informe de repetidos (pestaña Backup).\nSi es otra persona, cancelá y revisá el pedido.\n\n¿Aprobar igual?"
 }
