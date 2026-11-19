@@ -1,5 +1,9 @@
 {
   "suggest": {
+    "followingTag": "seguida",
+    "saverTag": "acadêmico",
+    "followingNow": "aula seguida de outra do professor",
+    "days": {"0": "Domingo", "1": "Segunda", "2": "Terça", "3": "Quarta", "4": "Quinta", "5": "Sexta", "6": "Sábado"},
     "title": "Valor sugerido pela tabela",
     "use": "Usar este valor",
     "band": "Pulseira {{nivel}}",

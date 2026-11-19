@@ -382,8 +382,12 @@ export default function CronogramaPage() {
       professor: catalogs.professores.find((p) => String(p.id) === String(formData.professorId)),
       modalidadeNome: catalogs.modalidades.find((m) => String(m.id) === String(formData.modalidadeId))?.nome,
       unidadeId: formData.unidadeId, hora: formData.hora, dias: formData.dias, hojeISO: getTodayStr(),
+      // Aulas seguidas: as outras aulas ativas deste professor (a que está sendo editada não conta).
+      outrasAulas: aulasBrutas
+        .filter((a) => String(a.professorId) === String(formData.professorId) && a.id !== editingClass?.id && (!a.dataFim || a.dataFim >= getTodayStr()))
+        .map((a) => ({ id: a.id, modalidade: catalogs.modalidades.find((m) => String(m.id) === String(a.modalidadeId))?.nome, unidadeId: a.unidadeId, hora: a.hora, dias: a.dias })),
     });
-  }, [podeVerPrecos, tabelaDoSugerido, catalogs.unidades, catalogs.professores, catalogs.modalidades, formData.unidadeId, formData.professorId, formData.modalidadeId, formData.hora, formData.dias]);
+  }, [podeVerPrecos, tabelaDoSugerido, catalogs.unidades, catalogs.professores, catalogs.modalidades, aulasBrutas, editingClass, formData.unidadeId, formData.professorId, formData.modalidadeId, formData.hora, formData.dias]);
 
   const modalCurrencySymbol = useMemo(() => {
       const unit = catalogs.unidades.find(u => String(u.id) === String(formData.unidadeId));

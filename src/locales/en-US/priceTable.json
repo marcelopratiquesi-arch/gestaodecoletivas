@@ -1,5 +1,9 @@
 {
   "suggest": {
+    "followingTag": "back-to-back",
+    "saverTag": "academic",
+    "followingNow": "back-to-back with another of the teacher's classes",
+    "days": {"0": "Sunday", "1": "Monday", "2": "Tuesday", "3": "Wednesday", "4": "Thursday", "5": "Friday", "6": "Saturday"},
     "title": "Value suggested by the table",
     "use": "Use this value",
     "band": "{{nivel}} wristband",

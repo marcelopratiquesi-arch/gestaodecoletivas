@@ -100,6 +100,22 @@ export function ehHorarioSaver(professor, unidadeId, dataISO, hhmm) {
 
 const INTERVALO_SEGUIDAS_MIN = 20;
 
+/** Duração da aula em minutos: Power Core 20; lutas (Power Fight) 60; as demais 40. */
+export function duracaoDaModalidade(nome) {
+  const g = grupoDaModalidade(nome);
+  if (g === 'core') return 20;
+  if (g === 'fight') return 60;
+  return 40;
+}
+
+/** "HH:MM" de término de uma aula que começa em "hora" (vira o mesmo dia; aula que passa da meia-noite fica em 23:59). */
+export function fimDaAula(hora, nomeModalidade) {
+  const ini = minutos(hora);
+  if (ini === null) return null;
+  const fim = Math.min(ini + duracaoDaModalidade(nomeModalidade), 23 * 60 + 59);
+  return `${String(Math.floor(fim / 60)).padStart(2, '0')}:${String(fim % 60).padStart(2, '0')}`;
+}
+
 /**
  * Aulas seguidas de um professor NO MESMO DIA: só Jump/Energy Jump e Dance entre si (Training, Core e Bumbum não têm
  * valor de aulas seguidas). Cada aula: { id, modalidade, unidadeId, ini: 'HH:MM', fim: 'HH:MM' }.

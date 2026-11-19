@@ -20,17 +20,25 @@ export default function SugestaoDeValor({ sugestao, carregando, valorDigitado, o
   return (
     <div className="mt-2 p-3 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 space-y-1.5 text-xs">
       <p className="font-black text-amber-800 dark:text-amber-300 flex items-center gap-1.5 uppercase tracking-wide text-[10px]"><Lightbulb className="w-3.5 h-3.5" /> {t("priceTable.suggest.title")}</p>
-      {sugestao.mista ? (
-        <p className="font-black text-slate-800 dark:text-white">{t("priceTable.suggest.both", { normal: reais(sugestao.valorNormal), academico: reais(sugestao.valorAcademico) })}</p>
-      ) : (
+      {unico !== null ? (
         <p className="font-black text-slate-800 dark:text-white text-sm">R$ {reais(unico)}</p>
+      ) : (
+        <ul className="font-black text-slate-800 dark:text-white space-y-0.5">
+          {sugestao.porDia.map((d) => (
+            <li key={d.dia ?? "x"}>
+              {t(`priceTable.suggest.days.${d.dia}`)}: R$ {reais(d.valor)}
+              {d.seguida && <span className="font-semibold text-slate-500"> · {t("priceTable.suggest.followingTag")}</span>}
+              {d.saver && <span className="font-semibold text-slate-500"> · {t("priceTable.suggest.saverTag")}</span>}
+            </li>
+          ))}
+        </ul>
       )}
       <p className="text-slate-600 dark:text-slate-300">
         {nivel} · {sugestao.nivel === "cinza" ? t("priceTable.suggest.whyNone") : t("priceTable.suggest.why", { count: sugestao.quantidade })}
         {sugestao.soAcademico && ` · ${t("priceTable.suggest.saver")}`}
-        {sugestao.mista && ` · ${t("priceTable.suggest.saverDays")}`}
+        {sugestao.temSeguida && unico !== null && ` · ${t("priceTable.suggest.followingNow")}`}
       </p>
-      {sugestao.seguidas !== null && <p className="text-slate-600 dark:text-slate-300">{t("priceTable.suggest.seguidas", { valor: reais(sugestao.seguidas) })}</p>}
+      {sugestao.seguidas !== null && !sugestao.temSeguida && <p className="text-slate-600 dark:text-slate-300">{t("priceTable.suggest.seguidas", { valor: reais(sugestao.seguidas) })}</p>}
       {sugestao.candidataPreta && sugestao.extraPreta > 0 && (
         <p className="text-slate-600 dark:text-slate-300">{t("priceTable.suggest.preta", { extra: reais(sugestao.extraPreta), manha: frequencia?.manha ?? LIMITE_MANHA_NOITE.manha, noite: frequencia?.noite ?? LIMITE_MANHA_NOITE.noite })}</p>
       )}
