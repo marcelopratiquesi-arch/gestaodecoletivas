@@ -4,7 +4,6 @@ import {
   Building2, Users, Dumbbell, CalendarDays, 
   ShieldCheck, Database, LayoutDashboard, Loader2, Headphones, UserCheck, ShoppingBag
 } from "lucide-react";
-import { usePedidosPendentes } from "./Pendencias/usePedidosPendentes";
 import { useCatalogs } from "../../contexts/CatalogContext";
 import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
 import { ehLider, ehDoMeuEscopo } from '../../permissions';
@@ -42,19 +41,19 @@ export default function ConfiguracoesPage() {
   const { t } = useTranslation(); // 🟢 CÉREBRO CONECTADO NO COMPONENTE PRINCIPAL
   
   const role = useMemo(() => String(userData?.role || "").trim().toLowerCase(), [userData?.role]);
-  const { total: totalPendencias } = usePedidosPendentes();
-  // Líderes que assumiram sozinhos (trocaram o login antigo pelo Google) e ainda não foram conferidos.
+  // Número vermelho da aba Líderes: unidades SEM LÍDER (o que a pessoa enxerga). Os pedidos de acesso e os
+  // líderes a conferir aparecem dentro da aba, na central de pendências.
   const { catalogs } = useCatalogs();
-  const lideresAConferir = useMemo(() => (catalogs?.unidades || []).filter((u) =>
-    u.liderUid && u.liderAConferir === true && (role === "admin" || (role === "mentor" && ehDoMeuEscopo(userData, u.mentorId)))).length,
+  const unidadesSemLider = useMemo(() => (catalogs?.unidades || []).filter((u) =>
+    !u.liderUid && (role === "admin" || (role === "mentor" && ehDoMeuEscopo(userData, u.mentorId)))).length,
   [catalogs?.unidades, role, userData]);
 
   // 🟢 Abas agora reagem ao idioma em tempo real
   const tabs = useMemo(() => [
     // Ordem: Mentores, Líderes, Professores, Unidades, Modalidades, Feriados, Workshops, Pratique Play, Backup.
-    // Os pedidos de acesso pelo Google ficam dentro da aba Líderes (o número vermelho mostra quantos aguardam).
+    // Os pedidos de acesso pelo Google ficam dentro da aba Líderes (o número vermelho da aba = unidades sem líder).
     { id: "mentores", label: t('settingsPage.tabs.mentores', 'Mentores'), icon: ShieldCheck, roles: ["admin"] },
-    { id: "lideres", label: t('settingsPage.tabs.lideres'), icon: UserCheck, roles: ["admin", "mentor"], contador: totalPendencias + lideresAConferir },
+    { id: "lideres", label: t('settingsPage.tabs.lideres'), icon: UserCheck, roles: ["admin", "mentor"], contador: unidadesSemLider },
     { id: "professores", label: t('settingsPage.tabs.professores', 'Professores'), icon: Users, roles: ["admin", "mentor", "lider", "unidade"] },
     { id: "unidades", label: t('settingsPage.tabs.unidades', 'Unidades'), icon: Building2, roles: ["admin", "mentor"] },
     { id: "modalidades", label: t('settingsPage.tabs.modalidades', 'Modalidades'), icon: Dumbbell, roles: ["admin", "mentor"] },
@@ -62,7 +61,7 @@ export default function ConfiguracoesPage() {
     { id: "workshops", label: t('settingsPage.tabs.workshops', 'Workshops'), icon: ShoppingBag, roles: ["admin", "mentor", "lider", "unidade"] },
     { id: "pratique-play", label: t('settingsPage.tabs.pratiquePlay', 'Pratique Play'), icon: Headphones, roles: ["admin"] },
     { id: "backup", label: t('settingsPage.tabs.backup', 'Backup'), icon: Database, roles: ["admin"] },
-  ], [t, totalPendencias, lideresAConferir]);
+  ], [t, unidadesSemLider]);
 
   const allowedTabs = useMemo(() => tabs.filter(t => t.roles.includes(role)), [role, tabs]);
 

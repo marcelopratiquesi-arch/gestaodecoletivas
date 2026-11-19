@@ -592,7 +592,7 @@ export function MentoresTab() {
                         {m.coberturaMentorId && (
                           <div className="rounded-lg border border-teal-200 dark:border-teal-800 bg-teal-50/60 dark:bg-teal-900/10 px-2.5 py-1.5 w-fit">
                             <div className="flex items-center gap-1.5 flex-wrap text-xs">
-                              <Selo tipo="tema" abaId="lideres" icone={Timer}>{t('mentorsTab.row.tempBadge')}</Selo>
+                              <Selo tipo="turquesa" icone={Timer}>{t('mentorsTab.row.tempBadge')}</Selo>
                               <span className="font-bold text-slate-700 dark:text-slate-200">{t('mentorsTab.row.covers', { name: nomeDoCoberto(m) })}</span>
                             </div>
                             <div className="mt-1 flex items-center gap-1.5 text-[11px] font-bold text-slate-500">
@@ -605,7 +605,7 @@ export function MentoresTab() {
                         {cobrindoMe.map((c) => (
                           <div key={c.id} className="rounded-lg border border-teal-200 dark:border-teal-800 bg-teal-50/60 dark:bg-teal-900/10 px-2.5 py-1.5 w-fit">
                             <div className="flex items-center gap-1.5 flex-wrap text-xs">
-                              <Selo tipo="tema" abaId="lideres" icone={Timer}>{t('mentorsTab.row.tempBadge')}</Selo>
+                              <Selo tipo="turquesa" icone={Timer}>{t('mentorsTab.row.tempBadge')}</Selo>
                               <span className="font-bold text-slate-700 dark:text-slate-200">{t('mentorsTab.row.coveredBy', { name: c.nome })}</span>
                             </div>
                             <div className="mt-1 flex items-center gap-1.5 text-[11px] font-bold text-slate-500">

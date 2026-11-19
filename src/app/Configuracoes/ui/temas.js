@@ -24,24 +24,24 @@ export const TEMAS = {
     contagem: "bg-blue-600 text-white",
   },
   "lideres": {
-    cor: "teal",
+    cor: "red",
     // menu de abas
-    menuAtivo: "border-teal-600 text-teal-600 dark:text-teal-400 dark:border-teal-400 bg-teal-50/50 dark:bg-teal-900/10",
-    menuIconeAtivo: "text-teal-600 dark:text-teal-400",
-    menuContador: "bg-teal-600 text-white",
+    menuAtivo: "border-red-600 text-red-600 dark:text-red-400 dark:border-red-400 bg-red-50/50 dark:bg-red-900/10",
+    menuIconeAtivo: "text-red-600 dark:text-red-400",
+    menuContador: "bg-red-600 text-white",
     // faixa colorida no alto da área de conteúdo
-    faixa: "border-t-4 border-t-teal-500",
+    faixa: "border-t-4 border-t-red-500",
     // quadradinho do ícone no título
-    iconeTitulo: "bg-teal-600 text-white shadow-md shadow-teal-500/20",
+    iconeTitulo: "bg-red-600 text-white shadow-md shadow-red-500/20",
     // botão principal (ex.: Novo Mentor)
-    botao: "bg-teal-600 hover:bg-teal-700 text-white shadow-lg shadow-teal-500/20",
+    botao: "bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-500/20",
     // campo de busca / seletores em foco
-    foco: "focus:outline-none focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500",
-    lupa: "group-focus-within:text-teal-500",
+    foco: "focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500",
+    lupa: "group-focus-within:text-red-500",
     // selo/etiqueta suave e botão de filtro marcado
-    suave: "bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-900/20 dark:text-teal-300 dark:border-teal-800",
-    marcado: "bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300",
-    contagem: "bg-teal-600 text-white",
+    suave: "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800",
+    marcado: "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300",
+    contagem: "bg-red-600 text-white",
   },
   "professores": {
     cor: "green",
