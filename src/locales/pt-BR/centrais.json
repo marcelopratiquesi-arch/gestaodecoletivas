@@ -65,7 +65,8 @@
     "equipe": "Equipe",
     "unidades": "Unidades",
     "aulas": "Aulas",
-    "cadastro": "Cadastro"
+    "cadastro": "Cadastro",
+    "workshops": "Workshops"
   },
   "cadastro": {
     "nome": "Nome",
@@ -378,7 +379,9 @@
       "ultimaAula": "Última aula dada",
       "aulasNoPeriodo": "{{n}} aula(s) dada(s) no período",
       "umaUnidade": "Unidade vinculada",
-      "cadastro": "Situação do cadastro"
+      "cadastro": "Situação do cadastro",
+      "workshops": "Workshops",
+      "workshopsVazio": "Nenhum workshop registrado"
     },
     "emDia": {
       "ativo": {
@@ -417,7 +420,14 @@
         "acao": "Abrir a validação"
       }
     },
-    "workshops": "Workshops",
-    "semWorkshops": "Nenhum workshop informado"
+    "workshops": {
+      "titulo": "Workshops que o professor fez",
+      "vazio": "Nenhum workshop registrado para este professor ainda.",
+      "nota": "Valem para todas as unidades dele.",
+      "por": "adicionado por {{nome}}",
+      "editar": "Adicionar ou remover workshops",
+      "ultimo": "Último: {{nome}}",
+      "colPor": "Adicionado por"
+    }
   }
 }
