@@ -25,8 +25,10 @@ import { modalidadeHabilitada } from '../../utils/modalidadesPorUnidade';
 import { podeVerTabelaPrecos } from '../../utils/tabelaPrecos';
 import TabelaPrecosModal from '../../components/TabelaPrecos/TabelaPrecosModal';
 import SugestaoDeValor from '../../components/TabelaPrecos/SugestaoDeValor';
+import PopupFlutuante from '../../components/PopupFlutuante';
 import { lerTabelaPrecos } from '../../services/tabelaPrecosService';
 import { sugestaoDoCronograma } from '../../utils/sugestaoCronograma';
+import { ehUnidadeBrasil } from '../../utils/pulseira';
 
 // --- FUNÇÕES UTILITÁRIAS ---
 const getTodayStr = () => new Date().toLocaleDateString('en-CA');
@@ -163,6 +165,13 @@ const GlobalUnitBlock = ({ unitName, classes, isReadOnly, onEdit, t }) => {
   )
 };
 
+// Visual do modal de aula (cartões alinhados: A aula · Quando · Valor).
+const CARTAO_MODAL = 'space-y-3.5 pb-5 border-b border-slate-200 dark:border-slate-700 last:border-b-0 last:pb-0';
+const TITULO_CARTAO = 'text-[11px] font-black uppercase tracking-widest text-red-600 dark:text-red-400 flex items-center gap-1.5';
+const ROTULO_MODAL = 'text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 block';
+const CAMPO_MODAL = 'w-full p-3 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-white rounded-xl text-sm focus:border-red-500 focus:ring-2 focus:ring-red-100 outline-none font-bold uppercase disabled:opacity-60';
+const DICA_MODAL = 'mt-1.5 text-[10px] leading-snug text-slate-400 dark:text-slate-500';
+
 export default function CronogramaPage() {
   const { userData } = useAuth();
   const { t } = useTranslation(); // 🟢 MOTOR ACIONADO
@@ -176,6 +185,8 @@ export default function CronogramaPage() {
   const [precosAberta, setPrecosAberta] = useState(false);
   // Valor sugerido na tela de aula: lê a tabela de preços UMA vez, só quando a pessoa abre a janela (e pode ver a tabela).
   const [tabelaDoSugerido, setTabelaDoSugerido] = useState(null); // null = ainda não leu; false = não deu
+  // Último valor que o SISTEMA colocou no campo (texto). Se o campo ainda tem esse valor (ou está vazio), pode ser trocado pela sugestão; se a pessoa digitou outro, nunca é sobrescrito.
+  const [valorAuto, setValorAuto] = useState(null);
 
   // --- DADOS GLOBAIS E DE TELA ---
   const [saving, setSaving] = useState(false);
@@ -189,6 +200,8 @@ export default function CronogramaPage() {
   // --- ESTADOS DO MODAL E VISUALIZAÇÃO ---
   // 'grade' = o que vale hoje; 'historico' = aulas encerradas (só admin, mentor e líder).
   const [visao, setVisao] = useState('grade');
+  // Celular: a grade vira lista de um dia por vez, abrindo no dia de hoje
+  const [diaCelular, setDiaCelular] = useState(() => DIAS_SEMANA_GRADE[(new Date().getDay() + 6) % 7]);
  
   const [showModal, setShowModal] = useState(false);
   const [editingClass, setEditingClass] = useState(null);
@@ -375,18 +388,38 @@ export default function CronogramaPage() {
   const sugestaoDeValor = useMemo(() => {
     if (!podeVerPrecos || !tabelaDoSugerido) return null;
     const unit = catalogs.unidades.find((u) => String(u.id) === String(formData.unidadeId));
-    if (unit?.pais && unit.pais !== 'BR') return null; // a tabela está em reais
+    if (!ehUnidadeBrasil(unit?.pais)) return null; // a tabela está em reais
     return sugestaoDoCronograma({
       tabela: tabelaDoSugerido,
       professor: catalogs.professores.find((p) => String(p.id) === String(formData.professorId)),
       modalidadeNome: catalogs.modalidades.find((m) => String(m.id) === String(formData.modalidadeId))?.nome,
-      unidadeId: formData.unidadeId, hora: formData.hora, dias: formData.dias, hojeISO: getTodayStr(),
+      unidadeId: formData.unidadeId, hora: formData.hora, dias: formData.dias,
+      // Pulseira do mês em que a aula começa (aula que começa só no mês que vem já conta os workshops que passam a valer lá).
+      hojeISO: formData.dataInicio && formData.dataInicio > getTodayStr() ? formData.dataInicio : getTodayStr(),
       // Aulas seguidas: as outras aulas ativas deste professor (a que está sendo editada não conta).
       outrasAulas: aulasBrutas
         .filter((a) => String(a.professorId) === String(formData.professorId) && a.id !== editingClass?.id && (!a.dataFim || a.dataFim >= getTodayStr()))
         .map((a) => ({ id: a.id, modalidade: catalogs.modalidades.find((m) => String(m.id) === String(a.modalidadeId))?.nome, unidadeId: a.unidadeId, hora: a.hora, dias: a.dias })),
     });
-  }, [podeVerPrecos, tabelaDoSugerido, catalogs.unidades, catalogs.professores, catalogs.modalidades, aulasBrutas, editingClass, formData.unidadeId, formData.professorId, formData.modalidadeId, formData.hora, formData.dias]);
+  }, [podeVerPrecos, tabelaDoSugerido, catalogs.unidades, catalogs.professores, catalogs.modalidades, aulasBrutas, editingClass, formData.unidadeId, formData.professorId, formData.modalidadeId, formData.hora, formData.dias, formData.dataInicio]);
+
+  // Preenche o valor com o sugerido (valor único). Só mexe no campo se estiver vazio ou ainda com o último valor sugerido; o que a pessoa digitou fica.
+  useEffect(() => {
+    if (!showModal || isReadOnly || !sugestaoDeValor) return;
+    const unico = sugestaoDeValor.valores.length === 1 ? String(sugestaoDeValor.valores[0]) : null;
+    setFormData((f) => {
+      const atual = String(f.valor ?? '');
+      const podeTrocar = atual === '' || atual === valorAuto;
+      if (!podeTrocar) return f;
+      if (unico === null) return atual === valorAuto && valorAuto !== null ? { ...f, valor: '' } : f; // valores diferentes por dia: sem valor único, mostra a lista
+      return atual === unico ? f : { ...f, valor: unico };
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sugestaoDeValor, showModal]);
+  useEffect(() => {
+    if (!sugestaoDeValor) { setValorAuto(null); return; }
+    setValorAuto(sugestaoDeValor.valores.length === 1 ? String(sugestaoDeValor.valores[0]) : null);
+  }, [sugestaoDeValor]);
 
   const modalCurrencySymbol = useMemo(() => {
       const unit = catalogs.unidades.find(u => String(u.id) === String(formData.unidadeId));
@@ -446,11 +479,17 @@ export default function CronogramaPage() {
     e.preventDefault();
     if (isReadOnly || saving) return; 
 
+    if (formData.dias.length === 0 && formData.unidadeId && formData.modalidadeId && formData.professorId && formData.hora && formData.dataInicio) {
+        return alert(t('schedulePage.alerts.noDays', "❌ Marque pelo menos um dia da semana."));
+    }
     if (!formData.unidadeId || !formData.modalidadeId || !formData.professorId || !formData.hora || formData.dias.length === 0 || !formData.dataInicio) {
         return alert(t('schedulePage.alerts.fillRequired', "❌ Preencha todos os campos obrigatórios."));
     }
     if (formData.dataFim && formData.dataInicio > formData.dataFim) {
         return alert(t('schedulePage.alerts.invalidDates', "❌ A data de encerramento não pode ser anterior à data de início."));
+    }
+    if (!editingClass && formData.dataFim && formData.dataFim < getTodayStr()) {
+        return alert(t('schedulePage.alerts.endInPast', "❌ A data de encerramento já passou: a aula nasceria encerrada. Deixe vazio ou escolha uma data de hoje em diante."));
     }
     // Valor é obrigatório (vazio virava R$ 0). Aula antiga que já estava sem valor só continua sem valor
     // se ninguém mexer nele (assim ainda dá para encerrá-la); qualquer valor novo precisa ser maior que zero.
@@ -657,6 +696,7 @@ export default function CronogramaPage() {
     setFormData({ unidadeId: selectedUnit || '', modalidadeId: '', professorId: '', hora: '07:00', valor: '', dias: [], dataInicio: getTodayStr(), dataFim: '' });
     setEditingClass(null);
     setPendingSplit(null);
+    setValorAuto(null);
     setShowModal(true);
   };
 
@@ -670,6 +710,7 @@ export default function CronogramaPage() {
         dataFim: cls.dataFim || ''
     });
     setPendingSplit(null);
+    setValorAuto(null);
     setShowModal(true);
   };
 
@@ -879,7 +920,40 @@ export default function CronogramaPage() {
                         {!isReadOnly && <button onClick={openNewModal} className="mt-2 text-red-600 hover:underline font-bold text-sm">{t('schedulePage.placeholders.createFirstClass', 'Criar nova aula')}</button>}
                     </div>
                 ) : (
-                    <div className="overflow-x-auto custom-scrollbar pb-6">
+                    <>
+                    {/* CELULAR: um dia por vez, com barra para trocar de dia */}
+                    <div className="md:hidden">
+                        <div className="flex gap-1.5 p-3 border-b border-slate-100 dark:border-slate-700 overflow-x-auto custom-scrollbar" role="tablist">
+                            {DIAS_SEMANA_GRADE.map(dia => {
+                                const qtd = filteredClasses.filter(c => (c.dias || []).includes(dia)).length;
+                                const ativo = dia === diaCelular;
+                                return (
+                                    <button key={dia} type="button" role="tab" aria-selected={ativo} onClick={() => setDiaCelular(dia)}
+                                        className={`flex-1 min-w-[44px] py-2 rounded-xl text-[10px] font-black uppercase flex flex-col items-center gap-0.5 transition-colors ${ativo ? 'bg-red-600 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-900 text-slate-500 dark:text-slate-400'}`}>
+                                        {formatWeekday(dia, { short: true })}
+                                        <span className={`text-sm leading-none ${ativo ? 'text-white' : qtd ? 'text-slate-800 dark:text-slate-200' : 'text-slate-300 dark:text-slate-600'}`}>{qtd}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        <div className="p-3 space-y-3">
+                            {(() => {
+                                const horas = activeTimeSlots.filter(h => (aulasPorCelula.get(diaCelular + '|' + h) || []).length > 0);
+                                if (horas.length === 0) return <p className="text-center text-sm text-slate-400 py-10">{t('schedulePage.mobile.noClassesDay', 'Sem aulas neste dia.')}</p>;
+                                return horas.map(h => (
+                                    <div key={h} className="flex gap-3 items-start">
+                                        <div className="w-12 shrink-0 pt-3 text-xs font-black text-slate-500 dark:text-slate-400">{h}</div>
+                                        <div className="flex-1 min-w-0 flex flex-col gap-2">
+                                            {(aulasPorCelula.get(diaCelular + '|' + h) || []).map(cls => <ClassCard key={cls.id} data={cls} onClick={() => openEditModal(cls)} isReadOnly={isReadOnly} defaultTeacher={t('publicSchedule.defaultTeacher', 'Instrutor')} t={t} />)}
+                                        </div>
+                                    </div>
+                                ));
+                            })()}
+                        </div>
+                    </div>
+
+                    {/* COMPUTADOR: grade semanal */}
+                    <div className="hidden md:block overflow-x-auto custom-scrollbar pb-6">
                         <div 
                             className="grid w-full"
                             style={{ 
@@ -909,107 +983,130 @@ export default function CronogramaPage() {
                             ))}
                         </div>
                     </div>
+                    </>
                 )}
             </div>
         )}
       </div>
 
-      {/* MODAL PRINCIPAL DE EDIÇÃO E CÉREBRO DE TRANSIÇÃO */}
+      {/* POP-UP FLUTUANTE DE EDIÇÃO E CÉREBRO DE TRANSIÇÃO (sem fundo escuro; arrasta, redimensiona, Esc fecha) */}
       {showModal && !isReadOnly && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in zoom-in duration-200">
-          <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden border border-slate-100 dark:border-slate-700 flex flex-col max-h-[90vh]">
-            
+          <PopupFlutuante
+            titulo={pendingSplit ? t('schedulePage.splitModal.title', 'Alteração de Grade') : (editingClass ? t('schedulePage.modal.editTitle', 'EDITAR AULA') : t('schedulePage.modal.newTitle', 'CRIAR NOVA AULA'))}
+            onFechar={closeModal}
+            bloquearFechar={saving}
+            rotuloFechar={t('schedulePage.modal.cancel', 'Cancelar')}
+            chaveMemoria="cronograma.popupAula.v4"
+            rodape={!pendingSplit ? (
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                    {editingClass && (
+                        <button type="button" onClick={handleDelete} disabled={saving} className="mr-auto text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 px-3 py-2.5 rounded-xl text-xs font-black uppercase flex items-center justify-center gap-2 disabled:opacity-50 transition-colors">
+                            <Trash2 className="w-4 h-4"/> {t('schedulePage.modal.delete', 'Excluir')}
+                        </button>
+                    )}
+                    <button type="button" onClick={closeModal} disabled={saving} className="px-4 py-2.5 text-slate-500 dark:text-slate-400 font-bold uppercase text-xs hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl disabled:opacity-50 transition-colors">{t('schedulePage.modal.cancel', 'Cancelar')}</button>
+                    <button type="submit" form="form-aula-cronograma" disabled={saving} className="px-6 py-2.5 bg-red-600 text-white rounded-xl font-black uppercase text-xs hover:bg-red-700 shadow-md flex items-center justify-center gap-2 disabled:opacity-70 transition-all active:scale-95">
+                        {saving ? <Loader2 className="w-4 h-4 animate-spin"/> : <Check className="w-4 h-4" />} {editingClass ? t('schedulePage.modal.saveEdit', 'Salvar Alterações') : t('schedulePage.modal.save', 'Salvar')}
+                    </button>
+                </div>
+            ) : (
+                <div className="text-center">
+                    <button type="button" onClick={() => setPendingSplit(null)} className="text-slate-400 hover:text-slate-600 font-bold text-xs uppercase tracking-wider underline">{t('schedulePage.splitModal.backToForm', 'Voltar para o formulário')}</button>
+                </div>
+            )}
+          >
             {/* ESTADO 1: FORMULÁRIO NORMAL DE AULA */}
             {!pendingSplit ? (
                 <>
-                    <div className="px-8 py-6 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50 shrink-0">
-                        <h3 className="font-black text-xl text-slate-800 dark:text-white uppercase tracking-tight">{editingClass ? t('schedulePage.modal.editTitle', 'EDITAR AULA') : t('schedulePage.modal.newTitle', 'CRIAR NOVA AULA')}</h3>
-                        <button onClick={closeModal} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-200 dark:bg-slate-800 text-slate-500 hover:text-rose-500 hover:bg-rose-50 transition-colors"><X className="w-5 h-5" /></button>
-                    </div>
-                    
-                    <form onSubmit={handleFirstSaveClick} className="p-8 space-y-6 overflow-y-auto custom-scrollbar">
-                    
-                        <div>
-                            <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 block">{t('schedulePage.filters.unit', 'Unidade')}</label>
-                            <select className="w-full p-3.5 bg-slate-100 dark:bg-slate-900 border-transparent rounded-xl text-sm font-bold text-slate-600 dark:text-slate-300 outline-none" value={formData.unidadeId} onChange={e => {
-                                const novaUnidade = catalogs.unidades.find(u => String(u.id) === String(e.target.value));
-                                const manterModalidade = formData.modalidadeId && (modalidadeHabilitada(novaUnidade, formData.modalidadeId) || (editingClass && String(editingClass.unidadeId) === String(e.target.value) && String(editingClass.modalidadeId) === String(formData.modalidadeId)));
-                                setFormData({...formData, unidadeId: e.target.value, professorId: '', modalidadeId: manterModalidade ? formData.modalidadeId : ''});
-                            }} disabled={ehLider(userData?.role)}>
-                                <option value="">{t('schedulePage.filters.allUnits', 'Selecione...')}</option>
-                                {availableUnits.map(u => <option key={u.id} value={u.id}>{u.nome}</option>)}
-                            </select>
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-5">
-                            <div>
-                                <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 block">{t('schedulePage.modal.modality', 'Modalidade')}</label>
-                                <select className="w-full p-3.5 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-700 dark:text-white rounded-xl text-sm focus:border-red-500 outline-none font-bold" value={formData.modalidadeId} onChange={e => setFormData({...formData, modalidadeId: e.target.value})} required disabled={!formData.unidadeId}>
-                                    <option value="">{!formData.unidadeId ? t('schedulePage.modal.selectUnitAlert', "Selecione a unidade") : t('schedulePage.filters.allUnits', 'Selecione...')}</option>
-                                    {modalidadesDoModal.map(m => <option key={m.id} value={m.id}>{m.nome}</option>)}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 block">{t('schedulePage.modal.teacher', 'Professor Titular')}</label>
-                                <select className="w-full p-3.5 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-700 dark:text-white rounded-xl text-sm focus:border-red-500 outline-none font-bold" value={formData.professorId} onChange={e => setFormData({...formData,professorId: e.target.value})} required disabled={!formData.unidadeId}>
-                                    <option value="">{!formData.unidadeId ? t('schedulePage.modal.selectUnitAlert', "Selecione a unidade") : (professoresDoModal.length === 0 ? t('schedulePage.modal.noTeacherLinked', "Nenhum vinculado") : t('schedulePage.filters.allUnits', 'Selecione...'))}</option>
-                                    {professoresDoModal.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
-                                </select>
-                            </div>
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-5">
-                            <div>
-                                <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 flex items-center gap-1"><Clock className="w-3 h-3"/> {t('schedulePage.modal.time', 'Horário')}</label>
-                                <input type="time" className="w-full p-3.5 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-700 dark:text-white rounded-xl text-sm focus:border-red-500 outline-none font-bold" value={formData.hora} onChange={e => setFormData({...formData, hora: e.target.value})} required />
-                            </div>
-                            <div>
-                                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1.5 flex items-center gap-1"><DollarSign className="w-3 h-3 text-green-600"/> {t('schedulePage.modal.value', 'Valor Hora/Aula')}</label>
-                                <div className="relative">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">{modalCurrencySymbol}</span>
-                                    <input type="number" step="0.01" min={!editingClass || (parseFloat(editingClass.valor) || 0) > 0 ? "0.01" : "0"} required={!editingClass || (parseFloat(editingClass.valor) || 0) > 0} className="w-full p-3.5 pl-14 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 rounded-xl text-sm focus:border-green-500 outline-none font-black text-slate-700 dark:text-white" value={formData.valor} onChange={e => setFormData({...formData, valor: e.target.value})} placeholder="0.00" />
+                    <form id="form-aula-cronograma" onSubmit={handleFirstSaveClick} className="p-5 space-y-5">
+                        <div className="space-y-5">
+
+                            {/* CARTÃO 1: ONDE E QUEM */}
+                            <section className={CARTAO_MODAL}>
+                                <h4 className={TITULO_CARTAO}><MapPin className="w-3.5 h-3.5" /> {t('schedulePage.modal.sectionClass', 'A aula')}</h4>
+                                <div>
+                                    <label className={ROTULO_MODAL}>{t('schedulePage.filters.unit', 'Unidade')}</label>
+                                    <select className={CAMPO_MODAL} value={formData.unidadeId} onChange={e => {
+                                        const novaUnidade = catalogs.unidades.find(u => String(u.id) === String(e.target.value));
+                                        const manterModalidade = formData.modalidadeId && (modalidadeHabilitada(novaUnidade, formData.modalidadeId) || (editingClass && String(editingClass.unidadeId) === String(e.target.value) && String(editingClass.modalidadeId) === String(formData.modalidadeId)));
+                                        setFormData({...formData, unidadeId: e.target.value, professorId: '', modalidadeId: manterModalidade ? formData.modalidadeId : ''});
+                                    }} disabled={ehLider(userData?.role)}>
+                                        <option value="">{t('schedulePage.filters.allUnits', 'Selecione...')}</option>
+                                        {availableUnits.map(u => <option key={u.id} value={u.id}>{u.nome}</option>)}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className={ROTULO_MODAL}>{t('schedulePage.modal.modality', 'Modalidade')}</label>
+                                    <select className={CAMPO_MODAL} value={formData.modalidadeId} onChange={e => setFormData({...formData, modalidadeId: e.target.value})} required disabled={!formData.unidadeId}>
+                                        <option value="">{!formData.unidadeId ? t('schedulePage.modal.selectUnitAlert', "Selecione a unidade") : t('schedulePage.filters.allUnits', 'Selecione...')}</option>
+                                        {modalidadesDoModal.map(m => <option key={m.id} value={m.id}>{m.nome}</option>)}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className={ROTULO_MODAL}>{t('schedulePage.modal.teacher', 'Professor Titular')}</label>
+                                    <select className={CAMPO_MODAL} value={formData.professorId} onChange={e => setFormData({...formData, professorId: e.target.value})} required disabled={!formData.unidadeId}>
+                                        <option value="">{!formData.unidadeId ? t('schedulePage.modal.selectUnitAlert', "Selecione a unidade") : (professoresDoModal.length === 0 ? t('schedulePage.modal.noTeacherLinked', "Nenhum vinculado") : t('schedulePage.filters.allUnits', 'Selecione...'))}</option>
+                                        {professoresDoModal.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
+                                    </select>
+                                </div>
+                            </section>
+
+                            {/* CARTÃO 2: QUANDO */}
+                            <section className={CARTAO_MODAL}>
+                                <h4 className={TITULO_CARTAO}><CalendarDays className="w-3.5 h-3.5" /> {t('schedulePage.modal.sectionWhen', 'Quando')}</h4>
+                                <div>
+                                    <label className={`${ROTULO_MODAL} flex items-center gap-1`}><Clock className="w-3 h-3"/> {t('schedulePage.modal.time', 'Horário')}</label>
+                                    <input type="time" className={CAMPO_MODAL} value={formData.hora} onChange={e => setFormData({...formData, hora: e.target.value})} required />
+                                </div>
+                                <div>
+                                    <label className={ROTULO_MODAL}>{t('schedulePage.modal.daysOfWeek', 'Dias da Semana')}</label>
+                                    <div className="grid grid-cols-7 gap-1.5">
+                                        {allDays.map(day => (
+                                            <button key={day} type="button" aria-pressed={formData.dias.includes(day)} onClick={() => toggleDay(day)} className={`py-2 rounded-lg text-[10px] font-black uppercase border-2 transition-all ${formData.dias.includes(day) ? 'bg-red-600 text-white border-red-600 shadow-md' : 'bg-white dark:bg-slate-800 text-slate-400 dark:text-slate-500 border-slate-300 dark:border-slate-700 hover:border-red-300 hover:text-red-500'}`}>
+                                                {formatWeekday(day, { short: true })}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className={ROTULO_MODAL}>{t('schedulePage.modal.startDate', 'Aula Registrada a partir de')}</label>
+                                        <input type="date" required className={CAMPO_MODAL} value={formData.dataInicio} onChange={e => setFormData({...formData, dataInicio: e.target.value})} />
+                                        <p className={DICA_MODAL}>{t('schedulePage.modal.startHint', 'Primeiro dia em que a aula passa a existir e a ser registrada.')}</p>
+                                    </div>
+                                    <div>
+                                        <label className={ROTULO_MODAL}>{t('schedulePage.modal.endDate', 'Encerrar a aula em (último dia)')}</label>
+                                        <input type="date" min={formData.dataInicio || undefined} className={CAMPO_MODAL} value={formData.dataFim} onChange={e => setFormData({...formData, dataFim: e.target.value})} />
+                                        <p className={DICA_MODAL}>{t('schedulePage.modal.endHint', 'Deixe vazio se a aula continua. Depois dessa data ela sai da grade.')}</p>
+                                    </div>
+                                </div>
+                            </section>
+
+                            {/* CARTÃO 3: VALOR E SUGESTÃO DA TABELA DE PREÇOS */}
+                            <section className={CARTAO_MODAL}>
+                                <h4 className={TITULO_CARTAO}><DollarSign className="w-3.5 h-3.5" /> {t('schedulePage.modal.sectionValue', 'Valor')}</h4>
+                                <div>
+                                    <label className={ROTULO_MODAL}>{t('schedulePage.modal.value', 'Valor Hora/Aula')}</label>
+                                    <div className="relative">
+                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">{modalCurrencySymbol}</span>
+                                        <input type="number" step="0.01" min={!editingClass || (parseFloat(editingClass.valor) || 0) > 0 ? "0.01" : "0"} required={!editingClass || (parseFloat(editingClass.valor) || 0) > 0} className={`${CAMPO_MODAL} pl-14 font-black`} value={formData.valor} onChange={e => setFormData({...formData, valor: e.target.value})} placeholder="0.00" />
+                                    </div>
+                                    {valorAuto !== null && String(formData.valor) === valorAuto && <p className="mt-1.5 text-[10px] font-black uppercase text-emerald-600 dark:text-emerald-400">{t('schedulePage.modal.valueAuto', 'Igual ao valor da tabela de preços')}</p>}
+                                    {valorAuto !== null && String(formData.valor) !== valorAuto && String(formData.valor) !== '' && <p className="mt-1.5 text-[10px] font-black uppercase text-slate-500 dark:text-slate-400">{t('schedulePage.modal.valueManual', 'Valor digitado por você')}</p>}
                                 </div>
                                 {podeVerPrecos && formData.unidadeId && formData.modalidadeId && formData.professorId && (
-                                    <SugestaoDeValor sugestao={sugestaoDeValor} carregando={tabelaDoSugerido === null} valorDigitado={formData.valor} frequencia={tabelaDoSugerido ? tabelaDoSugerido.frequenciaPreta : undefined}
-                                        onUsar={(v) => setFormData((f) => ({ ...f, valor: String(v) }))} />
+                                    <SugestaoDeValor sugestao={sugestaoDeValor} carregando={tabelaDoSugerido === null} falhou={tabelaDoSugerido === false} valorDigitado={formData.valor} frequencia={tabelaDoSugerido ? tabelaDoSugerido.frequenciaPreta : undefined}
+                                        onUsar={(v) => { setFormData((f) => ({ ...f, valor: String(v) })); setValorAuto(String(v)); }} />
                                 )}
-                            </div>
+                            </section>
                         </div>
 
-                        <div>
-                            <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2 block">{t('schedulePage.modal.daysOfWeek', 'Dias da Semana')}</label>
-                            <div className="flex flex-wrap gap-2">
-                                {allDays.map(day => (
-                                    <button key={day} type="button" onClick={() => toggleDay(day)} className={`flex-1 min-w-[65px] py-3 rounded-xl text-[10px] font-black uppercase tracking-wider border-2 transition-all ${formData.dias.includes(day) ? 'bg-red-600 text-white border-red-600 shadow-md shadow-red-200 dark:shadow-none transform scale-105' : 'bg-white dark:bg-slate-900 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-slate-700 hover:border-red-300 hover:text-red-500'}`}>
-                                        {formatWeekday(day, { short: true })}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
+                        {editingClass && (
+                            <p className="flex items-start gap-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 rounded-xl p-3">
+                                <ArrowRightLeft className="w-3.5 h-3.5 mt-0.5 shrink-0 text-amber-600" /> {t('schedulePage.modal.editHint', 'Ao mudar unidade, professor, modalidade, horário, dias ou valor, o sistema vai perguntar se cria uma nova fase a partir de uma data (preserva o passado) ou se só corrige os dados.')}
+                            </p>
+                        )}
 
-                        {/* DATAS DA CONFIGURAÇÃO */}
-                        <div className="grid grid-cols-2 gap-5 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-800">
-                            <div>
-                                <label className="text-[10px] font-bold text-slate-800 dark:text-slate-200 uppercase mb-1.5 block">{t('schedulePage.modal.startDate', 'Aula Registrada a partir de')}</label>
-                                <input type="date" required className="w-full p-2.5 bg-transparent border-b-2 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-white text-sm focus:border-blue-500 outline-none font-bold" value={formData.dataInicio} onChange={e => setFormData({...formData, dataInicio: e.target.value})} />
-                            </div>
-                            <div>
-                                <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 block">{t('schedulePage.modal.endDate', 'Encerrar Permanentemente em')}</label>
-                                <input type="date" className="w-full p-2.5 bg-transparent border-b-2 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-white text-sm focus:border-rose-500 outline-none font-bold" value={formData.dataFim} onChange={e => setFormData({...formData, dataFim: e.target.value})} />
-                            </div>
-                        </div>
-
-                        <div className="pt-4 flex justify-end gap-3 shrink-0">
-                            {editingClass && (
-                                <button type="button" onClick={handleDelete} disabled={saving} className="mr-auto text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 px-4 py-3.5 rounded-xl text-xs font-black uppercase flex items-center gap-2 disabled:opacity-50 transition-colors">
-                                    <Trash2 className="w-4 h-4"/> {t('schedulePage.modal.delete', 'Excluir')}
-                                </button>
-                            )}
-                            <button type="button" onClick={closeModal} disabled={saving} className="px-6 py-3.5 text-slate-500 dark:text-slate-400 font-bold uppercase text-xs hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl disabled:opacity-50 transition-colors">{t('schedulePage.modal.cancel', 'Cancelar')}</button>
-                            <button type="submit" disabled={saving} className="px-8 py-3.5 bg-red-600 text-white rounded-xl font-black uppercase text-xs hover:bg-red-700 shadow-lg shadow-red-200 dark:shadow-none flex items-center gap-2 disabled:opacity-70 transition-all active:scale-95">
-                                {saving ? <Loader2 className="w-4 h-4 animate-spin"/> : <Check className="w-4 h-4" />} {editingClass ? t('schedulePage.modal.saveEdit', 'Salvar Alterações') : t('schedulePage.modal.save', 'Salvar')}
-                            </button>
-                        </div>
                     </form>
                 </>
             ) : (
@@ -1085,13 +1182,9 @@ export default function CronogramaPage() {
 
                     </div>
 
-                    <div className="px-8 py-4 border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 shrink-0 text-center">
-                        <button onClick={() => setPendingSplit(null)} className="text-slate-400 hover:text-slate-600 font-bold text-xs uppercase tracking-wider underline">{t('schedulePage.splitModal.backToForm', 'Voltar para o formulário')}</button>
-                    </div>
                 </div>
             )}
-          </div>
-        </div>
+          </PopupFlutuante>
       )}
     </div>
   );

@@ -47,7 +47,15 @@
     "delete": "Eliminar",
     "saveEdit": "Guardar Cambios",
     "selectUnitAlert": "Seleccione la unidad",
-    "noTeacherLinked": "Ninguno vinculado"
+    "noTeacherLinked": "Ninguno vinculado",
+    "sectionClass": "La clase",
+    "sectionWhen": "Cuándo",
+    "sectionValue": "Valor",
+    "startHint": "Primer día en que la clase existe y se registra.",
+    "endHint": "Dejá vacío si la clase continúa. Después de esta fecha sale de la grilla.",
+    "valueAuto": "Igual al valor de la tabla de precios",
+    "valueManual": "Valor escrito por vos",
+    "editHint": "Al cambiar unidad, profesor, modalidad, horario, días o valor, el sistema va a preguntar si crea una nueva fase desde una fecha (preserva el pasado) o si solo corrige los datos."
   },
   "splitModal": {
     "title": "Alteración de Grilla",
@@ -75,7 +83,9 @@
     "deleteError": "Error al enviar la clase a la papelera.",
     "saveError": "Error al guardar.",
     "valueRequired": "❌ Ingresá el valor de la clase (mayor que cero).",
-    "duplicateConfirm": "⚠️ Ya existe una clase igual a esta (misma unidad, modalidad, profesor, horario y día).\n\nGuardar igualmente puede pagar la misma clase dos veces.\n\n¿Guardar igualmente?"
+    "duplicateConfirm": "⚠️ Ya existe una clase igual a esta (misma unidad, modalidad, profesor, horario y día).\n\nGuardar igualmente puede pagar la misma clase dos veces.\n\n¿Guardar igualmente?",
+    "noDays": "❌ Marcá al menos un día de la semana.",
+    "endInPast": "❌ La fecha de cierre ya pasó: la clase nacería cerrada. Dejá vacío o elegí hoy o una fecha posterior."
   },
   "unknownModality": "Desconocida",
   "unknownUnit": "Sede Desconocida",
@@ -112,5 +122,8 @@
       "hora": "horario",
       "dias": "días"
     }
+  },
+  "mobile": {
+    "noClassesDay": "Sin clases este día."
   }
 }

@@ -65,3 +65,21 @@ describe('aulas seguidas no Cronograma (Power Core 20 min; demais 40 min; lutas 
     expect(r.porDia).toEqual([{ dia: 1, valor: 35, saver: false, seguida: false }, { dia: 2, valor: 30, saver: false, seguida: true }]);
   });
 });
+
+describe('workshop antigo sem modalidade e país da unidade', () => {
+  it('workshop sem modalidade gravada vale pelo NOME (Workshop Jump) e a pulseira sobe', () => {
+    const antigo = { workshops: [{ id: 'a', nome: 'Workshop Jump', data: '2026-03-10' }, { id: 'b', nome: 'Workshop Training', data: '2026-04-05' }] };
+    const r = sugestaoDoCronograma({ ...base, professor: antigo, modalidadeNome: 'Energy Jump' });
+    expect(r).toMatchObject({ nivel: 'vermelha', quantidade: 2, valores: [45] });
+  });
+  it('nome sem modalidade reconhecível não conta; item com modalidade usa só ela', () => {
+    const p = { workshops: [{ id: 'a', nome: 'Palestra de liderança', data: '2026-03-10' }, { id: 'b', nome: 'Workshop Jump', modalidade: 'Power Dance', data: '2026-03-10' }] };
+    expect(sugestaoDoCronograma({ ...base, professor: p, modalidadeNome: 'Jump' })).toMatchObject({ nivel: 'cinza' });
+    expect(sugestaoDoCronograma({ ...base, professor: p, modalidadeNome: 'Power Dance' })).toMatchObject({ nivel: 'verde' });
+  });
+  it('ehUnidadeBrasil aceita BR, Brasil e vazio; recusa Argentina e EUA', async () => {
+    const { ehUnidadeBrasil } = await import('../../src/utils/pulseira.js');
+    expect(['BR', 'Brasil', ' brasil ', '', undefined].every(ehUnidadeBrasil)).toBe(true);
+    expect(['AR', 'Argentina', 'US', 'EUA'].some(ehUnidadeBrasil)).toBe(false);
+  });
+});
