@@ -1,0 +1,50 @@
+{
+  "open": "Price table",
+  "title": "Price table",
+  "subtitle": "Rate per class, by modality and wristband (group classes career plan).",
+  "edit": "Edit values",
+  "close": "Close",
+  "cancel": "Cancel",
+  "save": "Save",
+  "saved_one": "Table saved. {{count}} value changed.",
+  "saved_other": "Table saved. {{count}} values changed.",
+  "noChanges": "Nothing was changed.",
+  "loadError": "Could not load the price table. Please try again.",
+  "saveError": "Could not save. Check your connection and try again.",
+  "invalidValues_one": "{{count}} field is empty or invalid. Use numbers only (e.g. 12.50).",
+  "invalidValues_other": "{{count}} fields are empty or invalid. Use numbers only (e.g. 12.50).",
+  "hidden": "Hidden",
+  "visible": "Visible",
+  "levels": {
+    "cinza": "No workshop",
+    "verde": "Green wristband",
+    "vermelha": "Red wristband",
+    "preta": "Black wristband"
+  },
+  "levelHint": {
+    "cinza": "no workshops",
+    "verde": "1 workshop",
+    "vermelha": "2 workshops",
+    "preta": "3 workshops"
+  },
+  "fields": {
+    "qualquer": "Any class",
+    "academico": "Academics",
+    "umaAula": "1 class",
+    "seguidas": "2 to 3 classes"
+  },
+  "rulesTitle": "How to read the table",
+  "ruleWorkshop": "The wristband depends on how many workshops the person completed. Each modality counts as one workshop.",
+  "ruleAcademic": "Academics: class taught during the internship/work schedule. The other values are for classes outside that schedule.",
+  "ruleStreak": "Jump and Dance: \"2 to 3 classes\" applies when the person teaches back-to-back classes on the same day (e.g. Jump then Dance).",
+  "blackTitle": "Black wristband",
+  "blackIntro": "Besides the 3 workshops, the class needs an average attendance above:",
+  "freq": {
+    "manha": "Morning:",
+    "noite": "Evening:"
+  },
+  "students": "students",
+  "notAutomatic": "Note: this table is for reference and editing. It does not calculate payments automatically yet; each class keeps the value set in the Schedule.",
+  "lastUpdate": "Last changed on {{when}} by {{who}}.",
+  "neverSaved": "Initial career plan values. Not yet saved by the administrator."
+}
