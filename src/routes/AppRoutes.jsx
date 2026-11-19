@@ -12,6 +12,7 @@ import Home from "../pages/home";
 import ConfiguracoesPage from "../app/Configuracoes"; 
 import ValidacaoDiaria from "../app/ValidacaoDiaria";
 import MeusWorkshops from "../pages/MeusWorkshops";
+import WorkshopsPage from "../app/Workshops";
 import MeuCadastro from "../pages/MeuCadastro";
 import CronogramaPage from "../app/Cronograma/index"; 
 import RelatorioPage from "../app/Relatorios"; 
@@ -143,8 +144,8 @@ export default function AppRoutes() {
             } 
           />
 
-          {/* Loja & Workshops agora é uma aba de Configurações (só admin): o endereço antigo leva para lá. */}
-          <Route path="workshops" element={<Navigate to="/app/configuracoes" state={{ aba: "workshops" }} replace />} />
+          {/* Loja & Eventos (Cofre): Resumo, Estoque e Eventos. O cadastro de Workshops fica em Configurações. */}
+          <Route path="workshops" element={<RoleRoute pageKey="workshops"><WorkshopsPage /></RoleRoute>} />
           
           {/* Configurações */}
           <Route 

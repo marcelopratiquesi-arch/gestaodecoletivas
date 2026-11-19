@@ -18,8 +18,9 @@ const ModalidadesTab = lazy(() => import('./Modalidades/ModalidadesTab').then(mo
 const ProfessoresTab = lazy(() => import('./Professores/ProfessoresTab').then(module => ({ default: module.ProfessoresTab })));
 const FeriadosTab = lazy(() => import('./Feriados/FeriadosTab').then(module => ({ default: module.FeriadosTab })));
 const BackupTab = lazy(() => import('./Backup/BackupTab'));
-// Loja & Eventos / Workshops (antes ficava no Cofre do menu lateral; agora é uma aba de Configurações, só do admin).
-const WorkshopsTab = lazy(() => import('../Workshops'));
+// Workshops: SÓ o cadastro (nome, data, modalidade, participantes). Resumo, Estoque e Eventos têm dinheiro e ficam no Cofre,
+// por isso esta aba NÃO carrega a tela da Loja (src/app/Workshops/index.jsx), só o cadastro.
+const WorkshopsTab = lazy(() => import('../Workshops/WorkshopsCadastro'));
 const LideresTab = lazy(() => import('./Lideres/LideresTab').then(module => ({ default: module.LideresTab })));
 
 // 🟢 NOVA ABA: PRATIQUE PLAY
@@ -58,7 +59,7 @@ export default function ConfiguracoesPage() {
     { id: "unidades", label: t('settingsPage.tabs.unidades', 'Unidades'), icon: Building2, roles: ["admin", "mentor"] },
     { id: "modalidades", label: t('settingsPage.tabs.modalidades', 'Modalidades'), icon: Dumbbell, roles: ["admin", "mentor"] },
     { id: "feriados", label: t('settingsPage.tabs.feriados', 'Feriados'), icon: CalendarDays, roles: ["admin", "mentor"] },
-    { id: "workshops", label: t('settingsPage.tabs.workshops', 'Workshops'), icon: ShoppingBag, roles: ["admin"] },
+    { id: "workshops", label: t('settingsPage.tabs.workshops', 'Workshops'), icon: ShoppingBag, roles: ["admin", "mentor", "lider", "unidade"] },
     { id: "pratique-play", label: t('settingsPage.tabs.pratiquePlay', 'Pratique Play'), icon: Headphones, roles: ["admin"] },
     { id: "backup", label: t('settingsPage.tabs.backup', 'Backup'), icon: Database, roles: ["admin"] },
   ], [t, totalPendencias, lideresAConferir]);
