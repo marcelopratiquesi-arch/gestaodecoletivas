@@ -3,6 +3,7 @@ import AppRoutes from "./routes/AppRoutes";
 import { PlayerProvider } from "./contexts/PlayerContext";
 // 🟢 IMPORTANDO O CÉREBRO DOS DADOS ESTÁTICOS (MEMÓRIA DE ELEFANTE)
 import { CatalogProvider } from "./contexts/CatalogContext";
+import AvisoNovaVersao from "./components/AvisoNovaVersao";
 
 export default function App() {
   return (
@@ -10,6 +11,7 @@ export default function App() {
     <PlayerProvider>
       <CatalogProvider>
         <AppRoutes />
+        <AvisoNovaVersao />
       </CatalogProvider>
     </PlayerProvider>
   );
