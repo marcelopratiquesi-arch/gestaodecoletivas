@@ -18,7 +18,7 @@ import {
   ChevronRight, TrendingUp, Globe, Megaphone, Headphones, Activity,
   Bell, Download, Trash2,
   Lock, ChevronDown, ShoppingBag, Key, FileSearch, Target,
-  X, ArrowRight, Check
+  X, ArrowRight, Check, Award
 } from "lucide-react";
 
 export default function Sidebar({ collapsed }) { 
@@ -404,6 +404,7 @@ export default function Sidebar({ collapsed }) {
           <div className="space-y-1.5">
               {!collapsed && <p className="px-4 text-[9px] font-black text-slate-400/60 uppercase tracking-widest mb-2">{t('sidebar.sections.operacional', 'Operacional')}</p>}
               <NavItem to="/app/validacao-diaria" icon={CircleCheck} label={t('sidebar.items.validacaoDiaria', 'Validação Diária')} collapsed={collapsed} active={isActive("/app/validacao-diaria")} badge={isProfessor ? pendenciasProfessor : pendencias}/>
+              {isProfessor && <NavItem to="/app/certificados" icon={Award} label={t('sidebar.items.certificados', 'Meus workshops')} collapsed={collapsed} active={isActive("/app/certificados")} />}
               {["admin", "mentor"].includes(role) && <NavItem to="/app/validacao-coletiva" icon={ShieldCheck} label={t('sidebar.items.validacaoColetiva', 'Validação Coletiva')} collapsed={collapsed} active={isActive("/app/validacao-coletiva")} />}
           </div>
 
