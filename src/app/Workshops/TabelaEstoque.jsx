@@ -166,14 +166,14 @@ const TabelaEstoque = ({
                                         {item.data?.toDate ? formatDate(item.data) : t('shop.stock.today')}
                                     </td>
                                     <td className="p-4">
-                                        <span className={`px-2 py-1 text-[9px] font-black uppercase rounded-md ${item.tipo === 'entrada' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'}`}>
+                                        <span className={`px-2 py-1 text-[9px] font-black uppercase rounded-md ${item.tipo === 'entrada' ? 'bg-slate-100 text-slate-700' : 'bg-amber-100 text-amber-700'}`}>
                                             {t(`shop.stockTypes.${item.tipo}`, item.tipo)}
                                         </span>
                                     </td>
                                     <td className="p-4 text-sm font-black text-slate-700 dark:text-white uppercase whitespace-nowrap">
                                         {item.modalidade}
                                         {/* 🟢 Mostra se está vinculado no histórico visual */}
-                                        {item.workshopId && <span className="block mt-1 text-[8px] text-blue-500 bg-blue-50 px-1 py-0.5 rounded border border-blue-200 w-fit">{t('shop.stock.linkedEvent')}</span>}
+                                        {item.workshopId && <span className="block mt-1 text-[8px] text-slate-500 bg-slate-50 px-1 py-0.5 rounded border border-slate-200 w-fit">{t('shop.stock.linkedEvent')}</span>}
                                     </td>
                                     <td className="p-4 text-center text-sm font-black text-slate-600 dark:text-slate-300">
                                         {item.quantidadeTotal}
@@ -185,7 +185,7 @@ const TabelaEstoque = ({
                                                 <div className="flex flex-wrap items-center gap-2">
                                                     <span className="text-[9px] text-red-500 font-black uppercase">{t('shop.stock.cost', { value: formatCurrency(item.custoTotal) })}</span>
                                                     {item.comprovanteUrl && (
-                                                        <a href={item.comprovanteUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[9px] font-black uppercase bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded border border-blue-200 hover:bg-blue-100 transition-colors">
+                                                        <a href={item.comprovanteUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[9px] font-black uppercase bg-slate-50 text-slate-600 px-1.5 py-0.5 rounded border border-slate-200 hover:bg-slate-100 transition-colors">
                                                             <ExternalLink className="w-3 h-3"/> {t('shop.stock.invoice')}
                                                         </a>
                                                     )}
@@ -197,14 +197,14 @@ const TabelaEstoque = ({
                                                 {item.motivoSaida.includes('Venda') && (
                                                     <div className="flex flex-col">
                                                         <span className="text-[10px] text-emerald-600 font-black uppercase">{t('shop.stock.sale', { value: formatCurrency(item.valorVenda) })}</span>
-                                                        <span className="text-[8px] text-blue-500 font-bold uppercase">{t('shop.stock.estProfit', { value: formatCurrency(item.lucroEstimado) })}</span>
+                                                        <span className="text-[8px] text-slate-500 font-bold uppercase">{t('shop.stock.estProfit', { value: formatCurrency(item.lucroEstimado) })}</span>
                                                     </div>
                                                 )}
                                             </div>
                                         )}
                                     </td>
                                     <td className="p-4 text-right space-x-2 whitespace-nowrap">
-                                        <button onClick={() => abrirModalEditarStock(item)} className="p-2 bg-slate-100 dark:bg-slate-700 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-600 hover:text-white transition-colors" title={t('shop.stock.editMovement')}>
+                                        <button onClick={() => abrirModalEditarStock(item)} className="p-2 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 rounded-lg hover:bg-red-600 hover:text-white transition-colors" title={t('shop.stock.editMovement')}>
                                             <Edit className="w-4 h-4"/>
                                         </button>
                                         <button onClick={() => handleExcluirStock(item.id)} className="p-2 bg-red-50 dark:bg-red-900/30 text-red-500 rounded-lg hover:bg-red-600 hover:text-white transition-colors" title={t('shop.stock.deleteMovement')}>

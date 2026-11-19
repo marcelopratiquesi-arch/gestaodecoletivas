@@ -29,7 +29,7 @@ export function BotaoDocumento({ onClick, disabled }) {
   const { t } = useTranslation();
   return (
     <button onClick={onClick} disabled={disabled} title={t("document.modal.edit")}
-      className="p-2 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200 hover:bg-blue-50 hover:text-blue-600 disabled:opacity-50">
+      className="p-2 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200 hover:bg-red-50 hover:text-red-600 disabled:opacity-50">
       <IdCard className="w-4 h-4" />
     </button>
   );
@@ -98,7 +98,7 @@ export function DocumentoModal({ alvo, onClose, abaId = "mentores" }) {
         <CabecalhoDoModal abaId={abaId} icone={IdCard} titulo={t("document.modal.title", { name: alvo.nome || alvo.email || "-" })} onFechar={onClose} />
         <div className="p-5 space-y-4 overflow-y-auto">
         {carregando ? (
-          <div className="flex justify-center py-6"><Loader2 className="w-6 h-6 animate-spin text-blue-500" /></div>
+          <div className="flex justify-center py-6"><Loader2 className="w-6 h-6 animate-spin text-red-500" /></div>
         ) : (
           <>
             {!anterior && <p className="text-xs font-bold text-amber-600">{t("document.modal.none")}</p>}
@@ -230,13 +230,13 @@ function CartaoDoDocumento({ r, aoLiberar, aoEscolherPessoa, aoCadastrar, aoIrPa
       <div>
         <p className="text-sm font-black text-slate-800 dark:text-slate-100">{nome}</p>
         {email && <p className="text-xs text-slate-500">{email}</p>}
-        <p className="text-[11px] font-black uppercase text-blue-600 mt-1">{situacao}</p>
+        <p className="text-[11px] font-black uppercase text-red-600 mt-1">{situacao}</p>
         {!r.cracha && r.pedido?.unidadeNomes?.length > 0 && <p className="text-[11px] text-slate-400 font-bold">{r.pedido.unidadeNomes.join(", ")}</p>}
       </div>
       <div className="flex flex-wrap gap-2">
         {!r.cracha && aoCadastrar && (
           <button type="button" onClick={() => aoCadastrar({ tipo: r.tipo, numero: r.numero, nome: r.pedido?.nome || "", email: r.pedido?.email || "", telefone: r.pedido?.telefone || "" })}
-            className="px-3 py-2 rounded-lg text-[11px] font-black uppercase bg-teal-600 hover:bg-teal-700 text-white flex items-center gap-1.5">
+            className="px-3 py-2 rounded-lg text-[11px] font-black uppercase bg-red-600 hover:bg-red-700 text-white flex items-center gap-1.5">
             <UserPlus className="w-3.5 h-3.5" /> {t("document.search.registerLeader")}
           </button>
         )}
@@ -248,13 +248,13 @@ function CartaoDoDocumento({ r, aoLiberar, aoEscolherPessoa, aoCadastrar, aoIrPa
         )}
         {r.cracha && aoEscolherPessoa && (
           <button type="button" onClick={aoEscolherPessoa}
-            className="px-3 py-2 rounded-lg text-[11px] font-black uppercase bg-teal-600 hover:bg-teal-700 text-white flex items-center gap-1.5">
+            className="px-3 py-2 rounded-lg text-[11px] font-black uppercase bg-red-600 hover:bg-red-700 text-white flex items-center gap-1.5">
             <UserCheck className="w-3.5 h-3.5" /> {t("document.search.useAsLeader")}
           </button>
         )}
         {r.cracha && (
           <button type="button" onClick={() => setDocAlvo({ id: r.uid, nome, email })}
-            className="px-3 py-2 rounded-lg text-[11px] font-black uppercase bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-1.5">
+            className="px-3 py-2 rounded-lg text-[11px] font-black uppercase bg-red-600 hover:bg-red-700 text-white flex items-center gap-1.5">
             <IdCard className="w-3.5 h-3.5" /> {t("document.search.fix")}
           </button>
         )}
@@ -266,7 +266,7 @@ function CartaoDoDocumento({ r, aoLiberar, aoEscolherPessoa, aoCadastrar, aoIrPa
         )}
         {r.cracha && aoResolverNaGrade && (
           <button type="button" onClick={() => aoResolverNaGrade({ tipo: r.tipo, numero: r.numero })}
-            className="px-3 py-2 rounded-lg text-[11px] font-black uppercase bg-green-600 hover:bg-green-700 text-white flex items-center gap-1.5">
+            className="px-3 py-2 rounded-lg text-[11px] font-black uppercase bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1.5">
             <UserCheck className="w-3.5 h-3.5" /> {t("document.search.openInSchedule")}
           </button>
         )}
@@ -320,7 +320,7 @@ export function BuscaDocumento({ aoCadastrar, aoEscolherPessoa, aoIrParaPedido, 
     <form onSubmit={buscar} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 space-y-3">
       <p className="text-xs font-black uppercase text-slate-500">{t("document.search.title")}</p>
       <CampoDocumento claro id="busca-documento" tipo={tipo} onTipo={setTipo} valor={numero} onValor={setNumero} desabilitado={buscando} />
-      <button type="submit" disabled={buscando} className="px-4 py-2.5 rounded-xl text-xs font-black uppercase bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-1.5 disabled:opacity-50">
+      <button type="submit" disabled={buscando} className="px-4 py-2.5 rounded-xl text-xs font-black uppercase bg-red-600 hover:bg-red-700 text-white flex items-center gap-1.5 disabled:opacity-50">
         {buscando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />} {t("document.search.button")}
       </button>
       {erro && <p className="text-xs font-bold text-red-600">{erro}</p>}
@@ -329,7 +329,7 @@ export function BuscaDocumento({ aoCadastrar, aoEscolherPessoa, aoIrParaPedido, 
           <p className="text-xs font-bold text-slate-500">{souAdmin ? t("document.search.notFound") : t("document.search.notFoundMentor")}</p>
           {aoCadastrar && (
             <button type="button" onClick={() => aoCadastrar({ tipo, numero: limparDocumento(numero), nome: "", email: "", telefone: "" })}
-              className="px-3 py-2 rounded-lg text-[11px] font-black uppercase bg-teal-600 hover:bg-teal-700 text-white flex items-center gap-1.5">
+              className="px-3 py-2 rounded-lg text-[11px] font-black uppercase bg-red-600 hover:bg-red-700 text-white flex items-center gap-1.5">
               <UserPlus className="w-3.5 h-3.5" /> {t("document.search.registerLeader")}
             </button>
           )}
@@ -340,7 +340,7 @@ export function BuscaDocumento({ aoCadastrar, aoEscolherPessoa, aoIrParaPedido, 
           <p className="text-sm font-black text-emerald-600">{t("document.search.freed")}</p>
           {aoCadastrar && (
             <button type="button" onClick={() => aoCadastrar({ tipo, numero: limparDocumento(numero), nome: "", email: "", telefone: "" })}
-              className="px-3 py-2 rounded-lg text-[11px] font-black uppercase bg-teal-600 hover:bg-teal-700 text-white flex items-center gap-1.5">
+              className="px-3 py-2 rounded-lg text-[11px] font-black uppercase bg-red-600 hover:bg-red-700 text-white flex items-center gap-1.5">
               <UserPlus className="w-3.5 h-3.5" /> {t("document.search.registerLeader")}
             </button>
           )}

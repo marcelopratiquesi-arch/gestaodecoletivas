@@ -61,7 +61,7 @@ export function ConfigurarModalidadesEmMassaModal({ unidades, modalidades, aulas
 
         <div className="p-4 space-y-3 overflow-y-auto flex-1 text-sm">
           {feito !== null ? (
-            <div className="flex items-start gap-2 text-green-700 bg-green-50 border border-green-200 rounded-xl p-4 font-bold">
+            <div className="flex items-start gap-2 text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl p-4 font-bold">
               <CheckCircle2 className="w-5 h-5 shrink-0" /> {t("unitsTab.modalities.bulk.done", { count: feito })}
             </div>
           ) : (

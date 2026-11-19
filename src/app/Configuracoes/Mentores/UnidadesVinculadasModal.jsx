@@ -95,7 +95,7 @@ export function UnidadesVinculadasModal({ mentor, mentores, unidades, quem, onCl
                       {tirando?.id === u.id ? (
                         <button onClick={() => { setTirando(null); setDestino(""); }} className="text-xs font-bold text-slate-500 hover:text-slate-700">{t("mentorsTab.modal.cancel")}</button>
                       ) : (
-                        <button onClick={() => { setTirando(u); setDestino(""); }} disabled={!!trabalhando} className="text-xs font-bold px-2.5 py-1 rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-500 hover:text-white dark:bg-orange-900/30 dark:text-orange-400 flex items-center gap-1 disabled:opacity-50">
+                        <button onClick={() => { setTirando(u); setDestino(""); }} disabled={!!trabalhando} className="text-xs font-bold px-2.5 py-1 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-500 hover:text-white dark:bg-amber-900/30 dark:text-amber-400 flex items-center gap-1 disabled:opacity-50">
                           <ArrowRightLeft className="w-3 h-3" /> {t("mentorsTab.linked.remove")}
                         </button>
                       )}

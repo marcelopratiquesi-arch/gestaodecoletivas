@@ -245,7 +245,7 @@ const DREModal = ({
                     className="p-5 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex justify-between items-center shrink-0 cursor-move"
                 >
                     <div className="flex items-center gap-3">
-                        <span className="p-2 bg-blue-100 text-blue-600 rounded-lg"><Table className="w-6 h-6"/></span> 
+                        <span className="p-2 bg-slate-100 text-slate-600 rounded-lg"><Table className="w-6 h-6"/></span> 
                         <div>
                             <h3 className="text-2xl font-black uppercase tracking-tight text-slate-800 dark:text-white flex items-center gap-2">
                                 {t('shop.dre.title')}
@@ -258,7 +258,7 @@ const DREModal = ({
                     
                     <div className="flex flex-wrap items-center gap-3">
                         <div className="hidden sm:flex gap-2 border-r border-slate-200 pr-4 mr-2">
-                            <button onClick={gerarRecibo} className="flex items-center gap-1 px-3 py-2 bg-blue-50 text-blue-600 rounded-xl text-[10px] font-black uppercase hover:bg-blue-100 transition-colors shadow-sm border border-blue-200"><FileSignature className="w-3 h-3"/> {t('shop.dre.receipt')}</button>
+                            <button onClick={gerarRecibo} className="flex items-center gap-1 px-3 py-2 bg-slate-50 text-slate-600 rounded-xl text-[10px] font-black uppercase hover:bg-slate-100 transition-colors shadow-sm border border-slate-200"><FileSignature className="w-3 h-3"/> {t('shop.dre.receipt')}</button>
                             <button onClick={exportarPDF} className="flex items-center gap-1 px-3 py-2 bg-red-50 text-red-600 rounded-xl text-[10px] font-black uppercase hover:bg-red-100 transition-colors shadow-sm"><Download className="w-3 h-3"/> {t('shop.dre.pdf')}</button>
                             <button onClick={exportarExcel} className="flex items-center gap-1 px-3 py-2 bg-emerald-50 text-emerald-600 rounded-xl text-[10px] font-black uppercase hover:bg-emerald-100 transition-colors shadow-sm"><Download className="w-3 h-3"/> XLS</button>
                         </div>
@@ -282,10 +282,10 @@ const DREModal = ({
                                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                                         {receitasList.map(lanc => (
                                             <tr key={lanc.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 group">
-                                                <td className="p-3"><p className={`font-bold uppercase ${lanc.isStock ? 'text-blue-600 dark:text-blue-400' : 'text-slate-800 dark:text-white'}`}>{traduzirCategoria(lanc.categoria)}</p><p className="text-[10px] text-slate-400 mt-0.5">{lanc.descricao}</p></td>
+                                                <td className="p-3"><p className={`font-bold uppercase ${lanc.isStock ? 'text-slate-600 dark:text-slate-400' : 'text-slate-800 dark:text-white'}`}>{traduzirCategoria(lanc.categoria)}</p><p className="text-[10px] text-slate-400 mt-0.5">{lanc.descricao}</p></td>
                                                 <td className="p-3 text-right font-black text-emerald-600 dark:text-emerald-400 whitespace-nowrap">{formatCurrency(lanc.valor)}</td>
                                                 <td className="p-3 text-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <button onClick={() => { setWorkshopDetalhe(null); if(lanc.isStock){ const s = stockLedger.find(x=>x.id===lanc.id); if(s) abrirModalEditarStock(s); } else { const originalT = transacoes.find(x=>x.id===lanc.id); if(originalT) abrirModalEditarTransacao(originalT); } }} className="text-blue-500 hover:scale-110 mr-2"><Edit className="w-3.5 h-3.5"/></button>
+                                                    <button onClick={() => { setWorkshopDetalhe(null); if(lanc.isStock){ const s = stockLedger.find(x=>x.id===lanc.id); if(s) abrirModalEditarStock(s); } else { const originalT = transacoes.find(x=>x.id===lanc.id); if(originalT) abrirModalEditarTransacao(originalT); } }} className="text-slate-500 hover:scale-110 mr-2"><Edit className="w-3.5 h-3.5"/></button>
                                                     <button onClick={() => { if(lanc.isStock) handleExcluirStock(lanc.id); else handleExcluirTransacao(lanc.id); }} className="text-red-500 hover:scale-110"><Trash2 className="w-3.5 h-3.5"/></button>
                                                 </td>
                                             </tr>
@@ -315,7 +315,7 @@ const DREModal = ({
                                                 <td className="p-3 text-center opacity-0 group-hover:opacity-100 transition-opacity">
                                                     {lanc.id !== 'comissao-evento-auto' && (
                                                         <>
-                                                            <button onClick={() => { setWorkshopDetalhe(null); if(lanc.isStock){ const s = stockLedger.find(x=>x.id===lanc.id); if(s) abrirModalEditarStock(s); } else { const originalT = transacoes.find(x=>x.id===lanc.id); if(originalT) abrirModalEditarTransacao(originalT); } }} className="text-blue-500 hover:scale-110 mr-2"><Edit className="w-3.5 h-3.5"/></button>
+                                                            <button onClick={() => { setWorkshopDetalhe(null); if(lanc.isStock){ const s = stockLedger.find(x=>x.id===lanc.id); if(s) abrirModalEditarStock(s); } else { const originalT = transacoes.find(x=>x.id===lanc.id); if(originalT) abrirModalEditarTransacao(originalT); } }} className="text-slate-500 hover:scale-110 mr-2"><Edit className="w-3.5 h-3.5"/></button>
                                                             <button onClick={() => { if(lanc.isStock) handleExcluirStock(lanc.id); else handleExcluirTransacao(lanc.id); }} className="text-red-500 hover:scale-110"><Trash2 className="w-3.5 h-3.5"/></button>
                                                         </>
                                                     )}
@@ -343,7 +343,7 @@ const DREModal = ({
                             </div>
                         </div>
 
-                        <div className="p-5 lg:p-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400 rounded-none flex flex-col justify-center">
+                        <div className="p-5 lg:p-6 bg-slate-50 dark:bg-slate-900/20 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-400 rounded-none flex flex-col justify-center">
                             <div className="flex justify-between items-start mb-2">
                                 <div className="flex items-center gap-2"><UserCheck className="w-4 h-4"/><span className="font-black uppercase tracking-widest text-[10px]">{t('shop.dre.commissions')}</span></div>
                             </div>

@@ -218,25 +218,25 @@ export default function AuditoriaPage() {
 
     // 🟢 ÍCONES ATUALIZADOS
     const getIconeAcao = (tipo) => {
-        if (tipo === 'LOGIN') return <LogIn className="w-4 h-4 text-indigo-500" />;
-        if (tipo === 'LOGOUT') return <LogOut className="w-4 h-4 text-orange-500" />;
+        if (tipo === 'LOGIN') return <LogIn className="w-4 h-4 text-slate-500" />;
+        if (tipo === 'LOGOUT') return <LogOut className="w-4 h-4 text-amber-500" />;
         if (tipo === 'NOVA' || tipo === 'CRIADO') return <PlusCircle className="w-4 h-4 text-emerald-500" />;
-        if (tipo === 'EXCLUÍDA' || tipo === 'DELETADO') return <Trash2 className="w-4 h-4 text-rose-500" />;
+        if (tipo === 'EXCLUÍDA' || tipo === 'DELETADO') return <Trash2 className="w-4 h-4 text-red-500" />;
         if (tipo === 'ALTERADA' || tipo === 'EDITADO') return <Edit2 className="w-4 h-4 text-amber-500" />;
-        if (tipo === 'VIGÊNCIA') return <Calendar className="w-4 h-4 text-blue-500" />;
-        if (tipo === 'EDICAO_FOLHA') return <DollarSign className="w-4 h-4 text-purple-600" />;
+        if (tipo === 'VIGÊNCIA') return <Calendar className="w-4 h-4 text-slate-500" />;
+        if (tipo === 'EDICAO_FOLHA') return <DollarSign className="w-4 h-4 text-slate-600" />;
         return <Activity className="w-4 h-4 text-slate-500" />;
     };
 
     // 🟢 BADGES ATUALIZADAS
     const getBadgeAcao = (tipo) => {
-        if (tipo === 'LOGIN') return <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded text-[9px] font-black uppercase">{t('audit.actions.LOGIN')}</span>;
-        if (tipo === 'LOGOUT') return <span className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded text-[9px] font-black uppercase">{t('audit.actions.LOGOUT')}</span>;
+        if (tipo === 'LOGIN') return <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[9px] font-black uppercase">{t('audit.actions.LOGIN')}</span>;
+        if (tipo === 'LOGOUT') return <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-[9px] font-black uppercase">{t('audit.actions.LOGOUT')}</span>;
         if (tipo === 'NOVA' || tipo === 'CRIADO') return <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded text-[9px] font-black uppercase">{t('audit.actions.added')}</span>;
-        if (tipo === 'EXCLUÍDA' || tipo === 'DELETADO') return <span className="bg-rose-100 text-rose-700 px-2 py-0.5 rounded text-[9px] font-black uppercase">{t('audit.actions.deleted')}</span>;
+        if (tipo === 'EXCLUÍDA' || tipo === 'DELETADO') return <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded text-[9px] font-black uppercase">{t('audit.actions.deleted')}</span>;
         if (tipo === 'ALTERADA' || tipo === 'EDITADO') return <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-[9px] font-black uppercase">{t('audit.actions.changed')}</span>;
-        if (tipo === 'VIGÊNCIA') return <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-[9px] font-black uppercase">{t('audit.actions.VIGENCIA')}</span>;
-        if (tipo === 'EDICAO_FOLHA') return <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-[9px] font-black uppercase">{t('audit.actions.EDICAO_FOLHA')}</span>;
+        if (tipo === 'VIGÊNCIA') return <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[9px] font-black uppercase">{t('audit.actions.VIGENCIA')}</span>;
+        if (tipo === 'EDICAO_FOLHA') return <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[9px] font-black uppercase">{t('audit.actions.EDICAO_FOLHA')}</span>;
         return <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[9px] font-black uppercase">{tipo === 'EXPORTACAO' ? t('audit.actions.EXPORTACAO') : tipo}</span>;
     };
 
@@ -260,7 +260,7 @@ export default function AuditoriaPage() {
                     disabled={loading}
                     className="flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 px-5 py-3 rounded-xl text-xs font-black shadow-sm hover:bg-slate-50 transition-all active:scale-95 disabled:opacity-50 uppercase"
                 >
-                    <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-blue-500' : 'text-blue-500'}`} />
+                    <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-slate-500' : 'text-slate-500'}`} />
                     {t('audit.sync')}
                 </button>
             </div>
@@ -269,13 +269,13 @@ export default function AuditoriaPage() {
                 <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-3 flex flex-col xl:flex-row gap-4 items-center justify-between">
                     <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
                         <div className="flex bg-slate-100 dark:bg-slate-700 rounded-xl p-1 h-11 shrink-0">
-                            <button onClick={() => handleDateChange('dia')} className={`px-4 text-xs font-bold rounded-lg uppercase transition-all ${modoFiltro === 'dia' ? 'bg-white dark:bg-slate-600 shadow-sm text-blue-600 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}>{t('common.period.day')}</button>
-                            <button onClick={() => setModoFiltro('periodo')} className={`px-4 text-xs font-bold rounded-lg uppercase transition-all ${modoFiltro === 'periodo' ? 'bg-white dark:bg-slate-600 shadow-sm text-blue-600 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}>{t('common.period.range')}</button>
-                            <button onClick={() => handleDateChange('mes')} className={`px-4 text-xs font-bold rounded-lg uppercase transition-all ${modoFiltro === 'mes' ? 'bg-white dark:bg-slate-600 shadow-sm text-blue-600 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}>{t('common.period.month')}</button>
+                            <button onClick={() => handleDateChange('dia')} className={`px-4 text-xs font-bold rounded-lg uppercase transition-all ${modoFiltro === 'dia' ? 'bg-white dark:bg-slate-600 shadow-sm text-slate-600 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}>{t('common.period.day')}</button>
+                            <button onClick={() => setModoFiltro('periodo')} className={`px-4 text-xs font-bold rounded-lg uppercase transition-all ${modoFiltro === 'periodo' ? 'bg-white dark:bg-slate-600 shadow-sm text-slate-600 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}>{t('common.period.range')}</button>
+                            <button onClick={() => handleDateChange('mes')} className={`px-4 text-xs font-bold rounded-lg uppercase transition-all ${modoFiltro === 'mes' ? 'bg-white dark:bg-slate-600 shadow-sm text-slate-600 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}>{t('common.period.month')}</button>
                         </div>
 
                         <div className="h-11 px-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-700 flex items-center gap-2 shrink-0">
-                            <Calendar className="w-4 h-4 text-blue-500"/>
+                            <Calendar className="w-4 h-4 text-slate-500"/>
                             {modoFiltro === 'mes' ? (
                                 <input type="month" value={dataInicio.substring(0, 7)} onChange={handleMonthChange} className="bg-transparent text-xs font-bold text-slate-700 dark:text-white outline-none cursor-pointer uppercase"/>
                             ) : (
@@ -302,10 +302,10 @@ export default function AuditoriaPage() {
                         <button onClick={() => setFiltroModulo("TODOS")} className={`px-5 py-2.5 rounded-xl text-[11px] font-black tracking-widest transition-all ${filtroModulo === "TODOS" ? 'bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 shadow-md' : 'bg-slate-100 text-slate-500 hover:bg-slate-200 dark:bg-slate-900 dark:border-slate-700'}`}>{t('audit.modules.all')}</button>
                         <button onClick={() => setFiltroModulo("CRONOGRAMA")} className={`px-5 py-2.5 rounded-xl text-[11px] font-black tracking-widest transition-all flex items-center gap-2 ${filtroModulo === "CRONOGRAMA" ? 'bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 shadow-md' : 'bg-slate-100 text-slate-500 hover:bg-slate-200 dark:bg-slate-900 dark:border-slate-700'}`}><Calendar className="w-3.5 h-3.5"/> {t('audit.modules.CRONOGRAMA')}</button>
                         <button onClick={() => setFiltroModulo("VALIDACAO")} className={`px-5 py-2.5 rounded-xl text-[11px] font-black tracking-widest transition-all flex items-center gap-2 ${filtroModulo === "VALIDACAO" ? 'bg-emerald-600 text-white shadow-md' : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400'}`}><CircleCheck className="w-3.5 h-3.5"/> {t('audit.modules.VALIDACAO')}</button>
-                        <button onClick={() => setFiltroModulo("FINANCEIRO")} className={`px-5 py-2.5 rounded-xl text-[11px] font-black tracking-widest transition-all flex items-center gap-2 ${filtroModulo === "FINANCEIRO" ? 'bg-purple-600 text-white shadow-md' : 'bg-purple-50 text-purple-600 hover:bg-purple-100 dark:bg-purple-900/20 dark:text-purple-400'}`}><TrendingUp className="w-3.5 h-3.5"/> {t('audit.modules.FINANCEIRO')}</button>
+                        <button onClick={() => setFiltroModulo("FINANCEIRO")} className={`px-5 py-2.5 rounded-xl text-[11px] font-black tracking-widest transition-all flex items-center gap-2 ${filtroModulo === "FINANCEIRO" ? 'bg-red-600 text-white shadow-md' : 'bg-slate-50 text-slate-600 hover:bg-slate-100 dark:bg-slate-900/20 dark:text-slate-400'}`}><TrendingUp className="w-3.5 h-3.5"/> {t('audit.modules.FINANCEIRO')}</button>
                         
                         {/* 🟢 NOVA ABA DE ACESSOS */}
-                        <button onClick={() => setFiltroModulo("ACESSOS")} className={`px-5 py-2.5 rounded-xl text-[11px] font-black tracking-widest transition-all flex items-center gap-2 ${filtroModulo === "ACESSOS" ? 'bg-indigo-600 text-white shadow-md' : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100 dark:bg-indigo-900/20 dark:text-indigo-400'}`}><Key className="w-3.5 h-3.5"/> {t('audit.modules.ACESSOS')}</button>
+                        <button onClick={() => setFiltroModulo("ACESSOS")} className={`px-5 py-2.5 rounded-xl text-[11px] font-black tracking-widest transition-all flex items-center gap-2 ${filtroModulo === "ACESSOS" ? 'bg-red-600 text-white shadow-md' : 'bg-slate-50 text-slate-600 hover:bg-slate-100 dark:bg-slate-900/20 dark:text-slate-400'}`}><Key className="w-3.5 h-3.5"/> {t('audit.modules.ACESSOS')}</button>
 
                         <button onClick={() => setFiltroModulo("CONFIGURACOES")} className={`px-5 py-2.5 rounded-xl text-[11px] font-black tracking-widest transition-all flex items-center gap-2 ${filtroModulo === "CONFIGURACOES" ? 'bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 shadow-md' : 'bg-slate-100 text-slate-500 hover:bg-slate-200 dark:bg-slate-900 dark:border-slate-700'}`}><Settings className="w-3.5 h-3.5"/> {t('audit.modules.CONFIGURACOES')}</button>
                     </div>
@@ -369,8 +369,8 @@ export default function AuditoriaPage() {
                                                     <td className="p-4 align-top">
                                                         <span className={`text-[10px] font-black px-2 py-1 rounded flex items-center gap-1 w-fit uppercase tracking-wider 
                                                             ${moduloExibicao === 'VALIDACAO' ? 'bg-emerald-50 text-emerald-600 border border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800' : 
-                                                            moduloExibicao === 'FINANCEIRO' ? 'bg-purple-50 text-purple-600 border border-purple-200 dark:bg-purple-900/20 dark:border-purple-800' :
-                                                            moduloExibicao === 'ACESSOS' ? 'bg-indigo-50 text-indigo-600 border border-indigo-200 dark:bg-indigo-900/20 dark:border-indigo-800' :
+                                                            moduloExibicao === 'FINANCEIRO' ? 'bg-slate-50 text-slate-600 border border-slate-200 dark:bg-slate-900/20 dark:border-slate-800' :
+                                                            moduloExibicao === 'ACESSOS' ? 'bg-slate-50 text-slate-600 border border-slate-200 dark:bg-slate-900/20 dark:border-slate-800' :
                                                             'text-slate-500 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800'}`}>
                                                             {moduloExibicao === 'CRONOGRAMA' && <Calendar className="w-3 h-3"/>}
                                                             {moduloExibicao === 'CONFIGURACOES' && <Settings className="w-3 h-3"/>}
@@ -400,19 +400,19 @@ export default function AuditoriaPage() {
                                                                     {(log.estadoAnterior || log.estadoNovo) ? (
                                                                         <div className="flex flex-col lg:flex-row gap-4 mt-3">
                                                                             {log.estadoAnterior && (
-                                                                                <div className="flex-1 border border-rose-200 dark:border-rose-900/50 bg-rose-50/50 dark:bg-rose-900/10 rounded-xl p-4 shadow-sm">
-                                                                                    <h5 className="text-[10px] font-black text-rose-600 dark:text-rose-400 mb-3 border-b border-rose-100 dark:border-rose-900/30 pb-2 flex items-center gap-1">
+                                                                                <div className="flex-1 border border-red-200 dark:border-red-900/50 bg-red-50/50 dark:bg-red-900/10 rounded-xl p-4 shadow-sm">
+                                                                                    <h5 className="text-[10px] font-black text-red-600 dark:text-red-400 mb-3 border-b border-red-100 dark:border-red-900/30 pb-2 flex items-center gap-1">
                                                                                         <Trash2 className="w-3 h-3"/> {t('audit.before')}
                                                                                     </h5>
                                                                                     <ul className="space-y-1.5 text-[11px] text-slate-600 dark:text-slate-400 font-medium">
                                                                                         <li><span className="font-black text-slate-800 dark:text-slate-200">{t('audit.fields.unit')}</span> {log.estadoAnterior.unidade}</li>
                                                                                         <li><span className="font-black text-slate-800 dark:text-slate-200">{t('audit.fields.modality')}</span> {log.estadoAnterior.modalidade}</li>
-                                                                                        <li className={log.estadoNovo && log.estadoAnterior.professor !== log.estadoNovo.professor ? "text-rose-600 font-black bg-rose-100/50 px-1 rounded -mx-1" : ""}><span className="font-black text-slate-800 dark:text-slate-200">{t('audit.fields.teacher')}</span> {log.estadoAnterior.professor}</li>
-                                                                                        <li className={log.estadoNovo && log.estadoAnterior.dias !== log.estadoNovo.dias ? "text-rose-600 font-black bg-rose-100/50 px-1 rounded -mx-1" : ""}><span className="font-black text-slate-800 dark:text-slate-200">{t('audit.fields.days')}</span> {log.estadoAnterior.dias}</li>
-                                                                                        <li className={log.estadoNovo && log.estadoAnterior.hora !== log.estadoNovo.hora ? "text-rose-600 font-black bg-rose-100/50 px-1 rounded -mx-1" : ""}><span className="font-black text-slate-800 dark:text-slate-200">{t('audit.fields.time')}</span> {log.estadoAnterior.hora}</li>
-                                                                                        <li className={log.estadoNovo && log.estadoAnterior.valor !== log.estadoNovo.valor ? "text-rose-600 font-black bg-rose-100/50 px-1 rounded -mx-1" : ""}><span className="font-black text-slate-800 dark:text-slate-200">{t('audit.fields.value')}</span> {formatCurrency(log.estadoAnterior.valor)}</li>
-                                                                                        <li className={log.estadoNovo && log.estadoAnterior.dataInicio !== log.estadoNovo.dataInicio ? "text-rose-600 font-black bg-rose-100/50 px-1 rounded -mx-1" : ""}><span className="font-black text-slate-800 dark:text-slate-200">{t('audit.fields.start')}</span> {formatarDataSimples(log.estadoAnterior.dataInicio)}</li>
-                                                                                        <li className={log.estadoNovo && log.estadoAnterior.dataFim !== log.estadoNovo.dataFim ? "text-rose-600 font-black bg-rose-100/50 px-1 rounded -mx-1" : ""}><span className="font-black text-slate-800 dark:text-slate-200">{t('audit.fields.end')}</span> {formatarDataSimples(log.estadoAnterior.dataFim)}</li>
+                                                                                        <li className={log.estadoNovo && log.estadoAnterior.professor !== log.estadoNovo.professor ? "text-red-600 font-black bg-red-100/50 px-1 rounded -mx-1" : ""}><span className="font-black text-slate-800 dark:text-slate-200">{t('audit.fields.teacher')}</span> {log.estadoAnterior.professor}</li>
+                                                                                        <li className={log.estadoNovo && log.estadoAnterior.dias !== log.estadoNovo.dias ? "text-red-600 font-black bg-red-100/50 px-1 rounded -mx-1" : ""}><span className="font-black text-slate-800 dark:text-slate-200">{t('audit.fields.days')}</span> {log.estadoAnterior.dias}</li>
+                                                                                        <li className={log.estadoNovo && log.estadoAnterior.hora !== log.estadoNovo.hora ? "text-red-600 font-black bg-red-100/50 px-1 rounded -mx-1" : ""}><span className="font-black text-slate-800 dark:text-slate-200">{t('audit.fields.time')}</span> {log.estadoAnterior.hora}</li>
+                                                                                        <li className={log.estadoNovo && log.estadoAnterior.valor !== log.estadoNovo.valor ? "text-red-600 font-black bg-red-100/50 px-1 rounded -mx-1" : ""}><span className="font-black text-slate-800 dark:text-slate-200">{t('audit.fields.value')}</span> {formatCurrency(log.estadoAnterior.valor)}</li>
+                                                                                        <li className={log.estadoNovo && log.estadoAnterior.dataInicio !== log.estadoNovo.dataInicio ? "text-red-600 font-black bg-red-100/50 px-1 rounded -mx-1" : ""}><span className="font-black text-slate-800 dark:text-slate-200">{t('audit.fields.start')}</span> {formatarDataSimples(log.estadoAnterior.dataInicio)}</li>
+                                                                                        <li className={log.estadoNovo && log.estadoAnterior.dataFim !== log.estadoNovo.dataFim ? "text-red-600 font-black bg-red-100/50 px-1 rounded -mx-1" : ""}><span className="font-black text-slate-800 dark:text-slate-200">{t('audit.fields.end')}</span> {formatarDataSimples(log.estadoAnterior.dataFim)}</li>
                                                                                     </ul>
                                                                                 </div>
                                                                             )}
@@ -439,7 +439,7 @@ export default function AuditoriaPage() {
                                                                         (moduloExibicao === 'CRONOGRAMA' || moduloExibicao === 'VALIDACAO') && log.unidadeNome && (
                                                                             <div className="text-[10px] font-black text-slate-500 flex flex-wrap items-center gap-2 mt-2">
                                                                                 <span className="bg-slate-100 dark:bg-slate-900 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700 shadow-sm">{log.unidadeNome}</span>
-                                                                                <span className="bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 px-1.5 py-0.5 rounded border border-blue-100 dark:border-blue-800 shadow-sm">{log.modalidadeNome}</span>
+                                                                                <span className="bg-slate-50 text-slate-600 dark:bg-slate-900/20 dark:text-slate-400 px-1.5 py-0.5 rounded border border-slate-100 dark:border-slate-800 shadow-sm">{log.modalidadeNome}</span>
                                                                                 <span className="bg-slate-100 dark:bg-slate-900 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700 shadow-sm">{log.professorNome}</span>
                                                                                 {log.dias && log.dias.length > 0 && log.hora && (
                                                                                     <span className="bg-slate-100 dark:bg-slate-900 px-1.5 py-0.5 rounded text-slate-400 border border-slate-200 dark:border-slate-700 shadow-sm">{t('audit.at', { date: formatWeekday(log.dias[0]), time: log.hora })}</span>
@@ -464,14 +464,14 @@ export default function AuditoriaPage() {
                                                                         </span>
                                                                     </div>
 
-                                                                    <div className="mt-2 flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 rounded-xl shadow-sm w-fit">
+                                                                    <div className="mt-2 flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-900/10 border border-slate-100 dark:border-slate-900/30 rounded-xl shadow-sm w-fit">
                                                                         <div className="flex flex-col">
-                                                                            <span className="text-[9px] font-black text-blue-400 uppercase tracking-widest">{t('audit.oldValue')}</span>
-                                                                            <span className="text-sm font-bold text-slate-500 line-through decoration-rose-500">{formatCurrency(log.valorAntigo)}</span>
+                                                                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{t('audit.oldValue')}</span>
+                                                                            <span className="text-sm font-bold text-slate-500 line-through decoration-red-500">{formatCurrency(log.valorAntigo)}</span>
                                                                         </div>
-                                                                        <div className="w-6 border-t-2 border-dashed border-blue-200 dark:border-blue-800"></div>
+                                                                        <div className="w-6 border-t-2 border-dashed border-slate-200 dark:border-slate-800"></div>
                                                                         <div className="flex flex-col">
-                                                                            <span className="text-[9px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">{t('audit.newValue')}</span>
+                                                                            <span className="text-[9px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest">{t('audit.newValue')}</span>
                                                                             <span className="text-base font-black text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/30 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">{formatCurrency(log.valorNovo)}</span>
                                                                         </div>
                                                                     </div>
@@ -512,7 +512,7 @@ export default function AuditoriaPage() {
                                 
                                 <button 
                                     onClick={() => setVerTudo(true)} 
-                                    className="px-6 py-2.5 bg-rose-50 text-rose-600 border border-rose-200 rounded-xl text-xs font-black hover:bg-rose-600 hover:text-white shadow-sm flex items-center gap-2 transition-all uppercase"
+                                    className="px-6 py-2.5 bg-red-50 text-red-600 border border-red-200 rounded-xl text-xs font-black hover:bg-red-600 hover:text-white shadow-sm flex items-center gap-2 transition-all uppercase"
                                 >
                                     <Database className="w-4 h-4"/> {t('audit.viewAll', { count: dadosFiltradosCompletos.length })}
                                 </button>

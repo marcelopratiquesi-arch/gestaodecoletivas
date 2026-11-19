@@ -369,7 +369,7 @@ export function LideresTab() {
     <div className="p-3 sm:p-6 space-y-4">
       {/* PEDIDOS DE ACESSO (login pelo Google) */}
       {totalPendencias > 0 && (
-        <div ref={pedidosRef} className="scroll-mt-4 rounded-2xl border border-neutral-200 bg-white dark:bg-neutral-900 dark:border-neutral-800">
+        <div ref={pedidosRef} className="scroll-mt-4 rounded-2xl border border-slate-200 bg-white dark:bg-slate-900 dark:border-slate-800">
           <PendenciasTab />
         </div>
       )}
@@ -424,7 +424,7 @@ export function LideresTab() {
                 remover: () => remover(selecionada.u),
               }} />
           ) : (
-            <div className="hidden lg:flex flex-col items-center justify-center gap-2 p-8 rounded-2xl border border-dashed border-neutral-300 bg-white text-center text-sm font-semibold text-neutral-500 dark:bg-neutral-900 dark:border-neutral-700 lg:sticky lg:top-4">
+            <div className="hidden lg:flex flex-col items-center justify-center gap-2 p-8 rounded-2xl border border-dashed border-slate-300 bg-white text-center text-sm font-semibold text-slate-500 dark:bg-slate-900 dark:border-slate-700 lg:sticky lg:top-4">
               {t("leadersTab.listB.pickUnit")}
             </div>
           )}
@@ -482,20 +482,20 @@ export function LideresTab() {
             <label className="block space-y-1">
               <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t("leadersTab.modal.name")}</span>
               <input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} disabled={salvando} maxLength={80}
-                className="w-full p-3 rounded-xl bg-slate-100 dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-teal-500" />
+                className="w-full p-3 rounded-xl bg-slate-100 dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-red-500" />
             </label>
 
             <label className="block space-y-1">
               <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t("leadersTab.modal.email")}</span>
               <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} disabled={salvando || modal.modo === "editar"}
-                className="w-full p-3 rounded-xl bg-slate-100 dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-teal-500 disabled:opacity-70" />
+                className="w-full p-3 rounded-xl bg-slate-100 dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-70" />
               {modal.modo === "editar" && <span className="text-[11px] text-slate-400">{t("leadersTab.modal.emailLocked")}</span>}
             </label>
 
             <label className="block space-y-1">
               <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t("leadersTab.modal.phone")}</span>
               <input value={form.telefone} onChange={(e) => setForm({ ...form, telefone: e.target.value })} disabled={salvando} maxLength={30} placeholder="+55 31 99999-9999"
-                className="w-full p-3 rounded-xl bg-slate-100 dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-teal-500" />
+                className="w-full p-3 rounded-xl bg-slate-100 dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-red-500" />
             </label>
             </div>
 
@@ -515,7 +515,7 @@ export function LideresTab() {
               <label className="block space-y-1">
                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 flex items-center gap-1"><KeyRound className="w-3 h-3" /> {t("leadersTab.modal.password")}</span>
                 <input type="text" value={form.senha} onChange={(e) => setForm({ ...form, senha: e.target.value })} disabled={salvando} autoComplete="new-password"
-                  className="w-full p-3 rounded-xl bg-slate-100 dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-teal-500" />
+                  className="w-full p-3 rounded-xl bg-slate-100 dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-red-500" />
                 <span className="text-[11px] text-slate-400">{t("leadersTab.modal.passwordHint", { min: SENHA_MINIMA })}</span>
               </label>
             )}
@@ -527,7 +527,7 @@ export function LideresTab() {
 
             <div className="flex justify-end gap-2 pt-2">
               <button type="button" onClick={() => setModal(null)} disabled={salvando} className="px-4 py-2.5 rounded-xl text-xs font-black uppercase bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200">{t("leadersTab.modal.cancel")}</button>
-              <button type="submit" disabled={salvando} className="px-5 py-2.5 rounded-xl text-xs font-black uppercase bg-teal-500 hover:bg-teal-600 text-white flex items-center gap-1.5 disabled:opacity-50">
+              <button type="submit" disabled={salvando} className="px-5 py-2.5 rounded-xl text-xs font-black uppercase bg-red-500 hover:bg-red-600 text-white flex items-center gap-1.5 disabled:opacity-50">
                 {salvando ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />} {t("leadersTab.modal.save")}
               </button>
             </div>

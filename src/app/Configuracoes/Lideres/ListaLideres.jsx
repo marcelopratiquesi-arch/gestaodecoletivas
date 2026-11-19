@@ -118,10 +118,10 @@ export function ListaLideres({ linhas, total, chips, situacao, setSituacao, filt
             <table className="w-full min-w-[620px] text-left border-collapse">
               <thead className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
                 <tr>
-                  <ColunaOrdenavel campo="unidade" rotulo={t("leadersTab.col.unit")} ordenacao={ordenacao} cor="red" />
-                  <ColunaOrdenavel campo="lider" rotulo={t("leadersTab.col.leader")} ordenacao={ordenacao} cor="red" />
-                  <ColunaOrdenavel campo="acesso" rotulo={t("tabela.access.column")} ordenacao={ordenacao} cor="red" />
-                  {mostrarMentor && <ColunaOrdenavel campo="mentor" rotulo={t("leadersTab.col.mentor")} ordenacao={ordenacao} cor="red" />}
+                  <ColunaOrdenavel campo="unidade" rotulo={t("leadersTab.col.unit")} ordenacao={ordenacao} />
+                  <ColunaOrdenavel campo="lider" rotulo={t("leadersTab.col.leader")} ordenacao={ordenacao} />
+                  <ColunaOrdenavel campo="acesso" rotulo={t("tabela.access.column")} ordenacao={ordenacao} />
+                  {mostrarMentor && <ColunaOrdenavel campo="mentor" rotulo={t("leadersTab.col.mentor")} ordenacao={ordenacao} />}
                   <th className="w-16" aria-label={t("leadersTab.listB.open")} />
                 </tr>
               </thead>

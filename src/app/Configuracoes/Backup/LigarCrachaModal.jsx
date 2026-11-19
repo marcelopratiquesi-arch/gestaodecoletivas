@@ -117,13 +117,13 @@ export default function LigarCrachaModal({ fichas, crachas, aoLigar, aoFechar })
           </p>
         )}
         {etapa === 'feito' && (
-          <p className="p-3 rounded-lg bg-green-100 text-green-700 text-sm font-bold flex items-center gap-2">
+          <p className="p-3 rounded-lg bg-emerald-100 text-emerald-700 text-sm font-bold flex items-center gap-2">
             <CircleCheck className="w-4 h-4 shrink-0" /> {t('backupTab.link.done', { name: ficha?.nome })}
             {copiou && ` ${t('backupTab.link.copiedDocument')}`}
           </p>
         )}
         {['lider', 'unidade', 'mentor'].includes(cracha?.papel) && etapa !== 'feito' && (
-          <p className="p-3 rounded-lg bg-sky-50 dark:bg-sky-900/20 text-sky-800 dark:text-sky-300 text-xs font-bold">
+          <p className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300 text-xs font-bold">
             {t('backupTab.link.leaderEffect')}
           </p>
         )}

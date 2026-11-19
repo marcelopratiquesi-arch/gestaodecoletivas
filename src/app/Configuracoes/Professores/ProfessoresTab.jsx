@@ -523,7 +523,7 @@ export function ProfessoresTab() {
       <CabecalhoDaAba abaId="professores" icone={UserPlus} titulo={t('teachersTab.title', 'Gestão de Professores')} subtitulo={t('teachersTab.subtitle', 'Controle de base e vínculos com as unidades.')}
         numeros={<CaixaDeNumeros abaId="professores" itens={[
           { id: "total", rotulo: t('teachersTab.stats.total', 'Total'), valor: kpis.total, onClick: () => setStatusFiltro(""), ativo: statusFiltro === "" },
-          { id: "ativo", rotulo: t('teachersTab.stats.active', 'Ativos'), valor: kpis.ativos, cor: "text-green-600", onClick: () => setStatusFiltro("ativo"), ativo: statusFiltro === "ativo" },
+          { id: "ativo", rotulo: t('teachersTab.stats.active', 'Ativos'), valor: kpis.ativos, cor: "text-emerald-600", onClick: () => setStatusFiltro("ativo"), ativo: statusFiltro === "ativo" },
           { id: "inativo", rotulo: t('teachersTab.stats.inactive', 'Inativos'), valor: kpis.inativos, cor: "text-red-500", onClick: () => setStatusFiltro("inativo"), ativo: statusFiltro === "inativo" },
           { id: "semDocumento", rotulo: t('teachersTab.stats.noDocument'), valor: kpis.semDocumento, cor: "text-amber-600", onClick: () => setStatusFiltro("semDocumento"), ativo: statusFiltro === "semDocumento" },
         ]} />}>
@@ -543,8 +543,8 @@ export function ProfessoresTab() {
           acoes={(role === "admin" || role === "mentor") && (
               <button type="button" onClick={() => setMostrarBuscaDoc(v => !v)} aria-expanded={mostrarBuscaDoc}
                   className={`px-4 py-3 rounded-xl border text-xs font-black uppercase flex items-center justify-center gap-2 transition-colors ${mostrarBuscaDoc
-                      ? "border-green-500 bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300"
-                      : "border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-green-500 hover:text-green-600"}`}>
+                      ? "border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300"
+                      : "border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-emerald-500 hover:text-emerald-600"}`}>
                   <ScanSearch className="w-4 h-4"/> {t("document.search.title")}
               </button>
           )}>
@@ -552,17 +552,17 @@ export function ProfessoresTab() {
       </FiltroPadrao>
       {/* TABELA DE DADOS */}
       <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden shadow-sm relative">
-        {loading && <div className="absolute inset-0 bg-white/80 dark:bg-slate-900/80 z-10 flex items-center justify-center backdrop-blur-sm"><Loader2 className="w-8 h-8 animate-spin text-green-600"/></div>}
+        {loading && <div className="absolute inset-0 bg-white/80 dark:bg-slate-900/80 z-10 flex items-center justify-center backdrop-blur-sm"><Loader2 className="w-8 h-8 animate-spin text-emerald-600"/></div>}
         
         <div className="overflow-x-auto">
             <table className="w-full min-w-[1000px] text-left">
                 <thead className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
                     <tr>
-                        <ColunaOrdenavel campo="status" rotulo={t('teachersTab.table.status', 'Status')} ordenacao={ordem} cor="green" className="w-28" />
-                        <ColunaOrdenavel campo="nome" rotulo={t('teachersTab.table.teacher', 'Professor')} ordenacao={ordem} cor="green" />
-                        <ColunaOrdenavel campo="contato" rotulo={t('teachersTab.table.contact', 'Contato')} ordenacao={ordem} cor="green" className="w-[24%]" />
-                        <ColunaOrdenavel campo="unidades" rotulo={t('teachersTab.table.units', 'Unidades Vinculadas')} ordenacao={ordem} cor="green" className="w-[22%]" />
-                        <ColunaOrdenavel campo="acesso" rotulo={t('tabela.access.column')} ordenacao={ordem} cor="green" className="w-36" />
+                        <ColunaOrdenavel campo="status" rotulo={t('teachersTab.table.status', 'Status')} ordenacao={ordem} className="w-28" />
+                        <ColunaOrdenavel campo="nome" rotulo={t('teachersTab.table.teacher', 'Professor')} ordenacao={ordem} />
+                        <ColunaOrdenavel campo="contato" rotulo={t('teachersTab.table.contact', 'Contato')} ordenacao={ordem} className="w-[24%]" />
+                        <ColunaOrdenavel campo="unidades" rotulo={t('teachersTab.table.units', 'Unidades Vinculadas')} ordenacao={ordem} className="w-[22%]" />
+                        <ColunaOrdenavel campo="acesso" rotulo={t('tabela.access.column')} ordenacao={ordem} className="w-36" />
                         <th className={`${CLASSE_TITULO} text-right w-32`}>{t('teachersTab.table.actions', 'Ações')}</th>
                     </tr>
                 </thead>
@@ -579,7 +579,7 @@ export function ProfessoresTab() {
                             <tr key={p.id} className={`align-top transition-colors ${ativo ? 'hover:bg-slate-50/70 dark:hover:bg-slate-700/30' : 'bg-slate-50 dark:bg-slate-900/30 opacity-75 grayscale-[0.5]'}`}>
                                 {/* STATUS */}
                                 <td className="px-4 py-4">
-                                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wide border ${ativo ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800' : 'bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'}`}>
+                                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wide border ${ativo ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800' : 'bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'}`}>
                                         {ativo ? <CheckCircle2 className="w-3 h-3"/> : <Ban className="w-3 h-3"/>} {ativo ? t('teachersTab.table.active', 'ATIVO') : t('teachersTab.table.inactive', 'INATIVO')}
                                     </span>
                                 </td>
@@ -635,7 +635,7 @@ export function ProfessoresTab() {
                                         )) : <span className="text-slate-400 text-xs italic font-medium">{t('teachersTab.table.noLinks', 'Nenhum vínculo.')}</span>}
 
                                         {podeEditar && (
-                                            <button type="button" onClick={() => setNovoVinculo({ profInicial: p })} className="p-1 rounded-md text-slate-400 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors" title={t('teachersTab.extra.linkOtherUnit')}>
+                                            <button type="button" onClick={() => setNovoVinculo({ profInicial: p })} className="p-1 rounded-md text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 transition-colors" title={t('teachersTab.extra.linkOtherUnit')}>
                                                 <PlusCircle className="w-4 h-4"/>
                                             </button>
                                         )}
@@ -728,13 +728,13 @@ export function ProfessoresTab() {
 
             <form onSubmit={salvarProfessor} className="p-6 space-y-5 overflow-y-auto custom-scrollbar">
                 {erro && <div className="text-red-600 text-sm font-bold bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 p-4 rounded-xl flex items-center gap-2"><AlertTriangle className="w-5 h-5 flex-shrink-0"/> {erro}</div>}
-                {sucesso && <div className="p-4 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-300 text-sm rounded-xl border border-green-100 dark:border-green-800 flex items-center gap-2"><CheckCircle2 className="w-5 h-5 flex-shrink-0"/> {sucesso}</div>}
+                {sucesso && <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-300 text-sm rounded-xl border border-emerald-100 dark:border-emerald-800 flex items-center gap-2"><CheckCircle2 className="w-5 h-5 flex-shrink-0"/> {sucesso}</div>}
                 
                 <div>
                     <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 pl-1">{t('teachersTab.formModal.loginEmail', 'E-mail (Login Fixo)')}</label>
                     <div className="relative">
                         <Mail className="absolute left-4 top-3.5 w-4 h-4 text-slate-400"/>
-                        <input type="email" className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-green-500 rounded-xl text-sm font-bold outline-none transition-all dark:text-white normal-case" value={email} onChange={e => setEmail(e.target.value)} placeholder={t('teachersTab.verifyModal.emailPlaceholder')} />
+                        <input type="email" className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-emerald-500 rounded-xl text-sm font-bold outline-none transition-all dark:text-white normal-case" value={email} onChange={e => setEmail(e.target.value)} placeholder={t('teachersTab.verifyModal.emailPlaceholder')} />
                     </div>
                 </div>
 
@@ -742,18 +742,18 @@ export function ProfessoresTab() {
                     <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 pl-1">{t('teachersTab.formModal.fullName', 'Nome Completo')}</label>
                     <div className="relative">
                         <User className="absolute left-4 top-3.5 w-4 h-4 text-slate-400"/>
-                        <input className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-green-500 rounded-xl text-sm font-bold outline-none transition-all dark:text-white" value={nome} onChange={e => setNome(e.target.value)} autoFocus placeholder={t('teachersTab.formModal.namePlaceholder', 'Nome do Professor')} />
+                        <input className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-emerald-500 rounded-xl text-sm font-bold outline-none transition-all dark:text-white" value={nome} onChange={e => setNome(e.target.value)} autoFocus placeholder={t('teachersTab.formModal.namePlaceholder', 'Nome do Professor')} />
                     </div>
                 </div>
 
                 {/* DOCUMENTO (CPF/DNI/SSN): chave única do professor. O número fica em área protegida, nunca na ficha. */}
                 {!profEditando ? (
-                    <div className="p-3 rounded-xl border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 text-xs font-bold text-green-700 dark:text-green-300 flex items-center gap-2 normal-case">
+                    <div className="p-3 rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 text-xs font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-2 normal-case">
                         <IdCard className="w-4 h-4 shrink-0" /> {t(`document.short.${docForm.tipo}`)} {docForm.numero} · {t('teachersTab.cpf.checked')}
                     </div>
                 ) : profEditando.documentoOk && !docAnterior ? (
                     <div className="p-3 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-300 flex items-center gap-2 normal-case">
-                        <IdCard className="w-4 h-4 shrink-0 text-green-600" /> {veDocumento ? t('teachersTab.cpf.loading') : t('teachersTab.cpf.onlyStaffSees')}
+                        <IdCard className="w-4 h-4 shrink-0 text-emerald-600" /> {veDocumento ? t('teachersTab.cpf.loading') : t('teachersTab.cpf.onlyStaffSees')}
                     </div>
                 ) : (
                     <div className="space-y-1 normal-case">
@@ -802,7 +802,7 @@ export function ProfessoresTab() {
                                 <select 
                                     value={pais} 
                                     onChange={e => { setPais(e.target.value); setTelefone(formatarTelefone(telefone, e.target.value)); }}
-                                    className="w-full pl-3 pr-7 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-green-500 rounded-xl text-xs font-bold outline-none transition-all dark:text-white appearance-none"
+                                    className="w-full pl-3 pr-7 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-emerald-500 rounded-xl text-xs font-bold outline-none transition-all dark:text-white appearance-none"
                                 >
                                     {PAISES.map(p => <option key={p.id} value={p.id}>{t(`common.countries.${p.id}`, p.nome)}</option>)}
                                 </select>
@@ -819,7 +819,7 @@ export function ProfessoresTab() {
                             <div className="relative">
                                 <Phone className="absolute left-4 top-3.5 w-4 h-4 text-slate-400"/>
                                 <input 
-                                    className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-green-500 rounded-xl text-sm font-bold outline-none transition-all dark:text-white" 
+                                    className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-emerald-500 rounded-xl text-sm font-bold outline-none transition-all dark:text-white" 
                                     value={telefone} 
                                     onChange={e => setTelefone(formatarTelefone(e.target.value, pais))} 
                                     placeholder={getPhonePlaceholder(pais)} 
@@ -831,7 +831,7 @@ export function ProfessoresTab() {
                     <div>
                         <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 pl-1">{t('teachersTab.formModal.status', 'Status')}</label>
                         <div className="relative">
-                            <select className="w-full pl-4 pr-10 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-green-500 rounded-xl text-sm font-bold outline-none appearance-none transition-all dark:text-white" value={status} onChange={e => setStatus(e.target.value)}>
+                            <select className="w-full pl-4 pr-10 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-emerald-500 rounded-xl text-sm font-bold outline-none appearance-none transition-all dark:text-white" value={status} onChange={e => setStatus(e.target.value)}>
                                 <option value="ativo">✅ {t('teachersTab.formModal.statusActive', 'ATIVO')}</option>
                                 <option value="inativo">🚫 {t('teachersTab.formModal.statusInactive', 'INATIVO')}</option>
                             </select>
@@ -842,7 +842,7 @@ export function ProfessoresTab() {
 
                 {!profEditando && (
                     <div className="space-y-4 pt-2">
-                        <div className="p-4 bg-blue-50 dark:bg-blue-900/10 text-blue-700 dark:text-blue-400 text-xs font-medium rounded-xl border border-blue-200 dark:border-blue-800">
+                        <div className="p-4 bg-red-50 dark:bg-red-900/10 text-red-700 dark:text-red-400 text-xs font-medium rounded-xl border border-red-200 dark:border-red-800">
                             <strong>{t('teachersTab.formModal.noLoginNote', 'Isto cria só o cadastro do professor.')}</strong> {t('teachersTab.formModal.noLoginNoteHint', 'Para acessar o sistema, ele entra pelo Google e pede acesso; o líder, o mentor ou o admin aprovam em Pendências.')}
                         </div>
                         {minhasUnidades.length > 0 && (
@@ -850,7 +850,7 @@ export function ProfessoresTab() {
                                 <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 pl-1">{t('teachersTab.formModal.autoLink', 'Vincular Automaticamente a:')}</label>
                                 <div className="relative">
                                     <select 
-                                        className="w-full pl-4 pr-10 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-green-500 rounded-xl text-sm font-bold outline-none appearance-none transition-all dark:text-white"
+                                        className="w-full pl-4 pr-10 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-emerald-500 rounded-xl text-sm font-bold outline-none appearance-none transition-all dark:text-white"
                                         value={unidadeSelecionadaId} 
                                         onChange={e => setUnidadeSelecionadaId(e.target.value)}
                                     >
@@ -868,7 +868,7 @@ export function ProfessoresTab() {
                     <button type="button" onClick={() => setModalFormAberto(false)} className="px-6 py-3 rounded-xl font-bold text-xs uppercase text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
                         {t('teachersTab.formModal.cancel', 'Cancelar')}
                     </button>
-                    <button type="submit" disabled={salvando} className="px-8 py-3 bg-green-600 text-white rounded-xl font-bold text-xs uppercase shadow-lg shadow-green-500/30 hover:bg-green-700 hover:-translate-y-0.5 transition-all flex items-center gap-2 disabled:opacity-50 disabled:transform-none">
+                    <button type="submit" disabled={salvando} className="px-8 py-3 bg-emerald-600 text-white rounded-xl font-bold text-xs uppercase shadow-lg shadow-emerald-500/30 hover:bg-emerald-700 hover:-translate-y-0.5 transition-all flex items-center gap-2 disabled:opacity-50 disabled:transform-none">
                         {salvando ? <Loader2 className="w-4 h-4 animate-spin"/> : (profEditando ? t('teachersTab.formModal.saveEdit', 'Salvar Alterações') : <><CheckCircle2 className="w-4 h-4"/> {t('teachersTab.formModal.saveNew', 'Concluir Cadastro')}</>)}
                     </button>
                 </div>

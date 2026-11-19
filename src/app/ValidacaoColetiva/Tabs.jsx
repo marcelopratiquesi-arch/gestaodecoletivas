@@ -23,14 +23,14 @@ export function RankingTab({ isMentor, rankingMentores, rankingUnidades }) {
 
                 let podiumClass = "bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700";
                 if (semAulas) podiumClass = "bg-slate-100 dark:bg-slate-700 text-slate-400 border border-slate-200 dark:border-slate-700";
-                else if (index === 0)podiumClass = "bg-yellow-400 text-yellow-950 border border-yellow-500 shadow-md shadow-yellow-400/30";
+                else if (index === 0)podiumClass = "bg-amber-400 text-amber-950 border border-amber-500 shadow-md shadow-amber-400/30";
                 else if (index === 1) podiumClass = "bg-slate-300 text-slate-800 dark:text-white border border-slate-400 shadow-md shadow-slate-300/30";
-                else if (index === 2) podiumClass = "bg-orange-300 text-orange-950 border border-orange-400 shadow-md shadow-orange-300/30";
+                else if (index === 2) podiumClass = "bg-amber-300 text-amber-950 border border-amber-400 shadow-md shadow-amber-300/30";
 
-                let scoreColor = "text-rose-600";
+                let scoreColor = "text-red-600";
                 if (semAulas) scoreColor = "text-slate-400";
                 else if (score === 100)scoreColor = "text-emerald-600";
-                else if (score >= 80) scoreColor = "text-blue-600";
+                else if (score >= 80) scoreColor = "text-emerald-500";
                 else if (score >= 50) scoreColor = "text-amber-600";
 
                 return (
@@ -65,8 +65,8 @@ export function RankingTab({ isMentor, rankingMentores, rankingUnidades }) {
                                     </div>
                                 ) : faltas > 0 ? (
                                     <div className="flex flex-col items-end">
-                                        <span className="text-[9px] font-black text-rose-400 tracking-widest uppercase">{t('groupValidation.ranking.pendencies')}</span>
-                                        <span className="text-xs font-black text-white bg-rose-500 px-2 py-0.5 rounded-md mt-1 shadow-sm">
+                                        <span className="text-[9px] font-black text-red-400 tracking-widest uppercase">{t('groupValidation.ranking.pendencies')}</span>
+                                        <span className="text-xs font-black text-white bg-red-500 px-2 py-0.5 rounded-md mt-1 shadow-sm">
                                             {t('groupValidation.ranking.absences', { count: faltas })}
                                         </span>
                                     </div>
@@ -104,7 +104,7 @@ export function StatusTab({ showOnlyIssues, setShowOnlyIssues, sortConfig, reque
                     <h3 className="text-sm font-black text-slate-800 dark:text-white tracking-widest">{t('groupValidation.status.title')}</h3>
                     <p className="text-[10px] font-bold text-slate-400 mt-0.5">{t('groupValidation.status.hint')}</p>
                 </div>
-                <button onClick={() => setShowOnlyIssues(!showOnlyIssues)} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all shadow-sm border ${showOnlyIssues ? 'bg-blue-600 text-white border-blue-600' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
+                <button onClick={() => setShowOnlyIssues(!showOnlyIssues)} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all shadow-sm border ${showOnlyIssues ? 'bg-red-600 text-white border-slate-600' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
                     {showOnlyIssues ? <EyeOff className="w-4 h-4"/> : <Eye className="w-4 h-4"/>} 
                     {showOnlyIssues ? t('groupValidation.status.showAll') : t('groupValidation.status.filterIssues')}
                 </button>
@@ -126,8 +126,8 @@ export function StatusTab({ showOnlyIssues, setShowOnlyIssues, sortConfig, reque
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                         {(statusExibicao || []).map(u => (
                             <React.Fragment key={u.id}>
-                                <tr className={`hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer group ${expandedUnitId === u.id ? 'bg-blue-50/40 dark:bg-blue-900/20' : ''}`} onClick={() => toggleUnit(u.id)}>
-                                    <td className="p-4 text-slate-400 group-hover:text-blue-500 transition-colors">
+                                <tr className={`hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer group ${expandedUnitId === u.id ? 'bg-slate-50/40 dark:bg-slate-900/20' : ''}`} onClick={() => toggleUnit(u.id)}>
+                                    <td className="p-4 text-slate-400 group-hover:text-slate-500 transition-colors">
                                         {expandedUnitId === u.id ? <ChevronDown className="w-5 h-5"/> : <ChevronRight className="w-5 h-5"/>}
                                     </td>
                                     <td className="p-4">
@@ -144,7 +144,7 @@ export function StatusTab({ showOnlyIssues, setShowOnlyIssues, sortConfig, reque
                                                         <div className={`h-full rounded-full transition-all duration-500 ${getColorClassByPercent(u.percentual)}`} style={{width: `${u.percentual}%`}}></div>
                                                     </div>
                                                 </div>
-                                                <span className={`text-[9px] font-black uppercase tracking-widest ${(u.pendencias || []).length === 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                                <span className={`text-[9px] font-black uppercase tracking-widest ${(u.pendencias || []).length === 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                                                     {(u.pendencias || []).length === 0 ? t('groupValidation.status.ok100') : t('groupValidation.status.pendencies', { count: u.pendencias.length })}
                                                 </span>
                                             </div>
@@ -170,7 +170,7 @@ export function StatusTab({ showOnlyIssues, setShowOnlyIssues, sortConfig, reque
                                     <td className="p-4 text-center" onClick={(e) => e.stopPropagation()}>
                                         {u.percentual < 100 && u.temCronograma && (
                                             <div className="flex items-center justify-center gap-2">
-                                                <button onClick={() => copyToClipboard(msgMentorToUnit(u))} className="p-2 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-blue-100 hover:text-blue-600 transition-all border border-slate-200 dark:border-slate-700" title={t('groupValidation.status.copyMessage')}><Copy className="w-4 h-4"/></button>
+                                                <button onClick={() => copyToClipboard(msgMentorToUnit(u))} className="p-2 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 hover:text-slate-600 transition-all border border-slate-200 dark:border-slate-700" title={t('groupValidation.status.copyMessage')}><Copy className="w-4 h-4"/></button>
                                                 <button onClick={() => sendWhatsApp(u.telefone, msgMentorToUnit(u), u.pais)} className="p-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:text-white transition-all border border-emerald-200" title={t('groupValidation.status.sendWhatsApp')}><Smartphone className="w-4 h-4"/></button>
                                             </div>
                                         )}
@@ -209,7 +209,7 @@ export function StatusTab({ showOnlyIssues, setShowOnlyIssues, sortConfig, reque
                                                                         <div className="flex flex-col items-center justify-center gap-1.5">
                                                                             <StatusBadge type={h.status} />
                                                                             {(statusAjustado === 'REALIZADA' || statusAjustado === 'VALIDADA') && (
-                                                                                <span className="text-[9px] font-black text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md flex items-center gap-1 shadow-sm">
+                                                                                <span className="text-[9px] font-black text-slate-700 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded-md flex items-center gap-1 shadow-sm">
                                                                                     <Users className="w-3 h-3"/> {t('groupValidation.status.students', { count: h.alunos || 0 })}
                                                                                 </span>
                                                                             )}
@@ -221,11 +221,11 @@ export function StatusTab({ showOnlyIssues, setShowOnlyIssues, sortConfig, reque
                                                                                 <div className="font-black text-slate-800 dark:text-white text-[10px] uppercase bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 mb-1">
                                                                                     {h.responsavelNome}
                                                                                 </div>
-                                                                                <div className="text-[9px] text-blue-600 font-black flex items-center gap-1.5 uppercase">
+                                                                                <div className="text-[9px] text-slate-600 font-black flex items-center gap-1.5 uppercase">
                                                                                     <ClockIcon className="w-3 h-3"/> {h.dataValidacao} {h.horaValidacao !== '-' ? t('groupValidation.status.atTime', { time: h.horaValidacao }) : ''}
                                                                                 </div>
                                                                             </div>
-                                                                        ) : (isFeriado ? <span className="text-purple-600 font-black text-[9px] uppercase border border-purple-200 px-2 py-0.5 rounded bg-purple-50">{t('groupValidation.status.recessHoliday')}</span> : <span className="text-slate-300 font-black">-</span>)}
+                                                                        ) : (isFeriado ? <span className="text-slate-600 font-black text-[9px] uppercase border border-slate-200 px-2 py-0.5 rounded bg-slate-50">{t('groupValidation.status.recessHoliday')}</span> : <span className="text-slate-300 font-black">-</span>)}
                                                                     </td>
                                                                 </tr>
                                                             )
@@ -246,7 +246,7 @@ export function StatusTab({ showOnlyIssues, setShowOnlyIssues, sortConfig, reque
                 
                 {itensVisiveisStatus < (sortedUnidades || []).length && (
                     <div className="p-6 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 flex justify-center">
-                        <button onClick={() => setItensVisiveisStatus(prev => prev + 12)} className="flex items-center gap-2 bg-white dark:bg-slate-800 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-blue-500 hover:text-blue-600 transition-all shadow-sm">
+                        <button onClick={() => setItensVisiveisStatus(prev => prev + 12)} className="flex items-center gap-2 bg-white dark:bg-slate-800 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-slate-500 hover:text-slate-600 transition-all shadow-sm">
                             <ArrowDown className="w-4 h-4"/> {t('groupValidation.status.loadMore')}
                         </button>
                     </div>
@@ -277,12 +277,12 @@ export function CobrancaTab({ isMentor, mentoresRelatorioGeral, unidadesRelatori
                 <div className="absolute top-0 right-0 p-8 opacity-10"><MessageSquare className="w-32 h-32"/></div>
                 <div className="relative z-10">
                     <h3 className="text-xl font-black flex items-center gap-3 tracking-tighter">
-                        <FileText className="w-6 h-6 text-blue-400"/>
+                        <FileText className="w-6 h-6 text-slate-400"/>
                         {t('groupValidation.collection.title', { scope: isMentor ? t('groupValidation.collection.scopeMyUnits') : t('groupValidation.collection.scopeMentors') })}
                     </h3>
                     <p className="text-slate-400 text-xs mt-2 font-bold uppercase tracking-widest">{t('groupValidation.collection.subtitle')}</p>
                     <div className="flex gap-3 mt-6">
-                        <button onClick={() => copyToClipboard(isMentor ? msgMentorGeneralReport() : msgAdminGeneralReport())} className="bg-white text-slate-900 px-5 py-2.5 rounded-lg text-[10px] font-black hover:bg-blue-500 hover:text-white transition-all shadow-lg flex items-center gap-2 uppercase">
+                        <button onClick={() => copyToClipboard(isMentor ? msgMentorGeneralReport() : msgAdminGeneralReport())} className="bg-white text-slate-900 px-5 py-2.5 rounded-lg text-[10px] font-black hover:bg-red-500 hover:text-white transition-all shadow-lg flex items-center gap-2 uppercase">
                             <Copy className="w-4 h-4"/> {t('groupValidation.collection.copyReport')}
                         </button>
                     </div>
@@ -327,7 +327,7 @@ export function CobrancaTab({ isMentor, mentoresRelatorioGeral, unidadesRelatori
                                     
                                     <td className="p-4 text-center">
                                         <div className="flex justify-center gap-2">
-                                            <button onClick={() => copyToClipboard(!isMentor ? msgAdminToMentor(item) : msgMentorToUnit(item))} className="px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 rounded-lg text-[10px] font-black uppercase hover:bg-blue-500 hover:text-white transition-all flex items-center gap-1.5">
+                                            <button onClick={() => copyToClipboard(!isMentor ? msgAdminToMentor(item) : msgMentorToUnit(item))} className="px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 rounded-lg text-[10px] font-black uppercase hover:bg-red-500 hover:text-white transition-all flex items-center gap-1.5">
                                                 <Copy className="w-3 h-3"/> {t('groupValidation.collection.copy')}
                                             </button>
                                             <button onClick={() => sendWhatsApp(item.telefone, !isMentor ? msgAdminToMentor(item) : msgMentorToUnit(item), item.pais)} className="px-3 py-2 bg-emerald-500 text-white rounded-lg text-[10px] font-black uppercase hover:bg-emerald-600 transition-all shadow-sm flex items-center gap-1.5">

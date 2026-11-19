@@ -87,7 +87,7 @@ export default function CertificadosAVerificar() {
                   <img src={c.foto} alt="" className="w-24 h-24 object-cover rounded-lg border border-slate-200 dark:border-slate-700" />
                 </button>
                 <div className="min-w-0 space-y-1">
-                  <p className="font-black text-slate-800 dark:text-white flex items-center gap-2"><User className="w-4 h-4 text-blue-500 shrink-0" /> {c.nome}</p>
+                  <p className="font-black text-slate-800 dark:text-white flex items-center gap-2"><User className="w-4 h-4 text-red-500 shrink-0" /> {c.nome}</p>
                   <p className="text-xs text-slate-500 flex items-center gap-2"><Building2 className="w-3 h-3 shrink-0" /> {nomeUnidade(c.unidadeId)}</p>
                   <p className="text-sm font-bold text-slate-700 dark:text-slate-200 break-words">{c.workshop}</p>
                   <p className="text-xs text-slate-500">{t("certificates.review.doneOn", { date: c.dataFeito?.split("-").reverse().join("/") })}</p>

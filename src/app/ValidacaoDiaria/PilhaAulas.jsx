@@ -29,7 +29,7 @@ export function PilhaAulas({ grupo, aberta, onAlternar, renderCartao, mostrarPro
                             <Clock className="w-3.5 h-3.5 text-emerald-500"/> {grupo.hora}
                         </span>
                         <span className="truncate uppercase">{grupo.modalidade}</span>
-                        {grupo.isAulao && <Star className="w-4 h-4 text-purple-500"/>}
+                        {grupo.isAulao && <Star className="w-4 h-4 text-slate-500"/>}
                     </p>
                     <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-3 flex-wrap">
                         <span className="flex items-center gap-1 truncate"><MapPin className="w-3 h-3"/> {grupo.unidade}</span>
@@ -38,7 +38,7 @@ export function PilhaAulas({ grupo, aberta, onAlternar, renderCartao, mostrarPro
                     <div className="flex gap-1.5 flex-wrap mt-2">
                         {pendentes.length > 0 && <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 flex items-center gap-1"><TriangleAlert className="w-3 h-3"/> {t('dailyValidation.views.pendingCount', { count: pendentes.length })}</span>}
                         {realizadas > 0 && <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 flex items-center gap-1"><CircleCheck className="w-3 h-3"/> {t('dailyValidation.views.doneCount', { count: realizadas })}</span>}
-                        {canceladas > 0 && <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 flex items-center gap-1"><CircleX className="w-3 h-3"/> {t('dailyValidation.views.canceledCount', { count: canceladas })}</span>}
+                        {canceladas > 0 && <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-red-100 text-red-700 flex items-center gap-1"><CircleX className="w-3 h-3"/> {t('dailyValidation.views.canceledCount', { count: canceladas })}</span>}
                     </div>
                 </div>
                 <span className="shrink-0 flex items-center gap-1 text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1.5">

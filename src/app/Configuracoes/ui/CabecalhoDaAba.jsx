@@ -32,7 +32,7 @@ export function CabecalhoDaAba({ abaId, icone, titulo, subtitulo, numeros, child
 /**
  * Caixinha com os números do topo (Total / Ativos / Inativos...). Se o item tiver `onClick`, vira filtro clicável.
  * @param {{itens: {id:string, rotulo:string, valor:number|string, cor?:string, onClick?:()=>void, ativo?:boolean}[], abaId:string}} props
- * `cor` = classe de texto do número (ex.: "text-green-600"); sem `cor`, usa o cinza padrão.
+ * `cor` = classe de texto do número (ex.: "text-emerald-600"); sem `cor`, usa o cinza padrão.
  */
 export function CaixaDeNumeros({ itens, abaId }) {
   const tema = temaDaAba(abaId);

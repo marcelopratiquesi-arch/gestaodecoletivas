@@ -465,7 +465,7 @@ export function MentoresTab() {
       <CabecalhoDaAba abaId="mentores" icone={ShieldCheck} titulo={t('mentorsTab.title', 'Gestão de Mentores')} subtitulo={t('mentorsTab.subtitle', 'Diretoria e Gestores Regionais.')}
         numeros={<CaixaDeNumeros abaId="mentores" itens={[
           { id: "total", rotulo: t('mentorsTab.extra.total'), valor: kpis.total, onClick: () => setStatusFiltro(""), ativo: statusFiltro === "" },
-          { id: "ativo", rotulo: t('mentorsTab.extra.active'), valor: kpis.ativos, cor: "text-green-600", onClick: () => setStatusFiltro("ativo"), ativo: statusFiltro === "ativo" },
+          { id: "ativo", rotulo: t('mentorsTab.extra.active'), valor: kpis.ativos, cor: "text-emerald-600", onClick: () => setStatusFiltro("ativo"), ativo: statusFiltro === "ativo" },
           { id: "inativo", rotulo: t('mentorsTab.extra.inactive'), valor: kpis.inativos, cor: "text-red-500", onClick: () => setStatusFiltro("inativo"), ativo: statusFiltro === "inativo" },
         ]} />}>
         <BotaoPrincipal abaId="mentores" icone={Plus} onClick={abrirModalNovo}>{t('mentorsTab.newMentor', 'Novo Mentor')}</BotaoPrincipal>
@@ -476,8 +476,8 @@ export function MentoresTab() {
           acoes={role === "admin" && (
               <button type="button" onClick={() => setMostrarBuscaDoc(v => !v)} aria-expanded={mostrarBuscaDoc}
                   className={`px-4 py-3 rounded-xl border text-xs font-black uppercase flex items-center justify-center gap-2 transition-colors ${mostrarBuscaDoc
-                      ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300"
-                      : "border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-blue-500 hover:text-blue-600"}`}>
+                      ? "border-red-500 bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300"
+                      : "border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-red-500 hover:text-red-600"}`}>
                   <ScanSearch className="w-4 h-4"/> {t("document.search.title")}
               </button>
           )}>
@@ -495,11 +495,11 @@ export function MentoresTab() {
             ].map((f) => (
               <button key={f.id} type="button" onClick={() => setSituacao(f.id)} aria-pressed={situacao === f.id}
                 className={`px-3.5 py-2 rounded-lg text-xs font-black uppercase flex items-center gap-2 transition-colors ${situacao === f.id
-                  ? "bg-white dark:bg-slate-700 text-blue-600 shadow-sm"
+                  ? "bg-white dark:bg-slate-700 text-red-600 shadow-sm"
                   : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"}`}>
                 {f.rotulo}
                 <span className={`min-w-[1.5rem] px-1.5 py-0.5 rounded-md text-[10px] text-center ${situacao === f.id
-                  ? "bg-blue-600 text-white"
+                  ? "bg-red-600 text-white"
                   : (f.id === "parado" || f.id === "nunca" || f.id === "sem") && contagemSituacao[f.id] > 0 ? "bg-amber-100 text-amber-700" : "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-300"}`}>{contagemSituacao[f.id]}</span>
               </button>
             ))}
@@ -535,11 +535,11 @@ export function MentoresTab() {
           <table className="w-full min-w-[980px] text-left">
             <thead className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
               <tr>
-                <ColunaOrdenavel campo="status" rotulo={t('mentorsTab.table.status', 'Status')} ordenacao={ordenacao} cor="blue" className="w-28" />
-                <ColunaOrdenavel campo="nome" rotulo={t('mentorsTab.table.name', 'Mentor')} ordenacao={ordenacao} cor="blue" />
-                <ColunaOrdenavel campo="contato" rotulo={t('teachersTab.table.contact', 'Contato')} ordenacao={ordenacao} cor="blue" className="w-[26%]" />
-                <ColunaOrdenavel campo="unidades" rotulo={t('mentorsTab.linked.column', 'Unidades')} ordenacao={ordenacao} cor="blue" className="w-36" />
-                <ColunaOrdenavel campo="acesso" rotulo={t('tabela.access.column')} ordenacao={ordenacao} cor="blue" className="w-40" />
+                <ColunaOrdenavel campo="status" rotulo={t('mentorsTab.table.status', 'Status')} ordenacao={ordenacao} className="w-28" />
+                <ColunaOrdenavel campo="nome" rotulo={t('mentorsTab.table.name', 'Mentor')} ordenacao={ordenacao} />
+                <ColunaOrdenavel campo="contato" rotulo={t('teachersTab.table.contact', 'Contato')} ordenacao={ordenacao} className="w-[26%]" />
+                <ColunaOrdenavel campo="unidades" rotulo={t('mentorsTab.linked.column', 'Unidades')} ordenacao={ordenacao} className="w-36" />
+                <ColunaOrdenavel campo="acesso" rotulo={t('tabela.access.column')} ordenacao={ordenacao} className="w-40" />
                 <th className={`${CLASSE_TITULO} text-right w-40`}>{t('mentorsTab.table.actions', 'Ações')}</th>
               </tr>
             </thead>
@@ -547,7 +547,7 @@ export function MentoresTab() {
               {loading ? (
                   <tr>
                       <td colSpan="6" className="p-10 text-center">
-                          <Loader2 className="w-8 h-8 animate-spin text-blue-500 mx-auto mb-2"/>
+                          <Loader2 className="w-8 h-8 animate-spin text-red-500 mx-auto mb-2"/>
                           <p className="text-slate-400 font-bold">{t('mentorsTab.loading', 'Sincronizando...')}</p>
                       </td>
                   </tr>
@@ -573,7 +573,7 @@ export function MentoresTab() {
 
                     {/* STATUS */}
                     <td className="px-4 py-4">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wide border ${ativo ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800' : 'bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'}`}>
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wide border ${ativo ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800' : 'bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'}`}>
                         {ativo ? <CheckCircle2 className="w-3 h-3"/> : <Ban className="w-3 h-3"/>} {ativo ? t('mentorsTab.table.active', 'ATIVO') : t('mentorsTab.table.inactive', 'INATIVO')}
                       </span>
                     </td>
@@ -591,7 +591,7 @@ export function MentoresTab() {
 
                         {/* Este mentor está COBRINDO outro (mentor temporário) */}
                         {m.coberturaMentorId && (
-                          <div className="rounded-lg border border-teal-200 dark:border-teal-800 bg-teal-50/60 dark:bg-teal-900/10 px-2.5 py-1.5 w-fit">
+                          <div className="rounded-lg border border-red-200 dark:border-red-800 bg-red-50/60 dark:bg-red-900/10 px-2.5 py-1.5 w-fit">
                             <div className="flex items-center gap-1.5 flex-wrap text-xs">
                               <Selo tipo="turquesa" icone={Timer}>{t('mentorsTab.row.tempBadge')}</Selo>
                               <span className="font-bold text-slate-700 dark:text-slate-200">{t('mentorsTab.row.covers', { name: nomeDoCoberto(m) })}</span>
@@ -604,7 +604,7 @@ export function MentoresTab() {
 
                         {/* Outras pessoas COBRINDO as unidades deste mentor */}
                         {cobrindoMe.map((c) => (
-                          <div key={c.id} className="rounded-lg border border-teal-200 dark:border-teal-800 bg-teal-50/60 dark:bg-teal-900/10 px-2.5 py-1.5 w-fit">
+                          <div key={c.id} className="rounded-lg border border-red-200 dark:border-red-800 bg-red-50/60 dark:bg-red-900/10 px-2.5 py-1.5 w-fit">
                             <div className="flex items-center gap-1.5 flex-wrap text-xs">
                               <Selo tipo="turquesa" icone={Timer}>{t('mentorsTab.row.tempBadge')}</Selo>
                               <span className="font-bold text-slate-700 dark:text-slate-200">{t('mentorsTab.row.coveredBy', { name: c.nome })}</span>
@@ -622,7 +622,7 @@ export function MentoresTab() {
                         {editandoTelefoneId === m.id ? (
                             <div className="space-y-1">
                                 <CelulaContato email={m.email} />
-                                <div className="flex items-center gap-1 bg-white dark:bg-slate-900 border border-blue-300 dark:border-blue-500/50 rounded-lg pl-2 pr-1 ring-2 ring-blue-500/20 w-fit">
+                                <div className="flex items-center gap-1 bg-white dark:bg-slate-900 border border-red-300 dark:border-red-500/50 rounded-lg pl-2 pr-1 ring-2 ring-red-500/20 w-fit">
                                     <span className={`inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded border ${PAIS_CONFIG[paisAtual]?.badgeClass}`}>
                                         <FlagIcon pais={paisAtual} /> {paisDDI}
                                     </span>
@@ -634,7 +634,7 @@ export function MentoresTab() {
                                         onKeyDown={(e) => { if (e.key === 'Enter') salvarTelefoneInline(m); if (e.key === 'Escape') setEditandoTelefoneId(null); }}
                                         placeholder={getPhonePlaceholder(paisAtual)}
                                     />
-                                    <button onClick={() => salvarTelefoneInline(m)} className="p-1 bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400 rounded-md hover:bg-green-600 hover:text-white transition-colors" title={t('common.actions.save')}>
+                                    <button onClick={() => salvarTelefoneInline(m)} className="p-1 bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400 rounded-md hover:bg-emerald-600 hover:text-white transition-colors" title={t('common.actions.save')}>
                                         <Check className="w-3.5 h-3.5"/>
                                     </button>
                                     <button onClick={() => setEditandoTelefoneId(null)} className="p-1 bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400 rounded-md hover:bg-slate-300 transition-colors" title={t('common.actions.cancel')}>
@@ -645,7 +645,7 @@ export function MentoresTab() {
                         ) : (
                             <CelulaContato email={m.email} telefone={m.telefone} pais={paisAtual} aoEditarTelefone={editarTelefone}
                                 semTelefone={
-                                    <button type="button" onClick={editarTelefone} className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-blue-600 transition-colors">
+                                    <button type="button" onClick={editarTelefone} className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-red-600 transition-colors">
                                         <Phone className="w-3.5 h-3.5"/> {t('mentorsTab.row.addPhone')}
                                     </button>
                                 } />
@@ -659,7 +659,7 @@ export function MentoresTab() {
                           <Link2 className="w-3.5 h-3.5"/> {t('mentorsTab.row.unitsShared', { count: nUnidades })}
                         </span>
                       ) : (
-                        <button onClick={() => setVinculoAlvo(m)} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-50 text-blue-700 hover:bg-blue-600 hover:text-white dark:bg-blue-900/30 dark:text-blue-300 transition-colors whitespace-nowrap" title={t('mentorsTab.linked.manage')}>
+                        <button onClick={() => setVinculoAlvo(m)} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-red-50 text-red-700 hover:bg-red-600 hover:text-white dark:bg-red-900/30 dark:text-red-300 transition-colors whitespace-nowrap" title={t('mentorsTab.linked.manage')}>
                           <Link2 className="w-3.5 h-3.5"/> {t('mentorsTab.row.units', { count: nUnidades })}
                         </button>
                       )}
@@ -733,7 +733,7 @@ export function MentoresTab() {
             <p className="text-xs font-medium text-slate-500 dark:text-slate-400">{t('mentorsTab.modal.instructions', 'Preencha os dados abaixo.')}</p>
               
               {erro && <div className="p-4 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100 flex items-center gap-2"><AlertTriangle className="w-5 h-5 flex-shrink-0"/> {erro}</div>}
-              {sucesso && <div className="p-4 bg-green-50 text-green-600 text-sm rounded-lg border border-green-100 flex items-center gap-2"><CheckCircle2 className="w-5 h-5 flex-shrink-0"/> {sucesso}</div>}
+              {sucesso && <div className="p-4 bg-emerald-50 text-emerald-600 text-sm rounded-lg border border-emerald-100 flex items-center gap-2"><CheckCircle2 className="w-5 h-5 flex-shrink-0"/> {sucesso}</div>}
 
               <div>
                   <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 block">{t('mentorsTab.modal.name', 'Nome do Mentor')}</label>

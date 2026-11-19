@@ -933,7 +933,7 @@ export default function ValidacaoDiariaPage() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
                 <h1 className="text-2xl md:text-3xl font-black text-slate-800 dark:text-white flex items-center gap-3">
-                    <span className="bg-gradient-to-tr from-emerald-500 to-green-600 text-white p-2.5 rounded-xl shadow-lg shadow-emerald-500/20">
+                    <span className="bg-gradient-to-tr from-emerald-500 to-emerald-600 text-white p-2.5 rounded-xl shadow-lg shadow-emerald-500/20">
                     <CircleCheck className="w-6 h-6 md:w-7 md:h-7" />
                     </span>
                     {t('dailyValidation.title')}
@@ -951,14 +951,14 @@ export default function ValidacaoDiariaPage() {
                         <span className="text-2xl font-black">{counts.pendentes}</span>
                         <span className="text-[10px] uppercase font-bold tracking-wider flex items-center gap-1"><TriangleAlert className="w-3 h-3"/> {t('dailyValidation.counters.pending')}</span>
                     </button>
-                    <button onClick={() => { setFiltroStatus('cancelada'); setItensVisiveis(12); }} className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all duration-300 shadow-sm hover:shadow-md ${filtroStatus === 'cancelada' ? 'bg-rose-600 text-white border-rose-700 ring-2 ring-rose-600 ring-offset-2' : 'bg-white border-rose-100 text-rose-500 hover:bg-rose-50'}`}>
+                    <button onClick={() => { setFiltroStatus('cancelada'); setItensVisiveis(12); }} className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all duration-300 shadow-sm hover:shadow-md ${filtroStatus === 'cancelada' ? 'bg-red-600 text-white border-red-700 ring-2 ring-red-600 ring-offset-2' : 'bg-white border-red-100 text-red-500 hover:bg-red-50'}`}>
                         <span className="text-2xl font-black">{counts.canceladas}</span>
                         <span className="text-[10px] uppercase font-bold tracking-wider flex items-center gap-1"><CircleX className="w-3 h-3"/> {t('dailyValidation.counters.canceled')}</span>
                     </button>
                 </div>
 
                 {role !== 'professor' && (
-                    <button onClick={handleNovoAulao} className="hidden md:flex flex-col items-center justify-center p-3 rounded-2xl border border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100 hover:border-purple-300 transition-all shadow-sm hover:shadow-md min-w-[100px]">
+                    <button onClick={handleNovoAulao} className="hidden md:flex flex-col items-center justify-center p-3 rounded-2xl border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 hover:border-slate-300 transition-all shadow-sm hover:shadow-md min-w-[100px]">
                         <Star className="w-6 h-6 mb-1" />
                         <span className="text-[10px] uppercase font-bold tracking-wider text-center leading-tight">{t('dailyValidation.addSpecialClass')}</span>
                     </button>
@@ -1010,7 +1010,7 @@ export default function ValidacaoDiariaPage() {
                 )}
 
                 {role !== 'professor' && (
-                    <button onClick={handleNovoAulao} className="md:hidden w-full h-10 px-4 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold uppercase shadow-md flex justify-center items-center gap-2 transition-all mt-2">
+                    <button onClick={handleNovoAulao} className="md:hidden w-full h-10 px-4 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold uppercase shadow-md flex justify-center items-center gap-2 transition-all mt-2">
                         <Star className="w-4 h-4" /> {t('dailyValidation.addSpecialClassLong')}
                     </button>
                 )}
@@ -1058,10 +1058,10 @@ export default function ValidacaoDiariaPage() {
           <p className="text-xs font-bold uppercase tracking-widest">{t('dailyValidation.empty.loading')}</p>
         </div>
       ) : erroValidacoes ? (
-        <div role="alert" className="py-16 px-6 text-center bg-rose-50 dark:bg-rose-900/10 rounded-3xl border border-rose-200 dark:border-rose-900/40 animate-fade-in">
-          <TriangleAlert className="w-10 h-10 text-rose-500 mx-auto mb-3"/>
-          <h3 className="text-lg font-black text-rose-700 dark:text-rose-400 uppercase tracking-tight">{t('dailyValidation.empty.loadErrorTitle')}</h3>
-          <p className="text-rose-600/80 dark:text-rose-400/80 text-sm font-medium mt-2 max-w-lg mx-auto">{t('dailyValidation.empty.loadErrorDesc')}</p>
+        <div role="alert" className="py-16 px-6 text-center bg-red-50 dark:bg-red-900/10 rounded-3xl border border-red-200 dark:border-red-900/40 animate-fade-in">
+          <TriangleAlert className="w-10 h-10 text-red-500 mx-auto mb-3"/>
+          <h3 className="text-lg font-black text-red-700 dark:text-red-400 uppercase tracking-tight">{t('dailyValidation.empty.loadErrorTitle')}</h3>
+          <p className="text-red-600/80 dark:text-red-400/80 text-sm font-medium mt-2 max-w-lg mx-auto">{t('dailyValidation.empty.loadErrorDesc')}</p>
         </div>
       ) : listaFiltradaTotal.length === 0 ? (
         <div className="py-24 text-center bg-white dark:bg-slate-800 rounded-3xl border border-dashed border-slate-300 dark:border-slate-700 animate-fade-in">

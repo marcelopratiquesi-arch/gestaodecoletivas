@@ -385,7 +385,7 @@ export function FeriadosTab() {
       return filtroPeriodo === 'passados' ? [...lista].reverse() : lista; // passados: o mais recente primeiro
   }, [feriados, filtroPeriodo, filtroAno, filtroEscopo, buscaLista, hojeStr]);
 
-  const inputClass = "w-full p-3 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pink-500";
+  const inputClass = "w-full p-3 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500";
   const labelClass = "text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1 block";
 
   return (
@@ -395,9 +395,9 @@ export function FeriadosTab() {
 
       {/* CARD DE CADASTRO */}
       <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-6 shadow-sm relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-1.5 h-full bg-pink-600"></div>
+        <div className="absolute top-0 left-0 w-1.5 h-full bg-red-600"></div>
         <div className="flex items-center gap-2 mb-6">
-          <CalendarDays className="w-6 h-6 text-pink-600" />
+          <CalendarDays className="w-6 h-6 text-red-600" />
           <h3 className="font-bold text-slate-700 dark:text-white uppercase text-sm">{editandoId ? t('holidaysTab.edit.title') : (ehAdmin ? t('holidaysTab.title') : t('holidaysTab.proposals.formTitle'))}</h3>
         </div>
 
@@ -438,7 +438,7 @@ export function FeriadosTab() {
                     key={escopo}
                     type="button"
                     onClick={() => alterarEscopo(escopo)}
-                    className={`px-4 py-2 rounded-lg text-xs font-bold uppercase border transition-colors ${form.escopo === escopo ? 'bg-pink-600 text-white border-pink-600' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:border-pink-300'}`}
+                    className={`px-4 py-2 rounded-lg text-xs font-bold uppercase border transition-colors ${form.escopo === escopo ? 'bg-red-600 text-white border-red-600' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:border-red-300'}`}
                   >
                     {t(`holidaysTab.scopes.${escopo}`)}
                   </button>
@@ -477,7 +477,7 @@ export function FeriadosTab() {
               <div>
                 <div className="flex items-center justify-between gap-3 mb-1">
                   <label className={`${labelClass} mb-0`}>{t('holidaysTab.except.title')}</label>
-                  <span className="text-xs font-bold text-pink-600">{t('holidaysTab.except.label', { count: form.unidadesExcecao.length })}</span>
+                  <span className="text-xs font-bold text-red-600">{t('holidaysTab.except.label', { count: form.unidadesExcecao.length })}</span>
                 </div>
                 <p className="text-[11px] text-slate-400 mb-2">{t('holidaysTab.except.hint')}</p>
                 <div className="relative mb-2">
@@ -505,7 +505,7 @@ export function FeriadosTab() {
               <div>
                 <div className="flex items-center justify-between gap-3 mb-2">
                   <label className={`${labelClass} mb-0`}>{t('holidaysTab.units')}</label>
-                  <span className="text-xs font-bold text-pink-600">{t('holidaysTab.selectedUnits', { count: form.unidadeIds.length })}</span>
+                  <span className="text-xs font-bold text-red-600">{t('holidaysTab.selectedUnits', { count: form.unidadeIds.length })}</span>
                 </div>
                 <div className="relative mb-2">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"/>
@@ -515,8 +515,8 @@ export function FeriadosTab() {
                   {unidadesFiltradas.map(u => {
                     const marcada = form.unidadeIds.includes(String(u.id));
                     return (
-                      <button key={u.id} type="button" onClick={() => alternarUnidade(String(u.id))} className={`w-full flex items-start gap-3 px-3 py-2.5 text-left transition-colors ${marcada ? 'bg-pink-50 dark:bg-pink-900/20' : 'hover:bg-slate-50 dark:hover:bg-slate-700/40'}`}>
-                        {marcada ? <CheckSquare className="w-4 h-4 text-pink-600 shrink-0 mt-0.5"/> : <Square className="w-4 h-4 text-slate-300 shrink-0 mt-0.5"/>}
+                      <button key={u.id} type="button" onClick={() => alternarUnidade(String(u.id))} className={`w-full flex items-start gap-3 px-3 py-2.5 text-left transition-colors ${marcada ? 'bg-red-50 dark:bg-red-900/20' : 'hover:bg-slate-50 dark:hover:bg-slate-700/40'}`}>
+                        {marcada ? <CheckSquare className="w-4 h-4 text-red-600 shrink-0 mt-0.5"/> : <Square className="w-4 h-4 text-slate-300 shrink-0 mt-0.5"/>}
                         <span className="min-w-0">
                           <span className="block text-sm font-bold text-slate-700 dark:text-slate-200 truncate">{u.nome}</span>
                           <span className="block text-[11px] text-slate-400 truncate">{[u.estado, u.enderecoCompleto].filter(Boolean).join(' · ')}</span>
@@ -533,7 +533,7 @@ export function FeriadosTab() {
             {editandoId && (
               <button type="button" onClick={cancelarEdicao} className="px-6 py-3 text-slate-500 dark:text-slate-400 font-bold uppercase text-xs hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">{t('holidaysTab.edit.cancel')}</button>
             )}
-            <button disabled={processando} className="w-full xl:w-auto px-6 py-3 bg-pink-600 hover:bg-pink-700 text-white font-bold rounded-lg text-sm shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50">
+            <button disabled={processando} className="w-full xl:w-auto px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg text-sm shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50">
               {processando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
               {processando ? t('holidaysTab.processing') : (editandoId ? t('holidaysTab.edit.save') : (ehAdmin ? t('holidaysTab.create') : t('holidaysTab.proposals.send')))}
             </button>
@@ -554,7 +554,7 @@ export function FeriadosTab() {
               {propostas.map(p => (
                 <div key={p.id} className="bg-white dark:bg-slate-800 border border-amber-200 dark:border-amber-900/50 rounded-xl p-5">
                   <div className="flex flex-wrap items-center gap-2 mb-2">
-                    <span className={`px-2 py-1 text-[10px] font-bold uppercase rounded border ${p.status === STATUS_PROPOSTA.APROVADA ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : p.status === STATUS_PROPOSTA.RECUSADA ? 'bg-rose-50 text-rose-700 border-rose-100' : 'bg-amber-50 text-amber-700 border-amber-100'}`}>
+                    <span className={`px-2 py-1 text-[10px] font-bold uppercase rounded border ${p.status === STATUS_PROPOSTA.APROVADA ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : p.status === STATUS_PROPOSTA.RECUSADA ? 'bg-red-50 text-red-700 border-red-100' : 'bg-amber-50 text-amber-700 border-amber-100'}`}>
                       {t(`holidaysTab.proposals.status.${p.status || 'pendente'}`)}
                     </span>
                     <span className="px-2 py-1 text-[10px] font-bold uppercase rounded border bg-slate-50 text-slate-600 border-slate-200 flex items-center gap-1">
@@ -566,16 +566,16 @@ export function FeriadosTab() {
                     <CalendarDays className="w-4 h-4"/> {t('holidaysTab.range', { start: formatDate(p.dataInicio), end: formatDate(p.dataFim) })}
                   </div>
                   {ehAdmin && <p className="text-xs text-slate-400 mt-2">{t('holidaysTab.proposals.by', { name: p.propostoPorNome || '-' })}</p>}
-                  {p.status === STATUS_PROPOSTA.RECUSADA && p.motivoRecusa && <p className="text-xs text-rose-600 mt-2">{t('holidaysTab.proposals.reason', { reason: p.motivoRecusa })}</p>}
+                  {p.status === STATUS_PROPOSTA.RECUSADA && p.motivoRecusa && <p className="text-xs text-red-600 mt-2">{t('holidaysTab.proposals.reason', { reason: p.motivoRecusa })}</p>}
                   {(ehAdmin || p.status === STATUS_PROPOSTA.PENDENTE) && (
                     <div className="flex gap-2 mt-4">
                       {ehAdmin ? (
                         <>
                           <button disabled={processando} onClick={() => aprovarProposta(p)} className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold uppercase rounded-lg flex items-center justify-center gap-1 disabled:opacity-50"><Check className="w-4 h-4"/> {t('holidaysTab.proposals.approve')}</button>
-                          <button disabled={processando} onClick={() => recusarProposta(p)} className="flex-1 py-2 bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 text-xs font-bold uppercase rounded-lg flex items-center justify-center gap-1 disabled:opacity-50"><X className="w-4 h-4"/> {t('holidaysTab.proposals.refuse')}</button>
+                          <button disabled={processando} onClick={() => recusarProposta(p)} className="flex-1 py-2 bg-white hover:bg-red-50 text-red-600 border border-red-200 text-xs font-bold uppercase rounded-lg flex items-center justify-center gap-1 disabled:opacity-50"><X className="w-4 h-4"/> {t('holidaysTab.proposals.refuse')}</button>
                         </>
                       ) : (
-                        <button onClick={() => desistirDaProposta(p)} className="py-2 px-3 text-slate-500 hover:text-rose-600 text-xs font-bold uppercase underline">{t('holidaysTab.proposals.withdraw')}</button>
+                        <button onClick={() => desistirDaProposta(p)} className="py-2 px-3 text-slate-500 hover:text-red-600 text-xs font-bold uppercase underline">{t('holidaysTab.proposals.withdraw')}</button>
                       )}
                     </div>
                   )}
@@ -598,7 +598,7 @@ export function FeriadosTab() {
         <div className="flex flex-wrap items-center gap-2 mb-4">
           {[['proximos', contagem.proximos], ['passados', contagem.passados], ['todos', contagem.todos]].map(([chave, n]) => (
             <button key={chave} type="button" onClick={() => setFiltroPeriodo(chave)}
-              className={`px-3 py-2 rounded-lg text-xs font-bold uppercase border transition-colors ${filtroPeriodo === chave ? 'bg-pink-600 text-white border-pink-600' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:border-pink-300'}`}>
+              className={`px-3 py-2 rounded-lg text-xs font-bold uppercase border transition-colors ${filtroPeriodo === chave ? 'bg-red-600 text-white border-red-600' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:border-red-300'}`}>
               {t(`holidaysTab.filters.${chave}`)} ({n})
             </button>
           ))}
@@ -625,7 +625,7 @@ export function FeriadosTab() {
                 <div className="flex justify-between items-start">
                     <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-2">
-                        <span className={`px-2 py-1 text-[10px] font-bold uppercase rounded border ${String(f.tipo || '').includes('Feriado') ? 'bg-blue-50 text-blue-700 border-blue-100 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-orange-50 text-orange-700 border-orange-100 dark:bg-orange-900/30 dark:text-orange-400'}`}>
+                        <span className={`px-2 py-1 text-[10px] font-bold uppercase rounded border ${String(f.tipo || '').includes('Feriado') ? 'bg-red-50 text-red-700 border-red-100 dark:bg-red-900/30 dark:text-red-400' : 'bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-900/30 dark:text-amber-400'}`}>
                         {TIPOS_FERIADO[f.tipo] ? t(`holidaysTab.types.${TIPOS_FERIADO[f.tipo]}`) : f.tipo}
                         </span>
                         <span className="px-2 py-1 text-[10px] font-bold uppercase rounded border bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-900/40 dark:text-slate-300 dark:border-slate-700 flex items-center gap-1">

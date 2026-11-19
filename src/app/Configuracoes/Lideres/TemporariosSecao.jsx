@@ -12,7 +12,7 @@ import { ATALHOS_DIAS, DIAS_LIMITE_TECNICO, diasRestantes, fimDoDia, fimPorDias,
 const COR_NIVEL = {
   vencido: "bg-red-50 text-red-700 border-red-300 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800",
   urgente: "bg-red-50 text-red-700 border-red-300 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800",
-  alto: "bg-orange-50 text-orange-700 border-orange-300 dark:bg-orange-900/20 dark:text-orange-300 dark:border-orange-800",
+  alto: "bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800",
   atencao: "bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800",
   ok: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-300 dark:border-emerald-800",
 };
@@ -43,7 +43,7 @@ export function SeletorDePrazo({ fim, onFim, desabilitado, atalhos = ATALHOS_DIA
           const ativo = fim && alvo.getTime() === fim.getTime();
           return (
             <button key={d} type="button" disabled={desabilitado} onClick={() => onFim(alvo)}
-              className={`px-3 py-2 rounded-lg text-xs font-black uppercase border transition-colors ${ativo ? (vermelho ? "bg-red-600 text-white border-red-600" : "bg-teal-600 text-white border-teal-600") : `border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 ${vermelho ? "hover:border-red-500" : "hover:border-teal-500"}`}`}>
+              className={`px-3 py-2 rounded-lg text-xs font-black uppercase border transition-colors ${ativo ? (vermelho ? "bg-red-600 text-white border-red-600" : "bg-slate-600 text-white border-slate-600") : `border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 ${vermelho ? "hover:border-red-500" : "hover:border-slate-500"}`}`}>
               {ROTULO_PRESET[d] && atalhos !== ATALHOS_DIAS ? t(`tempLeader.preset.${ROTULO_PRESET[d]}`) : t("tempLeader.days", { count: d })}
             </button>
           );
@@ -51,7 +51,7 @@ export function SeletorDePrazo({ fim, onFim, desabilitado, atalhos = ATALHOS_DIA
       </div>
       <input type="date" value={dataAtual} min={hoje} max={ultimoPermitido} disabled={desabilitado}
         onChange={(e) => onFim(e.target.value ? fimDoDia(e.target.value) : null)}
-        className={`w-full p-3 rounded-xl bg-slate-100 dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 ${vermelho ? "focus:ring-red-500" : "focus:ring-teal-500"}`} />
+        className={`w-full p-3 rounded-xl bg-slate-100 dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 ${vermelho ? "focus:ring-red-500" : "focus:ring-slate-500"}`} />
       <p className="text-[11px] text-slate-400">{t("tempLeader.deadlineHint")}</p>
     </div>
   );
@@ -70,7 +70,7 @@ export function PrazoModal({ cracha, onFechar, onSalvar, abaId = "lideres", atal
           <div className="flex justify-end gap-2">
             <button type="button" onClick={onFechar} className="px-4 py-2.5 rounded-xl text-xs font-black uppercase bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200">{t("tempLeader.cancel")}</button>
             <button type="button" disabled={!fim} onClick={() => { if (fim.getTime() > Date.now()) onSalvar(fim); }}
-              className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase text-white flex items-center gap-1.5 disabled:opacity-50 ${vermelho ? "bg-red-600 hover:bg-red-700" : "bg-teal-500 hover:bg-teal-600"}`}>
+              className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase text-white flex items-center gap-1.5 disabled:opacity-50 ${vermelho ? "bg-red-600 hover:bg-red-700" : "bg-slate-500 hover:bg-slate-600"}`}>
               <Check className="w-3.5 h-3.5" /> {t("tempLeader.save")}
             </button>
           </div>

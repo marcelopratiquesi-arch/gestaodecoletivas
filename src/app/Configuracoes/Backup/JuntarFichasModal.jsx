@@ -161,7 +161,7 @@ export default function JuntarFichasModal({ fichas, aoJuntar, aoFechar }) {
         )}
 
         {etapa === 'feito' && (
-          <p className="p-3 rounded-lg bg-green-100 text-green-700 text-sm font-bold flex items-center gap-2">
+          <p className="p-3 rounded-lg bg-emerald-100 text-emerald-700 text-sm font-bold flex items-center gap-2">
             <CircleCheck className="w-4 h-4 shrink-0" /> {t('backupTab.merge.done', { name: principal?.nome })}
           </p>
         )}

@@ -63,7 +63,7 @@ export default function CriarReservas({ registros, conflitos: semTrava = 0 }) {
       )}
       {res && (
         <div className="mt-2 space-y-2">
-          <p className="text-xs font-bold text-green-700 dark:text-green-400">{t('contacts.reserve.done', { created: res.criadas, ok: res.certas })}</p>
+          <p className="text-xs font-bold text-emerald-700 dark:text-emerald-400">{t('contacts.reserve.done', { created: res.criadas, ok: res.certas })}</p>
           {res.conflitos.length === 0 && res.tomadas.length === 0 && <p className="text-xs text-slate-500">{t('contacts.reserve.none')}</p>}
           {res.conflitos.length > 0 && (
             <p className="text-xs font-bold text-amber-700 dark:text-amber-400">{t('contacts.reserve.conflictsBelow', { count: res.conflitos.length })}</p>

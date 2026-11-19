@@ -125,9 +125,9 @@ export function ValidationModal({
     const seletorProfessor = (cor) => (
         <div className="space-y-2">
             <div className="relative">
-                <User className={`absolute left-3 top-3 w-4 h-4 ${cor === 'purple' ? 'text-purple-400' : 'text-blue-400'}`}/>
+                <User className={`absolute left-3 top-3 w-4 h-4 ${cor === 'purple' ? 'text-slate-400' : 'text-slate-400'}`}/>
                 <select
-                    className={`w-full pl-9 pr-9 p-2.5 bg-white border rounded-xl text-sm font-semibold text-slate-700 outline-none appearance-none ${cor === 'purple' ? 'border-purple-200 focus:border-purple-500' : 'border-blue-200 focus:border-blue-500'}`}
+                    className={`w-full pl-9 pr-9 p-2.5 bg-white border rounded-xl text-sm font-semibold text-slate-700 outline-none appearance-none ${cor === 'purple' ? 'border-slate-200 focus:border-red-500' : 'border-slate-200 focus:border-red-500'}`}
                     value={professorEncontrado?.id || ''}
                     onChange={(e) => escolherProfessor(e.target.value)}
                 >
@@ -206,10 +206,10 @@ export function ValidationModal({
     const getHeaderConfig = () => {
         switch(acaoAtual.tipo) {
             case 'validar': return { bg: 'bg-emerald-50 dark:bg-emerald-900/20', text: 'text-emerald-700 dark:text-emerald-400', icon: <CircleCheck className="w-8 h-8"/>, title: t('dailyValidation.modal.validateTitle') };
-            case 'cancelar': return { bg: 'bg-rose-50 dark:bg-rose-900/20', text: 'text-rose-700 dark:text-rose-400', icon: <CircleX className="w-8 h-8"/>, title: t('dailyValidation.modal.cancelTitle') };
+            case 'cancelar': return { bg: 'bg-red-50 dark:bg-red-900/20', text: 'text-red-700 dark:text-red-400', icon: <CircleX className="w-8 h-8"/>, title: t('dailyValidation.modal.cancelTitle') };
             case 'aulao': 
                 if (etapaAulao === 'aviso') return { bg: 'bg-amber-50 dark:bg-amber-900/20', text: 'text-amber-600', icon: <AlertTriangle className="w-8 h-8"/>, title: t('dailyValidation.modal.attentionTitle') };
-                return { bg: 'bg-purple-50 dark:bg-purple-900/20', text: 'text-purple-700 dark:text-purple-400', icon: <Star className="w-8 h-8"/>, title: t('dailyValidation.modal.specialClassTitle') };
+                return { bg: 'bg-slate-50 dark:bg-slate-900/20', text: 'text-slate-700 dark:text-slate-400', icon: <Star className="w-8 h-8"/>, title: t('dailyValidation.modal.specialClassTitle') };
             default: return {};
         }
     }
@@ -262,8 +262,8 @@ export function ValidationModal({
                     <form id="form-validacao" onSubmit={handleSubmit} className="space-y-5">
                         
                         {/* 1. Buscar Professor */}
-                        <div className="p-4 border-2 border-purple-100 bg-purple-50/30 rounded-xl space-y-3">
-                            <label className="block text-[10px] font-bold text-purple-600 uppercase mb-1">{t('dailyValidation.modal.whoTeaches')}</label>
+                        <div className="p-4 border-2 border-slate-100 bg-slate-50/30 rounded-xl space-y-3">
+                            <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">{t('dailyValidation.modal.whoTeaches')}</label>
                             {seletorProfessor('purple')}
                         </div>
 
@@ -320,29 +320,29 @@ export function ValidationModal({
                             <>
                                 {/* Aulão já lançado: só ajusta o número de alunos (não existe titular para substituir). */}
                                 {!acaoAtual.item?.isAulao && (
-                                <div className={`rounded-2xl border-2 transition-all duration-300 overflow-hidden ${isSubstituicao ? 'border-blue-500 bg-blue-50/50' : 'border-slate-100 hover:border-blue-200'}`}>
+                                <div className={`rounded-2xl border-2 transition-all duration-300 overflow-hidden ${isSubstituicao ? 'border-slate-500 bg-slate-50/50' : 'border-slate-100 hover:border-slate-200'}`}>
                                     <label className="flex items-center gap-4 p-4 cursor-pointer select-none">
-                                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${isSubstituicao ? 'border-blue-500 bg-blue-500' : 'border-slate-300'}`}>
+                                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${isSubstituicao ? 'border-slate-500 bg-red-500' : 'border-slate-300'}`}>
                                             {isSubstituicao && <Check className="w-3 h-3 text-white"/>}
                                         </div>
                                         <input type="checkbox" className="hidden" checked={isSubstituicao} onChange={(e) => setIsSubstituicao(e.target.checked)}/>
                                         <div className="flex-1">
-                                            <span className={`block font-bold text-sm ${isSubstituicao ? 'text-blue-700' : 'text-slate-600'}`}>{t('dailyValidation.modal.substitution')}</span>
+                                            <span className={`block font-bold text-sm ${isSubstituicao ? 'text-slate-700' : 'text-slate-600'}`}>{t('dailyValidation.modal.substitution')}</span>
                                             <span className="text-[10px] text-slate-400">{t('dailyValidation.modal.substitutionHint')}</span>
                                         </div>
-                                        <ArrowRightLeft className={`w-5 h-5 ${isSubstituicao ? 'text-blue-500' : 'text-slate-300'}`}/>
+                                        <ArrowRightLeft className={`w-5 h-5 ${isSubstituicao ? 'text-slate-500' : 'text-slate-300'}`}/>
                                     </label>
                                     
                                     {isSubstituicao && (
                                         <div className="px-4 pb-4 space-y-3 animate-in slide-in-from-top-2">
-                                            <div className="h-px w-full bg-blue-200 mb-3"></div>
+                                            <div className="h-px w-full bg-slate-200 mb-3"></div>
                                             <div>
-                                                <label className="block text-[10px] font-bold text-blue-600 uppercase mb-1">{t('dailyValidation.substitute.label')}</label>
+                                                <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">{t('dailyValidation.substitute.label')}</label>
                                                 {seletorProfessor('blue')}
                                             </div>
 
                                             {professorEncontrado && (
-                                                <div className="flex items-center gap-3 p-3 bg-white rounded-xl border border-blue-200 shadow-sm animate-in fade-in">
+                                                <div className="flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-200 shadow-sm animate-in fade-in">
                                                     <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center overflow-hidden border border-slate-300">
                                                         {professorEncontrado.fotoUrl ? (
                                                             <img src={professorEncontrado.fotoUrl} alt={t('dailyValidation.modal.photoAlt')} className="w-full h-full object-cover"/>
@@ -351,7 +351,7 @@ export function ValidationModal({
                                                         )}
                                                     </div>
                                                     <div className="min-w-0">
-                                                        <p className="text-[10px] font-bold text-blue-600 uppercase">{t('dailyValidation.modal.substituteConfirmed')}</p>
+                                                        <p className="text-[10px] font-bold text-slate-600 uppercase">{t('dailyValidation.modal.substituteConfirmed')}</p>
                                                         <p className="text-sm font-black text-slate-800 truncate">{professorEncontrado.nome}</p>
                                                     </div>
                                                     <Check className="w-5 h-5 text-emerald-500 ml-auto"/>
@@ -359,13 +359,13 @@ export function ValidationModal({
                                             )}
 
                                             <div>
-                                                <label className="block text-[10px] font-bold text-blue-600 uppercase mb-1">{t('dailyValidation.modal.substitutionReason')}</label>
+                                                <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">{t('dailyValidation.modal.substitutionReason')}</label>
                                                 <div className="relative">
-                                                    <select className="w-full p-2.5 bg-white border border-blue-200 rounded-xl text-sm font-semibold text-slate-700 focus:ring-2 focus:ring-blue-500 outline-none appearance-none" value={motivoSubstituicao} onChange={(e) => setMotivoSubstituicao(e.target.value)}>
+                                                    <select className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 focus:ring-2 focus:ring-red-500 outline-none appearance-none" value={motivoSubstituicao} onChange={(e) => setMotivoSubstituicao(e.target.value)}>
                                                         <option value="">{t('common.actions.select')}</option>
                                                         {OPCOES_SUBSTITUICAO.map(m => <option key={m} value={m}>{formatSubstitutionReason(m)}</option>)}
                                                     </select>
-                                                    <ChevronDown className="absolute right-3 top-3 w-4 h-4 text-blue-400 pointer-events-none"/>
+                                                    <ChevronDown className="absolute right-3 top-3 w-4 h-4 text-slate-400 pointer-events-none"/>
                                                 </div>
                                             </div>
                                         </div>
@@ -401,7 +401,7 @@ export function ValidationModal({
                                     <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2 ml-1">{t('dailyValidation.modal.cancelReason')}</label>
                                     <div className="relative">
                                         <select 
-                                            className={`w-full p-3 bg-slate-50 border-2 border-transparent rounded-xl text-sm font-bold text-slate-700 outline-none appearance-none ${acaoAtual.item.status === 'cancelada' ? 'cursor-not-allowed opacity-70' : 'focus:border-rose-500'}`} 
+                                            className={`w-full p-3 bg-slate-50 border-2 border-transparent rounded-xl text-sm font-bold text-slate-700 outline-none appearance-none ${acaoAtual.item.status === 'cancelada' ? 'cursor-not-allowed opacity-70' : 'focus:border-red-500'}`} 
                                             value={inputValor} 
                                             onChange={e => setInputValor(e.target.value)}
                                             disabled={acaoAtual.item.status === 'cancelada'}
@@ -426,7 +426,7 @@ export function ValidationModal({
                                         />
                                     </div>
                                 )}
-                                <div className="p-3 bg-rose-50 border border-rose-100 rounded-lg text-rose-600 text-xs flex gap-2">
+                                <div className="p-3 bg-red-50 border border-red-100 rounded-lg text-red-600 text-xs flex gap-2">
                                     <AlertTriangle className="w-4 h-4 shrink-0" />
                                     <p>{t('dailyValidation.modal.cancelWarning')}</p>
                                 </div>
@@ -470,8 +470,8 @@ export function ValidationModal({
                             <button type="button" onClick={onClose} className="flex-1 py-3.5 text-slate-500 font-bold hover:bg-slate-50 rounded-xl transition-colors">{t('common.actions.cancel')}</button>
                             <button type="submit" form="form-validacao" disabled={processando} className={`flex-[2] py-3.5 text-white font-bold rounded-xl shadow-lg flex items-center justify-center gap-2 transform active:scale-95 transition-all ${
                                 acaoAtual.tipo === 'validar' ? 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/30' : 
-                                acaoAtual.tipo === 'aulao' ? 'bg-purple-600 hover:bg-purple-700 shadow-purple-500/30' :
-                                'bg-rose-500 hover:bg-rose-600 shadow-rose-500/30'}`}>
+                                acaoAtual.tipo === 'aulao' ? 'bg-red-600 hover:bg-red-700 shadow-slate-500/30' :
+                                'bg-red-500 hover:bg-red-600 shadow-red-500/30'}`}>
                                 {processando ? <Loader2 className="w-5 h-5 animate-spin"/> : t('common.actions.confirm')}
                             </button>
                         </>

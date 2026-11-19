@@ -40,7 +40,7 @@ export default function AbaValores({ linhas, mapas, validacoes, periodo, hojeISO
     });
   }, [tabela, linhas, mapas, validacoes, periodo, hojeISO]);
 
-  if (tabela === null) return <div className="py-16 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-blue-500" /></div>;
+  if (tabela === null) return <div className="py-16 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-slate-500" /></div>;
   if (tabela === false) return <p className="p-6 text-sm font-bold text-red-600">{t("reports.values.loadError")}</p>;
 
   const { itens, porProfessor, resumo } = auditoria;
@@ -53,7 +53,7 @@ export default function AbaValores({ linhas, mapas, validacoes, periodo, hojeISO
   const comSugestao = resumo.aulas - resumo.semSugestao;
 
   const cartao = (rotulo, valor, Icone, cor, onClick, ativo) => (
-    <button type="button" onClick={onClick} className={`text-left p-4 rounded-xl border bg-white dark:bg-slate-800 transition-colors ${ativo ? "border-blue-500" : "border-slate-200 dark:border-slate-700 hover:border-blue-300"}`}>
+    <button type="button" onClick={onClick} className={`text-left p-4 rounded-xl border bg-white dark:bg-slate-800 transition-colors ${ativo ? "border-slate-500" : "border-slate-200 dark:border-slate-700 hover:border-slate-300"}`}>
       <p className="text-[10px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5"><Icone className={`w-3.5 h-3.5 ${cor}`} /> {rotulo}</p>
       <p className="text-2xl font-black text-slate-800 dark:text-white mt-1">{valor}</p>
     </button>
@@ -77,7 +77,7 @@ export default function AbaValores({ linhas, mapas, validacoes, periodo, hojeISO
       <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
         <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
           <h3 className="text-xs font-black uppercase tracking-wider text-slate-600 dark:text-slate-300">{t("reports.values.byTeacher")}</h3>
-          {professorAberto && <button type="button" onClick={() => setProfessorAberto("")} className="text-[11px] font-black uppercase text-blue-600">{t("reports.values.allTeachers")}</button>}
+          {professorAberto && <button type="button" onClick={() => setProfessorAberto("")} className="text-[11px] font-black uppercase text-slate-600">{t("reports.values.allTeachers")}</button>}
         </div>
         <div className="overflow-x-auto max-h-80 overflow-y-auto">
           <table className="w-full text-left text-xs min-w-[720px]">
@@ -93,7 +93,7 @@ export default function AbaValores({ linhas, mapas, validacoes, periodo, hojeISO
               {porProfessor.length === 0 && <tr><td colSpan="8" className="p-6 text-center text-slate-400 font-bold uppercase">{t("reports.values.empty")}</td></tr>}
               {porProfessor.map((p) => (
                 <tr key={p.professorId} onClick={() => { setProfessorAberto(p.professorId === professorAberto ? "" : p.professorId); setFiltro("todas"); setVisiveis(50); }}
-                  className={`cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/40 ${p.professorId === professorAberto ? "bg-blue-50 dark:bg-blue-900/20" : ""}`}>
+                  className={`cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/40 ${p.professorId === professorAberto ? "bg-slate-50 dark:bg-slate-900/20" : ""}`}>
                   <td className="p-3 font-black text-slate-800 dark:text-white">{p.professorNome}</td>
                   <td className="p-3 text-center font-bold">{p.aulas}</td>
                   <td className="p-3 text-center font-bold text-emerald-600">{p.certas}</td>
@@ -114,7 +114,7 @@ export default function AbaValores({ linhas, mapas, validacoes, periodo, hojeISO
         <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700 flex flex-wrap items-center gap-2">
           <h3 className="text-xs font-black uppercase tracking-wider text-slate-600 dark:text-slate-300 mr-auto">{t("reports.values.byClass")} ({filtrados.length}{erradas && filtro === "erradas" ? "" : ""})</h3>
           {["erradas", "todas", "certas", "semSugestao"].map((k) => (
-            <button key={k} type="button" onClick={() => { setFiltro(k); setVisiveis(50); }} className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase ${filtro === k ? "bg-blue-600 text-white" : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300"}`}>{t(`reports.values.filters.${k}`)}</button>
+            <button key={k} type="button" onClick={() => { setFiltro(k); setVisiveis(50); }} className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase ${filtro === k ? "bg-red-600 text-white" : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300"}`}>{t(`reports.values.filters.${k}`)}</button>
           ))}
         </div>
         <div className="overflow-x-auto">

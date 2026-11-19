@@ -73,7 +73,7 @@ export default function ParticipantesWorkshop({ workshop, professores, unidades,
       rodape={<>
         <span className="text-xs text-slate-500 mr-auto">{t('shop.ws.part.deleteNote')}</span>
         <button type="button" onClick={onClose} className={`${botao} text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700`}>{t('shop.ws.imp.close')}</button>
-        <button type="button" onClick={onImportar} className={`${botao} bg-purple-600 text-white hover:bg-purple-700`}>{t('shop.ws.importBtn')}</button>
+        <button type="button" onClick={onImportar} className={`${botao} bg-red-600 text-white hover:bg-red-700`}>{t('shop.ws.importBtn')}</button>
       </>}>
       {lista === null ? <div className="flex justify-center py-10 text-slate-400"><Loader2 className="w-6 h-6 animate-spin" /></div> : (
         <>
@@ -100,7 +100,7 @@ export default function ParticipantesWorkshop({ workshop, professores, unidades,
                         </td>
                       </tr>
                       {ligando?.id === p.id && (
-                        <tr className="bg-purple-50 dark:bg-purple-900/20"><td colSpan={4} className="p-3">
+                        <tr className="bg-slate-50 dark:bg-slate-900/20"><td colSpan={4} className="p-3">
                           <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1" htmlFor="busca-prof">{t('shop.ws.part.searchTeacher')}</label>
                           <input id="busca-prof" autoFocus value={busca} onChange={(e) => setBusca(e.target.value)} className="w-full p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm" placeholder={t('shop.ws.part.searchPh')} />
                           <div className="flex flex-wrap gap-2 mt-2">
