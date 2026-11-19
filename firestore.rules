@@ -809,7 +809,9 @@ service cloud.firestore {
         && (!('totalParticipantes' in d) || (d.totalParticipantes is int && d.totalParticipantes >= 0));
     }
     match /workshops_cadastro/{workshopId} {
-      allow read: if adminOuMentor();
+      // O professor lê o cadastro (nome, data, modalidade) para escolher o workshop que fez em "Meus workshops".
+      // Os participantes (subcoleção abaixo) continuam só do admin.
+      allow read: if adminOuMentor() || souProfessor();
       allow create: if adminOuMentor() && workshopCadastroOk(request.resource.data)
         && (souAdmin() || request.resource.data.get('totalParticipantes', 0) == 0);
       // O contador de participantes quem muda é a importação (admin): o mentor não o altera.
@@ -861,14 +863,24 @@ service cloud.firestore {
               && exists(/databases/$(database)/documents/vinculos/$(d.vinculoId))
               && certVinculoDoProfessor(d, cracha, get(/databases/$(database)/documents/vinculos/$(d.vinculoId)).data));
       }
+      // O professor escolhe um workshop JÁ CADASTRADO: o id do certificado é login + "_" + id do workshop (não repete),
+      // o workshop precisa existir, não estar cancelado, e nome/data são os do cadastro.
+      function certWorkshopOk(d) {
+        return d.get('workshopId', '') is string && d.get('workshopId', '') != ''
+          && cid == request.auth.uid + '_' + d.workshopId
+          && exists(/databases/$(database)/documents/workshops_cadastro/$(d.workshopId))
+          && get(/databases/$(database)/documents/workshops_cadastro/$(d.workshopId)).data.status != 'cancelado'
+          && get(/databases/$(database)/documents/workshops_cadastro/$(d.workshopId)).data.nome == d.workshop
+          && get(/databases/$(database)/documents/workshops_cadastro/$(d.workshopId)).data.data == d.dataFeito;
+      }
       function certValido() {
         let d = request.resource.data;
         let cracha = get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data;
         return logado() && cracha.get('role', '').lower() == 'professor'
-          && d.keys().hasOnly(['uid', 'unidadeId', 'vinculoId', 'nome', 'workshop', 'dataFeito', 'foto', 'status', 'criadoEm'])
+          && d.keys().hasOnly(['uid', 'unidadeId', 'vinculoId', 'workshopId', 'nome', 'workshop', 'dataFeito', 'foto', 'status', 'criadoEm'])
           && d.uid == request.auth.uid
           && cid.matches(request.auth.uid + '_[A-Za-z0-9]{4,24}')
-          && d.unidadeId is string && d.unidadeId != '' && certUnidadeOk(d, cracha)
+          && d.unidadeId is string && d.unidadeId != '' && certUnidadeOk(d, cracha) && certWorkshopOk(d)
           && d.status == 'pendente' && d.criadoEm == request.time
           && d.nome is string && d.nome.size() >= 3 && d.nome.size() <= 80
           && d.workshop is string && d.workshop.size() >= 3 && d.workshop.size() <= 120

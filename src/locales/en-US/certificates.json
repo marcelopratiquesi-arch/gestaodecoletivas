@@ -6,12 +6,13 @@
   "fix": "Fix and resend",
   "fields": {
     "workshop": "Workshop name",
-    "workshopPlaceholder": "E.g.: Pratique Pilates Workshop 2025",
+    "workshopPlaceholder": "Choose the workshop",
     "date": "Date you took it",
     "unit": "Unit that verifies",
     "unitPlaceholder": "Choose the unit",
     "unitHint": "The leader and mentor of this unit will check the certificate.",
-    "photo": "Certificate photo"
+    "photo": "Certificate photo",
+    "workshopHint": "Can't find your workshop? Ask your leader or mentor to register it."
   },
   "choosePhoto": "Choose photo",
   "changePhoto": "Change photo",
@@ -38,7 +39,9 @@
     "photo": "Could not prepare this photo. Try another one.",
     "save": "Could not send. Try again.",
     "delete": "Could not delete.",
-    "load": "Could not load your certificates."
+    "load": "Could not load your certificates.",
+    "choose": "Choose the workshop you attended.",
+    "loadList": "Could not load the workshop list."
   },
   "manager": {
     "button": "Workshops (certificates)",
@@ -60,5 +63,7 @@
     "verifyConfirm": "Confirm that {{name}}'s certificate (\"{{workshop}}\") is correct?",
     "refusePrompt": "Refuse {{name}}'s certificate \"{{workshop}}\"?\n\nWrite the reason (the teacher will see it):",
     "error": "Could not save the review."
-  }
+  },
+  "loadingList": "Loading workshops...",
+  "alreadyListed": "already listed"
 }

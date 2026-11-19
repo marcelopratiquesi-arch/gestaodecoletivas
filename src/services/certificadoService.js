@@ -15,11 +15,22 @@ export async function listarMeusCertificados(uid) {
   return snap.docs.map((d) => ({ id: d.id, ...d.data() })).sort(porDataDesc);
 }
 
-/** Envia um certificado novo (ou reenvia um recusado: passe `id`). */
-export async function enviarCertificado({ uid, id, unidadeId, vinculoId, nome, workshop, dataFeito, foto }) {
-  const cid = id || `${uid}_${codigoCurto()}`;
+/**
+ * Workshops cadastrados que o professor pode escolher (nome, data, modalidade). Lê UMA vez ao abrir a tela.
+ * Fora os cancelados e os que ainda não aconteceram.
+ */
+export async function listarWorkshopsEscolhiveis(hoje) {
+  const snap = await getDocs(collection(db, "workshops_cadastro"));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+    .filter((w) => w.status !== "cancelado" && w.data && w.data <= hoje)
+    .sort((a, b) => String(b.data).localeCompare(String(a.data)));
+}
+
+/** Envia um certificado do workshop escolhido. O id é fixo (login + workshop): reenviar o mesmo workshop reaproveita o documento. */
+export async function enviarCertificado({ uid, unidadeId, vinculoId, nome, workshopId, workshop, dataFeito, foto }) {
+  const cid = `${uid}_${workshopId}`;
   await setDoc(doc(db, "certificados_professor", cid), {
-    uid, unidadeId: String(unidadeId), ...(vinculoId ? { vinculoId: String(vinculoId) } : {}), nome, workshop: workshop.trim(), dataFeito, foto, status: "pendente", criadoEm: serverTimestamp(),
+    uid, unidadeId: String(unidadeId), ...(vinculoId ? { vinculoId: String(vinculoId) } : {}), workshopId, nome, workshop, dataFeito, foto, status: "pendente", criadoEm: serverTimestamp(),
   });
   return cid;
 }
@@ -50,6 +61,19 @@ export async function adicionarWorkshopAoProfessor({ professorId, nome, data, po
   const item = { id: id || codigoCurto(), nome: String(nome).trim(), data, por: String(por || "-").slice(0, 80), em: new Date().toISOString() };
   await updateDoc(doc(db, "professores", String(professorId)), { workshops: arrayUnion(item) });
   return item;
+}
+
+/**
+ * Certificado verificado de um workshop do cadastro: entra em professores/{id}.workshops com o id "wk_{workshopId}",
+ * o mesmo formato da importação (não repete). Vale para todas as fichas ligadas a esse login. `fichas` vem do catálogo.
+ */
+export async function registrarWorkshopVerificado({ fichas, workshopId, nome, data, por }) {
+  const idItem = `wk_${workshopId}`;
+  await Promise.all(fichas.map((f) => {
+    const sem = (f.workshops || []).filter((w) => w.id !== idItem);
+    const item = { id: idItem, workshopId, nome, data, por: String(por || "-").slice(0, 80), em: new Date().toISOString() };
+    return updateDoc(doc(db, "professores", String(f.id)), { workshops: [...sem, item] });
+  }));
 }
 
 export async function removerWorkshopDoProfessor({ professorId, atuais, id }) {

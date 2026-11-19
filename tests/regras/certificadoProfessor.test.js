@@ -32,26 +32,28 @@ beforeEach(async () => {
     await setDoc(doc(db, 'usuarios/profA'), { role: 'professor', unidadeId: 'uniA', nome: 'Prof A', loginGoogle: true });
     await setDoc(doc(db, 'usuarios/profB'), { role: 'professor', unidadeId: 'uniB', nome: 'Prof B', loginGoogle: true });
     await setDoc(doc(db, 'usuarios/profSem'), { role: 'professor', nome: 'Prof Sem', loginGoogle: true });
+    await setDoc(doc(db, 'workshops_cadastro/wkum01'), { nome: 'Workshop Pratique 2025', modalidade: 'Jump', data: '2025-05-10', status: 'realizado' });
+    await setDoc(doc(db, 'workshops_cadastro/wkdois2'), { nome: 'Workshop Pratique 2025', modalidade: 'Jump', data: '2025-05-10', status: 'cancelado' });
   });
 });
 
 const dados = (uid, extra = {}) => ({
   uid, unidadeId: 'uniA', nome: 'Prof A', workshop: 'Workshop Pratique 2025', dataFeito: '2025-05-10',
-  foto: FOTO, status: 'pendente', criadoEm: serverTimestamp(), ...extra,
+  workshopId: 'wkum01', foto: FOTO, status: 'pendente', criadoEm: serverTimestamp(), ...extra,
 });
-const enviar = (uid, extra = {}, id = `${uid}_abcd1234`) => setDoc(doc(como(uid), 'certificados_professor', id), dados(uid, extra));
-const semear = (id = 'profA_abcd1234', extra = {}) => env.withSecurityRulesDisabled(async (ctx) => {
+const enviar = (uid, extra = {}, id = `${uid}_${extra.workshopId || 'wkum01'}`) => setDoc(doc(como(uid), 'certificados_professor', id), dados(uid, extra));
+const semear = (id = 'profA_wkum01', extra = {}) => env.withSecurityRulesDisabled(async (ctx) => {
   await setDoc(doc(ctx.firestore(), 'certificados_professor', id), { ...dados('profA'), criadoEm: new Date(), ...extra });
 });
 const analise = (status, extra = {}) => ({ status, analisadoPor: 'x', analisadoPorNome: 'X', analisadoEm: serverTimestamp(), ...extra });
-const ref = (uid, id = 'profA_abcd1234') => doc(como(uid), 'certificados_professor', id);
+const ref = (uid, id = 'profA_wkum01') => doc(como(uid), 'certificados_professor', id);
 
 describe('professor envia', () => {
   it('professor envia o próprio certificado', async () => {
     await assertSucceeds(enviar('profA'));
   });
   it('NÃO envia em nome de outro professor nem com id fora do padrão', async () => {
-    await assertFails(setDoc(doc(como('profA'), 'certificados_professor/profB_abcd1234'), dados('profB', { unidadeId: 'uniB' })));
+    await assertFails(setDoc(doc(como('profA'), 'certificados_professor/profB_wkum01'), dados('profB', { unidadeId: 'uniB' })));
     await assertFails(enviar('profA', {}, 'qualquer'));
   });
   it('NÃO envia para uma unidade que não é a dele, nem sem unidade no cadastro', async () => {
@@ -74,8 +76,8 @@ describe('professor envia', () => {
     await assertSucceeds(enviar('profA', { foto: 'data:image/jpeg;base64,' + 'A'.repeat(600000) }));
   });
   it('líder, mentor e admin NÃO enviam certificado (é do professor)', async () => {
-    await assertFails(setDoc(doc(como('liderA'), 'certificados_professor/liderA_abcd1234'), dados('liderA')));
-    await assertFails(setDoc(doc(como('mentor1'), 'certificados_professor/mentor1_abcd1234'), dados('mentor1')));
+    await assertFails(setDoc(doc(como('liderA'), 'certificados_professor/liderA_wkum01'), dados('liderA')));
+    await assertFails(setDoc(doc(como('mentor1'), 'certificados_professor/mentor1_wkum01'), dados('mentor1')));
   });
 });
 
@@ -127,7 +129,7 @@ describe('verificar e recusar', () => {
     await assertFails(updateDoc(ref('liderA'), analise('verificado', { foto: FOTO + 'B' })));
   });
   it('certificado já verificado não muda mais', async () => {
-    await semear('profA_abcd1234', { status: 'verificado' });
+    await semear('profA_wkum01', { status: 'verificado' });
     await assertFails(updateDoc(ref('liderA'), analise('recusado')));
     await assertFails(enviar('profA'));
   });
@@ -135,13 +137,13 @@ describe('verificar e recusar', () => {
 
 describe('corrigir, reenviar e apagar', () => {
   it('recusado: o professor corrige e reenvia (volta a pendente)', async () => {
-    await semear('profA_abcd1234', { status: 'recusado', motivo: 'ilegível' });
-    await assertSucceeds(enviar('profA', { workshop: 'Workshop Pratique 2025 (corrigido)' }));
+    await semear('profA_wkum01', { status: 'recusado', motivo: 'ilegível' });
+    await assertSucceeds(enviar('profA', { foto: 'data:image/jpeg;base64,' + 'B'.repeat(5000) }));
   });
   it('o professor apaga o dele enquanto não verificado; verificado só o admin apaga', async () => {
     await semear();
     await assertSucceeds(deleteDoc(ref('profA')));
-    await semear('profA_abcd1234', { status: 'verificado' });
+    await semear('profA_wkum01', { status: 'verificado' });
     await assertFails(deleteDoc(ref('profA')));
     await assertFails(deleteDoc(ref('liderA')));
     await assertSucceeds(deleteDoc(ref('admin1')));
@@ -172,5 +174,29 @@ describe('crachá antigo sem unidade: unidade vem do vínculo', () => {
   });
   it('quem já tem unidade no crachá não pode usar vínculo alheio para trocar de unidade', async () => {
     await assertFails(enviar('profB', { vinculoId: 'v1', unidadeId: 'uniA' }));
+  });
+});
+
+describe('workshop escolhido da lista do cadastro', () => {
+  it('NÃO envia sem workshopId, com workshop inexistente, cancelado ou com nome/data diferentes do cadastro', async () => {
+    const semWorkshop = dados('profA');
+    delete semWorkshop.workshopId;
+    await assertFails(setDoc(doc(como('profA'), 'certificados_professor/profA_abcd1234'), semWorkshop));
+    await assertFails(enviar('profA', { workshopId: 'nao-existe' }));
+    await assertFails(enviar('profA', { workshopId: 'wkdois2' }));
+    await assertFails(enviar('profA', { workshop: 'Texto livre qualquer' }));
+    await assertFails(enviar('profA', { dataFeito: '2025-05-11' }));
+  });
+  it('o id fixo impede repetir: o mesmo id só se corrige antes de verificado', async () => {
+    await assertSucceeds(enviar('profA'));
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'certificados_professor/profA_wkum01'), { ...dados('profA'), criadoEm: new Date(), status: 'verificado' });
+    });
+    await assertFails(enviar('profA'));
+  });
+  it('professor lê o cadastro de workshops mas NÃO os participantes; professor sem login ativo não lê', async () => {
+    await assertSucceeds(getDoc(doc(como('profA'), 'workshops_cadastro/wkum01')));
+    await assertFails(getDocs(collection(como('profA'), 'workshops_cadastro/wkum01/participantes')));
+    await assertFails(setDoc(doc(como('profA'), 'workshops_cadastro/wktres3'), { nome: 'xxx', modalidade: 'Jump', data: '2025-01-01', status: 'realizado' }));
   });
 });
