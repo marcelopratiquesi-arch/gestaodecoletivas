@@ -34,7 +34,7 @@ import CampoContrato from "../components/acesso/CampoContrato";
 import { contratoVazio, validarContrato } from "../utils/contrato";
 import { documentoValido, formatarDocumento, tipoDocumentoPadrao } from "../utils/documento";
 import { documentoNoLote, gravarComAviso, lerDocumento, ERRO_DOCUMENTO_EM_USO } from "../services/documentoService";
-import { sincronizarEAvisar } from "../services/contatoService";
+import { mensagemSeContatoEmUso, sincronizarEAvisar } from "../services/contatoService";
 import { normalizarPais } from "../utils/feriados";
 
 const temGoogle = (u) => (u?.providerData || []).some((p) => p.providerId === "google.com");
@@ -158,6 +158,15 @@ export default function AtualizarCadastro() {
       await conta.getIdToken(true); // o banco só aceita a atualização com o Google já conectado
       const email = emailDoGoogle(conta) || conta.email || "";
       const emailAntigo = userData.email || userData.emailAuth || "";
+
+      // Parte B: e-mail/telefone novo que já é de outra pessoa não é salvo.
+      const paisContato = normalizarPais(userData.pais || unidade?.pais);
+      const bloqueio = await mensagemSeContatoEmUso({
+        dono: { uid, professorId: userData.professorId },
+        antes: { email: emailAntigo, telefone: userData.telefone, pais: paisContato },
+        depois: { email, telefone: telefoneLimpo, pais: paisContato },
+      }, t);
+      if (bloqueio) { setPasso("dados"); setErro(bloqueio); return; }
 
       // 2) Atualiza o crachá e, se for líder, o cadastro da unidade (tudo junto ou nada).
       const assumindoAgora = souLider && !souSegundoLider && unidade?.liderUid !== uid;

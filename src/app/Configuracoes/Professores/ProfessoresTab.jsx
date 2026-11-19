@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
 import LinkCentral from "../../../centrais/LinkCentral";
-import { ehLider, unidadesDoLider, escopoMentor } from '../../../permissions';
+import { ehLider, unidadesDoLider, ehDoMeuEscopo } from '../../../permissions';
 import PedidosProfessor from "../Pendencias/PedidosProfessor";
 import { BuscaDocumento } from "../Documento/DocumentoModal";
 import { FiltroPadrao } from "../ui/FiltroPadrao";
@@ -36,7 +36,7 @@ import { useFiltroCascata } from "../ui/useFiltroCascata";
 import SeloRepetido from "../ui/SeloRepetido";
 import { useSelosRepetidos } from "../ui/useSelosRepetidos";
 import JuntarFichasModal from "../Backup/JuntarFichasModal";
-import { liberarContatos, sincronizarEAvisar } from "../../../services/contatoService";
+import { liberarContatos, mensagemSeContatoEmUso, sincronizarEAvisar } from "../../../services/contatoService";
 import CertificadosAVerificar from "./CertificadosAVerificar";
 import AtualizacoesAConferir from "./AtualizacoesAConferir";
 import CertificadosDoProfessor from "./CertificadosDoProfessor";
@@ -147,7 +147,6 @@ export function ProfessoresTab() {
   // ===== PERMISSÕES E ESCOPO =====
   const role = useMemo(() => String(userData?.role || "").trim().toLowerCase(), [userData?.role]);
   const userId = useMemo(() => userData?.id || userData?.uid, [userData]);
-  const escopoId = escopoMentor(userData); // id que vale como "mentor das unidades" (2º mentor usa o do 1º)
 
   const podeVer = ["admin", "mentor", "lider", "unidade"].includes(role);
   const podeEditar = ["admin", "mentor", "lider", "unidade"].includes(role);
@@ -238,10 +237,10 @@ export function ProfessoresTab() {
   // ==========================================
   const minhasUnidades = useMemo(() => {
       if (role === 'admin') return unidades;
-      if (role === 'mentor') return unidades.filter(u => u.mentorId === escopoId);
+      if (role === 'mentor') return unidades.filter(u => ehDoMeuEscopo(userData, u.mentorId));
       if (ehLider(role)) { const minhas = unidadesDoLider(userData); return unidades.filter(u => minhas.includes(String(u.id))); }
       return [];
-  }, [unidades, role, userData, escopoId]);
+  }, [unidades, role, userData]);
 
   const meusVinculos = useMemo(() => {
       const idsUnidades = minhasUnidades.map(u => u.id);
@@ -448,6 +447,14 @@ export function ProfessoresTab() {
     const mesmoEmail = (!profEditando || emailMudou)
         && fichasParecidas(professoresTotais, { email: emailLimpo }, profEditando?.id).find(a => a.campos.includes('email'));
     if (mesmoEmail) return parar(t('teachersTab.cpf.emailTaken', { name: mesmoEmail.ficha.nome }));
+
+    // Parte B: e-mail/telefone novo que já é de outra pessoa (crachá ou outra ficha) não é salvo.
+    const bloqueio = await mensagemSeContatoEmUso({
+      dono: profEditando ? { professorId: profEditando.id, uid: profEditando.uidLogin } : { uid: uidLoginNovo },
+      antes: profEditando ? { email: profEditando.email, telefone: profEditando.telefone, pais: profEditando.pais } : null,
+      depois: { email: emailMudou || !profEditando ? emailLimpo : profEditando.email, telefone, pais },
+    }, t);
+    if (bloqueio) return parar(bloqueio);
 
     try {
       if (profEditando) {

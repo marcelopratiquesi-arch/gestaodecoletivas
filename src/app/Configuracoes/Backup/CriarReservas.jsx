@@ -1,7 +1,7 @@
 // "Criar reservas dos cadastros atuais" (só admin, dentro do relatório de repetidos): grava a trava de e-mail e
 // telefone (contatos_unicos) para quem já está cadastrado — fichas da grade e crachás. Não muda nenhum cadastro.
-// O que não dá para reservar (o mesmo dado em pessoas diferentes) aparece como conflito: é a limpeza que falta
-// antes da parte B da F3 (bloquear repetidos). Lê todas as reservas uma vez (só ao clicar).
+// O que não dá para reservar (o mesmo dado em pessoas diferentes) fica na lista "Sem trava" do relatório,
+// com os botões de limpeza (juntar, ligar, corrigir). Lê todas as reservas uma vez (só ao clicar).
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Loader2, Lock, TriangleAlert } from 'lucide-react';
@@ -12,7 +12,7 @@ import { gravarReservas, lerTodasAsReservas } from '../../../services/contatoSer
 const compartilhaDono = (a, b) => (!!a.uid && a.uid === b.uid) || (!!a.professorId && a.professorId === b.professorId);
 const iguais = (a, b) => a.tipo === b.tipo && (a.uid || '') === (b.uid || '') && (a.professorId || '') === (b.professorId || '');
 
-export default function CriarReservas({ registros, rotuloOrigem }) {
+export default function CriarReservas({ registros, conflitos: semTrava = 0 }) {
   const { t } = useTranslation();
   const [estado, setEstado] = useState({ trabalhando: false, erro: false, resultado: null });
 
@@ -51,7 +51,7 @@ export default function CriarReservas({ registros, rotuloOrigem }) {
   return (
     <div className="mb-4 p-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/30">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xl">{t('contacts.reserve.hint')}</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xl">{t('contacts.reserve.hint', { count: semTrava })}</p>
         <button onClick={criar} disabled={estado.trabalhando}
           className="py-1.5 px-3 border border-slate-300 dark:border-slate-600 rounded-lg flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-700 disabled:opacity-50">
           {estado.trabalhando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />}
@@ -66,21 +66,7 @@ export default function CriarReservas({ registros, rotuloOrigem }) {
           <p className="text-xs font-bold text-green-700 dark:text-green-400">{t('contacts.reserve.done', { created: res.criadas, ok: res.certas })}</p>
           {res.conflitos.length === 0 && res.tomadas.length === 0 && <p className="text-xs text-slate-500">{t('contacts.reserve.none')}</p>}
           {res.conflitos.length > 0 && (
-            <div>
-              <p className="text-xs font-bold text-amber-700 dark:text-amber-400">{t('contacts.reserve.conflicts', { count: res.conflitos.length })}</p>
-              <ul className="mt-1 max-h-60 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-700 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800">
-                {res.conflitos.map(c => (
-                  <li key={c.id} className="px-3 py-1.5">
-                    <p className="text-xs font-bold text-slate-700 dark:text-slate-200 break-all">
-                      {t(`contacts.reserve.type.${c.tipo}`)}: {valor(c.id)}
-                    </p>
-                    <p className="text-[11px] text-slate-500">
-                      {c.itens.map(i => `${rotuloOrigem(i.origem)} · ${i.nome || '—'}`).join('  |  ')}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <p className="text-xs font-bold text-amber-700 dark:text-amber-400">{t('contacts.reserve.conflictsBelow', { count: res.conflitos.length })}</p>
           )}
           {res.tomadas.length > 0 && (
             <p className="text-xs text-slate-500 break-all">

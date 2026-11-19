@@ -1,4 +1,4 @@
-import { ehLider, unidadesDoLider, escopoMentor } from '../../permissions';
+import { ehLider, unidadesDoLider, ehDoMeuEscopo } from '../../permissions';
 import React, { useState, useEffect, useMemo } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
@@ -85,7 +85,6 @@ export default function Sidebar({ collapsed }) {
   // ECONOMIA DE COTA: antes, a cada 1 minuto, cada pessoa logada baixava TODAS as validações do dia da rede inteira
   // (~300 leituras/minuto por pessoa). Agora escuta ao vivo só as validações de hoje das MINHAS unidades:
   // paga a primeira carga e depois só cada validação nova.
-  const escopoId = escopoMentor(userData); // id que vale como "mentor das unidades" (2º mentor usa o do 1º)
 
   // Hoje (AAAA-MM-DD). O relógio só troca o dia; não lê nada do banco.
   const [hojeStr, setHojeStr] = useState(() => new Date().toLocaleDateString('en-CA'));
@@ -114,13 +113,13 @@ export default function Sidebar({ collapsed }) {
         let isMyResponsibility = false;
         if (role === 'admin') isMyResponsibility = true;
         else if (ehLider(role) && unidadesDoLider(userData).includes(String(aula.unidadeId))) isMyResponsibility = true;
-        else if (role === 'mentor' && unidade?.mentorId === escopoId) isMyResponsibility = true;
+        else if (role === 'mentor' && ehDoMeuEscopo(userData, unidade?.mentorId)) isMyResponsibility = true;
         if (!isMyResponsibility) return;
         if (feriadoNoDia(hojeStr, unidade || { id: aula.unidadeId }, catalogs.feriados || [])) return;
         lista.push(aula);
     });
     return lista;
-  }, [loadingCatalogs, hojeStr, catalogs, role, userData, escopoId]);
+  }, [loadingCatalogs, hojeStr, catalogs, role, userData]);
 
   // Quais unidades escutar: '*' = rede inteira (admin); senão, as unidades das minhas aulas de hoje.
   // Vira texto para a escuta só reabrir quando o conjunto de unidades mudar de verdade.

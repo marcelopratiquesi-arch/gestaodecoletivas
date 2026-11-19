@@ -9,8 +9,9 @@ import { fimDoTemporario } from "../../../utils/temporario";
 export const MAX_UNIDADES_TEMPORARIO = 5;
 
 // Quem pode convidar para estas unidades: o admin, ou o mentor de TODAS elas (o banco confere igual).
-export function unidadesQueEuPosso({ role, escopoId, unidades }) {
-  return role === "admin" ? unidades : unidades.filter((u) => u.mentorId === escopoId);
+// escopos = ids de mentor cujas unidades a pessoa enxerga (o dela e, se tem cobertura, o do mentor coberto).
+export function unidadesQueEuPosso({ role, escopos = [], unidades }) {
+  return role === "admin" ? unidades : unidades.filter((u) => escopos.includes(String(u.mentorId)));
 }
 
 export function validarConvite({ email, nome, telefone, unidadeIds, fim, agora = Date.now() }) {
@@ -39,19 +40,19 @@ export function cancelarConvite(email) {
 }
 
 // Convites de líder temporário ainda pendentes (admin vê todos; mentor, os dele — a consulta repete os filtros que o banco exige).
-export async function lerConvitesPendentes({ role, escopoId }) {
+export async function lerConvitesPendentes({ role, escopos = [] }) {
   const base = collection(db, "convites_acesso");
-  const q = role === "admin"
-    ? query(base, where("papel", "==", "lider"))
-    : query(base, where("mentorId", "==", escopoId), where("papel", "==", "lider"));
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((c) => c.status === "pendente");
+  const consultas = role === "admin"
+    ? [query(base, where("papel", "==", "lider"))]
+    : escopos.map((id) => query(base, where("mentorId", "==", id), where("papel", "==", "lider")));
+  const snaps = await Promise.all(consultas.map((q) => getDocs(q)));
+  return snaps.flatMap((snap) => snap.docs.map((d) => ({ id: d.id, ...d.data() }))).filter((c) => c.status === "pendente");
 }
 
 // Líderes temporários que já entraram (crachás com prazo). O mentor só enxerga os das unidades dele.
-export async function lerTemporarios({ role, escopoId, unidades }) {
+export async function lerTemporarios({ role, escopos = [], unidades }) {
   const snap = await getDocs(query(collection(db, "usuarios"), where("temporarioAte", ">", Timestamp.fromMillis(0))));
-  const minhas = new Set(unidades.filter((u) => role === "admin" || u.mentorId === escopoId).map((u) => String(u.id)));
+  const minhas = new Set(unidades.filter((u) => role === "admin" || escopos.includes(String(u.mentorId))).map((u) => String(u.id)));
   return snap.docs
     .map((d) => ({ id: d.id, ...d.data() }))
     .filter((c) => role === "admin" || (c.unidadeIds || [c.unidadeId]).every((id) => minhas.has(String(id))));

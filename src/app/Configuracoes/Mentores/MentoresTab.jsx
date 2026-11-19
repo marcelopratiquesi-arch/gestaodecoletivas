@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useAuth } from "../../../contexts/AuthContext";
 import {
-  collection, updateDoc, deleteDoc, doc, query, where, serverTimestamp, setDoc, onSnapshot, getDocs, limit
+  collection, updateDoc, deleteDoc, doc, query, where, serverTimestamp, setDoc, onSnapshot, getDocs, limit, Timestamp
 } from "firebase/firestore";
 
 // Mentor novo NÃO tem senha: o admin cadastra o e-mail do Google (convite em convites_acesso/{e-mail}).
@@ -14,7 +14,7 @@ import { documentoValido, limparDocumento, tipoDocumentoPadrao } from "../../../
 
 import { 
     ShieldCheck, Edit2, Trash2, AlertTriangle, CheckCircle2, 
-    Loader2, User, Mail, ChevronDown, ChevronUp, Ban, PowerOff, Plus, X, Phone, Check, Clock, Link2, ScanSearch, Users, ArrowUpCircle, UserMinus
+    Loader2, User, Mail, ChevronDown, ChevronUp, Ban, PowerOff, Plus, X, Phone, Check, Clock, Link2, ScanSearch, Users, ArrowUpCircle, UserMinus, Timer
 } from "lucide-react";
 
 const EMAIL_VALIDO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -23,8 +23,10 @@ import LinkCentral from "../../../centrais/LinkCentral";
 import { useCatalogs } from "../../../contexts/CatalogContext";
 import { UnidadesVinculadasModal } from "./UnidadesVinculadasModal";
 import { SegundoMentorModal } from "./SegundoMentorModal";
-import { segundoDe, principalDe, conviteDe } from "./segundoMentor";
-import { sairDeSegundo, promoverASegundo } from "./acoesSegundoMentor";
+import { segundoDe, principalDe, conviteDe, coberturasDe } from "./segundoMentor";
+import { sairDeSegundo, promoverASegundo, prorrogarCobertura, encerrarCobertura } from "./acoesSegundoMentor";
+import { SeloDoPrazo, PrazoModal } from "../Lideres/TemporariosSecao";
+import { ATALHOS_COBERTURA, diaDoFim } from "../../../utils/temporario";
 import { resumoDoAcesso } from "../../../utils/ultimoAcesso";
 import { FiltroPadrao } from "../ui/FiltroPadrao";
 import { CabecalhoDoModal } from "../ui/CabecalhoDoModal";
@@ -34,7 +36,7 @@ import { AcoesDoContato } from "../ui/AcoesDoContato";
 import { useFiltroCascata } from "../ui/useFiltroCascata";
 import SeloRepetido from "../ui/SeloRepetido";
 import { useSelosRepetidos } from "../ui/useSelosRepetidos";
-import { sincronizarEAvisar } from "../../../services/contatoService";
+import { mensagemSeContatoEmUso, sincronizarEAvisar } from "../../../services/contatoService";
 
 // 🌍 PADRÃO OURO INTERNACIONAL — cada país com sua cor de identidade
 const PAIS_CONFIG = {
@@ -145,6 +147,9 @@ export function MentoresTab() {
   const todasUnidades = useMemo(() => catalogs?.unidades || [], [catalogs?.unidades]);
   const [vinculoAlvo, setVinculoAlvo] = useState(null);
   const [segundoAlvo, setSegundoAlvo] = useState(null); // mentor que vai ganhar (ou trocar) o 2º mentor
+  const [temporarioAlvo, setTemporarioAlvo] = useState(null); // mentor que vai ganhar um mentor temporário (cobertura)
+  const [prazoAlvo, setPrazoAlvo] = useState(null); // pessoa em cobertura que está tendo o prazo mudado
+  const [coberturas, setCoberturas] = useState([]); // pessoas (de qualquer papel) com cobertura de algum mentor
   const { t, i18n } = useTranslation(); // 🟢 TRADUTOR CONECTADO
   
   const role = useMemo(() => String(userData?.role || "").trim().toLowerCase(), [userData?.role]);
@@ -225,7 +230,14 @@ export function MentoresTab() {
         (error) => console.error("Erro ao ler convites de mentor:", error)
     );
 
-    return () => { unsub(); unsubConvites(); };
+    // Coberturas (mentor temporário): quem tem acesso extra às unidades de outro mentor, de qualquer papel.
+    const unsubCoberturas = onSnapshot(
+        query(collection(db, "usuarios"), where("coberturaAte", ">", Timestamp.fromMillis(0))),
+        (snap) => setCoberturas(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
+        (error) => console.error("Erro ao ler coberturas:", error)
+    );
+
+    return () => { unsub(); unsubConvites(); unsubCoberturas(); };
   }, [podeAcessar]);
 
   // ==========================================
@@ -372,6 +384,14 @@ export function MentoresTab() {
         if ((mentorEditando.pais || PAIS_DEFAULT) !== pais) mudancas.push(`País: ${mentorEditando.pais || PAIS_DEFAULT} ➔ ${pais}`);
         if (mentorEditando.status !== status) mudancas.push(`Status: ${mentorEditando.status} ➔ ${status}`);
 
+        // Parte B: telefone novo que já é de outra pessoa não é salvo.
+        const bloqueio = await mensagemSeContatoEmUso({
+          dono: { uid: mentorEditando.id },
+          antes: { telefone: mentorEditando.telefone, pais: mentorEditando.pais || PAIS_DEFAULT },
+          depois: { telefone: telefone.trim(), pais },
+        }, t);
+        if (bloqueio) { setSalvando(false); return setErro(bloqueio); }
+
         await updateDoc(doc(db, "usuarios", mentorEditando.id), {
           nome: nome.trim(), 
           pais, // 🟢 SALVA O PAÍS
@@ -400,6 +420,10 @@ export function MentoresTab() {
         if (!jaTem.empty) { setSalvando(false); return setErro(t('mentorsTab.invite.alreadyHasAccess')); }
 
         if (docNumero.trim() && !documentoValido(docTipo, docNumero)) { setSalvando(false); return setErro(t("document.errors.invalid")); }
+
+        // Parte B: e-mail/telefone que já é de outra pessoa não vira convite.
+        const bloqueio = await mensagemSeContatoEmUso({ depois: { email: emailGoogle, telefone: telefone.trim(), pais } }, t);
+        if (bloqueio) { setSalvando(false); return setErro(bloqueio); }
 
         await setDoc(doc(db, "convites_acesso", emailGoogle), {
           // Documento opcional: o mentor novo só o copia para a gaveta privada dele no 1º acesso (pages/InformarDocumento).
@@ -470,6 +494,25 @@ export function MentoresTab() {
       setSalvando(true);
       await sairDeSegundo({ cracha: seg });
       await registrarLogAuditoria('ALTERADA', `Deixou de ser 2º mentor de ${principal?.nome || '-'}.`, seg, seg.papelAntesSegundoMentor ? `Voltou a: ${seg.papelAntesSegundoMentor}` : 'Sem papel anterior: ficou sem acesso.');
+    } catch (e) { alert(t('mentorsTab.second.errors.save') + ' ' + e.message); } finally { setSalvando(false); }
+  }
+
+  // Mentor temporário (cobertura): encerrar agora ou mudar o prazo. A pessoa continua sendo o que era.
+  const nomeDoCoberto = (pessoa) => mentores.find((m) => m.id === pessoa.coberturaMentorId)?.nome || '-';
+  async function encerrarCoberturaDe(pessoa) {
+    if (!window.confirm(t('tempLeader.mentor.endConfirm', { name: pessoa.nome, mentor: nomeDoCoberto(pessoa) }))) return;
+    try {
+      setSalvando(true);
+      await encerrarCobertura(pessoa.id);
+      await registrarLogAuditoria('ALTERADA', `Cobertura de ${nomeDoCoberto(pessoa)} encerrada.`, pessoa, 'Voltou ao acesso de antes.');
+    } catch (e) { alert(t('mentorsTab.second.errors.save') + ' ' + e.message); } finally { setSalvando(false); }
+  }
+  async function mudarPrazoCobertura(pessoa, fim) {
+    setPrazoAlvo(null);
+    try {
+      setSalvando(true);
+      await prorrogarCobertura(pessoa.id, fim);
+      await registrarLogAuditoria('ALTERADA', `Prazo da cobertura de ${nomeDoCoberto(pessoa)} alterado para ${diaDoFim(fim, i18n.language)}.`, pessoa, '');
     } catch (e) { alert(t('mentorsTab.second.errors.save') + ' ' + e.message); } finally { setSalvando(false); }
   }
 
@@ -682,6 +725,19 @@ export function MentoresTab() {
                           <Clock className="w-3 h-3"/> {t('mentorsTab.second.pending', { name: conviteDe(convites, m.id).nome })}
                         </div>
                       )}
+                      {coberturasDe(coberturas, m.id).map((c) => (
+                        <div key={c.id} className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] font-bold text-teal-700 dark:text-teal-300 normal-case">
+                          <Timer className="w-3 h-3"/> {t('tempLeader.mentor.has', { name: c.nome })} <SeloDoPrazo fim={c.coberturaAte} />
+                          <span className="text-slate-500">{t('tempLeader.until', { date: diaDoFim(c.coberturaAte, i18n.language) })}</span>
+                          <button type="button" onClick={() => setPrazoAlvo(c)} className="px-1.5 py-0.5 rounded-md bg-teal-50 hover:bg-teal-100 dark:bg-teal-900/20 text-[10px] font-black uppercase">{t('tempLeader.extend')}</button>
+                          <button type="button" onClick={() => encerrarCoberturaDe(c)} className="px-1.5 py-0.5 rounded-md bg-red-50 hover:bg-red-100 dark:bg-red-900/20 text-red-600 text-[10px] font-black uppercase">{t('tempLeader.mentor.end')}</button>
+                        </div>
+                      ))}
+                      {m.coberturaMentorId && (
+                        <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] font-bold text-teal-700 dark:text-teal-300 normal-case">
+                          <Timer className="w-3 h-3"/> {t('tempLeader.mentor.badge', { name: nomeDoCoberto(m) })} <SeloDoPrazo fim={m.coberturaAte} />
+                        </div>
+                      )}
                       <div className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5 flex items-center gap-1">
                           <Mail className="w-3 h-3"/> {m.email}
                       </div>
@@ -768,6 +824,9 @@ export function MentoresTab() {
                             {m.mentorPrincipalId && (
                                 <BotaoDeLinha abaId="mentores" tipo="desativar" icone={UserMinus} onClick={() => removerSegundo(m)} title={t('mentorsTab.second.remove')} />
                             )}
+                            {!m.mentorPrincipalId && m.status === 'ativo' && (
+                                <BotaoDeLinha abaId="mentores" icone={Timer} onClick={() => setTemporarioAlvo(m)} title={t('tempLeader.mentor.add')} />
+                            )}
                             <BotaoDocumento onClick={() => setDocAlvo({ id: m.id, nome: m.nome, email: m.email })} />
                             <BotaoDeLinha abaId="mentores" icone={Edit2} onClick={() => abrirModalEditar(m)} title={t('mentorsTab.table.edit', 'Editar Completo')} />
                             <BotaoDeLinha abaId="mentores" tipo={m.status === "ativo" ? "desativar" : "ativar"} icone={m.status === "ativo" ? PowerOff : CheckCircle2} onClick={() => alternarStatus(m)}
@@ -785,7 +844,9 @@ export function MentoresTab() {
       </div>
 
       {/* MODAL */}
-      {segundoAlvo && <SegundoMentorModal principal={segundoAlvo} professores={catalogs?.professores || []} unidades={todasUnidades} quem={userData} registrarAuditoria={registrarLogAuditoria} onClose={() => setSegundoAlvo(null)} />}
+      {segundoAlvo && <SegundoMentorModal principal={segundoAlvo} professores={catalogs?.professores || []} mentores={mentores} unidades={todasUnidades} quem={userData} registrarAuditoria={registrarLogAuditoria} onClose={() => setSegundoAlvo(null)} />}
+      {temporarioAlvo && <SegundoMentorModal temporario principal={temporarioAlvo} professores={catalogs?.professores || []} mentores={mentores} unidades={todasUnidades} quem={userData} registrarAuditoria={registrarLogAuditoria} onClose={() => setTemporarioAlvo(null)} />}
+      {prazoAlvo && <PrazoModal abaId="mentores" cracha={prazoAlvo} atalhos={ATALHOS_COBERTURA} onFechar={() => setPrazoAlvo(null)} onSalvar={(fim) => mudarPrazoCobertura(prazoAlvo, fim)} />}
       {vinculoAlvo && <UnidadesVinculadasModal mentor={vinculoAlvo} mentores={mentores} unidades={todasUnidades} quem={userData} onClose={() => setVinculoAlvo(null)} />}
       {docAlvo && <DocumentoModal alvo={docAlvo} onClose={() => setDocAlvo(null)} />}
 

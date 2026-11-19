@@ -1,4 +1,4 @@
-import { escopoMentor } from "../../../permissions.js";
+import { ehDoMeuEscopo } from "../../../permissions.js";
 // (Também: pedidos de OUTRA unidade de líderes, coleção pedidos_unidade; ver Lideres/pedidoOutraUnidade.js.)
 // Pedidos de acesso (login pelo Google) aguardando aprovação + avisos de saída ("não sou mais da unidade /
 // mentor", coleção saidas_acesso) ainda não tratados.
@@ -17,7 +17,6 @@ export function usePedidosPendentes() {
   const { userData } = useAuth();
   const { catalogs } = useCatalogs();
   const role = String(userData?.role || "").trim().toLowerCase();
-  const escopoId = escopoMentor(userData); // id que vale como "mentor das unidades" (2º mentor usa o do 1º)
   const podeVer = role === "admin" || role === "mentor";
 
   const [pedidos, setPedidos] = useState([]);
@@ -68,24 +67,24 @@ export function usePedidosPendentes() {
       return !(u && (u.liderUid === x.uid || u.lider2Uid === x.uid));
     });
     if (role === "admin") return pendentes;
-    const minhas = new Set(unidades.filter((u) => u.mentorId === escopoId).map((u) => u.id));
+    const minhas = new Set(unidades.filter((u) => ehDoMeuEscopo(userData, u.mentorId)).map((u) => u.id));
     return pendentes.filter((x) => minhas.has(String(x.unidadeId)));
-  }, [podeVer, extrasTodos, role, catalogs?.unidades, escopoId]);
+  }, [podeVer, extrasTodos, role, catalogs?.unidades, userData]);
 
   const visiveis = useMemo(() => {
     if (!podeVer) return [];
     if (role === "admin") return pedidos;
     // Mentor: só pedidos de LÍDER que tenham alguma unidade dele (pedido de mentor é só do admin).
-    const minhas = new Set((catalogs?.unidades || []).filter((u) => u.mentorId === escopoId).map((u) => u.id));
+    const minhas = new Set((catalogs?.unidades || []).filter((u) => ehDoMeuEscopo(userData, u.mentorId)).map((u) => u.id));
     return pedidos.filter((p) => (p.papel || "lider") === "lider" && idsDoPedido(p).some((id) => minhas.has(id)));
-  }, [podeVer, pedidos, role, catalogs?.unidades, escopoId]);
+  }, [podeVer, pedidos, role, catalogs?.unidades, userData]);
 
   const saidas = useMemo(() => {
     if (!podeVer) return [];
     if (role === "admin") return saidasTodas;
-    const minhas = new Set((catalogs?.unidades || []).filter((u) => u.mentorId === escopoId).map((u) => u.id));
+    const minhas = new Set((catalogs?.unidades || []).filter((u) => ehDoMeuEscopo(userData, u.mentorId)).map((u) => u.id));
     return saidasTodas.filter((a) => a.papel !== "mentor" && (a.unidadeIds || []).some((id) => minhas.has(String(id))));
-  }, [podeVer, saidasTodas, role, catalogs?.unidades, escopoId]);
+  }, [podeVer, saidasTodas, role, catalogs?.unidades, userData]);
 
   return { pedidos: visiveis, saidas, extras, total: visiveis.length + saidas.length + extras.length, carregando: podeVer && carregando };
 }

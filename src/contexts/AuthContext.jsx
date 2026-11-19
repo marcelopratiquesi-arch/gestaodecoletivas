@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { onAuthStateChanged, signOut, unlink } from "firebase/auth";
 import { doc, getDoc, updateDoc, deleteDoc, collection, addDoc, serverTimestamp } from "firebase/firestore"; // 🟢 Importações do X-9
 import { auth, db } from "../services/firebase"; // ✅ caminho correto
-import { crachaSemAcesso, professorDeLoginAntigo, AVISO_SEM_ACESSO, AVISO_PROFESSOR_LOGIN_ANTIGO } from "../permissions";
+import { crachaSemAcesso, professorDeLoginAntigo, papelEfetivo, coberturaAtiva, AVISO_SEM_ACESSO, AVISO_PROFESSOR_LOGIN_ANTIGO } from "../permissions";
 import { temporarioVencido } from "../utils/temporario";
 
 const AuthContext = createContext(null);
@@ -111,10 +111,15 @@ export function AuthProvider({ children }) {
       }
 
       setAguardandoAprovacao(false);
+      // Mentor temporário (cobertura): enquanto o prazo vale, o papel que o sistema usa é "mentor";
+      // o papel de verdade fica em "roleBase" e volta sozinho quando a cobertura acaba (ver o efeito abaixo).
+      const dadosDoCracha = snap.data();
       setUserData({
         id: firebaseUser.uid,
         emailAuth: firebaseUser.email,
-        ...snap.data(), // ✅ CORREÇÃO: spread correto
+        ...dadosDoCracha, // ✅ CORREÇÃO: spread correto
+        role: papelEfetivo(dadosDoCracha) || dadosDoCracha.role,
+        roleBase: dadosDoCracha.role,
       });
 
       setLoading(false);
@@ -145,6 +150,15 @@ export function AuthProvider({ children }) {
     document.addEventListener("visibilitychange", conferir);
     return () => { clearInterval(timer); document.removeEventListener("visibilitychange", conferir); };
   }, [userData]);
+
+  // Cobertura de mentor: quando o prazo acaba com o sistema aberto, lê o crachá de novo e a pessoa volta ao que era.
+  useEffect(() => {
+    if (!userData?.coberturaAte || !coberturaAtiva(userData)) return undefined;
+    const conferir = () => { if (!coberturaAtiva(userData)) carregarCracha(auth.currentUser); };
+    const timer = setInterval(conferir, 60 * 1000);
+    document.addEventListener("visibilitychange", conferir);
+    return () => { clearInterval(timer); document.removeEventListener("visibilitychange", conferir); };
+  }, [userData, carregarCracha]);
 
   // Chamado pela tela de pedido de acesso quando o pedido é aprovado (lê o crachá de novo).
   const recarregarCracha = useCallback(() => carregarCracha(auth.currentUser), [carregarCracha]);

@@ -80,6 +80,31 @@ export const AVISO_PROFESSOR_LOGIN_ANTIGO = "pratique_aviso_professor_login_anti
 export function escopoMentor(userData) {
   return userData?.mentorPrincipalId || userData?.id || userData?.uid;
 }
+// COBERTURA (mentor temporário): acesso EXTRA, com data de fim, às unidades de OUTRO mentor. O crachá guarda
+// coberturaMentorId + coberturaAte e o papel de verdade NÃO muda: enquanto vale, a pessoa age como mentor (papel
+// efetivo, ver AuthContext e meuPapel() no firestore.rules); passou o prazo, volta sozinha ao que era (líder
+// continua líder, mentor fica só com as unidades dele).
+export function coberturaAtiva(cracha, agora = Date.now()) {
+  const id = cracha?.coberturaMentorId;
+  const fim = cracha?.coberturaAte;
+  const ms = typeof fim?.toMillis === "function" ? fim.toMillis() : typeof fim?.seconds === "number" ? fim.seconds * 1000 : fim ? new Date(fim).getTime() : 0;
+  return id && ms > agora ? String(id) : null;
+}
+// Todos os ids de mentor cujas unidades esta pessoa enxerga como mentor: o dela (ou do 1º mentor, se é 2º) + o da cobertura.
+export function escoposMentor(userData, agora = Date.now()) {
+  const proprio = escopoMentor(userData);
+  const cobertura = coberturaAtiva(userData, agora);
+  return [...new Set([proprio, cobertura].filter(Boolean).map(String))];
+}
+// A unidade é de um dos mentores que esta pessoa enxerga? (substitui "unidade.mentorId === meu id")
+export function ehDoMeuEscopo(userData, mentorId) {
+  return !!mentorId && escoposMentor(userData).includes(String(mentorId));
+}
+// Papel que vale agora: com cobertura ativa, "mentor" (exceto admin); senão, o papel do crachá.
+export function papelEfetivo(cracha, agora = Date.now()) {
+  const papel = String(cracha?.role || "").trim().toLowerCase();
+  return coberturaAtiva(cracha, agora) && !["admin", "administrador", "master"].includes(papel) ? "mentor" : papel;
+}
 export function ehSegundoMentor(cracha) {
   return String(cracha?.role || "").trim().toLowerCase() === "mentor" && !!cracha?.mentorPrincipalId;
 }

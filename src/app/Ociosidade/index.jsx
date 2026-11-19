@@ -22,7 +22,7 @@ import { lerResumos, buscarValidacoes, mesAtual, mesAnterior } from '../../servi
 // 🟢 IMPORTANDO AS VISÕES (Os arquivos que você já separou)
 import VisaoGlobal from './VisaoGlobal';
 import VisaoPerformance from './VisaoPerformance';
-import { ehLider, escopoMentor } from '../../permissions';
+import { ehLider, ehDoMeuEscopo } from '../../permissions';
 
 // ============================================================================
 // 1. HELPERS & CONFIGURAÇÕES GLOBAIS
@@ -175,7 +175,6 @@ export default function RadarDeGrade() {
     const { catalogs, loadingCatalogs } = useCatalogs();
     const navigate = useNavigate();
     const role = String(userData?.role || "").toLowerCase();
-    const escopoId = escopoMentor(userData); // id que vale como "mentor das unidades" (2º mentor usa o do 1º)
 
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -222,7 +221,7 @@ export default function RadarDeGrade() {
         const carregar = async () => {
             setLoading(true);
             try {
-                const escopo = role === 'mentor' ? (catalogs.unidades || []).filter(u => u.mentorId === escopoId).map(u => u.id) : null;
+                const escopo = role === 'mentor' ? (catalogs.unidades || []).filter(u => ehDoMeuEscopo(userData, u.mentorId)).map(u => u.id) : null;
                 const mesesFechados = [1, 2, 3].map(n => mesAnterior(mesAtual(), n));
                 const aulasPorId = new Map((catalogs.aulasTodas || catalogs.aulas || []).map(a => [String(a.id), a]));
                 const resumos = await lerResumos(mesesFechados, { podeMontar: role === 'admin', aulasPorId });
@@ -333,7 +332,7 @@ export default function RadarDeGrade() {
     const dadosRadar = useMemo(() => {
         if (isCofreFechado || !catalogs.unidades) return [];
         let unidades = catalogs.unidades;
-        if (role === 'mentor') unidades = unidades.filter(u => u.mentorId === escopoId);
+        if (role === 'mentor') unidades = unidades.filter(u => ehDoMeuEscopo(userData, u.mentorId));
         
         if (estadosFiltro.length > 0) unidades = unidades.filter(u => estadosFiltro.includes(u.estado));
         if (mentoresFiltro.length > 0) unidades = unidades.filter(u => mentoresFiltro.includes(u.mentorId));
@@ -381,7 +380,7 @@ export default function RadarDeGrade() {
             
             return { ...u, dias: diasData, mediaAlunos: media, saude, totalAulas };
         }).filter(Boolean).sort((a, b) => b.mediaAlunos - a.mediaAlunos);
-    }, [catalogs.unidades, aulasPorUnidade, validacoesPorUnidade, estadosFiltro, mentoresFiltro, unidadesFiltro, turnoFiltro, role, isCofreFechado, escopoId]);
+    }, [catalogs.unidades, aulasPorUnidade, validacoesPorUnidade, estadosFiltro, mentoresFiltro, unidadesFiltro, turnoFiltro, role, isCofreFechado, userData]);
 
     // 🟢 MATEMÁTICA: OCIOSIDADE MENSAL GLOBAL
     const resumoCEO = useMemo(() => {

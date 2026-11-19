@@ -7,7 +7,7 @@ import {
 import { usePedidosPendentes } from "./Pendencias/usePedidosPendentes";
 import { useCatalogs } from "../../contexts/CatalogContext";
 import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
-import { ehLider, escopoMentor } from '../../permissions';
+import { ehLider, ehDoMeuEscopo } from '../../permissions';
 import { useLocation } from "react-router-dom";
 import { temaDaAba } from "./ui/temas";
 
@@ -42,10 +42,9 @@ export default function ConfiguracoesPage() {
   const { total: totalPendencias } = usePedidosPendentes();
   // Líderes que assumiram sozinhos (trocaram o login antigo pelo Google) e ainda não foram conferidos.
   const { catalogs } = useCatalogs();
-  const escopoId = escopoMentor(userData); // id que vale como "mentor das unidades" (2º mentor usa o do 1º)
   const lideresAConferir = useMemo(() => (catalogs?.unidades || []).filter((u) =>
-    u.liderUid && u.liderAConferir === true && (role === "admin" || (role === "mentor" && u.mentorId === escopoId))).length,
-  [catalogs?.unidades, role, escopoId]);
+    u.liderUid && u.liderAConferir === true && (role === "admin" || (role === "mentor" && ehDoMeuEscopo(userData, u.mentorId)))).length,
+  [catalogs?.unidades, role, userData]);
 
   // 🟢 Abas agora reagem ao idioma em tempo real
   const tabs = useMemo(() => [

@@ -27,7 +27,7 @@
   "send": "Send invite",
   "days_one": "{{count}} day",
   "days_other": "{{count}} days",
-  "deadlineHint": "Today counts as day 1 and access lasts until 11:59 PM (Brasília) on the last day. Up to {{max}} days, and you can extend later.",
+  "deadlineHint": "Today counts as day 1 and access lasts until 11:59 PM (Brasília) on the last day. You pick the date and can extend later.",
   "modalTitle": "Invite temporary leader",
   "modalSubtitle": "The person signs in with Google using the e-mail below and lands as leader of the chosen units.",
   "sectionPerson": "Person",
@@ -63,5 +63,29 @@
   "central": {
     "title": "Temporary leaders",
     "until": "Until {{date}}"
+  },
+  "preset": {
+    "m3": "3 months",
+    "m6": "6 months",
+    "y1": "1 year"
+  },
+  "mentor": {
+    "add": "Temporary mentor (deadline-based cover)",
+    "title": "Temporary mentor",
+    "help": "Gives access to {{mentor}} units for a set period, with the same access (including units they receive later). The person stays who they are: a mentor keeps their own units too. Several people can cover the same mentor. Only the admin can grant it.",
+    "keeps": "Stays {{role}} and gains access to this mentor units until the deadline.",
+    "confirm": "Give {{name}} access to {{mentor}} units until {{date}} 11:59 PM? After that date they go back to their previous access automatically.",
+    "done": "{{name}} now covers the units until the deadline.",
+    "badge": "Covering {{name}}",
+    "has": "Cover: {{name}}",
+    "end": "End cover",
+    "endConfirm": "End {{name}} cover of {{mentor}} units now? They go back to their previous access.",
+    "chip": "Covers {{nome}} until {{date}}",
+    "coverLabel": "Temporary mentor (until {{date}})",
+    "coverField": "Temporary mentor",
+    "bannerTitleToday": "Your mentor cover ends TODAY at 11:59 PM.",
+    "bannerTitleDays_one": "Your mentor cover ends in {{count}} day ({{date}}).",
+    "bannerTitleDays_other": "Your mentor cover ends in {{count}} days ({{date}}).",
+    "bannerHelp": "After that date you go back to your normal access. To continue, ask the administrator to extend it."
   }
 }

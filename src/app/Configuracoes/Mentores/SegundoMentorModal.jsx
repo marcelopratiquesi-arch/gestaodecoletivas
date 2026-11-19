@@ -7,13 +7,18 @@ import { Check, Loader2, Search, UserPlus, Users, AlertTriangle, X } from "lucid
 import { db } from "../../../services/firebase";
 import { acharDonoDoDocumento } from "../../../services/documentoService";
 import { documentoValido, TIPOS_DOCUMENTO } from "../../../utils/documento";
-import { entrarComoSegundo, convidarSegundo } from "./acoesSegundoMentor";
-import { motivoQueBloqueia } from "./segundoMentor";
+import { entrarComoSegundo, convidarSegundo, darCobertura } from "./acoesSegundoMentor";
+import { motivoQueBloqueia, motivoQueBloqueiaCobertura } from "./segundoMentor";
+import { SeletorDePrazo } from "../Lideres/TemporariosSecao";
+import { ATALHOS_COBERTURA, diaDoFim, fimPorDias } from "../../../utils/temporario";
 
 const EMAIL_VALIDO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export function SegundoMentorModal({ principal, professores = [], unidades = [], quem, registrarAuditoria, onClose }) {
-  const { t } = useTranslation();
+// temporario = true: COBERTURA (mentor temporário): acesso extra às unidades do mentor até uma data; a pessoa continua o que é
+// (líder, professor, ou mentor com as unidades dele) e volta sozinha ao fim do prazo. Pode haver várias pessoas por mentor.
+export function SegundoMentorModal({ principal, professores = [], mentores = [], unidades = [], quem, registrarAuditoria, onClose, temporario = false }) {
+  const { t, i18n } = useTranslation();
+  const [fim, setFim] = useState(() => (temporario ? fimPorDias(60) : null));
   const [modo, setModo] = useState("existente"); // existente | novo
   const [busca, setBusca] = useState("");
   const [pessoa, setPessoa] = useState(null);
@@ -44,8 +49,10 @@ export function SegundoMentorModal({ principal, professores = [], unidades = [],
       if (u.liderUid) juntar(String(u.liderUid), { nome: u.liderNome, email: u.liderEmail, telefone: u.liderTelefone }, "lider");
       if (u.lider2Uid) juntar(String(u.lider2Uid), { nome: u.lider2Nome, email: u.lider2Email, telefone: u.lider2Telefone }, "lider");
     });
+    // Mentores também podem ser escolhidos (ex.: quem acabou de subir e fica sob supervisão).
+    mentores.filter((m) => m.id && m.status !== "inativo").forEach((m) => juntar(String(m.id), { nome: m.nome, email: m.email, telefone: m.telefone }, "mentor"));
     return [...porUid.values()].filter((c) => c.uid !== principal.id).sort((a, b) => String(a.nome).localeCompare(String(b.nome)));
-  }, [professores, unidades, principal.id]);
+  }, [professores, unidades, mentores, principal.id]);
 
   // Digitou um CPF/DNI/SSN válido? Acha o dono do documento.
   useEffect(() => {
@@ -80,18 +87,28 @@ export function SegundoMentorModal({ principal, professores = [], unidades = [],
     } catch (e) { console.error(e); setErro(t("mentorsTab.second.errors.read")); } finally { setLendo(false); }
   }
 
-  const bloqueio = cracha ? motivoQueBloqueia(cracha.inexistente ? null : cracha) : null;
+  const temUnidades = !!pessoa && unidades.some((u) => String(u.mentorId) === String(pessoa.uid));
+  const bloqueio = !cracha ? null : temporario
+    ? motivoQueBloqueiaCobertura(cracha.inexistente ? null : { ...cracha, id: pessoa?.uid }, principal.id)
+    : motivoQueBloqueia(cracha.inexistente ? null : cracha, { temUnidades });
   const papelAtual = cracha && !cracha.inexistente ? String(cracha.role || "").toLowerCase() : "";
 
   async function confirmarExistente() {
     if (!pessoa || !cracha || bloqueio) return;
     const nomePessoa = cracha.nome || pessoa.nome;
-    if (!window.confirm(t("mentorsTab.second.confirm", { name: nomePessoa, mentor: principal.nome }))) return;
+    if (temporario && (!fim || fim.getTime() <= Date.now())) return setErro(t("tempLeader.errors.past"));
+    const aviso = temporario
+      ? t("tempLeader.mentor.confirm", { name: nomePessoa, mentor: principal.nome, date: diaDoFim(fim, i18n.language) })
+      : t("mentorsTab.second.confirm", { name: nomePessoa, mentor: principal.nome });
+    if (!window.confirm(aviso)) return;
     setSalvando(true); setErro("");
     try {
-      await entrarComoSegundo({ cracha, uid: pessoa.uid, principalId: principal.id });
-      await registrarAuditoria("NOVA", `Virou 2º mentor de ${principal.nome} (era ${papelAtual || "-"}).`, { id: pessoa.uid, nome: nomePessoa, email: cracha.email }, `Mentor principal: ${principal.nome}`);
-      alert(t("mentorsTab.second.done", { name: nomePessoa }));
+      if (temporario) await darCobertura({ uid: pessoa.uid, principalId: principal.id, fim });
+      else await entrarComoSegundo({ cracha, uid: pessoa.uid, principalId: principal.id });
+      await registrarAuditoria("NOVA", temporario
+        ? `Mentor temporário de ${principal.nome} até ${diaDoFim(fim, i18n.language)} (é ${papelAtual || "-"}).`
+        : `Virou 2º mentor de ${principal.nome} (era ${papelAtual || "-"}).`, { id: pessoa.uid, nome: nomePessoa, email: cracha.email }, `Mentor principal: ${principal.nome}`);
+      alert(temporario ? t("tempLeader.mentor.done", { name: nomePessoa }) : t("mentorsTab.second.done", { name: nomePessoa }));
       onClose();
     } catch (e) { console.error(e); setErro(t("mentorsTab.second.errors.save") + " " + (e.message || "")); } finally { setSalvando(false); }
   }
@@ -118,18 +135,18 @@ export function SegundoMentorModal({ principal, professores = [], unidades = [],
       <div onClick={(e) => e.stopPropagation()} className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-h-[90vh] flex flex-col overflow-hidden">
         <div className="p-5 border-b border-slate-100 dark:border-slate-700 flex items-start justify-between gap-3">
           <div>
-            <h3 className="text-lg font-black text-slate-800 dark:text-white flex items-center gap-2"><Users className="w-5 h-5 text-blue-600" /> {t("mentorsTab.second.title")}</h3>
-            <p className="text-xs text-slate-500 mt-1">{t("mentorsTab.second.help", { mentor: principal.nome })}</p>
+            <h3 className="text-lg font-black text-slate-800 dark:text-white flex items-center gap-2"><Users className="w-5 h-5 text-blue-600" /> {temporario ? t("tempLeader.mentor.title") : t("mentorsTab.second.title")}</h3>
+            <p className="text-xs text-slate-500 mt-1">{temporario ? t("tempLeader.mentor.help", { mentor: principal.nome }) : t("mentorsTab.second.help", { mentor: principal.nome })}</p>
           </div>
           <button type="button" onClick={onClose} disabled={salvando} className="p-2 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"><X className="w-4 h-4" /></button>
         </div>
         <div className="p-5 space-y-4 overflow-y-auto">
-          <div className="flex gap-2">
+          {!temporario && <div className="flex gap-2">
             {[["existente", t("mentorsTab.second.modeExisting")], ["novo", t("mentorsTab.second.modeNew")]].map(([id, rotulo]) => (
               <button key={id} type="button" onClick={() => { setModo(id); setErro(""); }} aria-pressed={modo === id}
                 className={`flex-1 px-3 py-2 rounded-xl text-xs font-black uppercase transition-colors ${modo === id ? "bg-blue-600 text-white" : "bg-slate-100 dark:bg-slate-900 text-slate-500 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"}`}>{rotulo}</button>
             ))}
-          </div>
+          </div>}
 
           {modo === "existente" ? (
             <>
@@ -156,9 +173,9 @@ export function SegundoMentorModal({ principal, professores = [], unidades = [],
               {pessoa && cracha && !lendo && (
                 <div className={`text-xs font-bold p-3 rounded-xl space-y-1 ${bloqueio ? "text-red-600 bg-red-50 dark:bg-red-900/20" : "text-slate-600 bg-slate-50 dark:bg-slate-900/40 dark:text-slate-300"}`}>
                   <p className="flex items-start gap-2">{bloqueio && <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />}
-                    {bloqueio ? t(`mentorsTab.second.errors.${bloqueio}`) : t("mentorsTab.second.now", { role: t(`mentorsTab.second.tag.${papelAtual === "unidade" ? "lider" : papelAtual}`, papelAtual) })}</p>
-                  {!bloqueio && unidadesDaPessoa.length > 0 && <p className="font-medium">{t("mentorsTab.second.keepsLeader", { units: unidadesDaPessoa.map(nomeUnidade).join(", ") })}</p>}
-                  {!bloqueio && fora.length > 0 && <p className="text-amber-700 dark:text-amber-400 flex items-start gap-2"><AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" /> {t("mentorsTab.second.outsideWarning", { units: fora.map(nomeUnidade).join(", ") })}</p>}
+                    {bloqueio ? t(`mentorsTab.second.errors.${bloqueio}`) : t(temporario ? "tempLeader.mentor.keeps" : "mentorsTab.second.now", { role: t(`mentorsTab.second.tag.${papelAtual === "unidade" ? "lider" : papelAtual}`, papelAtual) })}</p>
+                  {!bloqueio && !temporario && unidadesDaPessoa.length > 0 && <p className="font-medium">{t("mentorsTab.second.keepsLeader", { units: unidadesDaPessoa.map(nomeUnidade).join(", ") })}</p>}
+                  {!bloqueio && !temporario && fora.length > 0 && <p className="text-amber-700 dark:text-amber-400 flex items-start gap-2"><AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" /> {t("mentorsTab.second.outsideWarning", { units: fora.map(nomeUnidade).join(", ") })}</p>}
                 </div>
               )}
             </>
@@ -172,6 +189,13 @@ export function SegundoMentorModal({ principal, professores = [], unidades = [],
                 </label>
               ))}
               <p className="text-[11px] text-slate-500">{t("mentorsTab.second.inviteHelp")}</p>
+            </div>
+          )}
+
+          {temporario && (
+            <div className="space-y-1">
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t("tempLeader.sectionDeadline")}</span>
+              <SeletorDePrazo fim={fim} onFim={setFim} desabilitado={salvando} atalhos={ATALHOS_COBERTURA} />
             </div>
           )}
 

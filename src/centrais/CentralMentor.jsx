@@ -37,6 +37,10 @@ import { useValidacoesDasUnidades, useFechamentosMensais } from './useValidacoes
 import { DIAS_JANELA_PENDENCIAS, periodoDoMes, liderDaVaga, ehAdmin } from './contasUnidade';
 import { mesesDoTrimestre, limitesDoMes, gastoPorUnidade, gastoPorUnidadeDoResumo, totaisPorMoeda } from './contasValores';
 import { linhasDoMentor, professoresDoMentor, aValidarPorUnidade, itensEmDiaMentor } from './contasPessoas';
+import { useCoberturasDoMentor } from './useCoberturasDoMentor';
+import { SeloDoPrazo } from '../app/Configuracoes/Lideres/TemporariosSecao';
+import { coberturaAtiva } from '../permissions';
+import { diaDoFim } from '../utils/temporario';
 
 const doisDigitos = (n) => String(n).padStart(2, '0');
 const ABAS_COM_VALORES = ['valores', 'panorama'];
@@ -121,12 +125,17 @@ export default function CentralMentor({ id: mentorId, z, textoVoltar, onFechar, 
   }, [meses, mesDeHoje, hoje, fechamentos, leitura0.validacoes, leitura1.validacoes, leitura2.validacoes, aulasTodas, unidades]);
   const erroValores = erroFechamentos || leitura0.erro || leitura1.erro || leitura2.erro;
 
+  // Mentor temporário (cobertura): quem tem acesso extra às unidades deste mentor (qualquer papel).
+  const coberturas = useCoberturasDoMentor(mentor?.id, !!mentor);
+
   if (!mentor || !acesso) return null;
 
   const pode = telasPermitidas(userData);
   const ativo = mentor.status === 'ativo';
   // Equipe de mentores: o 2º mentor (espelho do 1º) e, na ficha do 2º, o 1º mentor.
   const segundo = catalogs.mentores.find((m) => m.mentorPrincipalId === mentor.id) || null;
+  // Mentor temporário (cobertura): quem tem acesso extra às unidades deste mentor até uma data (qualquer papel).
+  const cobreOutro = coberturaAtiva(mentor) ? catalogs.mentores.find((m) => m.id === mentor.coberturaMentorId) || null : null;
   const principal2 = mentor.mentorPrincipalId ? catalogs.mentores.find((m) => m.id === mentor.mentorPrincipalId) || null : null;
   // CPF/DNI/SSN do mentor: o admin e o próprio mentor (é o que o banco libera).
   const podeVerDocumento = ehAdmin(userData?.role) || mentor.id === (userData?.id || userData?.uid);
@@ -139,6 +148,7 @@ export default function CentralMentor({ id: mentorId, z, textoVoltar, onFechar, 
   const selos = [
     { texto: t('centrais.papel.mentor'), cor: 'blue' },
     mentor.mentorPrincipalId && { texto: t('centrais.mentor.segundoDe', { nome: principal2?.nome || '-' }), cor: 'violet' },
+    cobreOutro && { texto: t('tempLeader.mentor.chip', { nome: cobreOutro.nome, date: diaDoFim(mentor.coberturaAte) }), cor: 'amber' },
     { texto: ativo ? t('centrais.ativo') : t('centrais.inativo'), cor: ativo ? 'emerald' : 'slate' },
     faltam > 0
       ? { texto: t('centrais.selos.faltam', { n: faltam }), cor: 'amber' }
@@ -345,11 +355,12 @@ export default function CentralMentor({ id: mentorId, z, textoVoltar, onFechar, 
 
   const equipe = (
     <>
-      {(segundo || principal2) && (
+      {(segundo || principal2 || coberturas.length > 0) && (
         <Quadro titulo={t('centrais.mentor.equipeMentoresTitulo')} icone={ShieldCheck} acao={atalhoTelaCompleta(t, pode.cfgMentores, caminhos.configuracoes(irPara, 'mentores'))}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {principal2 && cartaoMentor(principal2, t('centrais.mentor.primeiro'))}
             {segundo && cartaoMentor(segundo, t('centrais.mentor.segundo'))}
+            {coberturas.map((c) => cartaoMentor(c, t('tempLeader.mentor.coverLabel', { date: diaDoFim(c.coberturaAte) })))}
           </div>
         </Quadro>
       )}
@@ -427,6 +438,9 @@ export default function CentralMentor({ id: mentorId, z, textoVoltar, onFechar, 
         {principal2 && (
           <Campo rotulo={t('centrais.mentor.primeiro')}><LinkCentral tipo="mentor" alvo={principal2}>{principal2.nome}</LinkCentral></Campo>
         )}
+        {coberturas.map((c) => (
+          <Campo key={c.id} rotulo={t('tempLeader.mentor.coverField')}><LinkCentral tipo="mentor" alvo={c}>{c.nome}</LinkCentral> <SeloDoPrazo fim={c.coberturaAte} /></Campo>
+        ))}
         {segundo && (
           <Campo rotulo={t('centrais.mentor.segundo')}><LinkCentral tipo="mentor" alvo={segundo}>{segundo.nome}</LinkCentral></Campo>
         )}

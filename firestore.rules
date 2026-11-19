@@ -29,8 +29,20 @@ service cloud.firestore {
 
     // Papel de quem está fazendo a ação, lido do crachá (usuarios/{uid}).
     // Custa 1 leitura, e só é usado ao GRAVAR em usuarios (nunca nas leituras do dia a dia).
+    // COBERTURA (mentor temporário): crachá com coberturaMentorId + coberturaAte (só o admin grava). Enquanto o prazo
+    // vale, a pessoa age como "mentor" e enxerga também as unidades do mentor coberto; passou o prazo, volta sozinha
+    // ao papel de verdade (sem rotina, sem função na nuvem).
+    function coberturaAtiva(c) {
+      return c.get('coberturaMentorId', '') is string && c.get('coberturaMentorId', '') != ''
+        && 'coberturaAte' in c && c.coberturaAte > request.time;
+    }
+    // (O caminho de quem NÃO tem cobertura é o mais curto possível: as regras têm limite de 1000 verificações.)
+    function papelComCobertura(c) {
+      return coberturaAtiva(c) && !(c.get('role', '').lower() in ['admin', 'administrador', 'master']) ? 'mentor' : c.get('role', '').lower();
+    }
     function meuPapel() {
-      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.get('role', '').lower();
+      let c = get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data;
+      return 'coberturaMentorId' in c ? papelComCobertura(c) : c.get('role', '').lower();
     }
     function souAdmin() { return logado() && meuPapel() in ['admin', 'administrador', 'master']; }
     // Líder = perfil novo "lider" ou o antigo "unidade" (valem igual durante a transição).
@@ -48,10 +60,21 @@ service cloud.firestore {
       let c = get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data;
       return c.get('mentorPrincipalId', '') is string && c.get('mentorPrincipalId', '') != '' ? c.mentorPrincipalId : request.auth.uid;
     }
+    // Este id de mentor é um dos que o logado enxerga? (o dele, o do 1º mentor se é 2º, ou o mentor coberto)
+    function ehMeuMentor(id) {
+      let c = get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data;
+      return id is string && id != ''
+        && (id == (c.get('mentorPrincipalId', '') == '' ? request.auth.uid : c.mentorPrincipalId)
+          || ('coberturaMentorId' in c && id == c.coberturaMentorId && coberturaAtiva(c)));
+    }
     // O mentor logado é o mentor desta unidade? (id vazio = não)
     function mentorDaUnidadeId(unidadeId) {
       return unidadeId is string && unidadeId != ''
-        && get(/databases/$(database)/documents/unidades/$(unidadeId)).data.get('mentorId', '') == meuMentorId();
+        && ehMeuMentor(get(/databases/$(database)/documents/unidades/$(unidadeId)).data.get('mentorId', ''));
+    }
+    // Quem não é admin não cria crachá já com cobertura (só o admin concede).
+    function semCobertura() {
+      return !('coberturaMentorId' in request.resource.data) && !('coberturaAte' in request.resource.data);
     }
     function papelDoAlvo() { return resource.data.get('role', '').lower(); }
     function papelNovo() { return request.resource.data.get('role', '').lower(); }
@@ -233,25 +256,79 @@ service cloud.firestore {
             && exists(/databases/$(database)/documents/configuracoes/modalidadesBasicas)
             && ids.toSet().difference(get(/databases/$(database)/documents/configuracoes/modalidadesBasicas).data.get('ids', []).toSet()).size() == 0);
     }
-    match /unidades/{document=**} {
+    // Quem grava em "unidades" (Etapa 1 das regras por unidade):
+    //  - admin: tudo;
+    //  - mentor (inclusive 2º mentor e quem tem cobertura): cria, edita e apaga SÓ as unidades dele (mentorId), e não troca o
+    //    mentor da unidade (quem redistribui unidades é o admin); as modalidades continuam só do admin;
+    //  - líder: só os campos de líder da PRÓPRIA unidade (atualização de cadastro, saída da função, desfazer saída).
+    // Professor não grava. Ninguém mais.
+    function camposDeLiderDaUnidade() {
+      return ['liderUid', 'liderNome', 'liderEmail', 'liderTelefone', 'liderTipo', 'liderDesde', 'liderAConferir',
+              'lider2Uid', 'lider2Nome', 'lider2Email', 'lider2Telefone', 'lider2Tipo', 'lider2Desde',
+              'loginAntigoDesligado', 'loginAntigoDesligadoEm'];
+    }
+    // Usa o papel de VERDADE do crachá (não o efetivo): quem tem cobertura de mentor continua líder da própria unidade.
+    function liderDestaUnidade(unidadeId) {
+      let c = meuUsuario();
+      return c.get('role', '').lower() in papeisLider() && (unidadeId == c.get('unidadeId', '') || unidadeId in c.get('unidadeIds', []));
+    }
+    match /unidades/{unidadeId} {
       allow read: if logado();
-      allow create: if logado() && !souProfessor() && (souAdmin() || modalidadesIniciaisPermitidas());
-      allow update: if logado() && !souProfessor()
-        && (souAdmin() || !camposAlterados().hasAny(camposDeModalidadeDaUnidade()));
-      allow delete: if logado() && !souProfessor();
+      allow create: if souAdmin()
+        || (logado() && meuPapel() == 'mentor' && ehMeuMentor(request.resource.data.get('mentorId', ''))
+            && modalidadesIniciaisPermitidas());
+      allow update: if souAdmin()
+        || (logado() && meuPapel() == 'mentor' && ehMeuMentor(resource.data.get('mentorId', ''))
+            && request.resource.data.get('mentorId', '') == resource.data.get('mentorId', '')
+            && !camposAlterados().hasAny(camposDeModalidadeDaUnidade()))
+        || (logado() && liderDestaUnidade(unidadeId) && camposAlterados().hasOnly(camposDeLiderDaUnidade()));
+      allow delete: if souAdmin()
+        || (logado() && meuPapel() == 'mentor' && ehMeuMentor(resource.data.get('mentorId', '')));
+      // Se algum dia houver subcoleção dentro de uma unidade: lê quem está logado, grava só o admin.
+      match /{sub=**} {
+        allow read: if logado();
+        allow write: if souAdmin();
+      }
     }
     // Lista básica de modalidades da rede (usada nas unidades novas). Todos os logados leem; só o admin grava.
     match /configuracoes/{docId} {
       allow read: if logado();
       allow write: if souAdmin();
     }
+    // Ficha do professor (Etapa 2 das regras por unidade). Mentor e líder criam e editam só os campos de CONTATO e de
+    // vínculo com o login (nome, e-mail, país, telefone, status, uidLogin, documentoOk, workshops e as marcas de data);
+    // qualquer outro campo, e apagar a ficha, é só do admin (que também junta fichas e liga crachás).
+    function camposDeFichaDoProfessor() {
+      return ['nome', 'email', 'pais', 'telefone', 'status', 'documentoOk', 'uidLogin', 'workshops',
+              'updatedAt', 'createdAt', 'createdBy', 'roleCreator'];
+    }
     match /professores/{professorId} {
       allow read: if logado();
       // "documentoOk" só vale com o documento guardado na gaveta privada da ficha (documentos_ficha).
-      allow create, update: if logado() && !souProfessor()
+      allow create: if logado() && !souProfessor()
+        && (souAdmin() || request.resource.data.keys().hasOnly(camposDeFichaDoProfessor()))
         && (request.resource.data.get('documentoOk', false) != true
             || existsAfter(/databases/$(database)/documents/documentos_ficha/$(professorId)));
-      allow delete: if logado() && !souProfessor();
+      allow update: if logado() && !souProfessor()
+        && (souAdmin() || camposAlterados().hasOnly(camposDeFichaDoProfessor()))
+        && (request.resource.data.get('documentoOk', false) != true
+            || existsAfter(/databases/$(database)/documents/documentos_ficha/$(professorId)));
+      allow delete: if souAdmin();
+    }
+
+    // Vínculo professor × unidade (Etapa 2). Cria e apaga: admin, mentor da unidade e líder da unidade. Nunca se edita
+    // (só o admin, ao juntar fichas). Lê quem está logado.
+    function podeMexerNaUnidade(unidadeId) {
+      return unidadeId is string && unidadeId != '' && logado()
+        && ((meuPapel() == 'mentor' && mentorDaUnidadeId(unidadeId)) || liderDestaUnidade(unidadeId));
+    }
+    match /vinculos/{vinculoId} {
+      allow read: if logado();
+      allow create: if souAdmin()
+        || (request.resource.data.keys().hasOnly(['professorId', 'unidadeId', 'status', 'createdAt'])
+            && podeMexerNaUnidade(request.resource.data.get('unidadeId', '')));
+      allow update: if souAdmin();
+      allow delete: if souAdmin() || podeMexerNaUnidade(resource.data.get('unidadeId', ''));
     }
 
     // ===================== FERIADOS =====================
@@ -354,7 +431,7 @@ service cloud.firestore {
 
     function mentorPodeGravar(vid, d) {
       return meuPapel() == 'mentor'
-        && get(/databases/$(database)/documents/unidades/$(d.unidadeId)).data.get('mentorId', '') == meuMentorId()
+        && ehMeuMentor(get(/databases/$(database)/documents/unidades/$(d.unidadeId)).data.get('mentorId', ''))
         && idCerto(vid, d) && mesmaAulaEDia(d)
         && diaDa(d.data) <= hojeLocal()
         && (diaDa(d.data) >= inicioDoMes() || justificada(d))
@@ -375,7 +452,7 @@ service cloud.firestore {
       // Apagar = "reverter cancelamento" (só admin e mentor da unidade, como na tela).
       allow delete: if souAdmin()
         || (logado() && meuPapel() == 'mentor'
-            && get(/databases/$(database)/documents/unidades/$(resource.data.unidadeId)).data.get('mentorId', '') == meuMentorId());
+            && ehMeuMentor(get(/databases/$(database)/documents/unidades/$(resource.data.unidadeId)).data.get('mentorId', '')));
     }
 
     // ===================== CRACHÁS (usuarios) =====================
@@ -434,7 +511,7 @@ service cloud.firestore {
           && mentorDeTodas(unidadesDoAlvo())
           && (
             (camposAlterados().hasOnly(['temporarioAte']) && 'temporarioAte' in novo && novo.temporarioAte is timestamp
-              && novo.temporarioAte <= request.time + duration.value(61, 'd'))
+              && novo.temporarioAte <= request.time + duration.value(3650, 'd'))
             || (camposAlterados().hasOnly(['temporarioAte', 'temporarioDesde'])
               && !('temporarioAte' in novo) && !('temporarioDesde' in novo))
           );
@@ -481,11 +558,11 @@ service cloud.firestore {
       allow create: if liderTemporarioAceitaConvite(uid)
         || souAdmin()
         // Crachá de professor só nasce da APROVAÇÃO de um pedido (login do Google): nunca com e-mail e senha.
-        || (logado() && meuPapel() == 'mentor' && papelNovo() == 'professor' && request.resource.data.get('loginGoogle', false) == true)
+        || (logado() && meuPapel() == 'mentor' && papelNovo() == 'professor' && request.resource.data.get('loginGoogle', false) == true && semCobertura())
         || (logado() && meuPapel() == 'mentor' && papelNovo() in papeisLider()
-            && get(/databases/$(database)/documents/unidades/$(request.resource.data.unidadeId)).data.get('mentorId', '') == meuMentorId()
-            && request.resource.data.get('unidadeIds', [request.resource.data.unidadeId]) == [request.resource.data.unidadeId])
-        || (logado() && meuPapel() in papeisLider() && papelNovo() == 'professor' && request.resource.data.get('loginGoogle', false) == true)
+            && ehMeuMentor(get(/databases/$(database)/documents/unidades/$(request.resource.data.unidadeId)).data.get('mentorId', ''))
+            && request.resource.data.get('unidadeIds', [request.resource.data.unidadeId]) == [request.resource.data.unidadeId] && semCobertura())
+        || (logado() && meuPapel() in papeisLider() && papelNovo() == 'professor' && request.resource.data.get('loginGoogle', false) == true && semCobertura())
         // Mentor novo convidado pelo admin (aba Mentores): no 1º acesso pelo Google, a própria pessoa cria
         // o crachá dela, SÓ se houver convite pendente para o e-mail Google dela e com os dados do convite.
         || mentorAceitaConvite(uid);
@@ -530,7 +607,7 @@ service cloud.firestore {
         // Professor do login antigo (sem Google): a própria pessoa apaga o crachá antigo para poder pedir acesso.
         || (autenticado() && request.auth.uid == uid && papelDoAlvo() == 'professor' && resource.data.get('loginGoogle', false) != true)
         || (logado() && meuPapel() == 'mentor' && papelDoAlvo() in papeisLider()
-            && get(/databases/$(database)/documents/unidades/$(resource.data.unidadeId)).data.get('mentorId', '') == meuMentorId()
+            && ehMeuMentor(get(/databases/$(database)/documents/unidades/$(resource.data.unidadeId)).data.get('mentorId', ''))
             && unidadesDoAlvo().size() <= 1);
 
       // Favoritos do Pratique Play: cada pessoa mexe só nos próprios.
@@ -711,7 +788,14 @@ service cloud.firestore {
       // Grava: líder, mentor e admin; ou a própria pessoa, só com o próprio login.
       function podeGravar(d) { return gestorDeCadastro() || (logado() && d.get('uid', '') == request.auth.uid); }
       function minha() { return autenticado() && resource.data.get('uid', '') == request.auth.uid; }
-      allow get: if gestorDeCadastro() || minha();
+      // A da minha ficha (reserva só da ficha ligada ao meu login) também é minha.
+      function daMinhaFicha() {
+        return autenticado() && resource.data.get('professorId', '') != ''
+          && get(caminhoFicha(resource.data.professorId)).data.get('uidLogin', '') == request.auth.uid;
+      }
+      // Parte B: antes de salvar, a tela confere se o dado está livre. Logado pode saber que NÃO existe reserva
+      // (livre); a de outra pessoa continua fechada (a recusa = "já é de outra pessoa").
+      allow get: if gestorDeCadastro() || (autenticado() && resource == null) || minha() || daMinhaFicha();
       allow list: if souAdmin();
       allow create: if podeGravar(request.resource.data) && formatoOk(request.resource.data);
       // Só a MESMA pessoa atualiza: mantém o login ou a ficha de antes (ex.: junta o login à ficha ligada).
@@ -810,7 +894,7 @@ service cloud.firestore {
       // O mentor lê os convites de líder temporário dele (o convite guarda "mentorId" = escopo do mentor; consulta com where).
       allow read: if souAdmin() || souConvidado()
         || (logado() && meuPapel() == 'mentor' && resource.data.get('papel', '') == 'lider'
-            && resource.data.get('mentorId', '') == meuMentorId());
+            && ehMeuMentor(resource.data.get('mentorId', '')));
 
       allow create, update: if souAdmin()
         && request.resource.data.papel == 'mentor'
@@ -828,18 +912,18 @@ service cloud.firestore {
           && d.nome is string && d.nome.size() >= 3 && d.nome.size() <= 80
           && d.telefone is string && d.telefone.size() >= 6 && d.telefone.size() <= 30
           && ids is list && ids.size() >= 1 && ids.size() <= 5 && d.get('unidadeId', '') == ids[0]
-          && d.temporarioAte is timestamp && d.temporarioAte <= request.time + duration.value(61, 'd')
+          && d.temporarioAte is timestamp && d.temporarioAte <= request.time + duration.value(3650, 'd')
           && (d.status == 'cancelado' || d.temporarioAte > request.time)
           && d.get('mentorId', '') is string;
       }
       allow create: if conviteTemporarioOk() && request.resource.data.criadoPor == request.auth.uid
         && (souAdmin() || (logado() && meuPapel() == 'mentor'
-            && request.resource.data.get('mentorId', '') == meuMentorId()
+            && ehMeuMentor(request.resource.data.get('mentorId', ''))
             && mentorDeTodas(request.resource.data.get('unidadeIds', []))));
       allow update: if conviteTemporarioOk()
         && request.resource.data.criadoPor in [request.auth.uid, resource.data.get('criadoPor', '')]
         && (souAdmin() || (logado() && meuPapel() == 'mentor'
-            && request.resource.data.get('mentorId', '') == meuMentorId()
+            && ehMeuMentor(request.resource.data.get('mentorId', ''))
             && resource.data.get('papel', '') == 'lider'
             && mentorDeTodas(resource.data.get('unidadeIds', []))
             && mentorDeTodas(request.resource.data.get('unidadeIds', []))));
@@ -1032,7 +1116,7 @@ service cloud.firestore {
     // (No Firestore, se QUALQUER regra libera, a ação passa; por isso as exceções precisam estar aqui.)
     match /{colecao}/{resto=**} {
       allow read: if logado() && !(colecao in ['feriados_propostas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos', 'documentos_ficha', 'documentos_professor', 'contatos_unicos', 'telemetria_leituras', 'tabela_precos', 'workshops_cadastro', 'certificados_professor', 'atualizacoes_professor']);
-      allow write: if logado() && !(colecao in ['feriados', 'feriados_propostas', 'usuarios', 'publico', 'validacoes', 'aulas', 'aulas_publicas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'resumos_mensais', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos', 'professores', 'documentos_ficha', 'documentos_professor', 'contatos_unicos', 'telemetria_leituras', 'tabela_precos', 'workshops_cadastro', 'certificados_professor', 'atualizacoes_professor', 'unidades', 'configuracoes']) && !souProfessor();
+      allow write: if logado() && !(colecao in ['feriados', 'feriados_propostas', 'usuarios', 'publico', 'validacoes', 'aulas', 'aulas_publicas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'resumos_mensais', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos', 'professores', 'documentos_ficha', 'documentos_professor', 'contatos_unicos', 'telemetria_leituras', 'tabela_precos', 'workshops_cadastro', 'certificados_professor', 'atualizacoes_professor', 'unidades', 'configuracoes', 'vinculos']) && !souProfessor();
       allow create: if logado() && colecao in ['auditoria_cronograma', 'auditoria_configuracoes'];
     }
   }

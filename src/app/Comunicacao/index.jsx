@@ -1,4 +1,4 @@
-import { escopoMentor } from "../../permissions.js";
+import { ehDoMeuEscopo } from "../../permissions.js";
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../services/firebase';
@@ -153,7 +153,6 @@ export default function CentralComunicacao() {
     const { t } = useTranslation();
     const role = String(userData?.role || "").trim().toLowerCase();
     const userId = userData?.id || userData?.uid;
-    const escopoId = escopoMentor(userData); // id que vale como "mentor das unidades" (2º mentor usa o do 1º)
 
     const [loadingDb, setLoadingDb] = useState(false);
     const [processing, setProcessing] = useState(false);
@@ -207,7 +206,7 @@ export default function CentralComunicacao() {
                 if (!isMounted) return;
 
                 let unidadesData = uniSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-                if (role === 'mentor') unidadesData = unidadesData.filter(u => u.mentorId === escopoId);
+                if (role === 'mentor') unidadesData = unidadesData.filter(u => ehDoMeuEscopo(userData, u.mentorId));
 
                 const mentoresData = userSnap.docs.map(d => ({ id: d.id, ...d.data() })).filter(u => u.role === 'mentor');
 
@@ -221,7 +220,7 @@ export default function CentralComunicacao() {
         };
         fetchCatalogs();
         return () => { isMounted = false; };
-    }, [role, userId, escopoId]);
+    }, [role, userId, userData]);
 
     // OPÇÕES DE FILTROS DINÂMICOS
     const estadosOptions = useMemo(() => [...new Set(catalogs.unidades.map(u => u.estado).filter(Boolean))].sort().map(s => ({ id: s, nome: s })), [catalogs.unidades]);

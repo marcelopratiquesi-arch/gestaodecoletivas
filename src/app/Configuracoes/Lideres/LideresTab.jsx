@@ -1,4 +1,4 @@
-import { escopoMentor } from "../../../permissions.js";
+import { escoposMentor, ehDoMeuEscopo } from "../../../permissions.js";
 // Aba "Líderes": quem responde por cada unidade. A unidade é só um cadastro (nome, endereço...);
 // quem entra no sistema é o LÍDER, com login pessoal. Cada unidade tem até 2 líderes, e uma pessoa pode ser
 // líder de várias unidades (ver saidaDoLider.js).
@@ -39,7 +39,7 @@ import i18n from "../../../i18n";
 import CampoDocumento from "../../../components/acesso/CampoDocumento";
 import { documentoNoLote, gravarComAviso, ERRO_DOCUMENTO_EM_USO, excluirPedidoELiberar, liberarReserva } from "../../../services/documentoService";
 import { documentoValido, tipoDocumentoPadrao } from "../../../utils/documento";
-import { sincronizarEAvisar } from "../../../services/contatoService";
+import { mensagemSeContatoEmUso, sincronizarEAvisar } from "../../../services/contatoService";
 import { normalizarPais } from "../../../utils/feriados";
 
 const SENHA_MINIMA = 6;
@@ -63,7 +63,7 @@ export function LideresTab() {
 
   const role = String(userData?.role || "").trim().toLowerCase();
   const userId = userData?.id || userData?.uid;
-  const escopoId = escopoMentor(userData); // id que vale como "mentor das unidades" (2º mentor usa o do 1º)
+  const escopos = useMemo(() => escoposMentor(userData), [userData]); // mentores cujas unidades eu enxergo (o meu + o da cobertura)
   const meuNome = userData?.nome || userData?.email || "Admin";
   const podeAcessar = role === "admin" || role === "mentor";
 
@@ -86,8 +86,8 @@ export function LideresTab() {
 
   const minhasUnidades = useMemo(() => {
     const todas = catalogs?.unidades || [];
-    return role === "admin" ? todas : todas.filter((u) => u.mentorId === escopoId);
-  }, [catalogs?.unidades, role, escopoId]);
+    return role === "admin" ? todas : todas.filter((u) => ehDoMeuEscopo(userData, u.mentorId));
+  }, [catalogs?.unidades, role, userData]);
 
   // Selo "possível repetido" (mesmo telefone de outra pessoa): compara os líderes das unidades que a tela já tem.
   const registrosRepetidos = useMemo(() => {
@@ -179,6 +179,13 @@ export function LideresTab() {
     if (modal.modo === "editar") {
       setSalvando(true);
       try {
+        // Parte B: telefone novo que já é de outra pessoa não é salvo.
+        const bloqueio = await mensagemSeContatoEmUso({
+          dono: { uid: unidade.liderUid },
+          antes: { telefone: unidade.liderTelefone, pais: normalizarPais(unidade.pais) },
+          depois: { telefone, pais: normalizarPais(unidade.pais) },
+        }, t);
+        if (bloqueio) { setErro(bloqueio); return; }
         const batch = writeBatch(db);
         batch.update(doc(db, "usuarios", unidade.liderUid), { nome, telefone });
         batch.update(doc(db, "unidades", unidade.id), { liderNome: nome, liderTelefone: telefone });
@@ -223,6 +230,9 @@ export function LideresTab() {
       setSalvando(false);
       return setErro(t("document.search.deleteError"));
     }
+    // Parte B: e-mail/telefone que já é de outra pessoa não vira cadastro novo.
+    const bloqueio = await mensagemSeContatoEmUso({ depois: { email, telefone, pais: normalizarPais(unidade.pais) } }, t);
+    if (bloqueio) { setSalvando(false); return setErro(bloqueio); }
     try {
       // Cria a conta de login num "app secundário", para o admin/mentor não ser deslogado.
       appSecundario = initializeApp(getApp().options, `CadastroLider_${Date.now()}`);
@@ -340,7 +350,7 @@ export function LideresTab() {
       )}
 
       {/* LÍDERES TEMPORÁRIOS (convite pelo e-mail do Google, com prazo) */}
-      <TemporariosSecao role={role} escopoId={escopoId} unidades={catalogs?.unidades || []}
+      <TemporariosSecao role={role} escopos={escopos} unidades={catalogs?.unidades || []}
         quem={{ id: userId, nome: meuNome, email: userData?.email }} registrarAuditoria={registrarAuditoria} />
 
       {/* LISTA DE UNIDADES E SEUS LÍDERES */}

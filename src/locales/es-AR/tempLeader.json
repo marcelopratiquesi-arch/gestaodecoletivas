@@ -27,7 +27,7 @@
   "send": "Enviar invitación",
   "days_one": "{{count}} día",
   "days_other": "{{count}} días",
-  "deadlineHint": "Hoy cuenta como el día 1 y el acceso vale hasta las 23:59 (Brasilia) del último día. Máximo {{max}} días, y se puede prorrogar después.",
+  "deadlineHint": "Hoy cuenta como el día 1 y el acceso vale hasta las 23:59 (Brasilia) del último día. Vos elegís la fecha y se puede prorrogar después.",
   "modalTitle": "Invitar líder temporal",
   "modalSubtitle": "La persona entra con Google usando el e-mail de abajo y queda como líder de las unidades elegidas.",
   "sectionPerson": "Persona",
@@ -63,5 +63,29 @@
   "central": {
     "title": "Líderes temporales",
     "until": "Hasta {{date}}"
+  },
+  "preset": {
+    "m3": "3 meses",
+    "m6": "6 meses",
+    "y1": "1 año"
+  },
+  "mentor": {
+    "add": "Mentor temporal (cobertura por plazo)",
+    "title": "Mentor temporal",
+    "help": "Da acceso a las unidades de {{mentor}} por un plazo, con el mismo acceso (incluidas las que reciba después). La persona sigue siendo lo que es: si ya es mentor, conserva también sus unidades. Puede haber varias personas cubriendo al mismo mentor. Solo lo habilita el admin.",
+    "keeps": "Sigue siendo {{role}} y gana acceso a las unidades de este mentor hasta el fin del plazo.",
+    "confirm": "¿Darle a {{name}} acceso a las unidades de {{mentor}} hasta el {{date}} 23:59? Después de esa fecha vuelve solo a su acceso anterior.",
+    "done": "{{name}} ahora cubre las unidades hasta el fin del plazo.",
+    "badge": "Cubre a {{name}}",
+    "has": "Cobertura: {{name}}",
+    "end": "Terminar cobertura",
+    "endConfirm": "¿Terminar ahora la cobertura de {{name}} sobre las unidades de {{mentor}}? Vuelve a su acceso anterior.",
+    "chip": "Cubre a {{nome}} hasta {{date}}",
+    "coverLabel": "Mentor temporal (hasta {{date}})",
+    "coverField": "Mentor temporal",
+    "bannerTitleToday": "Tu cobertura de mentor termina HOY a las 23:59.",
+    "bannerTitleDays_one": "Tu cobertura de mentor termina en {{count}} día ({{date}}).",
+    "bannerTitleDays_other": "Tu cobertura de mentor termina en {{count}} días ({{date}}).",
+    "bannerHelp": "Después de esa fecha volvés a tu acceso normal. Para seguir, pedile al administrador que lo prorrogue."
   }
 }

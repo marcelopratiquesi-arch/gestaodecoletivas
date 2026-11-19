@@ -45,7 +45,7 @@ describe('2º mentor', () => {
     expect(motivoQueBloqueia({ role: 'professor' })).toBe(null);
     expect(motivoQueBloqueia({ role: 'unidade' })).toBe(null);
     expect(motivoQueBloqueia({ role: 'admin' })).toBe('admin');
-    expect(motivoQueBloqueia({ role: 'mentor' })).toBe('alreadyMentor');
+    expect(motivoQueBloqueia({ role: 'mentor' }, { temUnidades: true })).toBe('mentorWithUnits');
     expect(motivoQueBloqueia({ role: 'bloqueado' })).toBe('blocked');
     expect(motivoQueBloqueia(null)).toBe('noLogin');
   });
