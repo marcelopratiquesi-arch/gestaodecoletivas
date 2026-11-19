@@ -785,14 +785,35 @@ service cloud.firestore {
         && request.resource.data.itens is map && request.resource.data.itens.size() <= 120;
     }
 
+    // ===================== CADASTRO DE WORKSHOPS (Cofre Master > Loja & Eventos > Workshops) =====================
+    // workshops_cadastro/{id}: nome, modalidade, data (AAAA-MM-DD), local, status, titular (opcional).
+    // Só admin e mentor leem e gravam. Workshop com participantes (totalParticipantes > 0) não pode ser apagado.
+    function workshopCadastroOk(d) {
+      return d.keys().hasOnly(['nome', 'modalidade', 'data', 'local', 'status', 'titularProfessorId', 'titularNome',
+                               'totalParticipantes', 'duplicadoDe', 'criadoEm', 'criadoPor', 'atualizadoEm', 'atualizadoPor'])
+        && d.nome is string && d.nome.size() >= 3 && d.nome.size() <= 150
+        && d.modalidade in ['Jump', 'Power Dance', 'Power Training', 'Energy Jump', 'Power Core', 'Power Fight', 'Power Bumbum']
+        && d.data is string && d.data.size() == 10
+        && d.status in ['agendado', 'realizado', 'cancelado']
+        && (!('local' in d) || (d.local is string && d.local.size() <= 150))
+        && (!('titularNome' in d) || (d.titularNome is string && d.titularNome.size() <= 150))
+        && (!('titularProfessorId' in d) || d.titularProfessorId is string)
+        && (!('totalParticipantes' in d) || (d.totalParticipantes is int && d.totalParticipantes >= 0));
+    }
+    match /workshops_cadastro/{workshopId} {
+      allow read: if adminOuMentor();
+      allow create, update: if adminOuMentor() && workshopCadastroOk(request.resource.data);
+      allow delete: if adminOuMentor() && resource.data.get('totalParticipantes', 0) == 0;
+    }
+
     // ===================== DEMAIS COLEÇÕES =====================
     // Logados leem e escrevem (como antes), EXCETO as coleções com regra própria acima
     // (usuarios, publico, validacoes, solicitacoes_acesso, convites_acesso, documentos_*, resumos_mensais e telemetria_leituras).
     // Professor não grava nada aqui, só cria registros de auditoria (log da validação e do "Sair").
     // (No Firestore, se QUALQUER regra libera, a ação passa; por isso as exceções precisam estar aqui.)
     match /{colecao}/{resto=**} {
-      allow read: if logado() && !(colecao in ['feriados_propostas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos', 'documentos_ficha', 'documentos_professor', 'contatos_unicos', 'telemetria_leituras']);
-      allow write: if logado() && !(colecao in ['feriados', 'feriados_propostas', 'usuarios', 'publico', 'validacoes', 'aulas', 'aulas_publicas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'resumos_mensais', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos', 'professores', 'documentos_ficha', 'documentos_professor', 'contatos_unicos', 'telemetria_leituras', 'unidades', 'configuracoes']) && !souProfessor();
+      allow read: if logado() && !(colecao in ['feriados_propostas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos', 'documentos_ficha', 'documentos_professor', 'contatos_unicos', 'telemetria_leituras', 'workshops_cadastro']);
+      allow write: if logado() && !(colecao in ['feriados', 'feriados_propostas', 'usuarios', 'publico', 'validacoes', 'aulas', 'aulas_publicas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'resumos_mensais', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos', 'professores', 'documentos_ficha', 'documentos_professor', 'contatos_unicos', 'telemetria_leituras', 'workshops_cadastro', 'unidades', 'configuracoes']) && !souProfessor();
       allow create: if logado() && colecao in ['auditoria_cronograma', 'auditoria_configuracoes'];
     }
   }
