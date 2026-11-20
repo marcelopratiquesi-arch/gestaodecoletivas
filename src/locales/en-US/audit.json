@@ -50,5 +50,7 @@
   "newValue": "New value",
   "systemNotes": "System notes:",
   "loadMore": "Load 30 more",
-  "viewAll": "Nuclear option: view all for this period ({{count}})"
+  "viewAll": "Nuclear option: view all for this period ({{count}})",
+  "viewedAs": "Done by the administrator while viewing the system as someone else",
+  "viewedAsShort": "viewing as {{tipo}}: {{nome}}"
 }

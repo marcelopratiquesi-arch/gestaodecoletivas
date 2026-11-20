@@ -4,6 +4,7 @@ import { doc, getDoc, updateDoc, deleteDoc, collection, addDoc, serverTimestamp 
 import { auth, db } from "../services/firebase"; // ✅ caminho correto
 import { crachaSemAcesso, professorDeLoginAntigo, papelEfetivo, coberturaAtiva, AVISO_SEM_ACESSO, AVISO_PROFESSOR_LOGIN_ANTIGO } from "../permissions";
 import { temporarioVencido } from "../utils/temporario";
+import { definirVisaoAtual } from "../services/visaoAdminAtual";
 
 const AuthContext = createContext(null);
 
@@ -195,6 +196,11 @@ export function AuthProvider({ children }) {
     () => (crachaReal && ehAdminReal ? crachaDaVisao(crachaReal, visaoAdmin) : crachaReal),
     [crachaReal, ehAdminReal, visaoAdmin]
   );
+
+  // Avisa o carimbo de auditoria (ver services/firestoreMedido.js) de quem o admin está vendo agora.
+  useEffect(() => {
+    definirVisaoAtual(crachaReal && ehAdminReal ? visaoAdmin : null);
+  }, [crachaReal, ehAdminReal, visaoAdmin]);
 
   const definirVisaoAdmin = useCallback((visao) => {
     setVisaoAdminEstado(visao || null);

@@ -50,5 +50,7 @@
   "newValue": "Nuevo valor",
   "systemNotes": "Observaciones del sistema:",
   "loadMore": "Cargar 30 más",
-  "viewAll": "Opción nuclear: ver todos de este período ({{count}})"
+  "viewAll": "Opción nuclear: ver todos de este período ({{count}})",
+  "viewedAs": "Hecho por el administrador mientras veía el sistema como otra persona",
+  "viewedAsShort": "viendo como {{tipo}}: {{nome}}"
 }
