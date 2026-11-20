@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
 import { ehLider, ehDoMeuEscopo } from '../../permissions';
 import { useLocation } from "react-router-dom";
 import { temaDaAba } from "./ui/temas";
+import { useTelaGrande } from "./ui/useTelaGrande";
 
 // --- LAZY LOADING ---
 const UnidadesTab = lazy(() => import('./Unidades/UnidadesTab').then(module => ({ default: module.UnidadesTab })));
@@ -39,6 +40,7 @@ const TabLoading = () => {
 export default function ConfiguracoesPage() {
   const { userData, loading } = useAuth();
   const { t } = useTranslation(); // 🟢 CÉREBRO CONECTADO NO COMPONENTE PRINCIPAL
+  const computador = useTelaGrande(); // >= 1024 px: barra de menus fixa no topo; no celular fica como era
   
   const role = useMemo(() => String(userData?.role || "").trim().toLowerCase(), [userData?.role]);
   // Número vermelho da aba Líderes: unidades SEM LÍDER (o que a pessoa enxerga). Os pedidos de acesso e os
@@ -104,6 +106,70 @@ export default function ConfiguracoesPage() {
   if (loading) return <div className="flex h-screen items-center justify-center text-slate-400"><Loader2 className="w-10 h-10 animate-spin"/></div>;
   if (!userData) return null;
 
+  const pode = (id) => activeTab === id && allowedTabs.some(t => t.id === id);
+  const conteudo = (
+    <Suspense fallback={<TabLoading />}>
+        <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+            {pode("unidades") && <UnidadesTab />}
+            {pode("lideres") && <LideresTab />}
+            {pode("mentores") && <MentoresTab />}
+            {pode("modalidades") && <ModalidadesTab />}
+            {pode("professores") && <ProfessoresTab />}
+            {pode("feriados") && <FeriadosTab />}
+            {pode("workshops") && <WorkshopsTab />}
+            {pode("pratique-play") && <PratiquePlayTab />}
+            {pode("backup") && <BackupTab />}
+        </div>
+    </Suspense>
+  );
+
+  // COMPUTADOR: barra horizontal fixa no topo (não some ao rolar) com a marca e as abas; o conteúdo de cada aba
+  // não muda. Líderes tem o próprio desenho de página (sem a moldura branca); as outras abas seguem na moldura.
+  if (computador) {
+    return (
+      <div className="min-h-screen bg-neutral-100 dark:bg-neutral-950 animate-fade-in">
+        <header className="sticky top-0 z-30 bg-white border-b border-neutral-200 dark:bg-neutral-900 dark:border-neutral-800">
+          <div className="max-w-[1440px] mx-auto px-6 py-2.5 flex items-center gap-4">
+            <div className="flex items-center gap-2.5 shrink-0">
+              <span aria-hidden="true" className="w-9 h-9 rounded-[10px] bg-red-600 text-white inline-flex items-center justify-center font-black text-lg">P</span>
+              <div>
+                <div className="text-[10px] font-extrabold uppercase tracking-[0.1em] text-neutral-500">{t('settingsPage.bar.panel', 'Painel')}</div>
+                <div className="text-sm font-black text-neutral-900 dark:text-white">{t('settingsPage.bar.settings', 'Configurações')}</div>
+              </div>
+            </div>
+            <span aria-hidden="true" className="w-px h-8 bg-neutral-200 dark:bg-neutral-800 shrink-0" />
+            <nav aria-label={t('settingsPage.bar.settings', 'Configurações')} className="flex gap-0.5 overflow-x-auto no-scrollbar flex-1 min-w-0">
+              {allowedTabs.map((tab) => {
+                const Icon = tab.icon;
+                const ativo = activeTab === tab.id;
+                return (
+                  <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)} aria-current={ativo ? "page" : undefined}
+                    className={`inline-flex items-center gap-2 h-10 px-3 rounded-[10px] text-sm whitespace-nowrap shrink-0 transition-colors ${ativo
+                      ? "bg-red-600 text-white font-extrabold"
+                      : "font-semibold text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"}`}>
+                    <Icon className="w-[17px] h-[17px] shrink-0" aria-hidden="true" />
+                    {tab.label}
+                    {tab.contador > 0 && (
+                      <span className={`px-[7px] py-px rounded-full text-[11px] font-black ${ativo ? "bg-white text-red-700" : "bg-red-600 text-white"}`}>{tab.contador}</span>
+                    )}
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
+        </header>
+
+        <main className="max-w-[1440px] mx-auto p-6">
+          {activeTab === "lideres" ? conteudo : (
+            <div className={`bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 min-h-[600px] relative ${temaAtivo.faixa}`}>
+              {conteudo}
+            </div>
+          )}
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 md:p-10 animate-fade-in max-w-[1600px] mx-auto min-h-screen">
       
@@ -152,19 +218,7 @@ export default function ConfiguracoesPage() {
 
       {/* ÁREA DE CONTEÚDO */}
       <div className={`bg-white dark:bg-slate-800 rounded-b-2xl shadow-sm border-x border-b border-slate-200 dark:border-slate-700 min-h-[600px] relative transition-colors duration-300 ${temaAtivo.faixa}`}>
-        <Suspense fallback={<TabLoading />}>
-            <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-                {activeTab === "unidades" && allowedTabs.some(t => t.id === 'unidades') && <UnidadesTab />}
-                {activeTab === "lideres" && allowedTabs.some(t => t.id === 'lideres') && <LideresTab />}
-                {activeTab === "mentores" && allowedTabs.some(t => t.id === 'mentores') && <MentoresTab />}
-                {activeTab === "modalidades" && allowedTabs.some(t => t.id === 'modalidades') && <ModalidadesTab />}
-                {activeTab === "professores" && allowedTabs.some(t => t.id === 'professores') && <ProfessoresTab />}
-                {activeTab === "feriados" && allowedTabs.some(t => t.id === 'feriados') && <FeriadosTab />}
-                {activeTab === "workshops" && allowedTabs.some(t => t.id === 'workshops') && <WorkshopsTab />}
-                {activeTab === "pratique-play" && allowedTabs.some(t => t.id === 'pratique-play') && <PratiquePlayTab />}
-                {activeTab === "backup" && allowedTabs.some(t => t.id === 'backup') && <BackupTab />}
-            </div>
-        </Suspense>
+        {conteudo}
       </div>
     </div>
   );
