@@ -2,6 +2,7 @@ import { ehLider, unidadesDoLider, ehDoMeuEscopo } from '../../permissions';
 import React, { useState, useEffect, useMemo } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
+import SeletorVisaoAdmin from "./SeletorVisaoAdmin";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useCatalogs } from "../../contexts/CatalogContext";
 import { db } from "../../services/firebase";
@@ -73,8 +74,9 @@ export default function Sidebar({ collapsed }) {
   // Professor de coletiva só vê: Cronograma, Link do Aluno e Validação Diária.
   const isProfessor = role === 'professor';
 
-  const userInitials = userData?.nome 
-    ? (userData.nome.split(' ')[0][0] + (userData.nome.split(' ').length > 1 ? userData.nome.split(' ').pop()[0] : '')).toUpperCase()
+  const nomeExibido = userData?.visaoAdmin?.nome || userData?.nome;
+  const userInitials = nomeExibido 
+    ? (nomeExibido.split(' ')[0][0] + (nomeExibido.split(' ').length > 1 ? nomeExibido.split(' ').pop()[0] : '')).toUpperCase()
     : "US";
 
   const path = location.pathname;
@@ -349,6 +351,9 @@ export default function Sidebar({ collapsed }) {
 
         <nav className="flex-1 overflow-y-auto px-4 space-y-6 custom-scrollbar py-4" onClick={(e) => {setShowNotifications(false); setIsLangMenuOpen(false);}}>
           
+          {/* VER COMO (só o administrador de verdade enxerga): mentor, líder/unidade ou professor */}
+          <SeletorVisaoAdmin collapsed={collapsed} />
+
           {/* 🟢 SELETOR DE IDIOMA MAGNÍFICO (NO TOPO) */}
           <div className="relative mb-6 mx-1">
               <button 
@@ -454,7 +459,7 @@ export default function Sidebar({ collapsed }) {
             </div>
             {!collapsed && (
               <div className="overflow-hidden">
-                <p className="text-sm font-bold text-slate-800 dark:text-white truncate">{userData.nome?.split(' ')[0]}</p>
+                <p className="text-sm font-bold text-slate-800 dark:text-white truncate">{(userData.visaoAdmin?.nome || userData.nome)?.split(' ')[0]}</p>
                 <p className="text-[10px] text-slate-400 font-bold uppercase">{formatRole(role)}</p>
               </div>
             )}
