@@ -78,7 +78,8 @@ export const AVISO_PROFESSOR_LOGIN_ANTIGO = "pratique_aviso_professor_login_anti
 // nas unidades dele (unidades.mentorId continua sendo o do 1º). Toda tela que filtra "minhas unidades" compara
 // unidades.mentorId com ESTE id (para o 1º mentor e para todo o resto, é o próprio id).
 export function escopoMentor(userData) {
-  return userData?.mentorPrincipalId || userData?.id || userData?.uid;
+  // escopoMentorId: só existe na visão do administrador ("ver como" mentor); o id de quem grava continua sendo o do admin.
+  return userData?.escopoMentorId || userData?.mentorPrincipalId || userData?.id || userData?.uid;
 }
 // COBERTURA (mentor temporário): acesso EXTRA, com data de fim, às unidades de OUTRO mentor. O crachá guarda
 // coberturaMentorId + coberturaAte e o papel de verdade NÃO muda: enquanto vale, a pessoa age como mentor (papel

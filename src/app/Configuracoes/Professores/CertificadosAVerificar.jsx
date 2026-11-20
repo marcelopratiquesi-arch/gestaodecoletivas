@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import { Award, Check, X, Loader2, Building2, User, Info } from "lucide-react";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useCatalogs } from "../../../contexts/CatalogContext";
-import { unidadesDoLider } from "../../../permissions";
+import { unidadesDoLider, ehDoMeuEscopo } from "../../../permissions";
 import { adicionarWorkshopAoProfessor, listarPendentes, recusarCertificado, registrarWorkshopVerificado, verificarCertificado } from "../../../services/certificadoService";
 
 export default function CertificadosAVerificar() {
@@ -20,9 +20,9 @@ export default function CertificadosAVerificar() {
 
   const unidadeIds = useMemo(() => {
     if (admin) return [];
-    if (role === "mentor") return (catalogs?.unidades || []).filter((u) => u.mentorId === userId).map((u) => String(u.id));
+    if (role === "mentor") return (catalogs?.unidades || []).filter((u) => ehDoMeuEscopo(userData, u.mentorId)).map((u) => String(u.id));
     return unidadesDoLider(userData);
-  }, [admin, role, catalogs?.unidades, userId, userData]);
+  }, [admin, role, catalogs?.unidades, userData]);
   const chave = unidadeIds.join(",");
 
   const [lista, setLista] = useState([]);

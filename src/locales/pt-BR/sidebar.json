@@ -40,5 +40,22 @@
   },
   "changeLanguage": "Mudar Idioma",
   "changeTheme": "Mudar Tema",
-  "logout": "Sair"
+  "logout": "Sair",
+  "viewAs": {
+    "title": "Ver como",
+    "navigation": "Tipo de navegação",
+    "choose": "Escolher…",
+    "backToAdmin": "Voltar ao administrador",
+    "types": {
+      "admin": "Administrador",
+      "mentor": "Mentor",
+      "lider": "Líder / Unidade",
+      "professor": "Professor"
+    },
+    "pick": {
+      "mentor": "Qual mentor?",
+      "lider": "Qual unidade?",
+      "professor": "Qual professor?"
+    }
+  }
 }

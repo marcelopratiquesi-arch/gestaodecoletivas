@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Check, X, Loader2, Building2, User, UserCog, Info } from "lucide-react";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useCatalogs } from "../../../contexts/CatalogContext";
-import { unidadesDoLider } from "../../../permissions";
+import { unidadesDoLider, ehDoMeuEscopo } from "../../../permissions";
 import { aprovarAtualizacao, listarAtualizacoesPendentes, recusarAtualizacao } from "../../../services/atualizacaoProfessorService";
 import { resumoContrato } from "../../../utils/contrato";
 import { fichasDoLogin } from "../../../utils/unidadeDoProfessor";
@@ -21,9 +21,9 @@ export default function AtualizacoesAConferir() {
 
   const unidadeIds = useMemo(() => {
     if (admin) return [];
-    if (role === "mentor") return (catalogs?.unidades || []).filter((u) => u.mentorId === userId).map((u) => String(u.id));
+    if (role === "mentor") return (catalogs?.unidades || []).filter((u) => ehDoMeuEscopo(userData, u.mentorId)).map((u) => String(u.id));
     return unidadesDoLider(userData);
-  }, [admin, role, catalogs?.unidades, userId, userData]);
+  }, [admin, role, catalogs?.unidades, userData]);
   const chave = unidadeIds.join(",");
   const podeVer = admin || (["mentor", "lider", "unidade"].includes(role) && unidadeIds.length > 0);
 
