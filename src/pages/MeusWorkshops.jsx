@@ -25,8 +25,12 @@ const hojeISO = () => {
 export default function MeusWorkshops() {
   const { t } = useTranslation();
   const { user, userData } = useAuth();
-  const uid = user?.uid;
   const { catalogs } = useCatalogs();
+  // Admin em "Ver como professor": envia no lugar do professor; o certificado fica na conta (login) dele.
+  const vendoComo = userData?.visaoAdmin?.tipo === "professor";
+  const fichaVista = vendoComo ? (catalogs?.professores || []).find((p) => String(p.id) === String(userData?.professorId)) : null;
+  const uid = vendoComo ? (fichaVista?.uidLogin || "") : user?.uid;
+  const nomeDono = String((vendoComo ? fichaVista?.nome : userData?.nome) || user?.email || "-").slice(0, 80);
   const arquivoRef = useRef(null);
 
   // Unidade que confere: escolhida sozinha (a do crachá; crachá antigo sem unidade = 1ª unidade dos vínculos).
@@ -86,7 +90,7 @@ export default function MeusWorkshops() {
     if (!destino) return setErro(t("certificates.errors.chooseUnit"));
     setProcessando(true);
     try {
-      await enviarCertificado({ uid, unidadeId: destino.unidadeId, vinculoId: destino.vinculoId, nome: userData?.nome || user?.email || "-", workshopId: escolhido.id, modalidade: escolhido.modalidade, workshop: escolhido.nome, dataFeito: escolhido.data, foto });
+      await enviarCertificado({ uid, unidadeId: destino.unidadeId, vinculoId: destino.vinculoId, nome: nomeDono, workshopId: escolhido.id, modalidade: escolhido.modalidade, workshop: escolhido.nome, dataFeito: escolhido.data, foto });
       if (substitui) { try { await apagarCertificado(substitui); } catch (e) { console.error(e); } }
       limpar();
       await carregar();
@@ -117,7 +121,11 @@ export default function MeusWorkshops() {
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">{t("certificates.subtitle")}</p>
       </div>
 
-      {opcoesUnidade.length === 0 ? (
+      {vendoComo && !uid ? (
+        <div className="flex gap-2 text-sm text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-xl p-4">
+          <AlertTriangle className="w-5 h-5 shrink-0" /> {t("certificates.viewAsNoLogin")}
+        </div>
+      ) : opcoesUnidade.length === 0 ? (
         <div className="flex gap-2 text-sm text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-xl p-4">
           <AlertTriangle className="w-5 h-5 shrink-0" /> {t("certificates.noUnit")}
         </div>

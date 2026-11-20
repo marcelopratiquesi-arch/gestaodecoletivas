@@ -66,5 +66,6 @@
     "error": "No se pudo guardar la revisión."
   },
   "loadingList": "Cargando workshops...",
-  "alreadyListed": "ya figura"
+  "alreadyListed": "ya figura",
+  "viewAsNoLogin": "Este profesor todavía no tiene login en el sistema, así que el certificado no tiene dónde quedar. Agregá su workshop desde la pestaña Profesores (botón Workshops)."
 }
