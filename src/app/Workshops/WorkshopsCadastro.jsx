@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
-import { Calendar, Loader2, Plus, X, Copy, Edit, Trash2, Users, ListPlus, Search, Upload, Award } from 'lucide-react';
+import { Calendar, Loader2, Plus, X, Copy, Edit, Trash2, Users, ListPlus, Search, Upload, Award, UserCheck } from 'lucide-react';
 import { useCatalogs } from '../../contexts/CatalogContext';
 import { useAuth } from '../../contexts/AuthContext';
 import ModalWorkshop from './ModalWorkshop';
@@ -11,6 +11,7 @@ import { planejarCompletarModalidade } from '../../utils/completarModalidade';
 import { gravarWorkshopsCompletados } from '../../services/certificadoService';
 import ImportarLista from './ImportarLista';
 import ParticipantesWorkshop from './ParticipantesWorkshop';
+import QuemFez from './QuemFez';
 import {
   ouvirWorkshops, criarWorkshop, atualizarWorkshop, duplicarWorkshop, excluirWorkshop,
   criarWorkshopsEmLote, buscarTitularPorDocumento,
@@ -46,6 +47,7 @@ export default function WorkshopsCadastro() {
   const podeEditar = souAdmin || String(userData?.role || '').trim().toLowerCase() === 'mentor';
   const [importando, setImportando] = useState(null); // workshop
   const [verPart, setVerPart] = useState(null); // workshop
+  const [verQuem, setVerQuem] = useState(false);
   const [lista, setLista] = useState(null);
   const [erroCarga, setErroCarga] = useState(false);
   const [filtroStatus, setFiltroStatus] = useState('todos');
@@ -205,6 +207,7 @@ export default function WorkshopsCadastro() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
+          <button type="button" onClick={() => setVerQuem(true)} className={`${botao} bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-700`}><UserCheck className="w-4 h-4" /> {t('shop.ws.who.btn')}</button>
           {souAdmin && <button type="button" onClick={completarModalidades} disabled={salvando || lista === null} className={`${botao} bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-60`}><Award className="w-4 h-4" /> {t('shop.ws.fillModality')}</button>}
           {podeEditar && <button type="button" onClick={abrirRapido} className={`${botao} bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-700`}><ListPlus className="w-4 h-4" /> {t('shop.ws.quick')}</button>}
           {podeEditar && <button type="button" onClick={abrirNovo} className={`${botao} bg-red-600 text-white hover:bg-red-700 shadow-lg shadow-slate-500/20`}><Plus className="w-4 h-4" /> {t('shop.ws.newBtn')}</button>}
@@ -271,6 +274,7 @@ export default function WorkshopsCadastro() {
         {visiveis.length === 0 && <div className="py-12 text-center text-slate-400 text-xs font-bold uppercase tracking-widest border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-3xl">{t('shop.ws.none')}</div>}
       </div>
 
+      {verQuem && <QuemFez workshops={lista || []} professores={professores || []} unidades={unidades || []} onClose={() => setVerQuem(false)} />}
       {importando && (
         <ImportarLista workshop={importando} professores={professores || []} unidades={unidades || []} onClose={() => setImportando(null)} onVerParticipantes={() => { setVerPart(importando); setImportando(null); }} />
       )}
