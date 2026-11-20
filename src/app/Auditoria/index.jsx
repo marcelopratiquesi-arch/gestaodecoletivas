@@ -363,6 +363,11 @@ export default function AuditoriaPage() {
                                                             <span className="font-black text-slate-700 dark:text-slate-300 text-xs">
                                                                 {log.usuarioAcaoNome || log.usuarioNome || t('audit.defaultUser')}
                                                             </span>
+                                                            {log.vistoComo?.tipo && (
+                                                                <span className="text-[9px] font-black uppercase tracking-wider text-amber-600 bg-amber-50 border border-amber-200 dark:bg-amber-900/20 dark:border-amber-800 dark:text-amber-400 px-1.5 py-0.5 rounded" title={t('audit.viewedAs')}>
+                                                                    {t('audit.viewedAsShort', { tipo: t(`sidebar.viewAs.types.${log.vistoComo.tipo}`), nome: log.vistoComo.nome })}
+                                                                </span>
+                                                            )}
                                                         </div>
                                                     </td>
 

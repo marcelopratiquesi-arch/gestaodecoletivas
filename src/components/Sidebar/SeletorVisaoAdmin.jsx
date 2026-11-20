@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Eye, ChevronDown, X } from "lucide-react";
+import { Eye, ChevronDown, X, Search, Clock } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../../contexts/AuthContext";
 import { useCatalogs } from "../../contexts/CatalogContext";
@@ -14,6 +14,85 @@ const porNome = (a, b) => String(a.nome || "").localeCompare(String(b.nome || ""
 
 const classeSelect =
   "w-full appearance-none rounded-lg border bg-white py-2 pl-3 pr-8 text-xs font-bold text-slate-700 outline-none transition-colors focus:border-red-400 dark:bg-slate-800 dark:text-slate-200";
+
+// Últimas pessoas escolhidas, por tipo (só neste navegador; se o storage falhar, a lista simplesmente não existe).
+const CHAVE_RECENTES = "pratique_visao_recentes";
+const lerRecentes = () => {
+  try { return JSON.parse(localStorage.getItem(CHAVE_RECENTES) || "{}") || {}; } catch { return {}; }
+};
+const guardarRecente = (tipo, valor) => {
+  try {
+    const todos = lerRecentes();
+    todos[tipo] = [valor, ...(todos[tipo] || []).filter((v) => v !== valor)].slice(0, 4);
+    localStorage.setItem(CHAVE_RECENTES, JSON.stringify(todos));
+  } catch { /* sem guardar, só não lembra */ }
+};
+
+const semAcento = (txt) => String(txt || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+
+// Lista com busca por nome (digita e filtra) e, com a busca vazia, as últimas escolhas no topo.
+function CaixaBusca({ opcoes, recentes, valor, onEscolher, rotulo, t }) {
+  const [aberta, setAberta] = useState(false);
+  const [busca, setBusca] = useState("");
+  const campo = useRef(null);
+
+  const atual = opcoes.find((o) => o.valor === valor);
+  const termo = semAcento(busca.trim());
+  const filtradas = termo ? opcoes.filter((o) => semAcento(o.nome).includes(termo)) : opcoes;
+  const recentesVisiveis = termo ? [] : recentes.map((v) => opcoes.find((o) => o.valor === v)).filter(Boolean);
+
+  const fechar = () => { setAberta(false); setBusca(""); };
+  const escolher = (o) => { fechar(); onEscolher(o.valor); };
+
+  const Item = ({ o }) => (
+    <button
+      type="button"
+      onClick={() => escolher(o)}
+      className={`block w-full truncate px-3 py-2 text-left text-xs transition-colors ${o.valor === valor ? "bg-red-50 font-bold text-red-600 dark:bg-red-900/20 dark:text-red-400" : "text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700"}`}
+    >
+      {o.nome}
+    </button>
+  );
+
+  return (
+    <div className="block">
+      <span className="mb-1 block px-1 text-[9px] font-black uppercase tracking-widest text-slate-400">{rotulo}</span>
+      <div className="relative">
+        <div className={`flex items-center gap-2 rounded-lg border bg-white px-3 py-2 dark:bg-slate-800 ${atual ? "border-amber-300 dark:border-amber-700" : "border-slate-200 dark:border-slate-700"} ${aberta ? "border-red-400" : ""}`}>
+          <Search className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+          <input
+            ref={campo}
+            value={aberta ? busca : (atual?.nome || "")}
+            placeholder={t("sidebar.viewAs.search")}
+            onFocus={() => setAberta(true)}
+            onChange={(e) => { setBusca(e.target.value); setAberta(true); }}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") { fechar(); campo.current?.blur(); }
+              if (e.key === "Enter" && filtradas[0]) { e.preventDefault(); escolher(filtradas[0]); campo.current?.blur(); }
+            }}
+            className="min-w-0 flex-1 bg-transparent text-xs font-bold text-slate-700 outline-none placeholder:font-medium placeholder:text-slate-400 dark:text-slate-200"
+          />
+        </div>
+        {aberta && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={fechar} />
+            <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-60 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-800">
+              {recentesVisiveis.length > 0 && (
+                <div className="border-b border-slate-100 dark:border-slate-700">
+                  <p className="flex items-center gap-1 px-3 pt-2 text-[9px] font-black uppercase tracking-widest text-slate-400"><Clock className="h-3 w-3" /> {t("sidebar.viewAs.recent")}</p>
+                  {recentesVisiveis.map((o) => <Item key={`r-${o.valor}`} o={o} />)}
+                </div>
+              )}
+              {filtradas.length === 0
+                ? <p className="px-3 py-3 text-center text-xs font-bold text-slate-400">{t("sidebar.viewAs.noResults")}</p>
+                : filtradas.map((o) => <Item key={o.valor} o={o} />)}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function SeletorVisaoAdmin({ collapsed }) {
   const { t } = useTranslation();
@@ -62,6 +141,7 @@ export default function SeletorVisaoAdmin({ collapsed }) {
   const escolherPessoa = (valor) => {
     const op = opcoes.find((o) => o.valor === valor);
     if (!op) return;
+    guardarRecente(tipoAtual, op.valor);
     definirVisaoAdmin({ tipo: tipoAtual, nome: op.nome, ...op.dados });
     setTipoEscolhido(null);
     navigate(tipoAtual === "professor" ? "/app/validacao-diaria" : "/app");
@@ -90,20 +170,15 @@ export default function SeletorVisaoAdmin({ collapsed }) {
       </label>
 
       {tipoAtual !== "admin" && (
-        <label className="block">
-          <span className="mb-1 block px-1 text-[9px] font-black uppercase tracking-widest text-slate-400">{t(`sidebar.viewAs.pick.${tipoAtual}`)}</span>
-          <div className="relative">
-            <select
-              value={valorAtual}
-              onChange={(e) => escolherPessoa(e.target.value)}
-              className={`${classeSelect} ${valorAtual ? "border-amber-300 dark:border-amber-700" : "border-slate-200 dark:border-slate-700"}`}
-            >
-              <option value="" disabled>{t("sidebar.viewAs.choose")}</option>
-              {opcoes.map((o) => <option key={o.valor} value={o.valor}>{o.nome}</option>)}
-            </select>
-            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
-          </div>
-        </label>
+        <CaixaBusca
+          key={tipoAtual}
+          opcoes={opcoes}
+          recentes={lerRecentes()[tipoAtual] || []}
+          valor={valorAtual}
+          onEscolher={escolherPessoa}
+          rotulo={t(`sidebar.viewAs.pick.${tipoAtual}`)}
+          t={t}
+        />
       )}
 
       {ativo && (

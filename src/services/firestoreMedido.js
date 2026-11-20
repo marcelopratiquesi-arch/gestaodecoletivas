@@ -14,6 +14,8 @@
 import {
   getDocs as _getDocs,
   getDoc as _getDoc,
+  addDoc as _addDoc,
+  writeBatch as _writeBatch,
   onSnapshot as _onSnapshot,
   getCountFromServer,
   collection,
@@ -22,8 +24,29 @@ import {
 } from 'firebase/firestore'
 import { db } from './firebase'
 import { registrarLeituras } from './telemetriaLeituras'
+import { lerVisaoAtual } from './visaoAdminAtual'
 
 export * from 'firebase/firestore'
+
+// AUDITORIA DA VISÃO DE ADMIN: se o administrador está "vendo como" mentor/líder/professor, todo registro de auditoria
+// que ele gravar leva o campo `vistoComo` ({ tipo, nome }). O autor continua sendo o login real dele.
+function carimbarVisao(ref, dados) {
+  const visao = lerVisaoAtual()
+  const caminho = String(ref?.path || ref?.parent?.path || '')
+  if (!visao || !caminho.startsWith('auditoria_') || !dados || typeof dados !== 'object') return dados
+  return { ...dados, vistoComo: visao }
+}
+
+export function addDoc(ref, dados, ...resto) {
+  return _addDoc(ref, carimbarVisao(ref, dados), ...resto)
+}
+
+export function writeBatch(...args) {
+  const lote = _writeBatch(...args)
+  const setOriginal = lote.set.bind(lote)
+  lote.set = (ref, dados, ...resto) => setOriginal(ref, carimbarVisao(ref, dados), ...resto)
+  return lote
+}
 
 const estado = { total: 0, porTela: {}, porColecao: {}, chamadas: 0 }
 

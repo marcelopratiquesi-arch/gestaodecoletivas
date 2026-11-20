@@ -56,6 +56,11 @@
       "mentor": "¿Qué mentor?",
       "lider": "¿Qué unidad?",
       "professor": "¿Qué profesor?"
-    }
+    },
+    "banner": "Viendo como {{tipo}}: {{nome}}",
+    "bannerHint": "Estás en la vista de otra persona. Las acciones valen como administrador.",
+    "recent": "Recientes",
+    "search": "Buscar…",
+    "noResults": "Sin resultados"
   }
 }
