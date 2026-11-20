@@ -123,22 +123,14 @@ export default function ConfiguracoesPage() {
     </Suspense>
   );
 
-  // COMPUTADOR: barra horizontal fixa no topo (não some ao rolar) com a marca e as abas; o conteúdo de cada aba
+  // COMPUTADOR: barra horizontal fixa no topo (não some ao rolar) só com as abas; o conteúdo de cada aba
   // não muda. Líderes tem o próprio desenho de página (sem a moldura branca); as outras abas seguem na moldura.
   if (computador) {
     return (
       <div className="min-h-screen bg-slate-100 dark:bg-slate-950 animate-fade-in">
         <header className="sticky top-0 z-30 bg-white border-b border-slate-200 dark:bg-slate-900 dark:border-slate-800">
           <div className="max-w-[1440px] mx-auto px-6 py-2.5 flex items-center gap-4">
-            <div className="flex items-center gap-2.5 shrink-0">
-              <span aria-hidden="true" className="w-9 h-9 rounded-[10px] bg-red-600 text-white inline-flex items-center justify-center font-black text-lg">P</span>
-              <div>
-                <div className="text-[10px] font-extrabold uppercase tracking-[0.1em] text-slate-500">{t('settingsPage.bar.panel', 'Painel')}</div>
-                <div className="text-sm font-black text-slate-900 dark:text-white">{t('settingsPage.bar.settings', 'Configurações')}</div>
-              </div>
-            </div>
-            <span aria-hidden="true" className="w-px h-8 bg-slate-200 dark:bg-slate-800 shrink-0" />
-            <nav aria-label={t('settingsPage.bar.settings', 'Configurações')} className="flex gap-0.5 overflow-x-auto no-scrollbar flex-1 min-w-0">
+            <nav aria-label={t('settingsPage.bar.settings', 'Configurações')} className="flex gap-0.5 overflow-x-auto flex-1 min-w-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {allowedTabs.map((tab) => {
                 const Icon = tab.icon;
                 const ativo = activeTab === tab.id;
