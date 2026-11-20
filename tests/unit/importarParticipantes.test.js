@@ -88,3 +88,14 @@ describe('montarConferencia', () => {
     expect(por('dani@provedor.com')).toMatchObject({ cls: 'c', incluir: true });
   });
 });
+
+describe('arquivo sem check-in', () => {
+  it('vale só o pagamento aprovado quando ninguém tem check-in', async () => {
+    const { arquivoUsaCheckin } = await import('../../src/utils/importarParticipantes');
+    const linhas = [{ nome: 'Ana', email: 'ana@x.com', telefones: [], pagamento: 'Aprovado', checkin: 'Não', linha: 1 }, { nome: 'Bia', email: 'bia@x.com', telefones: [], pagamento: 'Pendente', checkin: 'Não', linha: 2 }];
+    expect(arquivoUsaCheckin(linhas)).toBe(false);
+    const c = montarConferencia(linhas, []);
+    expect(c.map((x) => [x.nome, x.incluir])).toEqual([['Ana', true], ['Bia', false]]);
+    expect(arquivoUsaCheckin([{ checkin: 'Sim' }])).toBe(true);
+  });
+});

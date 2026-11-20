@@ -52,7 +52,10 @@ export function lerLista(rows) {
 }
 
 /** Só conta como "fez o workshop": pagamento aprovado E check-in feito. */
-export const contaComoPresente = (l) => minusculo(l.pagamento) === 'aprovado' && ['sim', 's', 'yes'].includes(minusculo(l.checkin));
+export const contaComoPresente = (l, exigirCheckin = true) => minusculo(l.pagamento) === 'aprovado' && (!exigirCheckin || ['sim', 's', 'yes'].includes(minusculo(l.checkin)));
+
+/** O arquivo usa check-in? Se ninguém tem "Sim", a plataforma não foi usada na porta: vale só o pagamento aprovado. */
+export const arquivoUsaCheckin = (linhas) => (linhas || []).some((l) => ['sim', 's', 'yes'].includes(minusculo(l.checkin)));
 
 const emailUsavel = (e) => !!e && emailFormatoValido(e) && !emailDeMentira(e);
 const limparId = (s) => String(s).toLowerCase().replace(/[^a-z0-9@._+-]/g, '_').slice(0, 100);
@@ -61,13 +64,13 @@ const limparId = (s) => String(s).toLowerCase().replace(/[^a-z0-9@._+-]/g, '_').
 export const idParticipante = (p) => (emailUsavel(p.email) ? `e_${limparId(p.email)}` : `n_${limparId(normalizarNome(p.nome))}`);
 
 /** Junta as linhas da mesma pessoa (mesmo e-mail; vários ingressos): conta se alguma linha conta. */
-export function juntarPessoas(linhas) {
+export function juntarPessoas(linhas, exigirCheckin = true) {
   const mapa = new Map();
   for (const l of linhas) {
     const base = { nome: l.nome, email: l.email, telefones: l.telefones };
     const id = idParticipante(base);
     const atual = mapa.get(id);
-    const conta = contaComoPresente(l);
+    const conta = contaComoPresente(l, exigirCheckin);
     if (!atual) { mapa.set(id, { id, ...base, pagamento: l.pagamento, checkin: l.checkin, conta, linhas: [l.linha] }); continue; }
     atual.linhas.push(l.linha);
     atual.telefones = [...new Set([...atual.telefones, ...l.telefones])];
@@ -94,7 +97,13 @@ export function acharProfessor(pessoa, fichas) {
     const porTel = !!kt && tels.has(kt);
     if (porEmail || porTel) achadas.push({ ficha: f, porEmail, porTel });
   }
-  if (!achadas.length) return { cls: 'c', grupos: [], grupoSel: -1 };
+  if (!achadas.length) {
+    // Nem e-mail nem telefone: tenta o nome completo igual (sem acento/caixa). Vira amarelo, para o admin conferir.
+    const k = normalizarNome(pessoa.nome);
+    const mesmas = k.split(' ').length >= 2 ? (fichas || []).filter((f) => normalizarNome(f.nome) === k) : [];
+    if (!mesmas.length) return { cls: 'c', grupos: [], grupoSel: -1 };
+    return { cls: 'a', grupos: [{ nome: mesmas[0].nome, fichas: mesmas, email: false, tel: false }], grupoSel: 0 };
+  }
 
   const porNome = new Map();
   for (const a of achadas) {
@@ -116,8 +125,8 @@ export function acharProfessor(pessoa, fichas) {
 }
 
 /** Passa por todas as pessoas do arquivo e monta as linhas da tela de conferência. */
-export function montarConferencia(linhas, fichas) {
-  return juntarPessoas(linhas).map((p) => {
+export function montarConferencia(linhas, fichas, exigirCheckin = arquivoUsaCheckin(linhas)) {
+  return juntarPessoas(linhas, exigirCheckin).map((p) => {
     const r = acharProfessor(p, fichas);
     const cls = p.conta ? r.cls : 'x';
     return { ...p, cls, achado: r.cls, grupos: r.grupos, grupoSel: r.grupoSel, incluir: p.conta };
