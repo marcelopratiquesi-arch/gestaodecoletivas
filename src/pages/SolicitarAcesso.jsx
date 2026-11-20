@@ -6,7 +6,7 @@
 // A lista de unidades vem da vitrine pública (só nome, cidade, estado e nome do mentor).
 // Mentor cadastrado pelo admin com este e-mail do Google (convites_acesso/{e-mail}): em vez do pedido,
 // aparece "Entrar como mentor" — o cadastro feito pelo admin já é a aprovação (regra mentorAceitaConvite).
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { doc, getDoc, onSnapshot, serverTimestamp, writeBatch } from "firebase/firestore";
 import { useTranslation } from "react-i18next";
@@ -23,11 +23,14 @@ import CampoDocumento from "../components/acesso/CampoDocumento";
 import SeletorModalidades from "../components/acesso/SeletorModalidades";
 import CampoContrato from "../components/acesso/CampoContrato";
 import { contratoVazio, validarContrato } from "../utils/contrato";
-import { documentoValido, formatarDocumento, tipoDocumentoPadrao } from "../utils/documento";
+import { documentoValido, formatarDocumento, limparDocumento, tipoDocumentoDoPais, tipoDocumentoPadrao } from "../utils/documento";
+import { normalizarPais } from "../utils/feriados";
+import { DDI_MAP, formatarTelefone, exemploDeTelefone } from "../app/Configuracoes/ui/telefone";
+import { lerNascimento, nascimentoValido } from "../services/meuCadastroService";
 import { documentoNoLote, gravarComAviso, lerDocumentoDoPedido, ERRO_DOCUMENTO_EM_USO } from "../services/documentoService";
 import { sincronizarEAvisar } from "../services/contatoService";
 import { diaDoFim } from "../utils/temporario";
-import { ICONE_FUNCAO, useUnidadesPublicas, lerPapelPedido, guardarPapelPedido, FUNCOES_PEDIDO, LIMITE_MODALIDADES } from "../components/acesso/acessoDados";
+import { ICONE_FUNCAO, useUnidadesPublicas, useModalidadesAtivas, modalidadesDaUnidade, lerPapelPedido, guardarPapelPedido, FUNCOES_PEDIDO, LIMITE_MODALIDADES } from "../components/acesso/acessoDados";
 
 const Carregando = () => (
   <FundoAcesso><Marca compacta /><div className="flex justify-center py-10"><Loader2 className="w-8 h-8 animate-spin text-red-600" /></div></FundoAcesso>
@@ -56,6 +59,7 @@ export default function SolicitarAcesso() {
   const [docTipo, setDocTipo] = useState(() => tipoDocumentoPadrao(i18n.language));
   const [docNumero, setDocNumero] = useState("");
   const [docAnterior, setDocAnterior] = useState(null); // documento do pedido anterior (se refizer o pedido)
+  const [nascimento, setNascimento] = useState(""); // professor: data de nascimento (opcional), guardada na gaveta privada
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState("");
 
@@ -138,6 +142,38 @@ export default function SolicitarAcesso() {
   const unidades = useUnidadesPublicas(precisaFormulario || !!pedido || temporario);
   const porId = useMemo(() => new Map((unidades || []).map((u) => [u.id, u])), [unidades]);
 
+  // Professor: o PAÍS da unidade escolhida decide a máscara do WhatsApp e o documento (Brasil CPF, Argentina DNI, EUA SSN),
+  // e a unidade decide quais modalidades aparecem. Sem unidade escolhida ainda vale o Brasil.
+  const ehProfessor = papel === "professor";
+  const unidadeEscolhida = porId.get(unidadeIds[0]) || null;
+  const pais = normalizarPais(unidadeEscolhida?.pais);
+  const todasModalidades = useModalidadesAtivas(precisaFormulario && ehProfessor);
+  const modalidadesDaQuestao = modalidadesDaUnidade(todasModalidades, unidadeEscolhida);
+  const paisAnterior = useRef(pais);
+  useEffect(() => {
+    if (!ehProfessor || paisAnterior.current === pais) return;
+    paisAnterior.current = pais;
+    setTelefone((v) => formatarTelefone(v, pais));
+    const tipo = tipoDocumentoDoPais(pais);
+    setDocTipo(tipo);
+    setDocNumero((v) => formatarDocumento(tipo, limparDocumento(v)));
+  }, [ehProfessor, pais]);
+  // Trocou de unidade: as modalidades marcadas que não existem na nova saem.
+  useEffect(() => {
+    if (!ehProfessor || !todasModalidades || !unidadeEscolhida) return;
+    const permitidas = new Set(modalidadesDaQuestao.map((m) => m.nome));
+    setModalidades((v) => {
+      const mantidas = String(v || "").split(",").map((x) => x.trim()).filter((x) => x && permitidas.has(x)).join(", ");
+      return mantidas === v ? v : mantidas;
+    });
+  }, [ehProfessor, todasModalidades, unidadeEscolhida]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Pedido anterior: traz a data de nascimento que já tinha informado.
+  useEffect(() => {
+    if (!precisaFormulario || !uid || !pedido || pedido.papel !== "professor") return;
+    lerNascimento(uid).then((d) => { if (d) setNascimento((v) => v || d); }).catch((e) => console.error(e));
+  }, [precisaFormulario, uid, pedido]);
+
   // Pedido anterior (recusado ou em edição): traz o documento que já tinha informado.
   useEffect(() => {
     if (!precisaFormulario || !uid || !pedido) return;
@@ -168,7 +204,8 @@ export default function SolicitarAcesso() {
     if (telefone.replace(/\D/g, "").length < 8) return setErro(t("accessRequest.errors.phone"));
     if (!unidadeIds.length) return setErro(t("accessRequest.errors.unit"));
     if (modalidades.length > LIMITE_MODALIDADES) return setErro(t("accessRequest.errors.modalities"));
-    if (papel === "professor" && !modalidades.trim()) return setErro(t("accessRequest.errors.modalitiesRequired"));
+    if (papel === "professor" && modalidadesDaQuestao.length > 0 && !modalidades.trim()) return setErro(t("accessRequest.errors.modalitiesRequired"));
+    if (papel === "professor" && !nascimentoValido(nascimento)) return setErro(t("accessRequest.errors.birth"));
     if (!documentoValido(docTipo, docNumero)) return setErro(t("document.errors.invalid"));
     const contratoOk = papel === "professor" ? validarContrato(contrato) : null;
     if (contratoOk && !contratoOk.ok) return setErro(t(`accessRequest.contract.errors.${contratoOk.erro}`));
@@ -178,7 +215,7 @@ export default function SolicitarAcesso() {
       const ids = unidadeIds.slice(0, papel === "professor" ? 1 : MAX_UNIDADES_PEDIDO); // professor escolhe UMA unidade
       const batch = writeBatch(db);
       batch.set(doc(db, "solicitacoes_acesso", uid), {
-        nome: nome.trim(),
+        nome: papel === "professor" ? nome.trim().replace(/\s+/g, " ").toUpperCase() : nome.trim(),
         telefone: telefone.trim(),
         papel,
         unidadeId: ids[0],
@@ -194,6 +231,7 @@ export default function SolicitarAcesso() {
         criadoEm: serverTimestamp(),
       });
       documentoNoLote(batch, { uid, tipo: docTipo, numero: docNumero, anterior: docAnterior, noPedido: true });
+      if (papel === "professor" && nascimento) batch.set(doc(db, "nascimentos", uid), { nascimento, atualizadoEm: serverTimestamp() });
       await gravarComAviso(batch);
       guardarPapelPedido(papel);
       setEditando(false);
@@ -343,7 +381,7 @@ export default function SolicitarAcesso() {
           <label htmlFor="pedido-nome" className={classeRotulo}>{t("accessRequest.fields.name")}</label>
           <div className="relative">
             <User className="absolute left-4 top-3.5 w-4 h-4 text-zinc-500" />
-            <input id="pedido-nome" value={nome} onChange={(e) => setNome(e.target.value)} maxLength={80} className={campo} placeholder={t("accessRequest.fields.namePlaceholder")} />
+            <input id="pedido-nome" value={nome} onChange={(e) => setNome(e.target.value)} maxLength={80} className={`${campo} uppercase placeholder:normal-case`} placeholder={t("accessRequest.fields.namePlaceholder")} />
           </div>
         </div>
 
@@ -351,7 +389,8 @@ export default function SolicitarAcesso() {
           <label htmlFor="pedido-telefone" className={classeRotulo}>{t("accessRequest.fields.phone")}</label>
           <div className="relative">
             <Phone className="absolute left-4 top-3.5 w-4 h-4 text-zinc-500" />
-            <input id="pedido-telefone" value={telefone} onChange={(e) => setTelefone(e.target.value)} maxLength={30} inputMode="tel" className={campo} placeholder={t("accessRequest.fields.phonePlaceholder")} />
+            <input id="pedido-telefone" value={telefone} onChange={(e) => setTelefone(ehProfessor ? formatarTelefone(e.target.value, pais) : e.target.value)} maxLength={30} inputMode="tel" className={ehProfessor ? campo.replace("pl-11", "pl-[5.5rem]") : campo} placeholder={ehProfessor ? exemploDeTelefone(pais) : t("accessRequest.fields.phonePlaceholder")} />
+            {ehProfessor && <span className="absolute left-11 top-3.5 text-sm font-black text-zinc-400">{DDI_MAP[pais]}</span>}
           </div>
         </div>
 
@@ -364,16 +403,28 @@ export default function SolicitarAcesso() {
           {t(papel === "mentor" ? "accessRequest.hints.mentorUnits" : papel === "professor" ? "accessRequest.hints.teacherUnit" : "accessRequest.hints.leaderUnits", { max: MAX_UNIDADES_PEDIDO })}
         </p>
         {papel === "professor" && (
-          <SeletorModalidades id="pedido-modalidades" valor={modalidades} onChange={setModalidades} desabilitado={enviando} />
+          <SeletorModalidades id="pedido-modalidades" valor={modalidades} onChange={setModalidades} unidade={unidadeEscolhida} desabilitado={enviando} />
         )}
         {papel === "professor" && (
           <CampoContrato id="pedido-contrato" valor={contrato} onChange={setContrato} unidades={unidades || []} desabilitado={enviando} />
         )}
 
         <div className="space-y-1">
-          <CampoDocumento id="pedido-documento" tipo={docTipo} onTipo={setDocTipo} valor={docNumero} onValor={setDocNumero} desabilitado={enviando} />
+          <CampoDocumento id="pedido-documento" key={ehProfessor ? pais : "doc"} tipoDoPais={ehProfessor ? tipoDocumentoDoPais(pais) : undefined} tipo={docTipo} onTipo={setDocTipo} valor={docNumero} onValor={setDocNumero} desabilitado={enviando} />
           <p className="text-[11px] text-zinc-500 ml-1">{t("document.hint")}</p>
         </div>
+
+        {ehProfessor && (
+          <div className="space-y-1">
+            <label htmlFor="pedido-nascimento" className={classeRotulo}>{t("accessRequest.fields.birth")}</label>
+            <input
+              id="pedido-nascimento" type="date" value={nascimento} min="1920-01-01" max={new Date().toISOString().slice(0, 10)}
+              onChange={(e) => setNascimento(e.target.value)} disabled={enviando}
+              className="w-full bg-zinc-900/50 border border-zinc-700 text-white font-bold px-4 py-3 rounded-xl focus:border-red-600 outline-none [color-scheme:dark]"
+            />
+            <p className="text-[11px] text-zinc-500 ml-1">{t("accessRequest.hints.birth")}</p>
+          </div>
+        )}
 
         {papel === "lider" && (
           <div className="space-y-1.5">

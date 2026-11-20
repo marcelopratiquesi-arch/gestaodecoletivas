@@ -313,7 +313,36 @@ service cloud.firestore {
         && (souAdmin() || camposAlterados().hasOnly(camposDeFichaDoProfessor()))
         && (request.resource.data.get('documentoOk', false) != true
             || existsAfter(/databases/$(database)/documents/documentos_ficha/$(professorId)));
+      // "Meu cadastro": o professor atualiza na hora só o CONTATO da PRÓPRIA ficha (a ligada ao login dele).
+      // Contrato, documento, status e vínculo continuam com quem gerencia.
+      allow update: if logado() && souProfessor() && resource.data.get('uidLogin', '') == request.auth.uid
+        && camposAlterados().hasOnly(['nome', 'email', 'pais', 'telefone', 'updatedAt'])
+        && request.resource.data.nome is string && request.resource.data.nome.size() >= 3 && request.resource.data.nome.size() <= 80
+        && request.resource.data.get('telefone', '') is string && request.resource.data.get('telefone', '').size() <= 30
+        && request.resource.data.get('pais', 'BR') in ['BR', 'AR', 'US']
+        && request.resource.data.get('email', '') is string && request.resource.data.get('email', '').size() <= 120;
       allow delete: if souAdmin();
+    }
+
+    // Data de nascimento (professor): gaveta privada, id = login da pessoa; nunca no crachá aberto nem na ficha.
+    // Lê: a própria pessoa, o admin, o mentor e o líder da unidade dela (para dar parabéns). Grava: ela e o admin.
+    // A própria pessoa só precisa estar logada: quem ainda não tem crachá (pedido de acesso do professor) também grava a dela.
+    match /nascimentos/{uid} {
+      function nascimentoValido() {
+        let d = request.resource.data;
+        return d.keys().hasOnly(['nascimento', 'atualizadoEm']) && d.nascimento is string
+          && d.nascimento.matches('^(19|20)[0-9]{2}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$');
+      }
+      function unidadeDeQuemNasceu() { return get(/databases/$(database)/documents/usuarios/$(uid)).data.get('unidadeId', ''); }
+      allow read: if (autenticado() && request.auth.uid == uid) || souAdmin()
+        || (logado() && meuPapel() == 'mentor' && mentorDaUnidadeId(unidadeDeQuemNasceu()))
+        || (logado() && liderDestaUnidade(unidadeDeQuemNasceu()))
+        // Pedido de acesso de professor ainda pendente: quem vai aprovar (líder da unidade, mentor dela) já vê.
+        || (logado() && exists(/databases/$(database)/documents/solicitacoes_acesso/$(uid))
+            && (liderDoPedidoProfessor(get(/databases/$(database)/documents/solicitacoes_acesso/$(uid)).data)
+                || mentorDoPedido(get(/databases/$(database)/documents/solicitacoes_acesso/$(uid)).data)));
+      allow create, update: if nascimentoValido() && ((autenticado() && request.auth.uid == uid) || souAdmin());
+      allow delete: if souAdmin() || (autenticado() && request.auth.uid == uid);
     }
 
     // Vínculo professor × unidade (Etapa 2). Cria e apaga: admin, mentor da unidade e líder da unidade. Nunca se edita
@@ -573,6 +602,15 @@ service cloud.firestore {
         // "Último acesso": a própria pessoa carimba só esse campo, com a hora do servidor (a aba Mentores mostra).
         if (request.auth.uid == uid && logado() && camposAlterados().hasOnly(['ultimoAcesso'])
             && request.resource.data.ultimoAcesso == request.time)
+        // "Meu cadastro" do professor: ele mesmo salva na hora os dados de contato (nome, telefone, país, e-mail de contato).
+        // O e-mail de LOGIN (email) e o papel não mudam por aqui. Fica em 2º lugar e começa pelas checagens baratas
+        // (esta regra já usa quase todo o limite de 1000 verificações do banco: no fim da lista o professor não chegava a ser avaliado).
+        || (request.auth.uid == uid && camposAlterados().hasOnly(['nome', 'telefone', 'pais', 'emailContato'])
+            && request.resource.data.nome is string && request.resource.data.nome.size() >= 3 && request.resource.data.nome.size() <= 80
+            && request.resource.data.telefone is string && request.resource.data.telefone.size() >= 6 && request.resource.data.telefone.size() <= 30
+            && request.resource.data.get('pais', 'BR') in ['BR', 'AR', 'US']
+            && request.resource.data.get('emailContato', '') is string && request.resource.data.get('emailContato', '').size() <= 120
+            && papelDoAlvo() == 'professor' && logado())
         // Depois de gravar o documento na gaveta privada, a PRÓPRIA pessoa só marca "documentoOk" no crachá
         // (o banco confere que o documento existe de verdade, na mesma gravação ou antes).
         || (request.auth.uid == uid && logado() && camposAlterados().hasOnly(['documentoOk'])
@@ -1157,8 +1195,8 @@ service cloud.firestore {
     // (No Firestore, se QUALQUER regra libera, a ação passa; por isso as coleções com regra própria precisam estar na
     // lista de exceções de leitura e de escrita aqui embaixo.)
     match /{colecao}/{resto=**} {
-      allow read: if logado() && !(colecao in ['feriados_propostas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos', 'documentos_ficha', 'documentos_professor', 'contatos_unicos', 'telemetria_leituras', 'tabela_precos', 'workshops_cadastro', 'certificados_professor', 'atualizacoes_professor', 'indicadores_mensais', 'auditoria_financeiro', 'unipower_stock', 'unipower_workshops', 'unipower_transacoes']);
-      allow write: if souAdmin() && !(colecao in ['feriados', 'feriados_propostas', 'usuarios', 'publico', 'validacoes', 'aulas', 'aulas_publicas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'resumos_mensais', 'documentos_privados', 'documentos_do_pedido', 'documentos_unicos', 'professores', 'documentos_ficha', 'documentos_professor', 'contatos_unicos', 'telemetria_leituras', 'tabela_precos', 'workshops_cadastro', 'certificados_professor', 'atualizacoes_professor', 'unidades', 'configuracoes', 'vinculos']);
+      allow read: if logado() && !(colecao in ['feriados_propostas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'documentos_privados', 'nascimentos', 'documentos_do_pedido', 'documentos_unicos', 'documentos_ficha', 'documentos_professor', 'contatos_unicos', 'telemetria_leituras', 'tabela_precos', 'workshops_cadastro', 'certificados_professor', 'atualizacoes_professor', 'indicadores_mensais', 'auditoria_financeiro', 'unipower_stock', 'unipower_workshops', 'unipower_transacoes']);
+      allow write: if souAdmin() && !(colecao in ['feriados', 'feriados_propostas', 'usuarios', 'publico', 'validacoes', 'aulas', 'aulas_publicas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'resumos_mensais', 'documentos_privados', 'nascimentos', 'documentos_do_pedido', 'documentos_unicos', 'professores', 'documentos_ficha', 'documentos_professor', 'contatos_unicos', 'telemetria_leituras', 'tabela_precos', 'workshops_cadastro', 'certificados_professor', 'atualizacoes_professor', 'unidades', 'configuracoes', 'vinculos']);
     }
   }
 }

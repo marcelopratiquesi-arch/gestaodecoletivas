@@ -3,7 +3,7 @@
 // - Aprovar cria o crachá de professor (role "professor", unidadeId, modalidades) e fecha o pedido.
 //   Antes de aprovar, quem aprova vê as fichas da grade que parecem ser a mesma pessoa (documento, e-mail, telefone)
 //   e pode LIGAR uma delas ao novo login. Sem ligar, nada da grade é mexido (o líder liga depois, como sempre foi).
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { doc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { useTranslation } from "react-i18next";
 import { Check, X, Loader2, Building2, Phone, Mail, User, Clock, Dumbbell, Info } from "lucide-react";
@@ -17,7 +17,22 @@ import FichaDoPedido from "./FichaDoPedido";
 import { aprovarProfessorPedido } from "../../../services/aprovarProfessorService";
 import { normalizarPais } from "../../../utils/feriados";
 import { resumoContrato } from "../../../utils/contrato";
+import { formatarNascimento } from "../../../utils/nascimento";
+import { lerNascimento } from "../../../services/meuCadastroService";
 import { avisoDeConflito, confirmarSeContatoEmUso } from "../../../services/contatoService";
+
+// Data de nascimento que o professor informou no pedido (1 leitura por cartão; some se não informou ou não pode ver).
+function NascimentoDoPedido({ uid }) {
+  const { t } = useTranslation();
+  const [valor, setValor] = useState("");
+  useEffect(() => {
+    let vivo = true;
+    lerNascimento(uid).then((v) => { if (vivo) setValor(v); }).catch(() => {});
+    return () => { vivo = false; };
+  }, [uid]);
+  if (!valor) return null;
+  return <p className="text-xs text-slate-500 ml-6">{t("pendingTab.teacher.birth")}: <b>{formatarNascimento(valor)}</b></p>;
+}
 
 const formatarData = (ts, idioma) => {
   const d = ts?.toDate?.();
@@ -135,6 +150,7 @@ export default function PedidosProfessor() {
                   {t("accessRequest.contract.pending")}: <b>{resumoContrato(p, (id) => (catalogs?.unidades || []).find((u) => String(u.id) === String(id))?.nome || id)}</b>
                 </p>
                 <p className="text-xs text-emerald-600 dark:text-emerald-400 font-bold ml-6">{t("pendingTab.teacher.documentOk")}</p>
+                <NascimentoDoPedido uid={p.id} />
               </div>
               <FichaDoPedido pedido={p} fichas={catalogs?.professores || []} pais={normalizarPais(unidade?.pais)} podeVerDocumento={podeVerDocumento}
                 ocupado={ocupado} onMudar={(e) => setFichasEscolhidas((prev) => ({ ...prev, [p.id]: e }))} />

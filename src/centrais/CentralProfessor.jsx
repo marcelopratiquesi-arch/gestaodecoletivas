@@ -27,8 +27,9 @@ import { Campo, Vazio, Numero, EstadoCarga, SeletorDeMes } from './pecas/Basicos
 import { GraficoBarras, EvolucaoMeses } from './pecas/Graficos';
 import { BOTAO_PRINCIPAL, BOTAO_BRANCO, TH, TD, SELO_ATIVO, SELO_INATIVO } from './pecas/cores';
 import { QuadroEmDia, GradeSemanal } from './secoes';
-import { CampoDocumento, CampoUltimoAcesso } from './CamposDaPessoa';
+import { CampoDocumento, CampoNascimento, CampoUltimoAcesso } from './CamposDaPessoa';
 import { lerDocumento } from '../services/documentoService';
+import { ehLider } from '../permissions';
 import { lerDocumentoDaFicha } from '../services/documentoFichaService';
 import LinkCentral from './LinkCentral';
 import { resumoContrato } from '../utils/contrato';
@@ -135,7 +136,10 @@ export default function CentralProfessor({ id: professorId, z, textoVoltar, onFe
   // CPF/DNI/SSN do professor: só admin e mentor leem a gaveta da ficha (o banco confere).
   const papelDeQuemOlha = String(userData?.role || '').trim().toLowerCase();
   const podeVerDocumento = ['admin', 'administrador', 'master', 'mentor'].includes(papelDeQuemOlha);
-  const lerDocumentoDaGrade = async (id) => (await lerDocumentoDaFicha(id)) || (professor.uidLogin ? lerDocumento(professor.uidLogin) : null);
+  // Nascimento: admin, mentor e líder da unidade (o banco confere a unidade).
+  const podeVerNascimento = podeVerDocumento || ehLider(papelDeQuemOlha);
+  // O documento que a própria pessoa atualizou em "Meu cadastro" (gaveta do login) vale mais que o antigo da ficha.
+  const lerDocumentoDaGrade = async (id) => (professor.uidLogin ? await lerDocumento(professor.uidLogin) : null) || (await lerDocumentoDaFicha(id));
   const ativo = professor.status === 'ativo';
   const faltam = itens.filter((i) => !i.ok).length;
   const totalNaSemana = aulasNaSemana(aulas);
@@ -427,6 +431,7 @@ export default function CentralProfessor({ id: professorId, z, textoVoltar, onFe
           {modalidades.length > 0 ? modalidades.map((m) => m.nome).join(', ') : t('centrais.semAulaNaGrade')}
         </Campo>
         <CampoDocumento pode={podeVerDocumento} chave={String(professor.id)} leitor={lerDocumentoDaGrade} />
+        <CampoNascimento pode={podeVerNascimento} uid={professor.uidLogin} />
         <CampoUltimoAcesso uid={professor.uidLogin} />
       </div>
       {pode.cfgProfessores && (

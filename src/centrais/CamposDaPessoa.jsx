@@ -7,6 +7,8 @@ import { IdCard } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { db } from '../services/firebase';
 import { formatarDocumento } from '../utils/documento';
+import { formatarNascimento } from '../utils/nascimento';
+import { lerNascimento } from '../services/meuCadastroService';
 import { Campo } from './pecas/Basicos';
 import Contato from './pecas/Contato';
 import { UltimoAcessoTexto } from './secoes';
@@ -38,6 +40,19 @@ export function CampoDocumento({ pode, chave, leitor, rotulo }) {
       {carregando ? '…' : erro ? t('centrais.naoCarregou') : dado
         ? <Contato icone={IdCard} texto={formatarDocumento(dado.tipo, dado.numero)} copiar />
         : t('centrais.naoInformado')}
+    </Campo>
+  );
+}
+
+// Data de nascimento (gaveta privada nascimentos/{login}): só admin, mentor e líder da unidade leem (o banco confere).
+// Sem login ainda, não há onde ler: aparece "não informado".
+export function CampoNascimento({ pode, uid }) {
+  const { t } = useTranslation();
+  const { carregando, dado, erro } = useLeituraUnica(pode && !!uid, uid, lerNascimento);
+  if (!pode) return null;
+  return (
+    <Campo rotulo={t('centrais.cadastro.nascimento')} falta={!carregando && !dado}>
+      {carregando ? '…' : erro ? t('centrais.naoCarregou') : dado ? formatarNascimento(dado) : t('centrais.naoInformado')}
     </Campo>
   );
 }

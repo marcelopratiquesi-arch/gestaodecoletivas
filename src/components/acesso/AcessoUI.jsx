@@ -166,8 +166,8 @@ export function SeletorUnidades({ unidades, selecionadas, onChange, rotulo, max 
                   onClick={() => { onChange([...selecionadas, u.id]); setBusca(""); }}
                   className="w-full flex items-baseline justify-between gap-3 px-4 py-2.5 border-b border-zinc-800/70 last:border-b-0 text-left hover:bg-red-600/10"
                 >
-                  <b className="text-[13px] text-white">{u.nome}</b>
-                  <span className="text-[11px] text-zinc-500 whitespace-nowrap">{[u.cidade, u.estado].filter(Boolean).join(" · ")}</span>
+                  <b className="text-[13px] text-white uppercase">{u.nome}</b>
+                  <span className="text-[11px] text-zinc-500 whitespace-nowrap uppercase">{[u.cidade, u.estado].filter(Boolean).join(" · ")}</span>
                 </button>
               ))}
             </div>
@@ -180,7 +180,7 @@ export function SeletorUnidades({ unidades, selecionadas, onChange, rotulo, max 
             <button
               key={id} type="button" disabled={desabilitado}
               onClick={() => onChange(selecionadas.filter((x) => x !== id))}
-              className="inline-flex items-center gap-1.5 rounded-full border border-red-600 bg-red-600/10 text-red-100 text-xs font-bold px-2.5 py-1"
+              className="inline-flex items-center gap-1.5 rounded-full border border-red-600 bg-red-600/10 text-red-100 text-xs font-bold px-2.5 py-1 uppercase"
               title={t("access.units.remove")}
             >
               {porId.get(id)?.nome || id}

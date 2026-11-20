@@ -1,6 +1,6 @@
 {
   "title": "Mi registro",
-  "subtitle": "Cambiá tu contrato (CLT o Saver, sedes y horarios). El líder de tu sede, tu mentor o el administrador lo revisa antes de que valga.",
+  "subtitle": "Tus datos personales se guardan al instante. El cambio de contrato (CLT o SAVER, sedes y horarios) lo revisa el líder de tu sede, tu mentor o el administrador antes de valer.",
   "current": "Lo que vale hoy",
   "noFicha": "Tu nombre todavía no está vinculado a un registro de la grilla. Pedíselo al líder de tu sede.",
   "change": "Pedir cambio",
@@ -31,5 +31,28 @@
     "refusePrompt": "Motivo del rechazo para {{name}} (opcional):",
     "noFicha": "Este profesor todavía no está vinculado a un registro de la grilla. Vinculalo antes de aprobar.",
     "error": "No se pudo completar. Probá de nuevo."
+  },
+  "me": {
+    "title": "Datos personales",
+    "contractTitle": "Contrato",
+    "name": "Nombre completo",
+    "country": "País",
+    "phone": "WhatsApp",
+    "document": "Documento",
+    "birth": "Fecha de nacimiento",
+    "birthHint": "Sirve para que el equipo te salude en tu cumpleaños. Solo la ves vos y quien gestiona tu sede.",
+    "contactEmail": "E-mail de contacto",
+    "contactEmailHint": "Es el e-mail que usa el equipo para hablar con vos. Podés cambiarlo cuando quieras.",
+    "loginEmail": "E-mail de acceso",
+    "loginEmailHint": "Es la cuenta de Google con la que entrás al sistema. No cambia por acá.",
+    "save": "Guardar mis datos",
+    "saved": "Datos guardados.",
+    "errors": {
+      "name": "Ingresá el nombre completo.",
+      "phone": "Ingresá tu WhatsApp con código de área.",
+      "email": "Revisá el e-mail de contacto.",
+      "birth": "Revisá la fecha de nacimiento.",
+      "save": "No se pudo guardar. Probá de nuevo."
+    }
   }
 }

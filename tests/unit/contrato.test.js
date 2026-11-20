@@ -1,6 +1,6 @@
 import './_semNavegador.js';
 import { describe, it, expect } from 'vitest';
-import { validarContrato, resumoContrato, mesmoContrato, contratoVazio, localVazio } from '../../src/utils/contrato.js';
+import { validarContrato, resumoContrato, mesmoContrato, contratoVazio, localVazio, agruparFaixas, achatarFaixas, faixaVazia, SEMANA } from '../../src/utils/contrato.js';
 
 const h = (dia = 1, ini = '06:00', fim = '10:00') => ({ dia, ini, fim });
 
@@ -35,8 +35,28 @@ describe('validar o contrato do professor', () => {
   it('resumo legível e comparação', () => {
     expect(resumoContrato({ tipoContrato: 'clt' })).toBe('CLT');
     expect(resumoContrato({ tipoContrato: 'saver', saverLocais: [{ unidadeId: 'u1', horarios: [h(1), h(3)] }] }, () => 'Santa Inês'))
-      .toBe('Saver: Santa Inês (seg 06:00-10:00, qua 06:00-10:00)');
+      .toBe('SAVER: Santa Inês (seg/qua 06:00-10:00)');
+    expect(resumoContrato({ tipoContrato: 'saver', saverLocais: [localVazio('u1')] }, () => 'Betim')).toBe('SAVER: Betim (seg-sex 06:00-10:00)');
     expect(mesmoContrato(undefined, { tipoContrato: 'clt', saverLocais: [] })).toBe(true);
     expect(mesmoContrato({ tipoContrato: 'saver', saverLocais: [{ unidadeId: 'u1', horarios: [h()] }] }, undefined)).toBe(false);
+  });
+});
+
+describe('faixas de horário de segunda a sexta', () => {
+  it('uma faixa vira 5 itens (seg-sex) e volta a ser uma faixa', () => {
+    const itens = achatarFaixas([faixaVazia()]);
+    expect(itens.map((i) => i.dia)).toEqual(SEMANA);
+    expect(agruparFaixas(itens)).toEqual([{ ini: '06:00', fim: '10:00', dias: SEMANA }]);
+  });
+  it('duas faixas na mesma unidade (manhã e tarde) valem e são validadas', () => {
+    const horarios = achatarFaixas([{ ini: '06:00', fim: '10:00', dias: SEMANA }, { ini: '14:00', fim: '18:00', dias: SEMANA }]);
+    const r = validarContrato({ tipoContrato: 'saver', saverLocais: [{ unidadeId: 'u1', horarios }] });
+    expect(r.ok).toBe(true);
+    expect(agruparFaixas(r.valor.saverLocais[0].horarios)).toHaveLength(2);
+  });
+  it('cadastro antigo com dias soltos não perde os dias', () => {
+    const f = agruparFaixas([h(1), h(3, '06:00', '10:00'), h(6, '08:00', '12:00')]);
+    expect(f).toEqual([{ ini: '06:00', fim: '10:00', dias: [1, 3] }, { ini: '08:00', fim: '12:00', dias: [6] }]);
+    expect(achatarFaixas(f)).toHaveLength(3);
   });
 });

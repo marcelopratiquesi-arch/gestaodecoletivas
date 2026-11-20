@@ -22,7 +22,7 @@ export function guardarPapelPedido(papel) {
   try { sessionStorage.setItem(CHAVE_PAPEL_PEDIDO, papel); } catch { /* segue sem guardar */ }
 }
 
-// Lista pública de unidades (só nome, cidade, estado e nome do mentor): 1 leitura.
+// Lista pública de unidades (só nome, cidade, estado, país, modalidades habilitadas e nome do mentor): 1 leitura.
 export function useUnidadesPublicas(ativo = true) {
   const [unidades, setUnidades] = useState(null);
   useEffect(() => {
@@ -32,7 +32,7 @@ export function useUnidadesPublicas(ativo = true) {
         const mapa = snap.exists() ? snap.data().unidades || {} : {};
         setUnidades(
           Object.entries(mapa)
-            .map(([id, u]) => ({ id, nome: u?.nome || "", cidade: u?.cidade || "", estado: u?.estado || "", mentorNome: u?.mentorNome || "" }))
+            .map(([id, u]) => ({ id, nome: u?.nome || "", cidade: u?.cidade || "", estado: u?.estado || "", mentorNome: u?.mentorNome || "", pais: u?.pais || "", modalidadesIds: Array.isArray(u?.modalidadesIds) ? u.modalidadesIds.map(String) : null }))
             .filter((u) => u.nome)
             .sort((a, b) => a.nome.localeCompare(b.nome))
         );
@@ -60,6 +60,13 @@ export function useModalidadesAtivas(ativo = true) {
       .catch((e) => { console.error(e); setLista([]); });
   }, [ativo]);
   return lista; // null = carregando
+}
+
+// Só as modalidades habilitadas na unidade escolhida. Unidade sem o campo (ainda não configurada, ou vitrine ainda não
+// atualizada) = todas as ativas, como era antes. Sem unidade escolhida = lista vazia.
+export function modalidadesDaUnidade(lista, unidade) {
+  if (!lista || !unidade) return [];
+  return Array.isArray(unidade.modalidadesIds) ? lista.filter((m) => unidade.modalidadesIds.includes(String(m.id))) : lista;
 }
 
 // As modalidades escolhidas ficam guardadas como texto "Zumba, Pilates" (mesmo formato de sempre).
