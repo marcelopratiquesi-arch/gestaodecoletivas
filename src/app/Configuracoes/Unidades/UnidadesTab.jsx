@@ -702,7 +702,7 @@ export function UnidadesTab() {
         <CabecalhoDaAba abaId="unidades" icone={Building2} titulo={t('unitsTab.title', 'Gestão de Unidades')} subtitulo={t('unitsTab.subtitle', { count: kpis.total })}
           numeros={<CaixaDeNumeros abaId="unidades" itens={[
             { id: "total", rotulo: t('unitsTab.extra.total'), valor: kpis.total, onClick: () => setStatusFiltro(""), ativo: statusFiltro === "" },
-            { id: "ativa", rotulo: t('unitsTab.extra.active'), valor: kpis.ativas, cor: "text-green-600", onClick: () => setStatusFiltro("ativa"), ativo: statusFiltro === "ativa" },
+            { id: "ativa", rotulo: t('unitsTab.extra.active'), valor: kpis.ativas, cor: "text-emerald-600", onClick: () => setStatusFiltro("ativa"), ativo: statusFiltro === "ativa" },
             { id: "inativa", rotulo: t('unitsTab.extra.inactive'), valor: kpis.inativas, cor: "text-red-500", onClick: () => setStatusFiltro("inativa"), ativo: statusFiltro === "inativa" },
           ]} />}>
           {role === 'admin' && (
@@ -736,15 +736,15 @@ export function UnidadesTab() {
         )}
 
         {role === 'admin' && loginsAntigosComLider.length > 0 && (
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-2xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 normal-case">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-2xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 normal-case">
                 <div className="flex items-start gap-3">
-                    <Key className="w-6 h-6 text-blue-600 shrink-0"/>
+                    <Key className="w-6 h-6 text-red-600 shrink-0"/>
                     <div>
-                        <p className="text-sm font-black text-blue-800 dark:text-blue-300 uppercase">{t('unitsTab.leader.bannerTitle', { count: loginsAntigosComLider.length })}</p>
-                        <p className="text-xs font-medium text-blue-700 dark:text-blue-400 mt-1">{t('unitsTab.leader.bannerDesc')}</p>
+                        <p className="text-sm font-black text-red-800 dark:text-red-300 uppercase">{t('unitsTab.leader.bannerTitle', { count: loginsAntigosComLider.length })}</p>
+                        <p className="text-xs font-medium text-red-700 dark:text-red-400 mt-1">{t('unitsTab.leader.bannerDesc')}</p>
                     </div>
                 </div>
-                <button onClick={() => desligarLoginsAntigos(loginsAntigosComLider)} disabled={desligandoLogins} className="px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs uppercase whitespace-nowrap flex items-center justify-center gap-2 disabled:opacity-50">
+                <button onClick={() => desligarLoginsAntigos(loginsAntigosComLider)} disabled={desligandoLogins} className="px-5 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-xs uppercase whitespace-nowrap flex items-center justify-center gap-2 disabled:opacity-50">
                     {desligandoLogins ? <Loader2 className="w-4 h-4 animate-spin"/> : <PowerOff className="w-4 h-4"/>} {t('unitsTab.leader.turnOffAll')}
                 </button>
             </div>
@@ -761,13 +761,13 @@ export function UnidadesTab() {
             <table className="w-full text-left min-w-[1180px]">
               <thead className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
                 <tr>
-                  <ColunaOrdenavel campo="status" rotulo={t('unitsTab.table.status', 'Status')} ordenacao={ordem} cor="red" className="w-24" />
-                  <ColunaOrdenavel campo="nome" rotulo={t('unitsTab.table.unit', 'Unidade')} ordenacao={ordem} cor="red" />
-                  <ColunaOrdenavel campo="local" rotulo={t('unitsTab.table.location', 'Local')} ordenacao={ordem} cor="red" className="w-72" />
-                  <ColunaOrdenavel campo="modalidades" rotulo={t('unitsTab.modalities.column')} ordenacao={ordem} cor="red" />
-                  <ColunaOrdenavel campo="estado" rotulo={t('unitsTab.extra.region')} ordenacao={ordem} cor="red" />
-                  <ColunaOrdenavel campo="responsavel" rotulo={t('unitsTab.table.responsible', 'Responsável')} ordenacao={ordem} cor="red" />
-                  <ColunaOrdenavel campo="acesso" rotulo={t('tabela.access.column')} ordenacao={ordem} cor="red" className="w-40" />
+                  <ColunaOrdenavel campo="status" rotulo={t('unitsTab.table.status', 'Status')} ordenacao={ordem} className="w-24" />
+                  <ColunaOrdenavel campo="nome" rotulo={t('unitsTab.table.unit', 'Unidade')} ordenacao={ordem} />
+                  <ColunaOrdenavel campo="local" rotulo={t('unitsTab.table.location', 'Local')} ordenacao={ordem} className="w-72" />
+                  <ColunaOrdenavel campo="modalidades" rotulo={t('unitsTab.modalities.column')} ordenacao={ordem} />
+                  <ColunaOrdenavel campo="estado" rotulo={t('unitsTab.extra.region')} ordenacao={ordem} />
+                  <ColunaOrdenavel campo="responsavel" rotulo={t('unitsTab.table.responsible', 'Responsável')} ordenacao={ordem} />
+                  <ColunaOrdenavel campo="acesso" rotulo={t('tabela.access.column')} ordenacao={ordem} className="w-40" />
                   <th className={`${CLASSE_TITULO} text-right w-28`}>{t('unitsTab.table.actions', 'Ações')}</th>
                 </tr>
               </thead>
@@ -790,7 +790,7 @@ export function UnidadesTab() {
                       
                       <td className="px-3 py-2">
                           <div className="flex items-center gap-1.5">
-                              <div className={`w-2 h-2 rounded-full ${u.status === 'ativa' ? 'bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.5)]' : 'bg-slate-400'}`}></div>
+                              <div className={`w-2 h-2 rounded-full ${u.status === 'ativa' ? 'bg-emerald-500 shadow-[0_0_5px_rgba(34,197,94,0.5)]' : 'bg-slate-400'}`}></div>
                               <span className={`text-[10px] font-black uppercase tracking-widest ${u.status === 'ativa' ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400'}`}>{u.status === 'ativa' ? t('unitsTab.table.active') : t('unitsTab.table.inactive')}</span>
                           </div>
                       </td>
@@ -802,13 +802,13 @@ export function UnidadesTab() {
                               <div className="flex items-center gap-1 animate-in fade-in">
                                   <input 
                                       autoFocus 
-                                      className="px-2 py-1 border border-blue-300 dark:border-blue-700 bg-white dark:bg-slate-900 rounded text-[10px] font-mono font-bold outline-none w-32 dark:text-white" 
+                                      className="px-2 py-1 border border-red-300 dark:border-red-700 bg-white dark:bg-slate-900 rounded text-[10px] font-mono font-bold outline-none w-32 dark:text-white" 
                                       value={telefoneInline} 
                                       onChange={(e) => setTelefoneInline(formatarTelefone(e.target.value, paisAtual))} 
                                       onKeyDown={(e) => e.key === 'Enter' && salvarDadoInline(u, 'telefone', telefoneInline, 'WhatsApp').then(()=>setEditandoTelefoneId(null))} 
                                       placeholder={getPhonePlaceholder(paisAtual)} 
                                   />
-                                  <button onClick={() => salvarDadoInline(u, 'telefone', telefoneInline, 'WhatsApp').then(()=>setEditandoTelefoneId(null))} className="p-1 bg-green-100 text-green-700 rounded hover:bg-green-600 hover:text-white transition-colors"><Check className="w-3 h-3"/></button>
+                                  <button onClick={() => salvarDadoInline(u, 'telefone', telefoneInline, 'WhatsApp').then(()=>setEditandoTelefoneId(null))} className="p-1 bg-emerald-100 text-emerald-700 rounded hover:bg-emerald-600 hover:text-white transition-colors"><Check className="w-3 h-3"/></button>
                                   <button onClick={() => setEditandoTelefoneId(null)} className="p-1 bg-slate-200 text-slate-600 rounded hover:bg-slate-400 transition-colors"><X className="w-3 h-3"/></button>
                               </div>
                           ) : (
@@ -834,23 +834,23 @@ export function UnidadesTab() {
                           {/* METRAGEM */}
                           {editandoMetragemId === u.id ? (
                               <div className="flex items-center gap-1 animate-in fade-in">
-                                  <input autoFocus type="number" className="px-2 py-1 border border-blue-300 dark:border-blue-700 bg-white dark:bg-slate-900 rounded text-[10px] font-bold outline-none w-20 dark:text-white" value={metragemInline} onChange={(e) => setMetragemInline(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && salvarDadoInline(u, 'metragemSalaColetiva', Number(metragemInline), 'M² da Sala').then(()=>setEditandoMetragemId(null))} placeholder="m²" />
-                                  <button onClick={() => salvarDadoInline(u, 'metragemSalaColetiva', Number(metragemInline), 'M² da Sala').then(()=>setEditandoMetragemId(null))} className="p-1 bg-green-100 text-green-700 rounded"><Check className="w-3 h-3"/></button>
+                                  <input autoFocus type="number" className="px-2 py-1 border border-red-300 dark:border-red-700 bg-white dark:bg-slate-900 rounded text-[10px] font-bold outline-none w-20 dark:text-white" value={metragemInline} onChange={(e) => setMetragemInline(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && salvarDadoInline(u, 'metragemSalaColetiva', Number(metragemInline), 'M² da Sala').then(()=>setEditandoMetragemId(null))} placeholder="m²" />
+                                  <button onClick={() => salvarDadoInline(u, 'metragemSalaColetiva', Number(metragemInline), 'M² da Sala').then(()=>setEditandoMetragemId(null))} className="p-1 bg-emerald-100 text-emerald-700 rounded"><Check className="w-3 h-3"/></button>
                                   <button onClick={() => setEditandoMetragemId(null)} className="p-1 bg-slate-200 text-slate-600 rounded"><X className="w-3 h-3"/></button>
                               </div>
                           ) : (
                               <div className="flex items-center gap-1.5 group/edit w-fit">
                                   <Maximize className="w-3 h-3 text-slate-400"/>
-                                  <span className={`text-[10px] font-black uppercase tracking-widest ${u.metragemSalaColetiva ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 italic opacity-50'}`}>{u.metragemSalaColetiva ? t('unitsTab.extra.freeArea', { value: u.metragemSalaColetiva }) : t('unitsTab.extra.addArea')}</span>
-                                  <Edit2 onClick={() => { setEditandoMetragemId(u.id); setMetragemInline(u.metragemSalaColetiva || ""); }} className="w-3 h-3 opacity-0 group-hover/edit:opacity-100 cursor-pointer text-blue-500 ml-1"/>
+                                  <span className={`text-[10px] font-black uppercase tracking-widest ${u.metragemSalaColetiva ? 'text-red-600 dark:text-red-400' : 'text-slate-400 italic opacity-50'}`}>{u.metragemSalaColetiva ? t('unitsTab.extra.freeArea', { value: u.metragemSalaColetiva }) : t('unitsTab.extra.addArea')}</span>
+                                  <Edit2 onClick={() => { setEditandoMetragemId(u.id); setMetragemInline(u.metragemSalaColetiva || ""); }} className="w-3 h-3 opacity-0 group-hover/edit:opacity-100 cursor-pointer text-red-500 ml-1"/>
                               </div>
                           )}
 
                           {/* ENDEREÇO (LINK MAPS CONSOLIDADO) */}
                           {editandoEnderecoId === u.id ? (
                               <div className="flex items-center gap-1 animate-in fade-in">
-                                  <input autoFocus type="text" className="px-2 py-1 border border-blue-300 dark:border-blue-700 bg-white dark:bg-slate-900 rounded text-[10px] font-bold outline-none w-48 dark:text-white" value={enderecoInline} onChange={(e) => setEnderecoInline(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && salvarDadoInline(u, 'enderecoCompleto', enderecoInline, 'Endereço').then(()=>setEditandoEnderecoId(null))} placeholder="Av. Afonso Pena, 1200..." />
-                                  <button onClick={() => salvarDadoInline(u, 'enderecoCompleto', enderecoInline, 'Endereço').then(()=>setEditandoEnderecoId(null))} className="p-1 bg-green-100 text-green-700 rounded"><Check className="w-3 h-3"/></button>
+                                  <input autoFocus type="text" className="px-2 py-1 border border-red-300 dark:border-red-700 bg-white dark:bg-slate-900 rounded text-[10px] font-bold outline-none w-48 dark:text-white" value={enderecoInline} onChange={(e) => setEnderecoInline(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && salvarDadoInline(u, 'enderecoCompleto', enderecoInline, 'Endereço').then(()=>setEditandoEnderecoId(null))} placeholder="Av. Afonso Pena, 1200..." />
+                                  <button onClick={() => salvarDadoInline(u, 'enderecoCompleto', enderecoInline, 'Endereço').then(()=>setEditandoEnderecoId(null))} className="p-1 bg-emerald-100 text-emerald-700 rounded"><Check className="w-3 h-3"/></button>
                                   <button onClick={() => setEditandoEnderecoId(null)} className="p-1 bg-slate-200 text-slate-600 rounded"><X className="w-3 h-3"/></button>
                               </div>
                           ) : (
@@ -858,7 +858,7 @@ export function UnidadesTab() {
                                   <MapPin className="w-3.5 h-3.5 shrink-0 mt-0.5 text-slate-400"/>
                                   <div className="flex flex-col">
                                       {u.linkGoogleMaps ? (
-                                          <a href={getValidUrl(u.linkGoogleMaps)} target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold uppercase text-blue-600 dark:text-blue-400 hover:underline truncate max-w-[250px] leading-tight" title={t('unitsTab.extra.openMaps')} onClick={e => e.stopPropagation()}>
+                                          <a href={getValidUrl(u.linkGoogleMaps)} target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold uppercase text-red-600 dark:text-red-400 hover:underline truncate max-w-[250px] leading-tight" title={t('unitsTab.extra.openMaps')} onClick={e => e.stopPropagation()}>
                                               {u.enderecoCompleto || t('unitsTab.extra.viewOnMap')}
                                           </a>
                                       ) : (
@@ -867,15 +867,15 @@ export function UnidadesTab() {
                                           </span>
                                       )}
                                   </div>
-                                  <Edit2 onClick={() => { setEditandoEnderecoId(u.id); setEnderecoInline(u.enderecoCompleto || ""); }} className="w-3 h-3 opacity-0 group-hover/edit:opacity-100 cursor-pointer text-blue-500 shrink-0 ml-1 mt-0.5"/>
+                                  <Edit2 onClick={() => { setEditandoEnderecoId(u.id); setEnderecoInline(u.enderecoCompleto || ""); }} className="w-3 h-3 opacity-0 group-hover/edit:opacity-100 cursor-pointer text-red-500 shrink-0 ml-1 mt-0.5"/>
                               </div>
                           )}
 
                           {/* EDITAR LINK DO MAPS */}
                           {editandoMapaId === u.id && (
                               <div className="flex items-center gap-1 animate-in fade-in">
-                                  <input autoFocus type="text" className="px-2 py-1 border border-blue-300 dark:border-blue-700 bg-white dark:bg-slate-900 rounded text-[10px] font-mono outline-none w-48 dark:text-white" value={mapaInline} onChange={(e) => setMapaInline(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && salvarDadoInline(u, 'linkGoogleMaps', mapaInline, 'Link do Maps').then(()=>setEditandoMapaId(null))} placeholder="http://maps..." />
-                                  <button onClick={() => salvarDadoInline(u, 'linkGoogleMaps', mapaInline, 'Link do Maps').then(()=>setEditandoMapaId(null))} className="p-1 bg-green-100 text-green-700 rounded"><Check className="w-3 h-3"/></button>
+                                  <input autoFocus type="text" className="px-2 py-1 border border-red-300 dark:border-red-700 bg-white dark:bg-slate-900 rounded text-[10px] font-mono outline-none w-48 dark:text-white" value={mapaInline} onChange={(e) => setMapaInline(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && salvarDadoInline(u, 'linkGoogleMaps', mapaInline, 'Link do Maps').then(()=>setEditandoMapaId(null))} placeholder="http://maps..." />
+                                  <button onClick={() => salvarDadoInline(u, 'linkGoogleMaps', mapaInline, 'Link do Maps').then(()=>setEditandoMapaId(null))} className="p-1 bg-emerald-100 text-emerald-700 rounded"><Check className="w-3 h-3"/></button>
                                   <button onClick={() => setEditandoMapaId(null)} className="p-1 bg-slate-200 text-slate-600 rounded"><X className="w-3 h-3"/></button>
                               </div>
                           )}
@@ -883,13 +883,13 @@ export function UnidadesTab() {
                               <div className="flex items-center gap-1.5 group/edit w-fit">
                                   <MapIcon className="w-3 h-3 shrink-0 text-slate-300"/>
                                   <span className="text-[9px] font-bold uppercase text-slate-400 italic">{t('unitsTab.extra.noMapsLink')}</span>
-                                  <Edit2 onClick={() => { setEditandoMapaId(u.id); setMapaInline(u.linkGoogleMaps || ""); }} className="w-3 h-3 opacity-0 group-hover/edit:opacity-100 cursor-pointer text-blue-500 ml-1"/>
+                                  <Edit2 onClick={() => { setEditandoMapaId(u.id); setMapaInline(u.linkGoogleMaps || ""); }} className="w-3 h-3 opacity-0 group-hover/edit:opacity-100 cursor-pointer text-red-500 ml-1"/>
                               </div>
                           )}
                           {!editandoMapaId && u.linkGoogleMaps && (
                                <div className="flex items-center gap-1.5 group/edit w-fit opacity-0 group-hover:opacity-100 transition-opacity">
                                    <span className="text-[9px] font-bold uppercase text-slate-400">{t('unitsTab.extra.changeLink')}</span>
-                                   <Edit2 onClick={() => { setEditandoMapaId(u.id); setMapaInline(u.linkGoogleMaps || ""); }} className="w-3 h-3 cursor-pointer text-blue-500 ml-1"/>
+                                   <Edit2 onClick={() => { setEditandoMapaId(u.id); setMapaInline(u.linkGoogleMaps || ""); }} className="w-3 h-3 cursor-pointer text-red-500 ml-1"/>
                                </div>
                           )}
                       </td>
@@ -972,13 +972,13 @@ export function UnidadesTab() {
           pos={importPos} setPos={setImportPos} size={importSize} setSize={setImportSize} minW={700} minH={600}
       >
         <div className="p-6 flex flex-col h-full bg-white dark:bg-slate-800">
-            <div className="bg-blue-50 dark:bg-blue-900/20 p-5 rounded-2xl border border-blue-100 dark:border-blue-800/50 mb-6 shrink-0 flex justify-between items-center">
+            <div className="bg-red-50 dark:bg-red-900/20 p-5 rounded-2xl border border-red-100 dark:border-red-800/50 mb-6 shrink-0 flex justify-between items-center">
                 <div>
-                    <h4 className="font-black text-blue-800 dark:text-blue-400 mb-1 text-sm">{t('unitsTab.extra.csv.scanSummary')}</h4>
+                    <h4 className="font-black text-red-800 dark:text-red-400 mb-1 text-sm">{t('unitsTab.extra.csv.scanSummary')}</h4>
                     <p className="text-[10px] font-bold text-slate-500 uppercase">{t('unitsTab.extra.csv.compare')}</p>
                 </div>
                 {importData.matches.some(m => m.status === 'pendente') && (
-                    <button onClick={aprovarTodosPendentes} disabled={importando} className="px-5 py-2.5 bg-blue-600 text-white text-[10px] font-black rounded-xl uppercase hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-lg shadow-blue-500/20">
+                    <button onClick={aprovarTodosPendentes} disabled={importando} className="px-5 py-2.5 bg-red-600 text-white text-[10px] font-black rounded-xl uppercase hover:bg-red-700 transition-colors flex items-center gap-2 shadow-lg shadow-red-500/20">
                         {importando ? <Loader2 className="w-3 h-3 animate-spin"/> : <><CheckCircle2 className="w-3 h-3"/> {t('unitsTab.extra.csv.approveAll')}</>}
                     </button>
                 )}
@@ -997,7 +997,7 @@ export function UnidadesTab() {
                                         <div>
                                             <div className="flex items-center gap-2 mb-1">
                                                 <FileSpreadsheet className="w-4 h-4 text-slate-400"/>
-                                                <p className="font-black text-slate-700 dark:text-slate-300 text-sm">CSV: <span className="text-blue-600 dark:text-blue-400">{m.csvNome}</span></p>
+                                                <p className="font-black text-slate-700 dark:text-slate-300 text-sm">CSV: <span className="text-red-600 dark:text-red-400">{m.csvNome}</span></p>
                                             </div>
                                             {conflito && m.status === 'pendente' && <p className="text-[10px] font-black text-amber-600 dark:text-amber-500 uppercase tracking-widest flex items-center gap-1 mt-2"><AlertTriangle className="w-3 h-3"/> {t('unitsTab.extra.csv.replaceAlert')}</p>}
                                         </div>
@@ -1018,11 +1018,11 @@ export function UnidadesTab() {
                                                     <div><span className="text-[9px] font-bold text-slate-400 uppercase block">{t('unitsTab.extra.csv.mapsLink')}</span><span className="text-xs font-medium text-slate-600 dark:text-slate-400 truncate block">{m.mapaAtual ? t('unitsTab.extra.csv.linkExists') : t('unitsTab.extra.csv.empty')}</span></div>
                                                 </div>
                                             </div>
-                                            <div className="bg-blue-50 dark:bg-blue-900/10 p-3 rounded-xl border border-blue-200 dark:border-blue-900/50">
-                                                <h5 className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-2 border-b border-blue-200 dark:border-blue-900/50 pb-1">{t('unitsTab.extra.csv.fromFile')}</h5>
+                                            <div className="bg-red-50 dark:bg-red-900/10 p-3 rounded-xl border border-red-200 dark:border-red-900/50">
+                                                <h5 className="text-[10px] font-black text-red-600 dark:text-red-400 uppercase tracking-widest mb-2 border-b border-red-200 dark:border-red-900/50 pb-1">{t('unitsTab.extra.csv.fromFile')}</h5>
                                                 <div className="space-y-2">
-                                                    <div><span className="text-[9px] font-bold text-blue-400 dark:text-blue-500 uppercase block">{t('unitsTab.extra.csv.address')}</span><span className={`text-xs font-black truncate block ${m.enderecoAtual !== m.novoEndereco && m.novoEndereco ? 'text-blue-700 dark:text-blue-300' : 'text-slate-500 dark:text-slate-400'}`}>{m.novoEndereco || t('unitsTab.extra.csv.noChange')}</span></div>
-                                                    <div><span className="text-[9px] font-bold text-blue-400 dark:text-blue-500 uppercase block">{t('unitsTab.extra.csv.mapsLink')}</span><span className={`text-xs font-black truncate block ${m.mapaAtual !== m.novoLinkMaps && m.novoLinkMaps ? 'text-blue-700 dark:text-blue-300' : 'text-slate-500 dark:text-slate-400'}`}>{m.novoLinkMaps ? t('unitsTab.extra.csv.injectNewLink') : t('unitsTab.extra.csv.noChange')}</span></div>
+                                                    <div><span className="text-[9px] font-bold text-red-400 dark:text-red-500 uppercase block">{t('unitsTab.extra.csv.address')}</span><span className={`text-xs font-black truncate block ${m.enderecoAtual !== m.novoEndereco && m.novoEndereco ? 'text-red-700 dark:text-red-300' : 'text-slate-500 dark:text-slate-400'}`}>{m.novoEndereco || t('unitsTab.extra.csv.noChange')}</span></div>
+                                                    <div><span className="text-[9px] font-bold text-red-400 dark:text-red-500 uppercase block">{t('unitsTab.extra.csv.mapsLink')}</span><span className={`text-xs font-black truncate block ${m.mapaAtual !== m.novoLinkMaps && m.novoLinkMaps ? 'text-red-700 dark:text-red-300' : 'text-slate-500 dark:text-slate-400'}`}>{m.novoLinkMaps ? t('unitsTab.extra.csv.injectNewLink') : t('unitsTab.extra.csv.noChange')}</span></div>
                                                 </div>
                                             </div>
                                         </div>
@@ -1059,7 +1059,7 @@ export function UnidadesTab() {
         <form onSubmit={salvarUnidade} className="p-6 overflow-y-auto custom-scrollbar flex-1 bg-slate-50 dark:bg-[#0b1120] flex flex-col gap-6">
           
           {erro && <div className="p-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300 text-sm rounded-lg border border-red-100 dark:border-red-800 flex items-center gap-2 shadow-sm"><AlertTriangle className="w-5 h-5 flex-shrink-0"/> {erro}</div>}
-          {sucesso && <div className="p-4 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-300 text-sm rounded-lg border border-green-100 dark:border-green-800 flex items-center gap-2 shadow-sm"><CheckCircle2 className="w-5 h-5 flex-shrink-0"/> {sucesso}</div>}
+          {sucesso && <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-300 text-sm rounded-lg border border-emerald-100 dark:border-emerald-800 flex items-center gap-2 shadow-sm"><CheckCircle2 className="w-5 h-5 flex-shrink-0"/> {sucesso}</div>}
 
           {/* CARD 1: DADOS PRINCIPAIS */}
           <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 space-y-5">
@@ -1146,7 +1146,7 @@ export function UnidadesTab() {
 
           {/* CARD 2: LÍDER DA UNIDADE (a unidade não tem mais login próprio) */}
           <div className="space-y-4 bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
-              <h4 className="text-[10px] font-black text-blue-500 dark:text-blue-400 uppercase tracking-widest border-b border-slate-100 dark:border-slate-700 pb-2 flex items-center gap-2">
+              <h4 className="text-[10px] font-black text-red-500 dark:text-red-400 uppercase tracking-widest border-b border-slate-100 dark:border-slate-700 pb-2 flex items-center gap-2">
                   <UserCheck className="w-3 h-3"/> {t('unitsTab.leader.title')}
               </h4>
 

@@ -27,6 +27,12 @@ export function grupoDaModalidade(nome) {
   return null;
 }
 
+// Unidade do Brasil? (a tabela de preços está em reais). Aceita "BR", "Brasil" e unidade sem país informado.
+export function ehUnidadeBrasil(pais) {
+  const p = semAcento(pais);
+  return !p || p === 'br' || p === 'brasil' || p === 'brazil';
+}
+
 // Linha da tabela de preços para a modalidade da aula (null = sem preço, como Power Fight por enquanto).
 export function chaveDaTabela(nome) {
   const g = grupoDaModalidade(nome);
@@ -49,7 +55,8 @@ export function gruposVigentes(workshops, mes, modalidadePorWorkshopId = {}) {
   const grupos = new Set();
   (Array.isArray(workshops) ? workshops : []).forEach((w) => {
     const inicio = mesDoBeneficio(w?.data);
-    const g = grupoDaModalidade(w?.modalidade || modalidadePorWorkshopId[w?.workshopId]);
+    // Item antigo sem modalidade gravada: usa a do cadastro de workshops e, na falta dela, o NOME do workshop (que traz a modalidade, ex.: "Workshop Jump").
+    const g = grupoDaModalidade(w?.modalidade || modalidadePorWorkshopId[w?.workshopId]) || (w?.modalidade ? null : grupoDaModalidade(w?.nome));
     if (g && inicio && inicio <= mes) grupos.add(g);
   });
   return grupos;

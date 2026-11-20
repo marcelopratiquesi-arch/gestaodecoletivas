@@ -95,14 +95,14 @@ const MultiSelect = ({ label, options, selected, onChange, icon: Icon, searchabl
     return (
         <div className="relative w-full" ref={wrapperRef}>
             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
-                <Icon className="w-3.5 h-3.5 text-blue-500"/> {label}
+                <Icon className="w-3.5 h-3.5 text-slate-500"/> {label}
             </label>
             <div 
-                className="w-full min-h-[42px] px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium text-slate-700 dark:text-white cursor-pointer flex justify-between items-center hover:border-blue-400 transition-colors shadow-sm"
+                className="w-full min-h-[42px] px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium text-slate-700 dark:text-white cursor-pointer flex justify-between items-center hover:border-slate-400 transition-colors shadow-sm"
                 onClick={() => { if (isOpen) { setIsOpen(false); setSearchTxt(''); } else { setIsOpen(true); } }}
             >
                 <span className="truncate pr-4 uppercase">
-                    {selected.length === 0 ? <span className="text-slate-400 font-normal">{t('common.multiSelect.allSelected')}</span> : <span className="font-bold text-blue-600">{t('common.multiSelect.selected', { count: selected.length })}</span>}
+                    {selected.length === 0 ? <span className="text-slate-400 font-normal">{t('common.multiSelect.allSelected')}</span> : <span className="font-bold text-slate-600">{t('common.multiSelect.selected', { count: selected.length })}</span>}
                 </span>
                 <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}/>
             </div>
@@ -113,13 +113,13 @@ const MultiSelect = ({ label, options, selected, onChange, icon: Icon, searchabl
                         <div className="p-2 border-b border-slate-100 dark:border-slate-700 shrink-0 bg-slate-50 dark:bg-slate-900/50">
                             <div className="relative">
                                 <Search className="absolute left-2.5 top-2 w-3.5 h-3.5 text-slate-400" />
-                                <input type="text" placeholder={t('common.multiSelect.search')} className="w-full pl-8 pr-3 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-md outline-none focus:border-blue-500 dark:text-white uppercase" value={searchTxt} onChange={(e) => setSearchTxt(e.target.value)} onClick={(e) => e.stopPropagation()} />
+                                <input type="text" placeholder={t('common.multiSelect.search')} className="w-full pl-8 pr-3 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-md outline-none focus:border-red-500 dark:text-white uppercase" value={searchTxt} onChange={(e) => setSearchTxt(e.target.value)} onClick={(e) => e.stopPropagation()} />
                             </div>
                         </div>
                     )}
                     
                     <div className="p-1.5 sticky top-0 bg-white dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700 z-10 shrink-0">
-                        <button type="button" onClick={toggleAll} className="w-full text-left px-2 py-1.5 text-[10px] font-bold text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-md flex items-center gap-1.5 transition-colors uppercase">
+                        <button type="button" onClick={toggleAll} className="w-full text-left px-2 py-1.5 text-[10px] font-bold text-slate-600 hover:bg-slate-50 dark:hover:bg-slate-900/30 rounded-md flex items-center gap-1.5 transition-colors uppercase">
                             {isAllFilteredSelected ? <CheckSquare className="w-3.5 h-3.5"/> : <Square className="w-3.5 h-3.5"/>} Marcar Visíveis
                         </button>
                     </div>
@@ -131,9 +131,9 @@ const MultiSelect = ({ label, options, selected, onChange, icon: Icon, searchabl
                             filteredOptions.map(opt => {
                                 const isSelected = selected.includes(opt.id);
                                 return (
-                                    <div key={opt.id} onClick={() => toggleOption(opt.id)} className={`flex items-center gap-2 px-2 py-2 rounded-md cursor-pointer transition-colors ${isSelected ? 'bg-blue-50 dark:bg-blue-900/20' : 'hover:bg-slate-50 dark:hover:bg-slate-700/50'}`}>
-                                        {isSelected ? <CheckSquare className="w-3.5 h-3.5 text-blue-600"/> : <Square className="w-3.5 h-3.5 text-slate-300"/>}
-                                        <span className={`text-xs truncate uppercase ${isSelected ? 'font-bold text-blue-700 dark:text-blue-400' : 'font-medium text-slate-600 dark:text-slate-300'}`}>{opt.nome}</span>
+                                    <div key={opt.id} onClick={() => toggleOption(opt.id)} className={`flex items-center gap-2 px-2 py-2 rounded-md cursor-pointer transition-colors ${isSelected ? 'bg-slate-50 dark:bg-slate-900/20' : 'hover:bg-slate-50 dark:hover:bg-slate-700/50'}`}>
+                                        {isSelected ? <CheckSquare className="w-3.5 h-3.5 text-slate-600"/> : <Square className="w-3.5 h-3.5 text-slate-300"/>}
+                                        <span className={`text-xs truncate uppercase ${isSelected ? 'font-bold text-slate-700 dark:text-slate-400' : 'font-medium text-slate-600 dark:text-slate-300'}`}>{opt.nome}</span>
                                     </div>
                                 );
                             })
@@ -526,7 +526,7 @@ export default function CentralComunicacao() {
             <div className="flex bg-slate-100 dark:bg-slate-800 p-1.5 rounded-xl w-full sm:w-fit shadow-inner">
                 <button 
                     onClick={() => setPublicoAlvo('professores')} 
-                    className={`flex-1 sm:flex-none px-6 py-2 text-xs font-black uppercase rounded-lg flex items-center justify-center gap-2 transition-all ${publicoAlvo === 'professores' ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                    className={`flex-1 sm:flex-none px-6 py-2 text-xs font-black uppercase rounded-lg flex items-center justify-center gap-2 transition-all ${publicoAlvo === 'professores' ? 'bg-white dark:bg-slate-700 text-slate-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                 >
                     <GraduationCap className="w-4 h-4"/> {t('comms.audience.professores')}
                 </button>
@@ -552,7 +552,7 @@ export default function CentralComunicacao() {
                 <div className="lg:col-span-4 space-y-5">
                     <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
                         <h2 className="font-black text-slate-800 dark:text-white uppercase flex items-center gap-2 border-b border-slate-100 dark:border-slate-700 pb-3 mb-4 text-xs tracking-widest">
-                            <Filter className="w-4 h-4 text-blue-500"/> {t('comms.step1')}
+                            <Filter className="w-4 h-4 text-slate-500"/> {t('comms.step1')}
                         </h2>
                         
                         {loadingDb ? (
@@ -577,7 +577,7 @@ export default function CentralComunicacao() {
                                     <button onClick={() => limparFiltros(false)} className="w-[30%] py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-[10px] uppercase rounded-lg flex items-center justify-center gap-1.5 transition-colors shadow-sm">
                                         <Eraser className="w-3.5 h-3.5"/> {t('comms.clear')}
                                     </button>
-                                    <button onClick={buscarPublico} disabled={processing} className="w-[70%] bg-slate-800 hover:bg-blue-600 text-white font-black text-[11px] uppercase tracking-widest py-2.5 rounded-lg flex items-center justify-center gap-2 shadow-md transition-all active:scale-95 disabled:opacity-50">
+                                    <button onClick={buscarPublico} disabled={processing} className="w-[70%] bg-slate-800 hover:bg-red-600 text-white font-black text-[11px] uppercase tracking-widest py-2.5 rounded-lg flex items-center justify-center gap-2 shadow-md transition-all active:scale-95 disabled:opacity-50">
                                         {processing ? <Loader2 className="w-4 h-4 animate-spin"/> : <Search className="w-4 h-4"/>} {t('comms.process')}
                                     </button>
                                 </div>
@@ -590,20 +590,20 @@ export default function CentralComunicacao() {
                 <div className="lg:col-span-8 space-y-5">
                     <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
                         <h2 className="font-black text-slate-800 dark:text-white uppercase flex items-center gap-2 border-b border-slate-100 dark:border-slate-700 pb-3 mb-4 text-xs tracking-widest">
-                            <MessageSquare className="w-4 h-4 text-green-500"/> {t('comms.step2')}
+                            <MessageSquare className="w-4 h-4 text-emerald-500"/> {t('comms.step2')}
                         </h2>
                         
                         <div className="mb-3">
                             <div className="flex flex-wrap gap-2">
                                 {[ { tag: '[PRIMEIRO_NOME]', label: t('comms.tagName') }, { tag: '[SAUDACAO]', label: t('comms.tagGreeting') }].map(tagItem => (
-                                    <button key={tagItem.tag} onClick={() => addTag(tagItem.tag)} className="bg-slate-50 hover:bg-blue-50 text-slate-600 text-[10px] font-bold uppercase px-3 py-1.5 rounded-md flex items-center gap-1.5 border border-slate-200 transition-colors shadow-sm">
-                                        <Tags className="w-3 h-3 text-blue-500"/> {tagItem.label}
+                                    <button key={tagItem.tag} onClick={() => addTag(tagItem.tag)} className="bg-slate-50 hover:bg-slate-50 text-slate-600 text-[10px] font-bold uppercase px-3 py-1.5 rounded-md flex items-center gap-1.5 border border-slate-200 transition-colors shadow-sm">
+                                        <Tags className="w-3 h-3 text-slate-500"/> {tagItem.label}
                                     </button>
                                 ))}
                             </div>
                         </div>
 
-                        <textarea ref={textareaRef} className="w-full h-28 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-800 dark:text-white font-medium focus:border-blue-500 outline-none resize-none custom-scrollbar" value={mensagem} onChange={(e) => setMensagem(e.target.value)} placeholder={t('comms.messagePlaceholder')}></textarea>
+                        <textarea ref={textareaRef} className="w-full h-28 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-800 dark:text-white font-medium focus:border-red-500 outline-none resize-none custom-scrollbar" value={mensagem} onChange={(e) => setMensagem(e.target.value)} placeholder={t('comms.messagePlaceholder')}></textarea>
                     </div>
 
                     {resultadoDesatualizado && (
@@ -621,7 +621,7 @@ export default function CentralComunicacao() {
                             <div className="bg-slate-50 dark:bg-slate-900/50 p-4 border-b border-slate-200 dark:border-slate-700 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
                                 <div>
                                     <h2 className="font-black text-slate-800 dark:text-white uppercase flex items-center gap-2 text-xs tracking-widest">
-                                        <Users className="w-4 h-4 text-indigo-500"/> {t('comms.step3', { audience: t(`comms.audience.${publicoAlvo}`) })}
+                                        <Users className="w-4 h-4 text-slate-500"/> {t('comms.step3', { audience: t(`comms.audience.${publicoAlvo}`) })}
                                     </h2>
                                     <p className="text-[10px] text-slate-500 font-bold uppercase mt-1 tracking-widest">
                                         {t('comms.validContacts', { count: resultadosBusca.length }).toUpperCase()}
@@ -644,7 +644,7 @@ export default function CentralComunicacao() {
                                         </button>
                                     </div>
 
-                                    <button onClick={copiarParaDisparador} disabled={resultadoDesatualizado} className={`flex-1 md:flex-none px-4 py-2 text-white rounded-lg text-[10px] font-black uppercase flex items-center justify-center gap-2 transition-colors shadow-sm disabled:opacity-50 ${copiado ? 'bg-green-500' : 'bg-indigo-600 hover:bg-indigo-700'}`}>
+                                    <button onClick={copiarParaDisparador} disabled={resultadoDesatualizado} className={`flex-1 md:flex-none px-4 py-2 text-white rounded-lg text-[10px] font-black uppercase flex items-center justify-center gap-2 transition-colors shadow-sm disabled:opacity-50 ${copiado ? 'bg-emerald-500' : 'bg-red-600 hover:bg-red-700'}`}>
                                         {copiado ? <Check className="w-3.5 h-3.5"/> : <Copy className="w-3.5 h-3.5"/>} 
                                         {copiado ? t('comms.copied').toUpperCase() : t('comms.copyWaseller').toUpperCase()}
                                     </button>
@@ -675,10 +675,10 @@ export default function CentralComunicacao() {
                                                         <div className="font-bold text-slate-800 dark:text-slate-200 uppercase text-xs">{p.nome}</div>
                                                         {publicoAlvo === 'professores' && <div className="text-[9px] font-medium text-slate-400 uppercase mt-0.5">{p.detalhe2}</div>}
                                                     </td>
-                                                    <td className="p-3 text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase">{p.detalhe1}</td>
+                                                    <td className="p-3 text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase">{p.detalhe1}</td>
                                                     <td className="p-3 font-mono font-medium text-xs text-slate-500">{p.telefoneFormatado}</td>
                                                     <td className="p-3 pr-5 text-center">
-                                                        <button onClick={() => dispararIndividual(p)} className="p-1.5 bg-slate-100 text-slate-600 hover:bg-green-500 hover:text-white rounded-md transition-colors inline-flex items-center gap-1.5 shadow-sm font-bold text-[9px] uppercase border border-slate-200 hover:border-transparent">
+                                                        <button onClick={() => dispararIndividual(p)} className="p-1.5 bg-slate-100 text-slate-600 hover:bg-emerald-500 hover:text-white rounded-md transition-colors inline-flex items-center gap-1.5 shadow-sm font-bold text-[9px] uppercase border border-slate-200 hover:border-transparent">
                                                             <Smartphone className="w-3.5 h-3.5"/> {t('comms.send')}
                                                         </button>
                                                     </td>

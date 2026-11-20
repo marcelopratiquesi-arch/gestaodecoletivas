@@ -91,14 +91,14 @@ export function FeriadosSugeridos({ feriados, unidades, aulas, usuario }) {
 
   const escolhidos = sugestoes.filter(s => selecionados.has(s.chave) && !s.aplicado && !s.dispensado);
   const anos = [anoAtual - 1, anoAtual, anoAtual + 1, anoAtual + 2];
-  const inputClass = 'p-2.5 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pink-500';
+  const inputClass = 'p-2.5 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500';
 
   return (
     <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm overflow-hidden">
       <button type="button" onClick={() => setAberto(!aberto)} className="w-full flex items-center justify-between gap-3 px-6 py-4 text-left hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
         <span className="flex items-center gap-2 font-bold text-slate-700 dark:text-white uppercase text-sm">
-          <CalendarCheck className="w-5 h-5 text-pink-600" /> {t('holidaysTab.suggested.title')}
-          {pendentes > 0 && <span className="px-2 py-0.5 rounded-full bg-pink-100 text-pink-700 text-[10px]">{t('holidaysTab.suggested.pending', { count: pendentes })}</span>}
+          <CalendarCheck className="w-5 h-5 text-red-600" /> {t('holidaysTab.suggested.title')}
+          {pendentes > 0 && <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-[10px]">{t('holidaysTab.suggested.pending', { count: pendentes })}</span>}
         </span>
         <ChevronDown className={`w-5 h-5 text-slate-400 transition-transform ${aberto ? 'rotate-180' : ''}`} />
       </button>
@@ -119,7 +119,7 @@ export function FeriadosSugeridos({ feriados, unidades, aulas, usuario }) {
             </label>
             <button
               type="button" disabled={processando || escolhidos.length === 0} onClick={() => aplicar(escolhidos)}
-              className="ml-auto px-4 py-2.5 bg-pink-600 hover:bg-pink-700 text-white font-bold rounded-lg text-xs uppercase flex items-center gap-2 disabled:opacity-40"
+              className="ml-auto px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg text-xs uppercase flex items-center gap-2 disabled:opacity-40"
             >
               {processando ? <Loader2 className="w-4 h-4 animate-spin" /> : <CalendarCheck className="w-4 h-4" />} {t('holidaysTab.suggested.applySelected', { count: escolhidos.length })}
             </button>
@@ -134,7 +134,7 @@ export function FeriadosSugeridos({ feriados, unidades, aulas, usuario }) {
               return (
                 <div key={s.chave} className={`flex items-center gap-3 px-4 py-3 ${bloqueado || s.passou ? 'opacity-60' : ''}`}>
                   <button type="button" disabled={bloqueado} onClick={() => alternar(s.chave)} className="shrink-0 disabled:cursor-not-allowed">
-                    {marcado && !bloqueado ? <CheckSquare className="w-5 h-5 text-pink-600" /> : <Square className="w-5 h-5 text-slate-300" />}
+                    {marcado && !bloqueado ? <CheckSquare className="w-5 h-5 text-red-600" /> : <Square className="w-5 h-5 text-slate-300" />}
                   </button>
                   <div className="min-w-0 flex-1">
                     <p className="font-bold text-slate-800 dark:text-white text-sm truncate">{s.nome}</p>
@@ -149,7 +149,7 @@ export function FeriadosSugeridos({ feriados, unidades, aulas, usuario }) {
                     {s.aplicado && <span className="px-2 py-1 text-[10px] font-bold uppercase rounded bg-emerald-50 text-emerald-700 border border-emerald-200">{t('holidaysTab.suggested.applied_badge')}</span>}
                     {!s.aplicado && !s.dispensado && (
                       <>
-                        <button type="button" disabled={processando} onClick={() => aplicar([s])} className="px-3 py-1.5 bg-pink-50 hover:bg-pink-600 text-pink-600 hover:text-white text-[11px] font-bold uppercase rounded-lg transition-colors disabled:opacity-50">{t('holidaysTab.suggested.apply')}</button>
+                        <button type="button" disabled={processando} onClick={() => aplicar([s])} className="px-3 py-1.5 bg-red-50 hover:bg-red-600 text-red-600 hover:text-white text-[11px] font-bold uppercase rounded-lg transition-colors disabled:opacity-50">{t('holidaysTab.suggested.apply')}</button>
                         <button type="button" onClick={() => dispensar(s.chave, true)} title={t('holidaysTab.suggested.dismiss')} className="p-1.5 text-slate-400 hover:text-slate-600"><EyeOff className="w-4 h-4" /></button>
                       </>
                     )}

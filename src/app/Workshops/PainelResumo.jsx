@@ -44,10 +44,10 @@ const PainelResumo = ({
                     <h3 className="text-3xl xl:text-4xl font-black text-amber-600 dark:text-amber-400 tracking-tighter">{formatCurrency(kpis.repasses)}</h3>
                 </div>
 
-                <div className="bg-gradient-to-br from-blue-700 to-blue-600 p-6 rounded-3xl shadow-lg shadow-blue-500/20 relative overflow-hidden text-white flex flex-col justify-center">
+                <div className="bg-gradient-to-br from-slate-700 to-slate-600 p-6 rounded-3xl shadow-lg shadow-slate-500/20 relative overflow-hidden text-white flex flex-col justify-center">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4 pointer-events-none"></div>
                     <div className="flex justify-between items-start mb-2 relative z-10">
-                        <p className="text-[10px] font-black text-blue-200 uppercase tracking-widest">{t('shop.panel.netProfit')}</p>
+                        <p className="text-[10px] font-black text-slate-200 uppercase tracking-widest">{t('shop.panel.netProfit')}</p>
                         <div className="p-2 bg-white/20 backdrop-blur-md rounded-lg"><DollarSign className="w-4 h-4 text-white"/></div>
                     </div>
                     <h3 className="text-4xl xl:text-5xl font-black drop-shadow-md tracking-tighter relative z-10">{formatCurrency(kpis.lucroLiquido)}</h3>
@@ -57,7 +57,7 @@ const PainelResumo = ({
             <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
                 <div className="p-5 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
                     <h3 className="text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">{t('shop.panel.lastEntries')}</h3>
-                    <button onClick={abrirModalNovaTransacao} className="text-[10px] font-black uppercase text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100">{t('shop.panel.launch')}</button>
+                    <button onClick={abrirModalNovaTransacao} className="text-[10px] font-black uppercase text-slate-600 bg-slate-50 px-3 py-1.5 rounded-lg hover:bg-slate-100">{t('shop.panel.launch')}</button>
                 </div>
                 <div className="divide-y divide-slate-100 dark:divide-slate-700">
                     {transacoes.slice(0, 8).map(lanc => {
@@ -77,7 +77,7 @@ const PainelResumo = ({
                                         <span className={`px-2 py-0.5 text-[8px] font-black uppercase rounded ${isReceita ? 'bg-emerald-50 text-emerald-600' : isDespesa ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600'}`}>
                                             {t(`shop.txBadges.${lanc.tipo}`, lanc.tipo)}
                                         </span>
-                                        <span className="text-[9px] font-black uppercase bg-purple-50 text-purple-600 px-1.5 py-0.5 rounded border border-purple-200">
+                                        <span className="text-[9px] font-black uppercase bg-slate-50 text-slate-600 px-1.5 py-0.5 rounded border border-slate-200">
                                             {ws ? ws.nome : t('shop.panel.globalWorkshop')}
                                         </span>
                                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{lanc.descricao || t('shop.panel.noDescription')}</p>
@@ -93,7 +93,7 @@ const PainelResumo = ({
                                     {isReceita ? '+' : '-'}{formatCurrency(lanc.valor)}
                                 </span>
                                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button onClick={() => abrirModalEditarTransacao(lanc)} className="p-1.5 text-blue-500 hover:bg-blue-50 rounded" title={t('shop.panel.editEntry')}>
+                                    <button onClick={() => abrirModalEditarTransacao(lanc)} className="p-1.5 text-slate-500 hover:bg-slate-50 rounded" title={t('shop.panel.editEntry')}>
                                         <Edit className="w-4 h-4"/>
                                     </button>
                                     <button onClick={() => handleExcluirTransacao(lanc.id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded" title={t('shop.panel.deleteEntry')}>

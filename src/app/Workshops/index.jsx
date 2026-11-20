@@ -305,9 +305,9 @@ export default function WorkshopsTab() {
           <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium text-sm">{t('shop.subtitle')}</p>
         </div>
         <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-          <button onClick={() => setActiveTab('dashboard')} className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-black uppercase transition-all ${activeTab === 'dashboard' ? 'bg-white dark:bg-slate-700 shadow text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}><LayoutDashboard className="w-4 h-4"/> {t('shop.tabs.dashboard')}</button>
+          <button onClick={() => setActiveTab('dashboard')} className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-black uppercase transition-all ${activeTab === 'dashboard' ? 'bg-white dark:bg-slate-700 shadow text-slate-600 dark:text-slate-400' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}><LayoutDashboard className="w-4 h-4"/> {t('shop.tabs.dashboard')}</button>
           <button onClick={() => setActiveTab('estoque')} className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-black uppercase transition-all ${activeTab === 'estoque' ? 'bg-white dark:bg-slate-700 shadow text-emerald-600 dark:text-emerald-400' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}><Package className="w-4 h-4"/> {t('shop.tabs.stock')}</button>
-          <button onClick={() => setActiveTab('eventos')} className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-black uppercase transition-all ${activeTab === 'eventos' ? 'bg-white dark:bg-slate-700 shadow text-purple-600 dark:text-purple-400' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}><Calendar className="w-4 h-4"/> {t('shop.tabs.events')}</button>
+          <button onClick={() => setActiveTab('eventos')} className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-black uppercase transition-all ${activeTab === 'eventos' ? 'bg-white dark:bg-slate-700 shadow text-slate-600 dark:text-slate-400' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}><Calendar className="w-4 h-4"/> {t('shop.tabs.events')}</button>
         </div>
       </div>
 
@@ -324,7 +324,7 @@ export default function WorkshopsTab() {
           <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
               <div className="flex flex-col xl:flex-row xl:justify-between xl:items-center gap-4">
                   <div className="flex items-center gap-3">
-                      <div className="p-3 bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400 rounded-xl"><Calendar className="w-6 h-6"/></div>
+                      <div className="p-3 bg-slate-100 text-slate-600 dark:bg-slate-900/30 dark:text-slate-400 rounded-xl"><Calendar className="w-6 h-6"/></div>
                       <div>
                           <h2 className="text-xl font-black text-slate-800 dark:text-white uppercase">{t('shop.events.title')}</h2>
                           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('shop.events.subtitle')}</p>
@@ -344,7 +344,7 @@ export default function WorkshopsTab() {
                       <button onClick={abrirModalNovaTransacao} className="flex-1 sm:flex-none px-5 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-white rounded-xl font-black text-xs uppercase hover:bg-slate-50 dark:hover:bg-slate-700 shadow-sm flex items-center justify-center gap-2 transition-all">
                           <CreditCard className="w-4 h-4"/> {t('shop.events.launchFinance')}
                       </button>
-                      <button onClick={abrirModalNovoEvento} className="flex-1 sm:flex-none px-5 py-3 bg-purple-600 text-white rounded-xl font-black text-xs uppercase tracking-wide hover:bg-purple-700 shadow-lg shadow-purple-500/20 flex items-center justify-center gap-2 transition-transform active:scale-95">
+                      <button onClick={abrirModalNovoEvento} className="flex-1 sm:flex-none px-5 py-3 bg-red-600 text-white rounded-xl font-black text-xs uppercase tracking-wide hover:bg-red-700 shadow-lg shadow-slate-500/20 flex items-center justify-center gap-2 transition-transform active:scale-95">
                           <Plus className="w-4 h-4"/> {t('shop.events.newEvent')}
                       </button>
                   </div>
@@ -352,8 +352,8 @@ export default function WorkshopsTab() {
 
               <div className="flex gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl w-fit">
                   <button onClick={() => setFiltroTipoEvento('Todos')} className={`px-4 py-2 text-xs font-black uppercase rounded-lg transition-all ${filtroTipoEvento === 'Todos' ? 'bg-white dark:bg-slate-700 shadow text-slate-800 dark:text-white' : 'text-slate-500 hover:text-slate-700'}`}>{t('shop.events.filterAll')}</button>
-                  <button onClick={() => setFiltroTipoEvento('Workshop')} className={`px-4 py-2 text-xs font-black uppercase rounded-lg transition-all ${filtroTipoEvento === 'Workshop' ? 'bg-white dark:bg-slate-700 shadow text-purple-600 dark:text-purple-400' : 'text-slate-500 hover:text-slate-700'}`}>{t('shop.events.filterWorkshops')}</button>
-                  <button onClick={() => setFiltroTipoEvento('Evento')} className={`px-4 py-2 text-xs font-black uppercase rounded-lg transition-all ${filtroTipoEvento === 'Evento' ? 'bg-white dark:bg-slate-700 shadow text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-700'}`}>{t('shop.events.filterEvents')}</button>
+                  <button onClick={() => setFiltroTipoEvento('Workshop')} className={`px-4 py-2 text-xs font-black uppercase rounded-lg transition-all ${filtroTipoEvento === 'Workshop' ? 'bg-white dark:bg-slate-700 shadow text-slate-600 dark:text-slate-400' : 'text-slate-500 hover:text-slate-700'}`}>{t('shop.events.filterWorkshops')}</button>
+                  <button onClick={() => setFiltroTipoEvento('Evento')} className={`px-4 py-2 text-xs font-black uppercase rounded-lg transition-all ${filtroTipoEvento === 'Evento' ? 'bg-white dark:bg-slate-700 shadow text-slate-600 dark:text-slate-400' : 'text-slate-500 hover:text-slate-700'}`}>{t('shop.events.filterEvents')}</button>
               </div>
 
               <div className="grid grid-cols-1 gap-4">
@@ -390,7 +390,7 @@ export default function WorkshopsTab() {
                       <div key={w.id} className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-6 hover:shadow-md transition-all group relative overflow-hidden">
                           
                           <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button onClick={() => abrirModalEditarEvento(w)} className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-600 hover:text-white transition-all shadow-sm" title={t('shop.events.edit')}>
+                              <button onClick={() => abrirModalEditarEvento(w)} className="p-2 bg-slate-50 text-slate-600 rounded-lg hover:bg-red-600 hover:text-white transition-all shadow-sm" title={t('shop.events.edit')}>
                                   <Edit className="w-4 h-4"/>
                               </button>
                               <button onClick={() => handleExcluirWorkshop(w.id)} className="p-2 bg-red-50 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-all shadow-sm" title={t('shop.events.delete')}>
@@ -401,7 +401,7 @@ export default function WorkshopsTab() {
                           <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6">
                               <div className="space-y-2 pr-20">
                                   <div className="flex flex-wrap items-center gap-2">
-                                      <span className={`px-2 py-1 text-[9px] font-black uppercase rounded-md tracking-widest ${w.tipoEvento === 'Evento' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>{traduzirTipoEvento(w.tipoEvento)}</span>
+                                      <span className={`px-2 py-1 text-[9px] font-black uppercase rounded-md tracking-widest ${w.tipoEvento === 'Evento' ? 'bg-slate-100 text-slate-700' : 'bg-slate-100 text-slate-700'}`}>{traduzirTipoEvento(w.tipoEvento)}</span>
                                       <span className="px-2 py-1 bg-slate-100 text-slate-500 text-[9px] font-black uppercase rounded-md tracking-widest">{w.modalidade}</span>
                                       <span className="flex items-center gap-1 text-[10px] font-bold text-slate-400 uppercase bg-slate-100 px-2 py-1 rounded-md"><Calendar className="w-3 h-3"/> {w.data}</span>
                                   </div>
@@ -412,7 +412,7 @@ export default function WorkshopsTab() {
                                   </div>
                               </div>
                               
-                              <div onClick={() => setWorkshopDetalhe(w)} className="flex flex-wrap sm:flex-nowrap gap-4 bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-700 w-full xl:w-auto mt-4 xl:mt-0 cursor-pointer hover:border-blue-400 hover:shadow-md transition-all">
+                              <div onClick={() => setWorkshopDetalhe(w)} className="flex flex-wrap sm:flex-nowrap gap-4 bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-700 w-full xl:w-auto mt-4 xl:mt-0 cursor-pointer hover:border-slate-400 hover:shadow-md transition-all">
                                   <div className="flex-1 sm:flex-none">
                                       <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{t('shop.events.revenue')}</p>
                                       <p className="text-sm font-black text-emerald-500">{formatCurrency(recTotalVisual)}</p>
@@ -424,10 +424,10 @@ export default function WorkshopsTab() {
                                   <div className="flex-1 sm:flex-none sm:pl-4 sm:border-l border-slate-200 flex items-center gap-4 justify-between w-full">
                                       <div>
                                           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{t('shop.events.finalProfit', { pct: percUnipower })}</p>
-                                          <p className={`text-lg font-black tracking-tighter ${lucroFinal >= 0 ? 'text-blue-600' : 'text-red-500'}`}>{formatCurrency(lucroFinal)}</p>
+                                          <p className={`text-lg font-black tracking-tighter ${lucroFinal >= 0 ? 'text-slate-600' : 'text-red-500'}`}>{formatCurrency(lucroFinal)}</p>
                                           {comissaoTotalPaga > 0 && <p className="text-[8px] font-bold text-amber-500 mt-0.5 uppercase">{t('shop.events.commissions', { pct: percProfessores, value: formatCurrency(comissaoTotalPaga) })}</p>}
                                       </div>
-                                      <div className="hidden sm:flex bg-blue-100 text-blue-600 p-2 rounded-lg items-center justify-center"><Table className="w-5 h-5"/></div>
+                                      <div className="hidden sm:flex bg-slate-100 text-slate-600 p-2 rounded-lg items-center justify-center"><Table className="w-5 h-5"/></div>
                                   </div>
                               </div>
                           </div>
@@ -448,7 +448,7 @@ export default function WorkshopsTab() {
       {isStockModalOpen && (
           <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
               <form onSubmit={handleSalvarStock} className="bg-white dark:bg-slate-800 w-full max-w-2xl rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col max-h-[90vh]">
-                  <div className={`p-5 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center text-white shrink-0 ${editingStockId ? 'bg-blue-600' : 'bg-emerald-600'}`}>
+                  <div className={`p-5 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center text-white shrink-0 ${editingStockId ? 'bg-red-600' : 'bg-emerald-600'}`}>
                       <h3 className="font-black uppercase tracking-widest flex items-center gap-2"><Package className="w-5 h-5"/> {editingStockId ? t('shop.stockModal.editTitle') : t('shop.stockModal.newTitle')}</h3>
                       <button type="button" onClick={() => setStockModalOpen(false)} className="p-1 hover:bg-white/20 rounded-full"><X className="w-5 h-5"/></button>
                   </div>
@@ -476,14 +476,14 @@ export default function WorkshopsTab() {
                       </div>
 
                       {formStock.tipo === 'entrada' && (
-                          <div className="bg-blue-50 p-5 rounded-2xl border border-blue-100 space-y-4">
+                          <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 space-y-4">
                               <div className="flex justify-between items-center">
-                                  <h4 className="text-[10px] font-black text-blue-600 uppercase tracking-widest flex items-center gap-2"><FileText className="w-4 h-4"/> {t('shop.stockModal.invoiceData')}</h4>
-                                  {fornecedoresUnicos.length > 0 && (<select onChange={(e) => handleAutoFillFornecedor(e.target.value)} className="text-[10px] p-1.5 rounded border border-blue-200 text-blue-600 font-bold outline-none cursor-pointer"><option value="">{t('shop.stockModal.autofill')}</option>{fornecedoresUnicos.map(f => <option key={f.cnpj} value={f.cnpj}>{f.nome}</option>)}</select>)}
+                                  <h4 className="text-[10px] font-black text-slate-600 uppercase tracking-widest flex items-center gap-2"><FileText className="w-4 h-4"/> {t('shop.stockModal.invoiceData')}</h4>
+                                  {fornecedoresUnicos.length > 0 && (<select onChange={(e) => handleAutoFillFornecedor(e.target.value)} className="text-[10px] p-1.5 rounded border border-slate-200 text-slate-600 font-bold outline-none cursor-pointer"><option value="">{t('shop.stockModal.autofill')}</option>{fornecedoresUnicos.map(f => <option key={f.cnpj} value={f.cnpj}>{f.nome}</option>)}</select>)}
                               </div>
                               <div className="mb-4">
-                                  <label className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1 block">{t('shop.stockModal.linkCostEvent')}</label>
-                                  <select value={formStock.workshopId} onChange={e=>setFormStock({...formStock, workshopId: e.target.value})} className="w-full p-2.5 bg-white border border-blue-200 rounded-xl text-xs font-bold outline-none focus:border-blue-500">
+                                  <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-1 block">{t('shop.stockModal.linkCostEvent')}</label>
+                                  <select value={formStock.workshopId} onChange={e=>setFormStock({...formStock, workshopId: e.target.value})} className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-red-500">
                                       <option value="">{t('shop.stockModal.generalStock')}</option>
                                       {workshops.map(w => <option key={w.id} value={w.id}>{formatarNomeEvento(w)}</option>)}
                                   </select>
@@ -495,9 +495,9 @@ export default function WorkshopsTab() {
                                   <div><label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">{t('shop.stockModal.phone')}</label><input type="text" value={formStock.fornecedorTelefone} onChange={e=>setFormStock({...formStock, fornecedorTelefone: e.target.value})} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs outline-none" /></div>
                                   <div><label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">{t('shop.stockModal.email')}</label><input type="email" value={formStock.fornecedorEmail} onChange={e=>setFormStock({...formStock, fornecedorEmail: e.target.value})} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs outline-none" /></div>
                               </div>
-                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2 border-t border-blue-100">
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2 border-t border-slate-100">
                                   <div><label className="text-[10px] font-black text-slate-500 uppercase block mb-1">{t('shop.stockModal.invoiceNo')}</label><input type="text" value={formStock.numeroNF} onChange={e=>setFormStock({...formStock, numeroNF: e.target.value})} className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-sm font-bold outline-none" /></div>
-                                  <div><label className="text-[10px] font-black text-blue-600 uppercase block mb-1">{t('shop.stockModal.unitCost', { symbol: getCurrencySymbol() })}</label><input type="number" step="0.01" value={formStock.valorUnitario} onChange={e=>setFormStock({...formStock, valorUnitario: e.target.value})} className="w-full p-2.5 bg-white border border-blue-200 rounded-xl text-sm font-black text-blue-600 outline-none focus:ring-2 focus:ring-blue-500" required/></div>
+                                  <div><label className="text-[10px] font-black text-slate-600 uppercase block mb-1">{t('shop.stockModal.unitCost', { symbol: getCurrencySymbol() })}</label><input type="number" step="0.01" value={formStock.valorUnitario} onChange={e=>setFormStock({...formStock, valorUnitario: e.target.value})} className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-sm font-black text-slate-600 outline-none focus:ring-2 focus:ring-red-500" required/></div>
                                   <div><label className="text-[10px] font-black text-red-600 uppercase block mb-1">{t('shop.stockModal.totalCost')}</label><div className="w-full p-2.5 bg-red-100 border border-red-200 rounded-xl text-sm font-black text-red-600">{formatCurrency(custoTotalCalculado)}</div></div>
                                   <div className="md:col-span-3"><label className="text-[10px] font-black text-slate-500 uppercase block mb-1 flex items-center gap-1"><Paperclip className="w-3 h-3"/> {t('shop.stockModal.attachment')}</label><input type="url" value={formStock.comprovanteUrl} onChange={e=>setFormStock({...formStock, comprovanteUrl: e.target.value})} className="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs font-medium outline-none" /></div>
                               </div>
@@ -519,8 +519,8 @@ export default function WorkshopsTab() {
                                   </div>
                                   {(formStock.motivoSaida === 'Venda' || formStock.motivoSaida === 'Venda no Evento') && (
                                       <div>
-                                          <label className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1 block">{t('shop.stockModal.linkSaleEvent')}</label>
-                                          <select value={formStock.workshopId} onChange={e=>setFormStock({...formStock, workshopId: e.target.value})} className="w-full p-3 bg-white border border-blue-200 rounded-xl text-sm font-bold uppercase outline-none focus:border-blue-500">
+                                          <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-1 block">{t('shop.stockModal.linkSaleEvent')}</label>
+                                          <select value={formStock.workshopId} onChange={e=>setFormStock({...formStock, workshopId: e.target.value})} className="w-full p-3 bg-white border border-slate-200 rounded-xl text-sm font-bold uppercase outline-none focus:border-red-500">
                                               <option value="">{t('shop.stockModal.generalStockNoLink')}</option>
                                               {workshops.map(w => <option key={w.id} value={w.id}>{formatarNomeEvento(w)}</option>)}
                                           </select>
@@ -532,7 +532,7 @@ export default function WorkshopsTab() {
                                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                           <div><label className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1 block">{t('shop.stockModal.saleValue')}</label><input type="number" step="0.01" value={formStock.valorUnitarioVenda} onChange={e=>setFormStock({...formStock, valorUnitarioVenda: e.target.value})} className="w-full p-3 bg-white border border-emerald-200 rounded-xl text-sm font-black text-emerald-600 outline-none focus:ring-2 focus:ring-emerald-500" required/></div>
                                           <div><label className="text-[10px] font-black text-emerald-700 uppercase tracking-widest mb-1 block">{t('shop.stockModal.collected')}</label><div className="w-full p-3 bg-emerald-100 border border-emerald-200 rounded-xl text-sm font-black text-emerald-700">{formatCurrency(valorTotalVendaCalculado)}</div></div>
-                                          <div><label className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1 block">{t('shop.stockModal.saleProfit')}</label><div className="w-full p-2.5 bg-blue-100 border border-blue-200 rounded-xl text-sm font-black text-blue-700 flex flex-col justify-center"><span>{formatCurrency(lucroDestaVenda)}</span><span className="text-[8px] font-bold text-blue-500 mt-0.5 uppercase">{t('shop.stockModal.costPerUnit', { value: formatCurrency(custoUnitarioMedio) })}</span></div></div>
+                                          <div><label className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-1 block">{t('shop.stockModal.saleProfit')}</label><div className="w-full p-2.5 bg-slate-100 border border-slate-200 rounded-xl text-sm font-black text-slate-700 flex flex-col justify-center"><span>{formatCurrency(lucroDestaVenda)}</span><span className="text-[8px] font-bold text-slate-500 mt-0.5 uppercase">{t('shop.stockModal.costPerUnit', { value: formatCurrency(custoUnitarioMedio) })}</span></div></div>
                                       </div>
                                   </div>
                               )}
@@ -540,7 +540,7 @@ export default function WorkshopsTab() {
                       )}
 
                       <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200">
-                          <div className="flex justify-between items-center mb-3"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Shirt className="w-4 h-4"/> {t('shop.stockModal.sizes')}</label><span className="text-[10px] font-black uppercase text-blue-500 bg-blue-50 px-2 py-1 rounded">{t('shop.stockModal.total', { count: totalPecasForm })}</span></div>
+                          <div className="flex justify-between items-center mb-3"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Shirt className="w-4 h-4"/> {t('shop.stockModal.sizes')}</label><span className="text-[10px] font-black uppercase text-slate-500 bg-slate-50 px-2 py-1 rounded">{t('shop.stockModal.total', { count: totalPecasForm })}</span></div>
                           <div className="grid grid-cols-4 sm:grid-cols-8 gap-3">
                               {TAMANHOS_PADRAO.map(tam => {
                                   const itemSendoEditado = editingStockId ? stockLedger.find(s => s.id === editingStockId) : null;
@@ -550,7 +550,7 @@ export default function WorkshopsTab() {
                                   return (
                                   <div key={tam}>
                                       <label className="text-[10px] font-bold text-slate-500 block mb-0.5 text-center flex flex-col">{tam}{formStock.tipo === 'saida' && formStock.modalidade && <span className="text-[8px] text-emerald-500 font-black mt-0.5">{t('shop.stockModal.max', { count: limitMax })}</span>}</label>
-                                      <input type="number" min="0" max={limitMax} value={formStock.tamanhos[tam]} onChange={e => handleTamanhoChange(tam, e.target.value)} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-center text-sm font-bold outline-none focus:border-blue-500" disabled={formStock.tipo === 'saida' && !formStock.modalidade}/>
+                                      <input type="number" min="0" max={limitMax} value={formStock.tamanhos[tam]} onChange={e => handleTamanhoChange(tam, e.target.value)} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-center text-sm font-bold outline-none focus:border-red-500" disabled={formStock.tipo === 'saida' && !formStock.modalidade}/>
                                   </div>
                               )})}
                           </div>
@@ -558,7 +558,7 @@ export default function WorkshopsTab() {
                   </div>
                   <div className="p-5 border-t border-slate-100 flex justify-end gap-3 bg-slate-50 shrink-0">
                       <button type="button" onClick={() => setStockModalOpen(false)} className="px-5 py-2.5 rounded-xl font-bold text-xs uppercase text-slate-500 hover:bg-slate-200 transition-colors">{t('common.actions.cancel')}</button>
-                      <button type="submit" disabled={salvando} className={`px-6 py-2.5 text-white rounded-xl font-black text-xs uppercase shadow-md transition-colors flex items-center gap-2 ${editingStockId ? 'bg-blue-600 hover:bg-blue-700' : 'bg-emerald-600 hover:bg-emerald-700'}`}>{salvando ? <Loader2 className="w-4 h-4 animate-spin"/> : t('shop.stockModal.save')}</button>
+                      <button type="submit" disabled={salvando} className={`px-6 py-2.5 text-white rounded-xl font-black text-xs uppercase shadow-md transition-colors flex items-center gap-2 ${editingStockId ? 'bg-red-600 hover:bg-red-700' : 'bg-emerald-600 hover:bg-emerald-700'}`}>{salvando ? <Loader2 className="w-4 h-4 animate-spin"/> : t('shop.stockModal.save')}</button>
                   </div>
               </form>
           </div>
@@ -568,16 +568,16 @@ export default function WorkshopsTab() {
       {isEventModalOpen && (
           <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
               <form onSubmit={handleSalvarEvento} className="bg-white dark:bg-slate-800 w-full max-w-lg rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col max-h-[90vh]">
-                  <div className={`p-5 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center text-white shrink-0 ${editingEventId ? 'bg-blue-600' : 'bg-purple-600'}`}>
+                  <div className={`p-5 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center text-white shrink-0 ${editingEventId ? 'bg-red-600' : 'bg-red-600'}`}>
                       <h3 className="font-black uppercase tracking-widest flex items-center gap-2"><Calendar className="w-5 h-5"/> {editingEventId ? t('shop.eventModal.editTitle') : t('shop.eventModal.newTitle')}</h3>
                       <button type="button" onClick={() => setEventModalOpen(false)} className="p-1 hover:bg-white/20 rounded-full"><X className="w-5 h-5"/></button>
                   </div>
                   <div className="p-6 space-y-4 overflow-y-auto custom-scrollbar flex-1">
                       
                       <div className="grid grid-cols-2 gap-4 mb-2">
-                          <div className="bg-purple-50 p-3 rounded-xl border border-purple-100">
-                              <label className="text-[10px] font-black text-purple-700 uppercase tracking-widest mb-1 block">{t('shop.eventModal.type')}</label>
-                              <select value={formEvent.tipoEvento} onChange={e=>setFormEvent({...formEvent, tipoEvento: e.target.value})} className="w-full p-2 bg-white border border-purple-200 rounded-lg text-xs font-bold uppercase outline-none focus:border-purple-500 text-purple-700" required>
+                          <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                              <label className="text-[10px] font-black text-slate-700 uppercase tracking-widest mb-1 block">{t('shop.eventModal.type')}</label>
+                              <select value={formEvent.tipoEvento} onChange={e=>setFormEvent({...formEvent, tipoEvento: e.target.value})} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold uppercase outline-none focus:border-red-500 text-slate-700" required>
                                   <option value="Workshop">{traduzirTipoEvento('Workshop')}</option>
                                   <option value="Evento">{traduzirTipoEvento('Evento')}</option>
                               </select>
@@ -600,27 +600,27 @@ export default function WorkshopsTab() {
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="md:col-span-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">{t('shop.eventModal.eventTitle')}</label><input type="text" value={formEvent.nome} onChange={e=>setFormEvent({...formEvent, nome: e.target.value})} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold uppercase outline-none focus:border-purple-500" required/></div>
+                          <div className="md:col-span-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">{t('shop.eventModal.eventTitle')}</label><input type="text" value={formEvent.nome} onChange={e=>setFormEvent({...formEvent, nome: e.target.value})} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold uppercase outline-none focus:border-red-500" required/></div>
                           
                           {/* 🟢 DOIS PROFESSORES AQUI */}
-                          <div><label className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1 block">{t('shop.eventModal.teacher1')}</label><input type="text" value={formEvent.professor} onChange={e=>setFormEvent({...formEvent, professor: e.target.value})} className="w-full p-3 bg-blue-50 border border-blue-200 rounded-xl text-sm font-bold uppercase outline-none focus:border-blue-500" required/></div>
-                          <div><label className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1 block">{t('shop.eventModal.teacher2')}</label><input type="text" value={formEvent.professor2} onChange={e=>setFormEvent({...formEvent, professor2: e.target.value})} className="w-full p-3 bg-blue-50 border border-blue-200 rounded-xl text-sm font-bold uppercase outline-none focus:border-blue-500" /></div>
+                          <div><label className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-1 block">{t('shop.eventModal.teacher1')}</label><input type="text" value={formEvent.professor} onChange={e=>setFormEvent({...formEvent, professor: e.target.value})} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold uppercase outline-none focus:border-red-500" required/></div>
+                          <div><label className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-1 block">{t('shop.eventModal.teacher2')}</label><input type="text" value={formEvent.professor2} onChange={e=>setFormEvent({...formEvent, professor2: e.target.value})} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold uppercase outline-none focus:border-red-500" /></div>
                           
-                          <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">{t('shop.eventModal.manager')}</label><input type="text" value={formEvent.gestor} onChange={e=>setFormEvent({...formEvent, gestor: e.target.value})} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold uppercase outline-none focus:border-purple-500" /></div>
-                          <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">{t('shop.eventModal.assistant')}</label><input type="text" value={formEvent.auxiliar} onChange={e=>setFormEvent({...formEvent, auxiliar: e.target.value})} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold uppercase outline-none focus:border-purple-500" /></div>
+                          <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">{t('shop.eventModal.manager')}</label><input type="text" value={formEvent.gestor} onChange={e=>setFormEvent({...formEvent, gestor: e.target.value})} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold uppercase outline-none focus:border-red-500" /></div>
+                          <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">{t('shop.eventModal.assistant')}</label><input type="text" value={formEvent.auxiliar} onChange={e=>setFormEvent({...formEvent, auxiliar: e.target.value})} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold uppercase outline-none focus:border-red-500" /></div>
                           
-                          <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">{t('shop.eventModal.mainModality')}</label><input type="text" list="modalidades-pratique-evento" value={formEvent.modalidade} onChange={e=>setFormEvent({...formEvent, modalidade: e.target.value})} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold uppercase outline-none focus:border-purple-500" required/><datalist id="modalidades-pratique-evento">{MODALIDADES_PRATIQUE.map(mod => <option key={mod} value={mod} />)}</datalist></div>
-                          <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">{t('shop.eventModal.date')}</label><input type="date" value={formEvent.data} onChange={e=>setFormEvent({...formEvent, data: e.target.value})} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold uppercase outline-none focus:border-purple-500" required/></div>
+                          <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">{t('shop.eventModal.mainModality')}</label><input type="text" list="modalidades-pratique-evento" value={formEvent.modalidade} onChange={e=>setFormEvent({...formEvent, modalidade: e.target.value})} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold uppercase outline-none focus:border-red-500" required/><datalist id="modalidades-pratique-evento">{MODALIDADES_PRATIQUE.map(mod => <option key={mod} value={mod} />)}</datalist></div>
+                          <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">{t('shop.eventModal.date')}</label><input type="date" value={formEvent.data} onChange={e=>setFormEvent({...formEvent, data: e.target.value})} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold uppercase outline-none focus:border-red-500" required/></div>
                           
                           <div className="md:col-span-2 grid grid-cols-3 gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-200">
-                              <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">{t('shop.eventModal.state')}</label><select value={formEvent.estado} onChange={e=>setFormEvent({...formEvent, estado: e.target.value})} className="w-full p-3 bg-white border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-purple-500">{ESTADOS_BR.map(uf => <option key={uf} value={uf}>{uf}</option>)}</select></div>
-                              <div className="col-span-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">{t('shop.eventModal.place')}</label><input type="text" value={formEvent.local} onChange={e=>setFormEvent({...formEvent, local: e.target.value})} className="w-full p-3 bg-white border border-slate-200 rounded-xl text-sm font-bold uppercase outline-none focus:border-purple-500" required/></div>
+                              <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">{t('shop.eventModal.state')}</label><select value={formEvent.estado} onChange={e=>setFormEvent({...formEvent, estado: e.target.value})} className="w-full p-3 bg-white border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-red-500">{ESTADOS_BR.map(uf => <option key={uf} value={uf}>{uf}</option>)}</select></div>
+                              <div className="col-span-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">{t('shop.eventModal.place')}</label><input type="text" value={formEvent.local} onChange={e=>setFormEvent({...formEvent, local: e.target.value})} className="w-full p-3 bg-white border border-slate-200 rounded-xl text-sm font-bold uppercase outline-none focus:border-red-500" required/></div>
                           </div>
                       </div>
                   </div>
                   <div className="p-5 border-t border-slate-100 flex justify-end gap-3 bg-slate-50 shrink-0">
                       <button type="button" onClick={() => setEventModalOpen(false)} className="px-5 py-2.5 rounded-xl font-bold text-xs uppercase text-slate-500 hover:bg-slate-200 transition-colors">{t('common.actions.cancel')}</button>
-                      <button type="submit" disabled={salvando} className={`px-6 py-2.5 text-white rounded-xl font-black text-xs uppercase shadow-md transition-colors flex items-center gap-2 ${editingEventId ? 'bg-blue-600 hover:bg-blue-700' : 'bg-purple-600 hover:bg-purple-700'}`}>{salvando ? <Loader2 className="w-4 h-4 animate-spin"/> : t('shop.stockModal.save')}</button>
+                      <button type="submit" disabled={salvando} className={`px-6 py-2.5 text-white rounded-xl font-black text-xs uppercase shadow-md transition-colors flex items-center gap-2 ${editingEventId ? 'bg-red-600 hover:bg-red-700' : 'bg-red-600 hover:bg-red-700'}`}>{salvando ? <Loader2 className="w-4 h-4 animate-spin"/> : t('shop.stockModal.save')}</button>
                   </div>
               </form>
           </div>
@@ -630,12 +630,12 @@ export default function WorkshopsTab() {
       {isTransactionModalOpen && (
           <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
               <form onSubmit={handleSalvarTransacao} className="bg-white dark:bg-slate-800 w-full max-w-md rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col max-h-[90vh]">
-                  <div className={`p-5 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center text-white shrink-0 ${editingTransacaoId ? 'bg-blue-600' : 'bg-slate-800 dark:bg-slate-900'}`}>
+                  <div className={`p-5 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center text-white shrink-0 ${editingTransacaoId ? 'bg-red-600' : 'bg-slate-800 dark:bg-slate-900'}`}>
                       <h3 className="font-black uppercase tracking-widest flex items-center gap-2"><CreditCard className="w-5 h-5"/> {editingTransacaoId ? t('shop.txModal.editTitle') : t('shop.txModal.newTitle')}</h3>
                       <button type="button" onClick={() => setTransactionModalOpen(false)} className="p-1 hover:bg-white/20 rounded-full"><X className="w-5 h-5"/></button>
                   </div>
                   <div className="p-6 space-y-4 overflow-y-auto custom-scrollbar flex-1">
-                      <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">{t('shop.txModal.linkEvent')}</label><select value={formTransacao.workshopId} onChange={e=>setFormTransacao({...formTransacao, workshopId: e.target.value})} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold uppercase outline-none focus:border-blue-500" required><option value="">{t('shop.stockModal.select')}</option>{workshops.map(w => <option key={w.id} value={w.id}>{formatarNomeEvento(w)}</option>)}</select></div>
+                      <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">{t('shop.txModal.linkEvent')}</label><select value={formTransacao.workshopId} onChange={e=>setFormTransacao({...formTransacao, workshopId: e.target.value})} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold uppercase outline-none focus:border-red-500" required><option value="">{t('shop.stockModal.select')}</option>{workshops.map(w => <option key={w.id} value={w.id}>{formatarNomeEvento(w)}</option>)}</select></div>
                       <div className="grid grid-cols-2 gap-4">
                           <div>
                               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">{t('shop.txModal.type')}</label>
@@ -646,7 +646,7 @@ export default function WorkshopsTab() {
                                   // 🟢 Removida a comissão de evento, agora é só camisas ou extras
                                   if(e.target.value === 'comissao') defaultCat = 'Comissão de Camisas (%)';
                                   setFormTransacao({...formTransacao, tipo: e.target.value, categoria: defaultCat});
-                              }} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold uppercase outline-none focus:border-blue-500">
+                              }} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold uppercase outline-none focus:border-red-500">
                                   <option value="receita">{t('shop.txTypes.receita')}</option>
                                   <option value="despesa">{t('shop.txTypes.despesa')}</option>
                                   <option value="comissao">{t('shop.txTypes.comissao')}</option>
@@ -662,7 +662,7 @@ export default function WorkshopsTab() {
                       </div>
                       <div>
                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">{t('shop.txModal.category')}</label>
-                          <select value={formTransacao.categoria} onChange={e=>setFormTransacao({...formTransacao, categoria: e.target.value})} className="w-full p-3 bg-white border border-slate-200 rounded-xl text-sm font-bold uppercase outline-none focus:border-blue-500">
+                          <select value={formTransacao.categoria} onChange={e=>setFormTransacao({...formTransacao, categoria: e.target.value})} className="w-full p-3 bg-white border border-slate-200 rounded-xl text-sm font-bold uppercase outline-none focus:border-red-500">
                               {formTransacao.tipo === 'receita' && (<><option value="Inscrições (Sympla)">{traduzirCategoria("Inscrições (Sympla)")}</option><option value="Patrocínio">{traduzirCategoria("Patrocínio")}</option><option value="Outra Receita">{traduzirCategoria("Outra Receita")}</option></>)}
                               {formTransacao.tipo === 'despesa' && (
                                   <>
@@ -684,13 +684,13 @@ export default function WorkshopsTab() {
                               )}
                           </select>
                       </div>
-                      {(formTransacao.tipo === 'despesa' || formTransacao.tipo === 'comissao') && (<div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">{t('shop.txModal.responsible')}</label><input type="text" value={formTransacao.fornecedorServico} onChange={e=>setFormTransacao({...formTransacao, fornecedorServico: e.target.value})} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-blue-500" /></div>)}
-                      <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">{t('shop.txModal.details')}</label><input type="text" value={formTransacao.descricao} onChange={e=>setFormTransacao({...formTransacao, descricao: e.target.value})} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold uppercase outline-none focus:border-blue-500" required/></div>
+                      {(formTransacao.tipo === 'despesa' || formTransacao.tipo === 'comissao') && (<div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">{t('shop.txModal.responsible')}</label><input type="text" value={formTransacao.fornecedorServico} onChange={e=>setFormTransacao({...formTransacao, fornecedorServico: e.target.value})} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-red-500" /></div>)}
+                      <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">{t('shop.txModal.details')}</label><input type="text" value={formTransacao.descricao} onChange={e=>setFormTransacao({...formTransacao, descricao: e.target.value})} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold uppercase outline-none focus:border-red-500" required/></div>
                       {(formTransacao.tipo === 'despesa' || formTransacao.tipo === 'comissao') && (<div className="bg-red-50 p-4 rounded-xl border border-red-100"><label className="text-[10px] font-black text-red-600 uppercase block mb-1 flex items-center gap-1"><Paperclip className="w-3 h-3"/> {t('shop.txModal.receipt')}</label><input type="url" value={formTransacao.comprovanteUrl} onChange={e=>setFormTransacao({...formTransacao, comprovanteUrl: e.target.value})} className="w-full p-2 bg-white border border-red-200 rounded-lg text-xs outline-none" /></div>)}
                   </div>
                   <div className="p-5 border-t border-slate-100 flex justify-end gap-3 bg-slate-50 shrink-0">
                       <button type="button" onClick={() => setTransactionModalOpen(false)} className="px-5 py-2.5 rounded-xl font-bold text-xs uppercase text-slate-500 hover:bg-slate-200 transition-colors">{t('common.actions.cancel')}</button>
-                      <button type="submit" disabled={salvando} className={`px-6 py-2.5 text-white rounded-xl font-black text-xs uppercase shadow-md transition-colors flex items-center gap-2 ${editingTransacaoId ? 'bg-blue-600 hover:bg-blue-700' : 'bg-slate-800 hover:bg-slate-900'}`}>{salvando ? <Loader2 className="w-4 h-4 animate-spin"/> : t('shop.stockModal.save')}</button>
+                      <button type="submit" disabled={salvando} className={`px-6 py-2.5 text-white rounded-xl font-black text-xs uppercase shadow-md transition-colors flex items-center gap-2 ${editingTransacaoId ? 'bg-red-600 hover:bg-red-700' : 'bg-slate-800 hover:bg-slate-900'}`}>{salvando ? <Loader2 className="w-4 h-4 animate-spin"/> : t('shop.stockModal.save')}</button>
                   </div>
               </form>
           </div>

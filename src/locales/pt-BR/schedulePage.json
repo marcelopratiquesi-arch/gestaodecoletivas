@@ -47,7 +47,15 @@
     "delete": "Excluir",
     "saveEdit": "Salvar Alterações",
     "selectUnitAlert": "Selecione a unidade",
-    "noTeacherLinked": "Nenhum vinculado"
+    "noTeacherLinked": "Nenhum vinculado",
+    "sectionClass": "A aula",
+    "sectionWhen": "Quando",
+    "sectionValue": "Valor",
+    "startHint": "Primeiro dia em que a aula passa a existir e a ser registrada.",
+    "endHint": "Deixe vazio se a aula continua. Depois dessa data ela sai da grade.",
+    "valueAuto": "Igual ao valor da tabela de preços",
+    "valueManual": "Valor digitado por você",
+    "editHint": "Ao mudar unidade, professor, modalidade, horário, dias ou valor, o sistema vai perguntar se cria uma nova fase a partir de uma data (preserva o passado) ou se só corrige os dados."
   },
   "splitModal": {
     "title": "Alteração de Grade",
@@ -75,7 +83,9 @@
     "deleteError": "Erro ao enviar a aula para a lixeira.",
     "saveError": "Erro ao salvar.",
     "valueRequired": "❌ Informe o valor da aula (maior que zero).",
-    "duplicateConfirm": "⚠️ Já existe uma aula igual a esta (mesma unidade, modalidade, professor, horário e dia).\n\nSalvar mesmo assim pode pagar a mesma aula duas vezes.\n\nDeseja salvar mesmo assim?"
+    "duplicateConfirm": "⚠️ Já existe uma aula igual a esta (mesma unidade, modalidade, professor, horário e dia).\n\nSalvar mesmo assim pode pagar a mesma aula duas vezes.\n\nDeseja salvar mesmo assim?",
+    "noDays": "❌ Marque pelo menos um dia da semana.",
+    "endInPast": "❌ A data de encerramento já passou: a aula nasceria encerrada. Deixe vazio ou escolha uma data de hoje em diante."
   },
   "unknownModality": "Desconhecido",
   "unknownUnit": "Unidade Desconhecida",
@@ -112,5 +122,8 @@
       "hora": "horário",
       "dias": "dias"
     }
+  },
+  "mobile": {
+    "noClassesDay": "Sem aulas neste dia."
   }
 }

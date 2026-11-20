@@ -109,7 +109,7 @@ export default function HistoricoAulas({ linhas, aulasTodas, catalogs, mostrarUn
                         <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase px-2 py-1 rounded bg-red-50 text-red-700 border border-red-200"><Trash2 className="w-3 h-3" /> {t('schedulePage.history.deleted')}</span>
                       ) : cont ? (
                         <div className="text-xs">
-                          <span className="text-[10px] font-bold uppercase px-2 py-1 rounded bg-blue-50 text-blue-700 border border-blue-200">{t('schedulePage.history.newPhase')}</span>
+                          <span className="text-[10px] font-bold uppercase px-2 py-1 rounded bg-slate-50 text-slate-700 border border-slate-200">{t('schedulePage.history.newPhase')}</span>
                           <p className="mt-1 text-slate-500 dark:text-slate-400">
                             {t('schedulePage.history.continuedBy', { professor: profNovo?.nome || '—', data: fmt(cont.continuadaPor.dataInicio) })}
                             {cont.mudou.length > 0 && <> · {t('schedulePage.history.changedLabel')}: {cont.mudou.map(rotuloMudanca).join(', ')}</>}
@@ -121,7 +121,7 @@ export default function HistoricoAulas({ linhas, aulasTodas, catalogs, mostrarUn
                     </td>
                     <td className="px-2 py-3">
                       {a.excluido !== true && (
-                        <button type="button" onClick={() => onEdit(a)} title={t('schedulePage.history.open')} className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg"><Edit2 className="w-4 h-4" /></button>
+                        <button type="button" onClick={() => onEdit(a)} title={t('schedulePage.history.open')} className="p-2 text-slate-600 hover:bg-slate-50 dark:hover:bg-slate-900/30 rounded-lg"><Edit2 className="w-4 h-4" /></button>
                       )}
                     </td>
                   </tr>

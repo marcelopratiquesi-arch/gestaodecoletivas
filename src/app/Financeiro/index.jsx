@@ -72,7 +72,7 @@ const MultiSelectDropdown = ({ options, selectedValues, onChange, placeholder, i
             <Icon className="absolute left-3 top-2.5 w-4 h-4 text-slate-400 z-10 pointer-events-none"/>
             <div 
                 onClick={() => setIsOpen(!isOpen)} 
-                className={`w-full pl-10 pr-8 p-2 border border-slate-200 dark:border-slate-600 rounded-xl text-sm font-bold text-slate-700 dark:text-white cursor-pointer shadow-sm select-none flex items-center h-[38px] uppercase ${isOpen ? 'ring-2 ring-purple-500' : ''}`}
+                className={`w-full pl-10 pr-8 p-2 border border-slate-200 dark:border-slate-600 rounded-xl text-sm font-bold text-slate-700 dark:text-white cursor-pointer shadow-sm select-none flex items-center h-[38px] uppercase ${isOpen ? 'ring-2 ring-red-500' : ''}`}
             >
                 <span className="truncate">{displayText}</span>
                 <ChevronDown className={`absolute right-3 top-3 w-4 h-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}/>
@@ -81,8 +81,8 @@ const MultiSelectDropdown = ({ options, selectedValues, onChange, placeholder, i
             {isOpen && (
                 <div className="absolute top-full left-0 mt-1 w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 shadow-xl rounded-xl z-50 max-h-60 flex flex-col overflow-hidden">
                     <div className="p-2 border-b border-slate-100 dark:border-slate-700 flex justify-between shrink-0 bg-slate-50 dark:bg-slate-900">
-                        <button onClick={selectAll} className="text-[10px] font-black text-purple-600 dark:text-purple-400 px-2 py-1 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded uppercase transition-colors">{t('common.multiSelect.selectAll')}</button>
-                        <button onClick={clearAll} className="text-[10px] font-black text-rose-600 dark:text-rose-400 px-2 py-1 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded uppercase transition-colors">{t('common.multiSelect.clear')}</button>
+                        <button onClick={selectAll} className="text-[10px] font-black text-slate-600 dark:text-slate-400 px-2 py-1 hover:bg-slate-50 dark:hover:bg-slate-900/30 rounded uppercase transition-colors">{t('common.multiSelect.selectAll')}</button>
+                        <button onClick={clearAll} className="text-[10px] font-black text-red-600 dark:text-red-400 px-2 py-1 hover:bg-red-50 dark:hover:bg-red-900/30 rounded uppercase transition-colors">{t('common.multiSelect.clear')}</button>
                     </div>
                     <div className="overflow-y-auto p-1 custom-scrollbar">
                         {options.length === 0 && <div className="p-2 text-xs text-slate-400 text-center font-bold uppercase">{t('common.multiSelect.noResults')}</div>}
@@ -92,7 +92,7 @@ const MultiSelectDropdown = ({ options, selectedValues, onChange, placeholder, i
                                     type="checkbox" 
                                     checked={selectedValues.includes(o.value)} 
                                     onChange={() => toggleOption(o.value)} 
-                                    className="w-4 h-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500 dark:border-slate-600 dark:bg-slate-700 cursor-pointer"
+                                    className="w-4 h-4 rounded border-slate-300 text-slate-600 focus:ring-red-500 dark:border-slate-600 dark:bg-slate-700 cursor-pointer"
                                 />
                                 <span className="text-xs font-bold uppercase text-slate-700 dark:text-slate-300 truncate">{o.label}</span>
                             </label>
@@ -150,7 +150,7 @@ const RankingCard = ({ title, emptyText, items, icon: Icon, colorClass, type }) 
                 items.map((item, idx) => (
                     <div key={item.unidade.id} className="p-3 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
                         <div className="flex items-center gap-3">
-                            <span className={`w-5 h-5 flex items-center justify-center rounded-full text-[10px] font-black ${idx === 0 ? 'bg-yellow-400 text-white shadow-sm' : 'bg-slate-100 text-slate-500'}`}>
+                            <span className={`w-5 h-5 flex items-center justify-center rounded-full text-[10px] font-black ${idx === 0 ? 'bg-amber-400 text-white shadow-sm' : 'bg-slate-100 text-slate-500'}`}>
                                 {idx + 1}
                             </span>
                             <div>
@@ -159,7 +159,7 @@ const RankingCard = ({ title, emptyText, items, icon: Icon, colorClass, type }) 
                             </div>
                         </div>
                         <div className="text-right">
-                            <p className={`text-xs font-black ${type === 'good' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                            <p className={`text-xs font-black ${type === 'good' ? 'text-emerald-600' : 'text-red-600'}`}>
                                 {formatPercent(item.percent)}
                             </p>
                         </div>
@@ -178,8 +178,8 @@ const SortableHeader = ({ label, field, currentSort, onSort, align = "left" }) =
         <div className={`flex items-center gap-1 ${align === "right" ? "justify-end" : align === "center" ? "justify-center" : "justify-start"}`}>
             {label}
             <div className="flex flex-col">
-                <ChevronDown className={`w-2 h-2 ${currentSort.field === field && currentSort.direction === 'desc' ? 'text-purple-600' : 'text-slate-300'}`} />
-                <ChevronDown className={`w-2 h-2 rotate-180 -mt-1 ${currentSort.field === field && currentSort.direction === 'asc' ? 'text-purple-600' : 'text-slate-300'}`} />
+                <ChevronDown className={`w-2 h-2 ${currentSort.field === field && currentSort.direction === 'desc' ? 'text-slate-600' : 'text-slate-300'}`} />
+                <ChevronDown className={`w-2 h-2 rotate-180 -mt-1 ${currentSort.field === field && currentSort.direction === 'asc' ? 'text-slate-600' : 'text-slate-300'}`} />
             </div>
         </div>
     </th>
@@ -220,7 +220,7 @@ const PerformanceRow = ({ unidade, mentorNome, custoAuto, folhaManualInicial, on
                         <div className="flex items-center gap-1 animate-in zoom-in duration-200">
                             <input 
                                 type="number" autoFocus
-                                className="w-24 text-right p-1.5 text-sm border border-blue-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-900 dark:text-white font-bold"
+                                className="w-24 text-right p-1.5 text-sm border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-red-500 bg-white dark:bg-slate-900 dark:text-white font-bold"
                                 value={tempValue} onChange={(e) => setTempValue(e.target.value)}
                             />
                             <button onClick={handleSave} disabled={saving} className="p-1.5 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors">
@@ -235,7 +235,7 @@ const PerformanceRow = ({ unidade, mentorNome, custoAuto, folhaManualInicial, on
                             <span className={`text-sm font-bold ${folhaManualInicial === 0 ? 'text-slate-300 italic' : 'text-slate-600 dark:text-slate-300'}`}>
                                 {folhaManualInicial > 0 ? formatCurrency(folhaManualInicial, unidade.pais) : t('finance.table.setValue')}
                             </span>
-                            <div className="p-1.5 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-blue-50 transition-colors opacity-0 group-hover/edit:opacity-100">
+                            <div className="p-1.5 rounded-lg text-slate-400 hover:text-slate-500 hover:bg-slate-50 transition-colors opacity-0 group-hover/edit:opacity-100">
                                 <Edit2 className="w-3.5 h-3.5"/>
                             </div>
                         </div>
@@ -245,11 +245,11 @@ const PerformanceRow = ({ unidade, mentorNome, custoAuto, folhaManualInicial, on
             <td className="p-4 text-center">
                 {folhaManualInicial > 0 || isEditing ? (
                     <div className="flex flex-col items-center justify-center w-full">
-                        <span className="font-black text-sm text-blue-600 dark:text-blue-400">
+                        <span className="font-black text-sm text-slate-600 dark:text-slate-400">
                             {formatPercent(percentual)}
                         </span>
                         <div className="w-20 h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full mt-1 overflow-hidden">
-                            <div className="h-full bg-blue-500 transition-all duration-500" style={{ width: `${Math.min(percentual, 100)}%` }}></div>
+                            <div className="h-full bg-red-500 transition-all duration-500" style={{ width: `${Math.min(percentual, 100)}%` }}></div>
                         </div>
                     </div>
                 ) : <span className="text-[10px] text-slate-300 font-bold tracking-widest">-</span>}
@@ -551,11 +551,11 @@ export default function PerformanceFinanceiraPage() {
   // 🟢 TRATAMENTO DE ERRO (UX)
   if (erroCarregamento) {
       return (
-          <div className="flex h-[80vh] items-center justify-center flex-col gap-4 text-rose-500 uppercase animate-fade-in">
-              <div className="bg-rose-50 p-6 rounded-full border border-rose-200 shadow-inner"><AlertTriangle className="w-12 h-12 text-rose-500" /></div>
+          <div className="flex h-[80vh] items-center justify-center flex-col gap-4 text-red-500 uppercase animate-fade-in">
+              <div className="bg-red-50 p-6 rounded-full border border-red-200 shadow-inner"><AlertTriangle className="w-12 h-12 text-red-500" /></div>
               <h2 className="text-xl font-black tracking-wider text-slate-800">{t('finance.error.title')}</h2>
               <p className="font-bold text-slate-500">{t('finance.error.desc')}</p>
-              <button onClick={() => window.location.reload()} className="mt-4 px-6 py-3 bg-rose-500 text-white rounded-xl font-black shadow-lg shadow-rose-500/30 hover:bg-rose-600 transition-colors active:scale-95">
+              <button onClick={() => window.location.reload()} className="mt-4 px-6 py-3 bg-red-500 text-white rounded-xl font-black shadow-lg shadow-red-500/30 hover:bg-red-600 transition-colors active:scale-95">
                   {t('finance.error.reload')}
               </button>
           </div>
@@ -572,7 +572,7 @@ export default function PerformanceFinanceiraPage() {
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 border-b border-slate-200 dark:border-slate-800 pb-6">
         <div>
             <h1 className="text-xl md:text-2xl font-black text-slate-800 dark:text-white flex items-center gap-3 tracking-tight">
-                <span className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-2.5 rounded-xl shadow-lg shadow-purple-500/20">
+                <span className="bg-gradient-to-r from-slate-600 to-slate-600 text-white p-2.5 rounded-xl shadow-lg shadow-slate-500/20">
                     <TrendingUp className="w-6 h-6"/>
                 </span>
                 {t('finance.title')}
@@ -585,13 +585,13 @@ export default function PerformanceFinanceiraPage() {
             
             {/* BUSCA */}
             <div className="relative w-full sm:w-56 group">
-                <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400 group-focus-within:text-purple-500"/>
+                <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400 group-focus-within:text-slate-500"/>
                 <input 
                     type="text" 
                     placeholder={t('finance.searchUnit').toUpperCase()} 
                     value={busca}
                     onChange={(e) => setBusca(e.target.value)}
-                    className="w-full pl-9 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-white shadow-sm outline-none focus:ring-2 focus:ring-purple-500 transition-all uppercase placeholder:normal-case h-[38px]"
+                    className="w-full pl-9 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-white shadow-sm outline-none focus:ring-2 focus:ring-red-500 transition-all uppercase placeholder:normal-case h-[38px]"
                 />
             </div>
 
@@ -624,8 +624,8 @@ export default function PerformanceFinanceiraPage() {
       {/* 🟢 O COFRE E LOADING TEMPO REAL */}
       {isCofreFechado ? (
           <div className="py-24 text-center bg-white dark:bg-slate-800 border-dashed border-2 border-slate-300 dark:border-slate-700 shadow-sm animate-in fade-in zoom-in duration-300 m-4 rounded-2xl">
-              <div className="bg-purple-50 dark:bg-slate-900 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 border border-purple-100 dark:border-slate-800 shadow-inner">
-                  <TrendingUp className="w-10 h-10 text-purple-500 animate-pulse"/>
+              <div className="bg-slate-50 dark:bg-slate-900 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 border border-slate-100 dark:border-slate-800 shadow-inner">
+                  <TrendingUp className="w-10 h-10 text-slate-500 animate-pulse"/>
               </div>
               <h3 className="text-2xl font-black text-slate-700 dark:text-white mb-3 uppercase tracking-wider">
                   {t('finance.locked.title')}
@@ -645,13 +645,13 @@ export default function PerformanceFinanceiraPage() {
                         <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">{t('finance.kpis.groupCost')}</p>
                         <h3 className="text-2xl font-black text-slate-800 dark:text-white">{formatCurrency(totais.totalColetiva)}</h3>
                         <div className="flex items-center gap-2 mt-1">
-                            <span className={`text-[10px] font-black px-1.5 py-0.5 rounded flex items-center gap-1 uppercase ${totais.variacao > 0 ? 'bg-rose-100 text-rose-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                            <span className={`text-[10px] font-black px-1.5 py-0.5 rounded flex items-center gap-1 uppercase ${totais.variacao > 0 ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-600'}`}>
                                 {totais.variacao > 0 ? <TrendingUp className="w-3 h-3"/> : <TrendingDown className="w-3 h-3"/>}
                                 {t('finance.kpis.vsLastYear', { value: Math.abs(totais.variacao) })}
                             </span>
                         </div>
                     </div>
-                    <div className="p-3 rounded-lg bg-purple-50 text-purple-600 shadow-inner"><BarChart3 className="w-6 h-6" /></div>
+                    <div className="p-3 rounded-lg bg-slate-50 text-slate-600 shadow-inner"><BarChart3 className="w-6 h-6" /></div>
                 </div>
                 <div className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-start justify-between">
                     <div>
@@ -659,15 +659,15 @@ export default function PerformanceFinanceiraPage() {
                         <h3 className="text-2xl font-black text-slate-800 dark:text-white">{formatCurrency(totais.totalFolha)}</h3>
                         <div className="flex items-center gap-2 mt-1"><span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t('finance.kpis.totalDeclared')}</span></div>
                     </div>
-                    <div className="p-3 rounded-lg bg-blue-50 text-blue-600 shadow-inner"><Wallet className="w-6 h-6" /></div>
+                    <div className="p-3 rounded-lg bg-slate-50 text-slate-600 shadow-inner"><Wallet className="w-6 h-6" /></div>
                 </div>
                 <div className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-start justify-between">
                     <div>
                         <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">{t('finance.kpis.avgImpact')}</p>
                         <h3 className="text-2xl font-black text-slate-800 dark:text-white">{formatPercent(totais.percentualGeral)}</h3>
-                        <div className="flex items-center gap-2 mt-1"><span className={`text-[10px] font-black tracking-wider uppercase ${totais.percentualGeral > 25 ? 'text-rose-500' : 'text-emerald-500'}`}>{totais.percentualGeral > 25 ? t('finance.kpis.highCost') : t('finance.kpis.healthy')}</span></div>
+                        <div className="flex items-center gap-2 mt-1"><span className={`text-[10px] font-black tracking-wider uppercase ${totais.percentualGeral > 25 ? 'text-red-500' : 'text-emerald-500'}`}>{totais.percentualGeral > 25 ? t('finance.kpis.highCost') : t('finance.kpis.healthy')}</span></div>
                     </div>
-                    <div className={`p-3 rounded-lg shadow-inner ${totais.percentualGeral > 25 ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600'}`}><PieChart className="w-6 h-6" /></div>
+                    <div className={`p-3 rounded-lg shadow-inner ${totais.percentualGeral > 25 ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}><PieChart className="w-6 h-6" /></div>
                 </div>
             </div>
 

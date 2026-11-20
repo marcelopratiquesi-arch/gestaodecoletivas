@@ -419,10 +419,10 @@ export function LideresTab() {
       {/* cabeçalho da página */}
       <div className="flex justify-between items-end gap-4 flex-wrap">
         <div className="flex gap-3.5 items-center min-w-0">
-          <span aria-hidden="true" className="w-[52px] h-[52px] rounded-[14px] bg-neutral-900 text-white inline-flex items-center justify-center shrink-0 dark:bg-white dark:text-neutral-900"><Users className="w-[26px] h-[26px]" /></span>
+          <span aria-hidden="true" className="w-[52px] h-[52px] rounded-[14px] bg-slate-900 text-white inline-flex items-center justify-center shrink-0 dark:bg-white dark:text-slate-900"><Users className="w-[26px] h-[26px]" /></span>
           <div className="min-w-0">
-            <h1 className="m-0 text-[28px] font-black leading-tight text-neutral-900 dark:text-white">{t("leadersTab.title")}</h1>
-            <p className="mt-1 mb-0 text-[13px] text-neutral-600 dark:text-neutral-400">{t("leadersTab.desk.subtitle")}</p>
+            <h1 className="m-0 text-[28px] font-black leading-tight text-slate-900 dark:text-white">{t("leadersTab.title")}</h1>
+            <p className="mt-1 mb-0 text-[13px] text-slate-600 dark:text-slate-400">{t("leadersTab.desk.subtitle")}</p>
           </div>
         </div>
         <div className="flex gap-2 flex-wrap">
@@ -434,27 +434,27 @@ export function LideresTab() {
       </div>
 
       {mostrarBuscaDoc && (
-        <div className="p-4 rounded-2xl border border-neutral-200 bg-white dark:bg-neutral-900 dark:border-neutral-800">
+        <div className="p-4 rounded-2xl border border-slate-200 bg-white dark:bg-slate-900 dark:border-slate-800">
           <BuscaDocumento aoCadastrar={cadastrarPeloDocumento} aoEscolherPessoa={() => setTornarLider({ vaga: 1, unidade: null })} aoIrParaPedido={abrirPedidos} />
         </div>
       )}
 
       {/* PEDIDOS DE ACESSO: barra fina, recolhível, fechada por padrão; some quando não há pedidos */}
       {totalPendencias > 0 && (
-        <section ref={pedidosRef} aria-label={t("leadersTab.requests.title")} className="scroll-mt-24 rounded-xl border border-neutral-200 border-l-4 border-l-red-600 bg-white overflow-hidden dark:bg-neutral-900 dark:border-neutral-800">
+        <section ref={pedidosRef} aria-label={t("leadersTab.requests.title")} className="scroll-mt-24 rounded-xl border border-slate-200 border-l-4 border-l-red-600 bg-white overflow-hidden dark:bg-slate-900 dark:border-slate-800">
           <div className="flex items-center gap-3.5 px-4 py-3 flex-wrap">
             <UserPlus className="w-5 h-5 text-red-600 shrink-0" aria-hidden="true" />
             <div className="flex items-center gap-2">
-              <span className="text-[15px] font-black text-neutral-900 dark:text-white">{t("leadersTab.requests.title")}</span>
+              <span className="text-[15px] font-black text-slate-900 dark:text-white">{t("leadersTab.requests.title")}</span>
               <span className="px-2 py-0.5 rounded-full bg-red-600 text-white text-[11px] font-black">{totalPendencias}</span>
             </div>
-            <span className="flex-1 min-w-[240px] text-[13px] text-neutral-600 dark:text-neutral-400">{textoDosPedidos}</span>
+            <span className="flex-1 min-w-[240px] text-[13px] text-slate-600 dark:text-slate-400">{textoDosPedidos}</span>
             <button type="button" onClick={() => mudarPedidosAbertos(!pedidosAbertos)} aria-expanded={pedidosAbertos} className={`${BTN} !h-[38px]`}>
               {pedidosAbertos ? t("leadersTab.desk.hideRequests") : t("leadersTab.desk.showRequests")}
               <ChevronDown className={`w-4 h-4 transition-transform ${pedidosAbertos ? "rotate-180" : ""}`} aria-hidden="true" />
             </button>
           </div>
-          {pedidosAbertos && <div className="border-t border-neutral-100 dark:border-neutral-800"><PendenciasTab /></div>}
+          {pedidosAbertos && <div className="border-t border-slate-100 dark:border-slate-800"><PendenciasTab /></div>}
         </section>
       )}
       {temp.erro && <p className="text-xs font-bold text-red-700 bg-red-50 border border-red-200 p-3 rounded-xl">{temp.erro}</p>}
@@ -555,7 +555,7 @@ export function LideresTab() {
                 remover: () => remover(selecionada.u),
               }} />
           ) : (
-            <div className="hidden lg:flex flex-col items-center justify-center gap-2 p-8 rounded-2xl border border-dashed border-neutral-300 bg-white text-center text-sm font-semibold text-neutral-500 dark:bg-neutral-900 dark:border-neutral-700 lg:sticky lg:top-4">
+            <div className="hidden lg:flex flex-col items-center justify-center gap-2 p-8 rounded-2xl border border-dashed border-slate-300 bg-white text-center text-sm font-semibold text-slate-500 dark:bg-slate-900 dark:border-slate-700 lg:sticky lg:top-4">
               {t("leadersTab.listB.pickUnit")}
             </div>
           )}
@@ -615,20 +615,20 @@ export function LideresTab() {
             <label className="block space-y-1">
               <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t("leadersTab.modal.name")}</span>
               <input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} disabled={salvando} maxLength={80}
-                className="w-full p-3 rounded-xl bg-slate-100 dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-teal-500" />
+                className="w-full p-3 rounded-xl bg-slate-100 dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-red-500" />
             </label>
 
             <label className="block space-y-1">
               <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t("leadersTab.modal.email")}</span>
               <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} disabled={salvando || modal.modo === "editar"}
-                className="w-full p-3 rounded-xl bg-slate-100 dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-teal-500 disabled:opacity-70" />
+                className="w-full p-3 rounded-xl bg-slate-100 dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-70" />
               {modal.modo === "editar" && <span className="text-[11px] text-slate-400">{t("leadersTab.modal.emailLocked")}</span>}
             </label>
 
             <label className="block space-y-1">
               <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t("leadersTab.modal.phone")}</span>
               <input value={form.telefone} onChange={(e) => setForm({ ...form, telefone: e.target.value })} disabled={salvando} maxLength={30} placeholder="+55 31 99999-9999"
-                className="w-full p-3 rounded-xl bg-slate-100 dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-teal-500" />
+                className="w-full p-3 rounded-xl bg-slate-100 dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-red-500" />
             </label>
             </div>
 
@@ -648,7 +648,7 @@ export function LideresTab() {
               <label className="block space-y-1">
                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 flex items-center gap-1"><KeyRound className="w-3 h-3" /> {t("leadersTab.modal.password")}</span>
                 <input type="text" value={form.senha} onChange={(e) => setForm({ ...form, senha: e.target.value })} disabled={salvando} autoComplete="new-password"
-                  className="w-full p-3 rounded-xl bg-slate-100 dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-teal-500" />
+                  className="w-full p-3 rounded-xl bg-slate-100 dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-red-500" />
                 <span className="text-[11px] text-slate-400">{t("leadersTab.modal.passwordHint", { min: SENHA_MINIMA })}</span>
               </label>
             )}
@@ -660,7 +660,7 @@ export function LideresTab() {
 
             <div className="flex justify-end gap-2 pt-2">
               <button type="button" onClick={() => setModal(null)} disabled={salvando} className="px-4 py-2.5 rounded-xl text-xs font-black uppercase bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200">{t("leadersTab.modal.cancel")}</button>
-              <button type="submit" disabled={salvando} className="px-5 py-2.5 rounded-xl text-xs font-black uppercase bg-teal-500 hover:bg-teal-600 text-white flex items-center gap-1.5 disabled:opacity-50">
+              <button type="submit" disabled={salvando} className="px-5 py-2.5 rounded-xl text-xs font-black uppercase bg-red-500 hover:bg-red-600 text-white flex items-center gap-1.5 disabled:opacity-50">
                 {salvando ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />} {t("leadersTab.modal.save")}
               </button>
             </div>

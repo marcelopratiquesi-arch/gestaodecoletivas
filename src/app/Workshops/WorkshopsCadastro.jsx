@@ -23,10 +23,10 @@ import { documentoValido, limparDocumento, tipoDocumentoPadrao } from '../../uti
 const FORM_VAZIO = { nome: '', modalidade: 'Power Core', data: '', local: '', status: 'agendado', titularNome: '', titularProfessorId: '' };
 const COR_STATUS = {
   realizado: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
-  agendado: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+  agendado: 'bg-slate-100 text-slate-700 dark:bg-slate-900/40 dark:text-slate-300',
   cancelado: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
 };
-const input = 'w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold outline-none focus:border-purple-500 text-slate-800 dark:text-white';
+const input = 'w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold outline-none focus:border-red-500 text-slate-800 dark:text-white';
 const rotulo = 'text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1 block';
 const botao = 'px-5 py-3 rounded-xl font-black text-xs uppercase tracking-wide flex items-center justify-center gap-2 transition-all';
 
@@ -198,7 +198,7 @@ export default function WorkshopsCadastro() {
     <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
       <div className="flex flex-col xl:flex-row xl:justify-between xl:items-center gap-4">
         <div className="flex items-center gap-3">
-          <div className="p-3 bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400 rounded-xl"><Calendar className="w-6 h-6" /></div>
+          <div className="p-3 bg-slate-100 text-slate-600 dark:bg-slate-900/30 dark:text-slate-400 rounded-xl"><Calendar className="w-6 h-6" /></div>
           <div>
             <h2 className="text-xl font-black text-slate-800 dark:text-white uppercase">{t('shop.ws.title')}</h2>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('shop.ws.subtitle')}</p>
@@ -207,7 +207,7 @@ export default function WorkshopsCadastro() {
         <div className="flex flex-wrap gap-2">
           {souAdmin && <button type="button" onClick={completarModalidades} disabled={salvando || lista === null} className={`${botao} bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-60`}><Award className="w-4 h-4" /> {t('shop.ws.fillModality')}</button>}
           {podeEditar && <button type="button" onClick={abrirRapido} className={`${botao} bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-700`}><ListPlus className="w-4 h-4" /> {t('shop.ws.quick')}</button>}
-          {podeEditar && <button type="button" onClick={abrirNovo} className={`${botao} bg-purple-600 text-white hover:bg-purple-700 shadow-lg shadow-purple-500/20`}><Plus className="w-4 h-4" /> {t('shop.ws.newBtn')}</button>}
+          {podeEditar && <button type="button" onClick={abrirNovo} className={`${botao} bg-red-600 text-white hover:bg-red-700 shadow-lg shadow-slate-500/20`}><Plus className="w-4 h-4" /> {t('shop.ws.newBtn')}</button>}
         </div>
       </div>
 
@@ -216,7 +216,7 @@ export default function WorkshopsCadastro() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[['todos', 'stAll'], ['realizado', 'stRealizado'], ['agendado', 'stAgendado'], ['cancelado', 'stCancelado']].map(([k, rot]) => (
           <button key={k} type="button" onClick={() => setFiltroStatus(k)}
-            className={`text-left p-4 rounded-2xl border bg-white dark:bg-slate-800 transition-all ${filtroStatus === k ? 'border-purple-500 ring-1 ring-purple-500' : 'border-slate-200 dark:border-slate-700 hover:border-slate-300'}`}>
+            className={`text-left p-4 rounded-2xl border bg-white dark:bg-slate-800 transition-all ${filtroStatus === k ? 'border-slate-500 ring-1 ring-red-500' : 'border-slate-200 dark:border-slate-700 hover:border-slate-300'}`}>
             <span className="block text-2xl font-black text-slate-800 dark:text-white tabular-nums">{contagem[k]}</span>
             <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{t(`shop.ws.${rot}`)}</span>
           </button>
@@ -243,7 +243,7 @@ export default function WorkshopsCadastro() {
           <div key={w.id} className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div className="space-y-2 min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="px-2 py-1 text-[9px] font-black uppercase rounded-md tracking-widest bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">{w.modalidade}</span>
+                <span className="px-2 py-1 text-[9px] font-black uppercase rounded-md tracking-widest bg-slate-100 text-slate-700 dark:bg-slate-900/40 dark:text-slate-300">{w.modalidade}</span>
                 <span className={`px-2 py-1 text-[9px] font-black uppercase rounded-md tracking-widest ${COR_STATUS[w.status] || ''}`}>{t(`shop.ws.status.${w.status}`)}</span>
                 <span className="flex items-center gap-1 text-[10px] font-bold text-slate-500 uppercase bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded-md"><Calendar className="w-3 h-3" /> {dataBr(w.data)}</span>
               </div>
@@ -257,12 +257,12 @@ export default function WorkshopsCadastro() {
               {souAdmin ? (
                 <>
                   <button type="button" onClick={() => setVerPart(w)} className="flex items-center gap-1 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-xs font-black hover:bg-slate-50 dark:hover:bg-slate-700"><Users className="w-3.5 h-3.5" /> {t('shop.ws.participantsBtn', { count: w.totalParticipantes || 0 })}</button>
-                  <button type="button" onClick={() => setImportando(w)} className="flex items-center gap-1 px-3 py-2 rounded-lg bg-purple-600 text-white text-xs font-black hover:bg-purple-700"><Upload className="w-3.5 h-3.5" /> {t('shop.ws.importBtn')}</button>
+                  <button type="button" onClick={() => setImportando(w)} className="flex items-center gap-1 px-3 py-2 rounded-lg bg-red-600 text-white text-xs font-black hover:bg-red-700"><Upload className="w-3.5 h-3.5" /> {t('shop.ws.importBtn')}</button>
                 </>
               ) : (
                 <span className="flex items-center gap-1 text-[11px] font-bold text-slate-400 border border-dashed border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2"><Users className="w-3.5 h-3.5" /> {w.totalParticipantes || 0}</span>
               )}
-              {podeEditar && <button type="button" onClick={() => abrirDup(w)} className="flex items-center gap-1 px-3 py-2 rounded-lg border border-purple-300 text-purple-700 dark:text-purple-300 text-xs font-black hover:bg-purple-50 dark:hover:bg-purple-900/30"><Copy className="w-3.5 h-3.5" /> {t('shop.ws.duplicate')}</button>}
+              {podeEditar && <button type="button" onClick={() => abrirDup(w)} className="flex items-center gap-1 px-3 py-2 rounded-lg border border-slate-300 text-slate-700 dark:text-slate-300 text-xs font-black hover:bg-slate-50 dark:hover:bg-slate-900/30"><Copy className="w-3.5 h-3.5" /> {t('shop.ws.duplicate')}</button>}
               {podeEditar && <button type="button" onClick={() => abrirEditar(w)} className="flex items-center gap-1 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-xs font-black hover:bg-slate-50 dark:hover:bg-slate-700"><Edit className="w-3.5 h-3.5" /> {t('shop.ws.edit')}</button>}
               {podeEditar && <button type="button" onClick={() => excluir(w)} className="flex items-center gap-1 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 text-red-600 text-xs font-black hover:bg-red-50 dark:hover:bg-red-900/20"><Trash2 className="w-3.5 h-3.5" /> {confirmando === w.id ? t('shop.ws.confirmDelete') : t('shop.ws.delete')}</button>}
             </div>
@@ -282,7 +282,7 @@ export default function WorkshopsCadastro() {
         <Modal titulo={form.id ? t('shop.ws.formEdit') : t('shop.ws.formNew')} onClose={() => setForm(null)}
           rodape={<>
             <button type="button" onClick={() => setForm(null)} className={`${botao} text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700`}>{t('shop.ws.cancel')}</button>
-            <button type="submit" form="form-workshop" disabled={salvando} className={`${botao} bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-60`}>{salvando ? t('shop.ws.saving') : t('shop.ws.save')}</button>
+            <button type="submit" form="form-workshop" disabled={salvando} className={`${botao} bg-red-600 text-white hover:bg-red-700 disabled:opacity-60`}>{salvando ? t('shop.ws.saving') : t('shop.ws.save')}</button>
           </>}>
           <form id="form-workshop" onSubmit={salvarForm} className="space-y-4">
             <div><label className={rotulo} htmlFor="ws-nome">{t('shop.ws.name')}</label><input id="ws-nome" className={input} value={form.nome} onChange={(e) => mudar('nome', e.target.value)} placeholder={t('shop.ws.namePh')} maxLength={150} required /></div>
@@ -307,7 +307,7 @@ export default function WorkshopsCadastro() {
                 <input className={`${input} flex-1 min-w-[160px]`} value={form.titularProfessorId ? '' : form.titularNome} disabled={!!form.titularProfessorId} onChange={(e) => mudar('titularNome', e.target.value)} placeholder={t('shop.ws.typeName')} aria-label={t('shop.ws.typeName')} maxLength={150} />
               </div>
               {form.titularNome && (
-                <div className="flex items-center justify-between gap-2 text-xs font-bold text-purple-700 dark:text-purple-300">
+                <div className="flex items-center justify-between gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
                   <span>{t('shop.ws.titularChosen', { name: form.titularNome })}</span>
                   <button type="button" onClick={() => setForm((f) => ({ ...f, titularNome: '', titularProfessorId: '' }))} className="underline">{t('shop.ws.titularClear')}</button>
                 </div>
@@ -321,7 +321,7 @@ export default function WorkshopsCadastro() {
         <Modal titulo={t('shop.ws.duplicateTitle')} onClose={() => setDup(null)}
           rodape={<>
             <button type="button" onClick={() => setDup(null)} className={`${botao} text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700`}>{t('shop.ws.cancel')}</button>
-            <button type="submit" form="form-dup" disabled={salvando} className={`${botao} bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-60`}>{salvando ? t('shop.ws.saving') : t('shop.ws.createCopy')}</button>
+            <button type="submit" form="form-dup" disabled={salvando} className={`${botao} bg-red-600 text-white hover:bg-red-700 disabled:opacity-60`}>{salvando ? t('shop.ws.saving') : t('shop.ws.createCopy')}</button>
           </>}>
           <form id="form-dup" onSubmit={salvarDup} className="space-y-4">
             <p className="text-sm text-slate-500">{t('shop.ws.duplicateHint')}</p>
@@ -338,7 +338,7 @@ export default function WorkshopsCadastro() {
         <Modal largo titulo={t('shop.ws.quickTitle')} onClose={() => setRapido(null)}
           rodape={<>
             <button type="button" onClick={() => setRapido(null)} className={`${botao} text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700`}>{t('shop.ws.cancel')}</button>
-            <button type="button" onClick={salvarRapido} disabled={salvando} className={`${botao} bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-60`}>{salvando ? t('shop.ws.saving') : t('shop.ws.saveAll')}</button>
+            <button type="button" onClick={salvarRapido} disabled={salvando} className={`${botao} bg-red-600 text-white hover:bg-red-700 disabled:opacity-60`}>{salvando ? t('shop.ws.saving') : t('shop.ws.saveAll')}</button>
           </>}>
           <p className="text-sm text-slate-500">{t('shop.ws.quickHint')}</p>
           <div className="overflow-x-auto">

@@ -40,5 +40,22 @@
   },
   "changeLanguage": "Change Language",
   "changeTheme": "Change Theme",
-  "logout": "Log out"
+  "logout": "Log out",
+  "viewAs": {
+    "title": "View as",
+    "navigation": "Navigation type",
+    "choose": "Choose…",
+    "backToAdmin": "Back to administrator",
+    "types": {
+      "admin": "Administrator",
+      "mentor": "Mentor",
+      "lider": "Leader / Unit",
+      "professor": "Teacher"
+    },
+    "pick": {
+      "mentor": "Which mentor?",
+      "lider": "Which unit?",
+      "professor": "Which teacher?"
+    }
+  }
 }

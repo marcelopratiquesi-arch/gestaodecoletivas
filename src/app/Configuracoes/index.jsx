@@ -127,17 +127,17 @@ export default function ConfiguracoesPage() {
   // não muda. Líderes tem o próprio desenho de página (sem a moldura branca); as outras abas seguem na moldura.
   if (computador) {
     return (
-      <div className="min-h-screen bg-neutral-100 dark:bg-neutral-950 animate-fade-in">
-        <header className="sticky top-0 z-30 bg-white border-b border-neutral-200 dark:bg-neutral-900 dark:border-neutral-800">
+      <div className="min-h-screen bg-slate-100 dark:bg-slate-950 animate-fade-in">
+        <header className="sticky top-0 z-30 bg-white border-b border-slate-200 dark:bg-slate-900 dark:border-slate-800">
           <div className="max-w-[1440px] mx-auto px-6 py-2.5 flex items-center gap-4">
             <div className="flex items-center gap-2.5 shrink-0">
               <span aria-hidden="true" className="w-9 h-9 rounded-[10px] bg-red-600 text-white inline-flex items-center justify-center font-black text-lg">P</span>
               <div>
-                <div className="text-[10px] font-extrabold uppercase tracking-[0.1em] text-neutral-500">{t('settingsPage.bar.panel', 'Painel')}</div>
-                <div className="text-sm font-black text-neutral-900 dark:text-white">{t('settingsPage.bar.settings', 'Configurações')}</div>
+                <div className="text-[10px] font-extrabold uppercase tracking-[0.1em] text-slate-500">{t('settingsPage.bar.panel', 'Painel')}</div>
+                <div className="text-sm font-black text-slate-900 dark:text-white">{t('settingsPage.bar.settings', 'Configurações')}</div>
               </div>
             </div>
-            <span aria-hidden="true" className="w-px h-8 bg-neutral-200 dark:bg-neutral-800 shrink-0" />
+            <span aria-hidden="true" className="w-px h-8 bg-slate-200 dark:bg-slate-800 shrink-0" />
             <nav aria-label={t('settingsPage.bar.settings', 'Configurações')} className="flex gap-0.5 overflow-x-auto no-scrollbar flex-1 min-w-0">
               {allowedTabs.map((tab) => {
                 const Icon = tab.icon;
@@ -146,7 +146,7 @@ export default function ConfiguracoesPage() {
                   <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)} aria-current={ativo ? "page" : undefined}
                     className={`inline-flex items-center gap-2 h-10 px-3 rounded-[10px] text-sm whitespace-nowrap shrink-0 transition-colors ${ativo
                       ? "bg-red-600 text-white font-extrabold"
-                      : "font-semibold text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"}`}>
+                      : "font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"}`}>
                     <Icon className="w-[17px] h-[17px] shrink-0" aria-hidden="true" />
                     {tab.label}
                     {tab.contador > 0 && (

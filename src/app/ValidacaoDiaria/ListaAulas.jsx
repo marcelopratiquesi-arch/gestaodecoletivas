@@ -32,10 +32,10 @@ function LinhaAula({ item, verificarFuturo, onValidar, onCancelar, onValidarRapi
                     <span className="text-emerald-700 dark:text-emerald-400 flex items-center gap-1"><User className="w-3.5 h-3.5"/> {t('dailyValidation.card.students', { count: item.validacao?.alunos ?? 0 })}</span>
                 )}
                 {item.status === 'cancelada' && (
-                    <span className="text-rose-600 truncate block">{formatCancelReason(item.validacao?.motivoCancelamento) || t('common.cancelReasons.recess')}</span>
+                    <span className="text-red-600 truncate block">{formatCancelReason(item.validacao?.motivoCancelamento) || t('common.cancelReasons.recess')}</span>
                 )}
                 {isSub && (
-                    <span className="text-blue-600 dark:text-blue-400 flex items-center gap-1 mt-0.5"><ArrowRightLeft className="w-3 h-3"/> {item.professor?.nome}</span>
+                    <span className="text-slate-600 dark:text-slate-400 flex items-center gap-1 mt-0.5"><ArrowRightLeft className="w-3 h-3"/> {item.professor?.nome}</span>
                 )}
                 {isFuture && <span>{t('dailyValidation.card.waitForDate')}</span>}
                 {bloqueado && <span className="flex items-center gap-1 text-slate-400 mt-0.5"><Lock className="w-3 h-3"/> {textoBloqueio}</span>}
@@ -48,10 +48,10 @@ function LinhaAula({ item, verificarFuturo, onValidar, onCancelar, onValidarRapi
                     {validacaoRapida && onValidarRapido ? (
                         <>
                             <ValidacaoRapida item={item} onValidarRapido={onValidarRapido} salvando={salvando} compacto />
-                            <button type="button" onClick={() => onValidar(item)} title={t('dailyValidation.quick.substitutionLink')} aria-label={t('dailyValidation.quick.substitutionLink')} className="h-9 w-9 rounded-lg border border-blue-200 text-blue-600 hover:bg-blue-50 dark:border-blue-900/50 dark:hover:bg-blue-900/20 flex items-center justify-center">
+                            <button type="button" onClick={() => onValidar(item)} title={t('dailyValidation.quick.substitutionLink')} aria-label={t('dailyValidation.quick.substitutionLink')} className="h-9 w-9 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-slate-900/50 dark:hover:bg-slate-900/20 flex items-center justify-center">
                                 <ArrowRightLeft className="w-4 h-4"/>
                             </button>
-                            <button type="button" onClick={() => onCancelar(item)} title={t('dailyValidation.quick.cancelLink')} aria-label={t('dailyValidation.quick.cancelLink')} className="h-9 w-9 rounded-lg border border-rose-200 text-rose-500 hover:bg-rose-50 dark:border-rose-900/50 dark:hover:bg-rose-900/20 flex items-center justify-center">
+                            <button type="button" onClick={() => onCancelar(item)} title={t('dailyValidation.quick.cancelLink')} aria-label={t('dailyValidation.quick.cancelLink')} className="h-9 w-9 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 dark:border-red-900/50 dark:hover:bg-red-900/20 flex items-center justify-center">
                                 <CircleX className="w-4 h-4"/>
                             </button>
                         </>
@@ -67,7 +67,7 @@ function LinhaAula({ item, verificarFuturo, onValidar, onCancelar, onValidarRapi
                                     <Pencil className="w-3.5 h-3.5"/> {item.status === 'realizada' ? t('dailyValidation.card.edit') : t('dailyValidation.card.validate')}
                                 </button>
                             )}
-                            <button type="button" onClick={() => onCancelar(item)} className={`${botao} border ${item.status === 'cancelada' ? 'border-rose-500 text-rose-600' : 'border-rose-200 text-rose-500'} hover:bg-rose-50 dark:hover:bg-rose-900/20`}>
+                            <button type="button" onClick={() => onCancelar(item)} className={`${botao} border ${item.status === 'cancelada' ? 'border-red-500 text-red-600' : 'border-red-200 text-red-500'} hover:bg-red-50 dark:hover:bg-red-900/20`}>
                                 {item.status === 'cancelada' ? t('dailyValidation.card.details') : t('dailyValidation.card.cancel')}
                             </button>
                         </>
@@ -89,7 +89,7 @@ export function ListaAulas({ grupos, mostrarProfessor, verificarFuturo, onValida
                         {/* Cabeçalho do grupo: horário · modalidade · unidade · professor */}
                         <div className="px-4 py-2.5 bg-slate-50 dark:bg-slate-900/60 flex items-center gap-x-3 gap-y-1 flex-wrap">
                             <span className="text-sm font-mono font-black text-slate-700 dark:text-slate-200">{grupo.hora}</span>
-                            <span className="text-sm font-black uppercase text-slate-800 dark:text-white flex items-center gap-1">{grupo.modalidade}{grupo.isAulao && <Star className="w-3.5 h-3.5 text-purple-500"/>}</span>
+                            <span className="text-sm font-black uppercase text-slate-800 dark:text-white flex items-center gap-1">{grupo.modalidade}{grupo.isAulao && <Star className="w-3.5 h-3.5 text-slate-500"/>}</span>
                             <span className="text-xs font-bold text-slate-500 dark:text-slate-400">{grupo.unidade}</span>
                             {mostrarProfessor && grupo.professor && <span className="text-xs font-bold text-slate-500 dark:text-slate-400">· {grupo.professor}</span>}
                             {pendentes > 0 && <span className="ml-auto text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">{t('dailyValidation.views.pendingCount', { count: pendentes })}</span>}

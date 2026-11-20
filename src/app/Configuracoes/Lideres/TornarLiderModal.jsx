@@ -214,7 +214,7 @@ export function TornarLiderModal({ unidades, todasUnidades, professores, mentore
             ))}
             {onCadastrar && (
               <button type="button" onClick={() => onCadastrar(unidade || null, vaga)} disabled={salvando}
-                className="ml-auto px-3 py-1.5 rounded-lg text-[11px] font-black uppercase bg-teal-600 hover:bg-teal-700 text-white flex items-center gap-1.5 disabled:opacity-50">
+                className="ml-auto px-3 py-1.5 rounded-lg text-[11px] font-black uppercase bg-red-600 hover:bg-red-700 text-white flex items-center gap-1.5 disabled:opacity-50">
                 <UserPlus className="w-3.5 h-3.5" /> {t("leadersTab.promote.registerNew")}
               </button>
             )}

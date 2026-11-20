@@ -16,13 +16,13 @@ import { ERRO_DOCUMENTO_EM_USO, acharDonoDoDocumento, gravarComAviso } from "../
 import { chaveTelefone, emailDeMentira, emailFormatoValido, fichasDoLogin, fichasParecidas, normalizarEmail } from "../../../utils/repetidos";
 
 const PAIS_DO_DOCUMENTO = { cpf: "BR", dni: "AR", ssn: "US" };
-const campoClasse = "w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-green-500 rounded-xl text-sm font-semibold outline-none transition-all dark:text-white normal-case";
+const campoClasse = "w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-emerald-500 rounded-xl text-sm font-semibold outline-none transition-all dark:text-white normal-case";
 const rotuloClasse = "text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 block pl-1";
 
 function Aviso({ tipo = "erro", children }) {
   const cor = tipo === "erro"
     ? "text-red-600 bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-800"
-    : tipo === "ok" ? "text-green-600 bg-green-50 dark:bg-green-900/20 border-green-100 dark:border-green-800"
+    : tipo === "ok" ? "text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800"
     : "text-amber-700 bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800";
   return <p className={`text-xs font-bold border p-3 rounded-lg flex items-start gap-2 normal-case ${cor}`}><AlertTriangle className="w-4 h-4 shrink-0" /> <span>{children}</span></p>;
 }
@@ -175,7 +175,7 @@ export default function NovoVinculoModal({
           {etapa === "documento" && (
             <form onSubmit={procurarDocumento} className="space-y-4">
               <CampoDocumento claro tipo={tipo} onTipo={setTipo} valor={numero} onValor={setNumero} desabilitado={ocupado} id="docNovoProfessor" />
-              <button type="submit" disabled={ocupado} className="w-full bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 flex justify-center items-center gap-2 disabled:opacity-50">
+              <button type="submit" disabled={ocupado} className="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold hover:bg-emerald-700 flex justify-center items-center gap-2 disabled:opacity-50">
                 {ocupado ? <Loader2 className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />} {t("teachersTab.cpf.search")}
               </button>
             </form>
@@ -198,7 +198,7 @@ export default function NovoVinculoModal({
                   <input id="telNovoProf" className={campoClasse} value={telefone} onChange={e => setTelefone(formatarTelefone(e.target.value, pais))} placeholder={placeholderTelefone(pais)} maxLength={15} />
                 </div>
               </div>
-              <button type="submit" className="w-full bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 flex justify-center items-center gap-2">
+              <button type="submit" className="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold hover:bg-emerald-700 flex justify-center items-center gap-2">
                 <ArrowRight className="w-5 h-5" /> {t("teachersTab.cpf.continue")}
               </button>
             </form>
@@ -216,7 +216,7 @@ export default function NovoVinculoModal({
                   {pessoaLogin && ficha.uidLogin && ficha.uidLogin !== pessoaLogin.uid && (
                     <p className="text-[11px] text-slate-500 normal-case">{t("teachersTab.cpf.replacesOldLogin")}</p>
                   )}
-                  <button type="button" onClick={() => escolher(ficha)} className="w-full py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-bold flex justify-center items-center gap-2">
+                  <button type="button" onClick={() => escolher(ficha)} className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-bold flex justify-center items-center gap-2">
                     <UserCheck className="w-4 h-4" /> {t("teachersTab.cpf.isThis")}
                   </button>
                 </div>
@@ -229,20 +229,20 @@ export default function NovoVinculoModal({
 
           {etapa === "achado" && achado && (
             <form onSubmit={confirmar} className="space-y-5">
-              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4 rounded-xl flex items-start gap-4">
-                <CheckCircle2 className="w-8 h-8 text-green-600 dark:text-green-400 flex-shrink-0" />
+              <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 p-4 rounded-xl flex items-start gap-4">
+                <CheckCircle2 className="w-8 h-8 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
                 <div>
-                  <h4 className="font-black text-green-800 dark:text-green-300 text-lg">{t("teachersTab.verifyModal.foundTitle")}</h4>
-                  <p className="text-sm font-bold text-green-700 dark:text-green-400 mt-1">{achado.nome}</p>
-                  <p className="text-xs text-green-600 dark:text-green-500 normal-case">{achado.email}</p>
-                  <p className="text-xs text-green-600 dark:text-green-500 normal-case">{unidadesDaFicha(achado.id)}</p>
+                  <h4 className="font-black text-emerald-800 dark:text-emerald-300 text-lg">{t("teachersTab.verifyModal.foundTitle")}</h4>
+                  <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400 mt-1">{achado.nome}</p>
+                  <p className="text-xs text-emerald-600 dark:text-emerald-500 normal-case">{achado.email}</p>
+                  <p className="text-xs text-emerald-600 dark:text-emerald-500 normal-case">{unidadesDaFicha(achado.id)}</p>
                 </div>
               </div>
               {gravarDocumento && <Aviso tipo="info">{t("teachersTab.cpf.willSaveDocument")}</Aviso>}
               <div>
                 <label className={rotuloClasse}>{t("teachersTab.verifyModal.linkToUnit")}</label>
                 <div className="relative">
-                  <select className="w-full pl-4 pr-10 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-green-500 rounded-xl text-sm font-bold outline-none appearance-none dark:text-white"
+                  <select className="w-full pl-4 pr-10 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-emerald-500 rounded-xl text-sm font-bold outline-none appearance-none dark:text-white"
                     value={unidadeId} onChange={e => setUnidadeId(e.target.value)}>
                     {minhasUnidades.length > 1 && <option value="">{t("teachersTab.verifyModal.select")}</option>}
                     {minhasUnidades.map(u => <option key={u.id} value={String(u.id)}>{u.nome}</option>)}
@@ -250,7 +250,7 @@ export default function NovoVinculoModal({
                   <ChevronDown className="absolute right-4 top-3.5 w-4 h-4 text-slate-400 pointer-events-none" />
                 </div>
               </div>
-              <button type="submit" disabled={ocupado || !unidadeId} className="w-full bg-green-600 text-white py-3.5 rounded-xl font-bold hover:bg-green-700 disabled:opacity-50 flex justify-center items-center gap-2">
+              <button type="submit" disabled={ocupado || !unidadeId} className="w-full bg-emerald-600 text-white py-3.5 rounded-xl font-bold hover:bg-emerald-700 disabled:opacity-50 flex justify-center items-center gap-2">
                 {ocupado ? <Loader2 className="w-5 h-5 animate-spin" /> : <><LinkIcon className="w-5 h-5" /> {t("teachersTab.verifyModal.confirmLink")}</>}
               </button>
             </form>
@@ -266,7 +266,7 @@ export default function NovoVinculoModal({
         <div className="p-4 bg-slate-50 dark:bg-slate-800 flex justify-between items-center border-t border-slate-100 dark:border-slate-700">
           <button type="button" onClick={aoFechar} className="text-slate-500 dark:text-slate-400 font-bold text-[10px] uppercase tracking-wider hover:text-slate-800 dark:hover:text-slate-200">{t("teachersTab.verifyModal.cancel")}</button>
           {etapa !== "documento" && !profInicial && (
-            <button type="button" onClick={() => { setEtapa("documento"); setErro(""); setAchado(null); }} className="text-blue-600 dark:text-blue-400 font-black text-[10px] uppercase tracking-wider">
+            <button type="button" onClick={() => { setEtapa("documento"); setErro(""); setAchado(null); }} className="text-red-600 dark:text-red-400 font-black text-[10px] uppercase tracking-wider">
               {t("teachersTab.cpf.back")}
             </button>
           )}

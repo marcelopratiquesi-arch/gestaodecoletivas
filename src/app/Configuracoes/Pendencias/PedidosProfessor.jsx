@@ -117,7 +117,7 @@ export default function PedidosProfessor() {
             <div key={p.id} className="p-5 rounded-2xl border border-red-200 dark:border-red-900/60 bg-white dark:bg-slate-800 shadow-sm space-y-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="font-black text-slate-800 dark:text-white flex items-center gap-2"><User className="w-4 h-4 text-blue-500" /> {p.nome}</p>
+                  <p className="font-black text-slate-800 dark:text-white flex items-center gap-2"><User className="w-4 h-4 text-red-500" /> {p.nome}</p>
                   <p className="text-xs text-slate-500 flex items-center gap-2 mt-1 break-all"><Mail className="w-3 h-3 shrink-0" /> {p.email}</p>
                   <p className="text-xs text-slate-500 flex items-center gap-2 mt-1"><Phone className="w-3 h-3" /> {p.telefone}</p>
                 </div>

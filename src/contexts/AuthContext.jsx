@@ -20,9 +20,36 @@ const PAPEIS_QUE_MIGRAM = ["lider", "unidade", "mentor"];
 // Quem precisa informar o documento de identificação (CPF/DNI/SSN). Professor entra numa etapa futura.
 const PAPEIS_COM_DOCUMENTO = ["lider", "unidade", "mentor", "professor", "admin", "administrador", "master"];
 
+const CHAVE_VISAO = "pratique_visao_admin";
+const lerVisaoGuardada = () => {
+  try { return JSON.parse(sessionStorage.getItem(CHAVE_VISAO) || "null"); } catch { return null; }
+};
+
+// Monta o "crachá de mentira" que as telas usam enquanto o admin está vendo como outra pessoa.
+// Mantém o que é do admin (e-mail do login, documento já informado) e troca só o que define o escopo.
+function crachaDaVisao(real, visao) {
+  if (!visao?.tipo) return real;
+  // "id" e "nome" continuam sendo os do admin (o login real): é quem fica como autor de tudo que for gravado.
+  // O escopo da pessoa vista vai em campos próprios (escopoMentorId, unidadeIds, professorId).
+  const base = { ...real, visaoAdmin: { tipo: visao.tipo, nome: visao.nome || "" } };
+  if (visao.tipo === "mentor" && visao.id) {
+    return { ...base, role: "mentor", roleBase: "mentor", escopoMentorId: String(visao.mentorPrincipalId || visao.id), mentorPrincipalId: visao.mentorPrincipalId || null, unidadeId: null, unidadeIds: [], coberturaMentorId: null, coberturaAte: null };
+  }
+  if (visao.tipo === "lider" && visao.unidadeId) {
+    return { ...base, role: "lider", roleBase: "lider", unidadeId: String(visao.unidadeId), unidadeIds: [String(visao.unidadeId)], mentorPrincipalId: null, coberturaMentorId: null, coberturaAte: null };
+  }
+  if (visao.tipo === "professor" && visao.professorId) {
+    return { ...base, role: "professor", roleBase: "professor", professorId: String(visao.professorId), unidadeId: null, unidadeIds: [], mentorPrincipalId: null, coberturaMentorId: null, coberturaAte: null };
+  }
+  return real;
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);          // firebaseUser
-  const [userData, setUserData] = useState(null);  // "crachá" (Firestore)
+  const [crachaReal, setUserData] = useState(null);  // "crachá" de verdade (Firestore). Quem é o admin de fato.
+  // VISÃO DO ADMINISTRADOR: só o admin pode "ver o sistema como" mentor, líder/unidade ou professor.
+  // É só a aparência (menu, telas, filtros): o banco continua enxergando o admin, com todas as permissões dele.
+  const [visaoAdmin, setVisaoAdminEstado] = useState(lerVisaoGuardada);
   const [loading, setLoading] = useState(true);
   // Entrou pelo Google mas ainda não tem crachá (pedido de acesso não feito ou aguardando aprovação).
   const [aguardandoAprovacao, setAguardandoAprovacao] = useState(false);
@@ -32,6 +59,8 @@ export function AuthProvider({ children }) {
 
     try {
       if (!firebaseUser) {
+        setVisaoAdminEstado(null); // saiu: a visão de admin não sobrevive ao logout
+        try { sessionStorage.removeItem(CHAVE_VISAO); } catch { /* sem storage, segue */ }
         setUser(null);
         setUserData(null);
         setAguardandoAprovacao(false);
@@ -140,25 +169,40 @@ export function AuthProvider({ children }) {
 
   // Líder temporário: quando o prazo acaba com o sistema aberto, sai sozinho (o banco já recusa tudo depois do prazo).
   useEffect(() => {
-    if (!userData?.temporarioAte) return undefined;
+    if (!crachaReal?.temporarioAte) return undefined;
     const conferir = () => {
-      if (!temporarioVencido(userData)) return;
+      if (!temporarioVencido(crachaReal)) return;
       try { sessionStorage.setItem(AVISO_SEM_ACESSO, "1"); } catch { /* sem aviso, mas sai igual */ }
       signOut(auth).catch((e) => console.error(e));
     };
     const timer = setInterval(conferir, 60 * 1000);
     document.addEventListener("visibilitychange", conferir);
     return () => { clearInterval(timer); document.removeEventListener("visibilitychange", conferir); };
-  }, [userData]);
+  }, [crachaReal]);
 
   // Cobertura de mentor: quando o prazo acaba com o sistema aberto, lê o crachá de novo e a pessoa volta ao que era.
   useEffect(() => {
-    if (!userData?.coberturaAte || !coberturaAtiva(userData)) return undefined;
-    const conferir = () => { if (!coberturaAtiva(userData)) carregarCracha(auth.currentUser); };
+    if (!crachaReal?.coberturaAte || !coberturaAtiva(crachaReal)) return undefined;
+    const conferir = () => { if (!coberturaAtiva(crachaReal)) carregarCracha(auth.currentUser); };
     const timer = setInterval(conferir, 60 * 1000);
     document.addEventListener("visibilitychange", conferir);
     return () => { clearInterval(timer); document.removeEventListener("visibilitychange", conferir); };
-  }, [userData, carregarCracha]);
+  }, [crachaReal, carregarCracha]);
+
+  // Só admin de verdade tem visão; para qualquer outra pessoa o estado guardado é ignorado.
+  const ehAdminReal = ["admin", "administrador", "master"].includes(String(crachaReal?.role || "").trim().toLowerCase());
+  const userData = useMemo(
+    () => (crachaReal && ehAdminReal ? crachaDaVisao(crachaReal, visaoAdmin) : crachaReal),
+    [crachaReal, ehAdminReal, visaoAdmin]
+  );
+
+  const definirVisaoAdmin = useCallback((visao) => {
+    setVisaoAdminEstado(visao || null);
+    try {
+      if (visao) sessionStorage.setItem(CHAVE_VISAO, JSON.stringify(visao));
+      else sessionStorage.removeItem(CHAVE_VISAO);
+    } catch { /* sem guardar, mas a visão vale até recarregar */ }
+  }, []);
 
   // Chamado pela tela de pedido de acesso quando o pedido é aprovado (lê o crachá de novo).
   const recarregarCracha = useCallback(() => carregarCracha(auth.currentUser), [carregarCracha]);
@@ -167,14 +211,14 @@ export function AuthProvider({ children }) {
   const logout = useCallback(async () => {
     try {
       // 1. Grava a saída ANTES de desconectar o Firebase (para ter os dados do usuário)
-      if (user && userData) {
+      if (user && crachaReal) {
           try {
               await addDoc(collection(db, "auditoria_configuracoes"), {
                   tipoAcao: "LOGOUT",
                   descricao: "Usuário encerrou a sessão no sistema.",
                   modulo: "CONFIGURACOES",
                   diffExtras: "Desconexão manual (Botão Sair).",
-                  usuarioAcaoNome: userData.nome || user.email,
+                  usuarioAcaoNome: crachaReal.nome || user.email,
                   usuarioAcaoId: user.uid,
                   dataAcao: serverTimestamp()
               });
@@ -188,33 +232,37 @@ export function AuthProvider({ children }) {
     } catch (error) {
       console.error("Erro ao fazer logout:", error);
     }
-  }, [user, userData]);
+  }, [user, crachaReal]);
 
   const value = useMemo(
     () => ({
       user,
       userData,
+      crachaReal,
+      visaoAdmin,
+      definirVisaoAdmin,
+      ehAdminReal,
       loading,
       logout,
       aguardandoAprovacao,
       recarregarCracha,
       // Líder (ou login antigo de unidade) e mentor que ainda não conectaram o Google: tela obrigatória
       // de atualização de cadastro antes de qualquer outra (ver PrivateRoute e pages/AtualizarCadastro).
-      precisaAtualizarCadastro: !!userData
-        && PAPEIS_QUE_MIGRAM.includes(String(userData.role || "").trim().toLowerCase())
-        && userData.loginGoogle !== true,
+      precisaAtualizarCadastro: !!crachaReal
+        && PAPEIS_QUE_MIGRAM.includes(String(crachaReal.role || "").trim().toLowerCase())
+        && crachaReal.loginGoogle !== true,
       // Já atualizou o cadastro mas ainda não informou o documento: tela obrigatória (ver PrivateRoute e pages/InformarDocumento).
-      precisaDocumento: !!userData
-        && PAPEIS_COM_DOCUMENTO.includes(String(userData.role || "").trim().toLowerCase())
-        && userData.documentoOk !== true
-        && !(PAPEIS_QUE_MIGRAM.includes(String(userData.role || "").trim().toLowerCase()) && userData.loginGoogle !== true),
+      precisaDocumento: !!crachaReal
+        && PAPEIS_COM_DOCUMENTO.includes(String(crachaReal.role || "").trim().toLowerCase())
+        && crachaReal.documentoOk !== true
+        && !(PAPEIS_QUE_MIGRAM.includes(String(crachaReal.role || "").trim().toLowerCase()) && crachaReal.loginGoogle !== true),
       role: userData?.role || null,
       isAdmin: userData?.role === "admin",
       isMentor: userData?.role === "mentor",
       isUnidade: ["lider", "unidade"].includes(String(userData?.role || "").toLowerCase()),
       isProfessor: userData?.role === "professor",
     }),
-    [user, userData, loading, logout, aguardandoAprovacao, recarregarCracha]
+    [user, userData, crachaReal, visaoAdmin, definirVisaoAdmin, ehAdminReal, loading, logout, aguardandoAprovacao, recarregarCracha]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

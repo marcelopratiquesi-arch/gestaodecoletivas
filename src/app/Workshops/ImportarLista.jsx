@@ -88,25 +88,25 @@ export default function ImportarLista({ workshop, professores, unidades, onClose
     <>
       <span className="text-xs font-bold text-slate-500 mr-auto">{t('shop.ws.imp.marked', { count: contagem.marcadas })}</span>
       <button type="button" onClick={onClose} className={`${botao} text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700`}>{t('shop.ws.cancel')}</button>
-      <button type="button" onClick={gravar} disabled={ocupado || !contagem.marcadas} className={`${botao} bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-60`}>{ocupado ? t('shop.ws.saving') : t('shop.ws.imp.confirm')}</button>
+      <button type="button" onClick={gravar} disabled={ocupado || !contagem.marcadas} className={`${botao} bg-red-600 text-white hover:bg-red-700 disabled:opacity-60`}>{ocupado ? t('shop.ws.saving') : t('shop.ws.imp.confirm')}</button>
     </>
   ) : (
     <>
       <button type="button" onClick={onClose} className={`${botao} text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700`}>{t('shop.ws.imp.close')}</button>
-      <button type="button" onClick={onVerParticipantes} className={`${botao} bg-purple-600 text-white hover:bg-purple-700`}>{t('shop.ws.imp.seeList')}</button>
+      <button type="button" onClick={onVerParticipantes} className={`${botao} bg-red-600 text-white hover:bg-red-700`}>{t('shop.ws.imp.seeList')}</button>
     </>
   );
 
   return (
     <ModalWorkshop largo titulo={`${t('shop.ws.imp.title')} · ${workshop.nome}`} onClose={onClose} rodape={rodape}>
       <div className="flex gap-2 text-[10px] font-black uppercase tracking-widest flex-wrap">
-        {[1, 2, 3].map((n) => <span key={n} className={`px-3 py-1 rounded-full ${passo === n ? 'bg-purple-600 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-400'}`}>{n} {t(`shop.ws.imp.step${n}`)}</span>)}
+        {[1, 2, 3].map((n) => <span key={n} className={`px-3 py-1 rounded-full ${passo === n ? 'bg-red-600 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-400'}`}>{n} {t(`shop.ws.imp.step${n}`)}</span>)}
       </div>
 
       {passo === 1 && (
         <>
           <button type="button" onClick={() => inputRef.current?.click()} disabled={ocupado}
-            className="w-full border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-2xl p-8 text-center text-slate-500 hover:border-purple-500 bg-slate-50 dark:bg-slate-900">
+            className="w-full border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-2xl p-8 text-center text-slate-500 hover:border-slate-500 bg-slate-50 dark:bg-slate-900">
             {ocupado ? <Loader2 className="w-6 h-6 animate-spin mx-auto" /> : <FileSpreadsheet className="w-7 h-7 mx-auto mb-2" />}
             <b className="block text-slate-800 dark:text-white text-sm">{t('shop.ws.imp.choose')}</b>
             <span className="text-xs">{t('shop.ws.imp.chooseHint')}</span>
