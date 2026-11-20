@@ -78,6 +78,32 @@ describe('professor envia', () => {
   it('líder, mentor e admin NÃO enviam certificado (é do professor)', async () => {
     await assertFails(setDoc(doc(como('liderA'), 'certificados_professor/liderA_wkum01'), dados('liderA')));
     await assertFails(setDoc(doc(como('mentor1'), 'certificados_professor/mentor1_wkum01'), dados('mentor1')));
+    await assertFails(setDoc(doc(como('admin1'), 'certificados_professor/admin1_wkum01'), dados('admin1')));
+  });
+});
+
+describe('admin envia no lugar do professor (Ver como)', () => {
+  const peloAdmin = (uid, extra = {}, id = `${uid}_${extra.workshopId || 'wkum01'}`) => setDoc(doc(como('admin1'), 'certificados_professor', id), dados(uid, extra));
+  it('admin envia o certificado na conta do professor', async () => {
+    await assertSucceeds(peloAdmin('profA'));
+  });
+  it('admin corrige e reenvia um recusado do professor', async () => {
+    await semear('profA_wkum01', { status: 'recusado', motivo: 'ilegível' });
+    await assertSucceeds(peloAdmin('profA'));
+  });
+  it('admin NÃO reenvia por cima de um verificado', async () => {
+    await semear('profA_wkum01', { status: 'verificado' });
+    await assertFails(peloAdmin('profA'));
+  });
+  it('admin NÃO envia para quem não é professor, para unidade errada ou com id de outro', async () => {
+    await assertFails(peloAdmin('liderA'));
+    await assertFails(peloAdmin('profA', { unidadeId: 'uniB' }));
+    await assertFails(peloAdmin('profA', {}, 'profB_wkum01'));
+    await assertFails(peloAdmin('profA', { status: 'verificado' }));
+  });
+  it('líder e mentor NÃO enviam no lugar do professor', async () => {
+    await assertFails(setDoc(doc(como('liderA'), 'certificados_professor/profA_wkum01'), dados('profA')));
+    await assertFails(setDoc(doc(como('mentor1'), 'certificados_professor/profA_wkum01'), dados('profA')));
   });
 });
 

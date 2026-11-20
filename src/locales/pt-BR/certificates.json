@@ -66,5 +66,6 @@
     "error": "Não foi possível salvar a conferência."
   },
   "loadingList": "Carregando workshops...",
-  "alreadyListed": "já consta"
+  "alreadyListed": "já consta",
+  "viewAsNoLogin": "Este professor ainda não tem login no sistema, então o certificado não tem onde ficar. Adicione o workshop dele pela aba Professores (botão Workshops)."
 }

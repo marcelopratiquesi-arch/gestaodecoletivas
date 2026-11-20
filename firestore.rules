@@ -1054,16 +1054,17 @@ service cloud.firestore {
 
     // Crachá antigo sem unidade: a unidade vem de um vínculo do próprio professor (vinculoId no certificado).
     // O vínculo precisa ser dele (professorId do crachá ou cadastro com uidLogin = este login) e da mesma unidade.
-    function certVinculoDoProfessor(d, cracha, v) {
+    // "dono" = login do professor dono do pedido (ele mesmo, ou o professor que o admin está vendo em "Ver como").
+    function certVinculoDoProfessor(d, cracha, v, dono) {
       return string(v.get('unidadeId', '')) == d.unidadeId
         && (v.get('professorId', '') == cracha.get('professorId', '#')
-            || get(/databases/$(database)/documents/professores/$(v.get('professorId', '#'))).data.get('uidLogin', '') == request.auth.uid);
+            || get(/databases/$(database)/documents/professores/$(v.get('professorId', '#'))).data.get('uidLogin', '') == dono);
     }
-    function certUnidadeOk(d, cracha) {
+    function certUnidadeOk(d, cracha, dono) {
       return d.unidadeId == cracha.get('unidadeId', '')
         || (d.get('vinculoId', '') is string && d.get('vinculoId', '') != ''
             && exists(/databases/$(database)/documents/vinculos/$(d.vinculoId))
-            && certVinculoDoProfessor(d, cracha, get(/databases/$(database)/documents/vinculos/$(d.vinculoId)).data));
+            && certVinculoDoProfessor(d, cracha, get(/databases/$(database)/documents/vinculos/$(d.vinculoId)).data, dono));
     }
 
     // ===================== ATUALIZAÇÃO DE CONTRATO DO PROFESSOR (atualizacoes_professor) =====================
@@ -1084,7 +1085,7 @@ service cloud.firestore {
           && d.uid == request.auth.uid
           && d.status == 'pendente' && d.criadoEm == request.time
           && d.nome is string && d.nome.size() >= 3 && d.nome.size() <= 80
-          && d.unidadeId is string && d.unidadeId != '' && certUnidadeOk(d, cracha)
+          && d.unidadeId is string && d.unidadeId != '' && certUnidadeOk(d, cracha, request.auth.uid)
           && d.tipoContrato in ['clt', 'saver']
           && d.saverLocais is list && d.saverLocais.size() <= 5
           && (d.tipoContrato == 'saver' ? d.saverLocais.size() >= 1 : d.saverLocais.size() == 0);
@@ -1111,23 +1112,24 @@ service cloud.firestore {
       }
       // O professor escolhe um workshop JÁ CADASTRADO: o id do certificado é login + "_" + id do workshop (não repete),
       // o workshop precisa existir, não estar cancelado, e nome/data são os do cadastro.
-      function certWorkshopOk(d) {
+      function certWorkshopOk(d, dono) {
         return d.get('workshopId', '') is string && d.get('workshopId', '') != ''
-          && cid == request.auth.uid + '_' + d.workshopId
+          && cid == dono + '_' + d.workshopId
           && exists(/databases/$(database)/documents/workshops_cadastro/$(d.workshopId))
           && get(/databases/$(database)/documents/workshops_cadastro/$(d.workshopId)).data.status != 'cancelado'
           && get(/databases/$(database)/documents/workshops_cadastro/$(d.workshopId)).data.nome == d.workshop
           && get(/databases/$(database)/documents/workshops_cadastro/$(d.workshopId)).data.data == d.dataFeito
           && (!('modalidade' in d) || d.modalidade == get(/databases/$(database)/documents/workshops_cadastro/$(d.workshopId)).data.modalidade);
       }
-      function certValido() {
+      // Vale para o certificado do professor "dono" (o crachá dele precisa ser de professor).
+      function certValidoPara(dono) {
         let d = request.resource.data;
-        let cracha = get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data;
+        let cracha = get(/databases/$(database)/documents/usuarios/$(dono)).data;
         return logado() && cracha.get('role', '').lower() == 'professor'
           && d.keys().hasOnly(['uid', 'unidadeId', 'vinculoId', 'workshopId', 'modalidade', 'nome', 'workshop', 'dataFeito', 'foto', 'status', 'criadoEm'])
-          && d.uid == request.auth.uid
-          && cid.matches(request.auth.uid + '_[A-Za-z0-9]{4,24}')
-          && d.unidadeId is string && d.unidadeId != '' && certUnidadeOk(d, cracha) && certWorkshopOk(d)
+          && d.uid == dono
+          && cid.matches(dono + '_[A-Za-z0-9]{4,24}')
+          && d.unidadeId is string && d.unidadeId != '' && certUnidadeOk(d, cracha, dono) && certWorkshopOk(d, dono)
           && d.status == 'pendente' && d.criadoEm == request.time
           && d.nome is string && d.nome.size() >= 3 && d.nome.size() <= 80
           && d.workshop is string && d.workshop.size() >= 3 && d.workshop.size() <= 120
@@ -1138,8 +1140,13 @@ service cloud.firestore {
 
       allow read: if (logado() && resource.data.uid == request.auth.uid) || certVerificador(resource.data.unidadeId);
       // O dono envia; e pode corrigir/reenviar enquanto não foi verificado (recusado volta a pendente).
-      allow create: if certValido();
-      allow update: if certValido() && resource.data.uid == request.auth.uid && resource.data.status in ['pendente', 'recusado'];
+      allow create: if certValidoPara(request.auth.uid);
+      allow update: if certValidoPara(request.auth.uid) && resource.data.uid == request.auth.uid && resource.data.status in ['pendente', 'recusado'];
+      // O admin ("Ver como professor") envia no lugar do professor: o certificado fica na conta do professor (que precisa ter login).
+      allow create: if souAdmin() && request.resource.data.get('uid', '') is string && request.resource.data.get('uid', '') != ''
+        && certValidoPara(request.resource.data.uid);
+      allow update: if souAdmin() && resource.data.status in ['pendente', 'recusado']
+        && request.resource.data.get('uid', '') == resource.data.uid && certValidoPara(resource.data.uid);
       // Admin, mentor ou líder da unidade verifica ou recusa (só os campos da análise).
       allow update: if resource.data.status == 'pendente' && certVerificador(resource.data.unidadeId)
         && camposAlterados().hasOnly(['status', 'motivo', 'analisadoPor', 'analisadoPorNome', 'analisadoEm'])

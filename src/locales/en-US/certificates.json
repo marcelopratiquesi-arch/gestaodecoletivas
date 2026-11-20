@@ -66,5 +66,6 @@
     "error": "Could not save the review."
   },
   "loadingList": "Loading workshops...",
-  "alreadyListed": "already listed"
+  "alreadyListed": "already listed",
+  "viewAsNoLogin": "This teacher has no login in the system yet, so the certificate has nowhere to go. Add their workshop from the Teachers tab (Workshops button)."
 }
