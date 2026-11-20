@@ -1,4 +1,4 @@
-// Foto de certificado: reduz a imagem no próprio aparelho e devolve um JPEG em texto base64 ("data:image/jpeg;base64,...").
+// Foto de certificado (ou PDF, que vira imagem da 1ª página): reduz a imagem no próprio aparelho e devolve um JPEG em texto base64 ("data:image/jpeg;base64,...").
 // O plano gratuito do Firebase não tem Storage, então a foto vai dentro do documento do Firestore (limite de 1 MiB);
 // por isso o alvo é caber em ~600 mil caracteres (o banco aceita até 700 mil, ver regra certificados_professor).
 export const LIMITE_FOTO = 600000;
@@ -29,10 +29,40 @@ const carregarImagem = (arquivo) => new Promise((resolve, reject) => {
   img.src = url;
 });
 
-/** @param {File} arquivo @returns {Promise<string>} JPEG em base64 (data URL) que cabe no limite */
+const ehPdf = (arquivo) => String(arquivo?.type || "") === "application/pdf" || /\.pdf$/i.test(String(arquivo?.name || ""));
+
+// PDF: desenha a 1ª página numa imagem (o leitor de PDF só é baixado quando alguém escolhe um PDF).
+async function pdfParaImagem(arquivo) {
+  const [pdfjs, { default: worker }] = await Promise.all([
+    import("pdfjs-dist/legacy/build/pdf.mjs"),
+    import("pdfjs-dist/legacy/build/pdf.worker.min.mjs?url"),
+  ]);
+  pdfjs.GlobalWorkerOptions.workerSrc = worker;
+  const pdf = await pdfjs.getDocument({ data: new Uint8Array(await arquivo.arrayBuffer()) }).promise;
+  try {
+    const pagina = await pdf.getPage(1);
+    const base = pagina.getViewport({ scale: 1 });
+    const viewport = pagina.getViewport({ scale: LADOS[0] / Math.max(base.width, base.height) });
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(viewport.width);
+    canvas.height = Math.round(viewport.height);
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    await pagina.render({ canvasContext: ctx, viewport }).promise;
+    return canvas;
+  } finally { pdf.destroy(); }
+}
+
+/** Foto (JPG, PNG, print) ou PDF do certificado -> JPEG em base64 (data URL) que cabe no limite.
+ * @param {File} arquivo @returns {Promise<string>} */
 export async function comprimirImagem(arquivo) {
-  if (!arquivo || !String(arquivo.type || "").startsWith("image/")) throw new Error("NAO_E_IMAGEM");
-  const img = await carregarImagem(arquivo);
+  const pdf = ehPdf(arquivo);
+  if (!arquivo || (!pdf && !String(arquivo.type || "").startsWith("image/"))) throw new Error("NAO_E_IMAGEM");
+  let img;
+  if (pdf) {
+    try { img = await pdfParaImagem(arquivo); } catch (e) { console.error(e); throw new Error("PDF_INVALIDO"); }
+  } else img = await carregarImagem(arquivo);
   for (const lado of LADOS) {
     const escala = Math.min(1, lado / Math.max(img.width, img.height));
     const canvas = document.createElement("canvas");

@@ -29,10 +29,10 @@ export default function MeusWorkshops() {
   const { catalogs } = useCatalogs();
   const arquivoRef = useRef(null);
 
-  // Unidade que verifica: a do crachá; se o crachá é antigo e não tem, vem dos vínculos do professor (sem leitura extra).
+  // Unidade que confere: escolhida sozinha (a do crachá; crachá antigo sem unidade = 1ª unidade dos vínculos).
+  // O professor não escolhe: o admin vê todos e o líder/mentor dessa unidade também (sem leitura extra).
   const opcoesUnidade = useMemo(() => opcoesDeUnidadeDoProfessor({ userData, uid, catalogs }), [userData, uid, catalogs]);
-  const [unidadeEscolhida, setUnidadeEscolhida] = useState("");
-  const destino = opcoesUnidade.find((o) => o.unidadeId === unidadeEscolhida) || (opcoesUnidade.length === 1 ? opcoesUnidade[0] : null);
+  const destino = opcoesUnidade[0] || null;
 
   const [lista, setLista] = useState(null);
   const [workshopId, setWorkshopId] = useState("");
@@ -72,7 +72,7 @@ export default function MeusWorkshops() {
     try { setFoto(await comprimirImagem(arquivo)); }
     catch (err) {
       console.error(err);
-      setErro(t(err?.message === "NAO_E_IMAGEM" ? "certificates.errors.notImage" : "certificates.errors.photo"));
+      setErro(t(err?.message === "NAO_E_IMAGEM" ? "certificates.errors.notImage" : err?.message === "PDF_INVALIDO" ? "certificates.errors.pdf" : "certificates.errors.photo"));
     } finally { setProcessando(false); }
   }
 
@@ -124,16 +124,6 @@ export default function MeusWorkshops() {
       ) : (
         <form onSubmit={enviar} className="p-5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm space-y-4">
           <h2 className="font-black text-slate-800 dark:text-white">{reenviando ? t("certificates.fix") : t("certificates.add")}</h2>
-          {opcoesUnidade.length > 1 && (
-            <div className="space-y-1">
-              <label htmlFor="cert-unidade" className="text-[10px] font-black uppercase tracking-wider text-slate-500">{t("certificates.fields.unit")}</label>
-              <select id="cert-unidade" value={destino?.unidadeId || ""} onChange={(e) => setUnidadeEscolhida(e.target.value)} className={campo}>
-                <option value="">{t("certificates.fields.unitPlaceholder")}</option>
-                {opcoesUnidade.map((o) => <option key={o.unidadeId} value={o.unidadeId}>{o.nome}</option>)}
-              </select>
-              <p className="text-[11px] text-slate-400">{t("certificates.fields.unitHint")}</p>
-            </div>
-          )}
           <div className="space-y-1">
             <label htmlFor="cert-workshop" className="text-[10px] font-black uppercase tracking-wider text-slate-500">{t("certificates.fields.workshop")}</label>
             <select id="cert-workshop" value={workshopId} onChange={(e) => setWorkshopId(e.target.value)} disabled={cadastrados === null} className={campo}>
@@ -148,7 +138,7 @@ export default function MeusWorkshops() {
           </div>
           <div className="space-y-2">
             <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">{t("certificates.fields.photo")}</span>
-            <input ref={arquivoRef} type="file" accept="image/*" onChange={escolherFoto} className="hidden" />
+            <input ref={arquivoRef} type="file" accept="image/*,application/pdf,.pdf" onChange={escolherFoto} className="hidden" />
             {foto && <img src={foto} alt={t("certificates.fields.photo")} className="max-h-64 rounded-xl border border-slate-200 dark:border-slate-700" />}
             <button type="button" disabled={processando} onClick={() => arquivoRef.current?.click()}
               className="px-4 py-2.5 rounded-xl text-xs font-black uppercase bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200 flex items-center gap-2 disabled:opacity-50">
