@@ -1,33 +1,35 @@
 {
   "contract": {
-    "title": "Are you CLT or Saver?",
+    "title": "Are you CLT or SAVER?",
     "clt": "CLT",
-    "saver": "Saver",
+    "saver": "SAVER",
     "cltHint": "CLT: you get the regular class pay.",
-    "saverHint": "Saver: academic/intern. During your internship hours, at the unit where you are a Saver, classes pay the academic rate.",
+    "saverHint": "SAVER: academic/intern. During your internship hours, at the unit where you are a SAVER, classes pay the academic rate.",
     "howMany": "In how many units are you a Saver in the WEIGHT ROOM?",
     "unit": "Unit {{n}}",
     "unitPlaceholder": "Choose the unit",
-    "hours": "Days and hours you work as a Saver",
+    "hours": "Hours you work as a SAVER (Monday to Friday)",
     "day": "Day",
     "from": "Start",
     "to": "to",
     "until": "End",
     "addHour": "Add hours",
     "removeHour": "Remove hours",
-    "rule": "A class outside these days and hours, or at another unit, pays the regular rate.",
+    "rule": "A class outside these hours, or at another unit, pays the regular rate.",
     "pending": "Contract",
     "declared": "The teacher reported: {{value}}",
     "useDeclared": "Use",
     "record": "Teacher contract",
+    "daysShort": {"0": "SUN", "1": "MON", "2": "TUE", "3": "WED", "4": "THU", "5": "FRI", "6": "SAT"},
     "days": {"0": "Sunday", "1": "Monday", "2": "Tuesday", "3": "Wednesday", "4": "Thursday", "5": "Friday", "6": "Saturday"},
-    "errors": {"unit": "Choose the unit where you are a Saver.", "sameUnit": "The same unit was chosen twice.", "hours": "Enter at least one day and time.", "hour": "Check the times: the end must be after the start.", "tooMany": "Too much information. Remove some.", "type": "Choose CLT or Saver."}
+    "errors": {"unit": "Choose the unit where you are a SAVER.", "sameUnit": "The same unit was chosen twice.", "hours": "Enter at least one time.", "hour": "Check the times: the end must be after the start.", "tooMany": "Too much information. Remove some.", "type": "Choose CLT or SAVER."}
   },
   "leader": "Location leader",
   "logout": "Sign out ({{email}})",
   "loadingUnits": "Loading locations...",
   "noUnits": "Could not load the list of locations. Please talk to your mentor.",
   "fields": {
+    "birth": "Date of birth",
     "name": "Full name",
     "namePlaceholder": "E.g. Mary Smith",
     "phone": "WhatsApp",
@@ -62,6 +64,7 @@
     "retry": "If needed, fix your details and send it again."
   },
   "errors": {
+    "birth": "Check the date of birth.",
     "name": "Enter your full name.",
     "phone": "Enter a valid WhatsApp number.",
     "unit": "Choose at least one unit.",
@@ -90,7 +93,9 @@
     "teacherUnit": "Pick your main unit. The leader can add other units later.",
     "modalities": "Tap the class types you teach. Only the class types registered in the system appear.",
     "modalitiesLoading": "Loading class types...",
-    "modalitiesNone": "No class types available right now. Try again shortly."
+    "modalitiesNone": "No class types available right now. Try again shortly.",
+    "modalitiesPickUnit": "Choose the unit first: only its class types appear.",
+    "birth": "So the team can wish you a happy birthday. Only you and the people who manage your unit see it."
   },
   "approver": {
     "lider": "Who approves: the unit's mentor or the administrator.",

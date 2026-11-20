@@ -3,7 +3,7 @@
 // A página pública é aberta sem login. Antes ela lia os cadastros completos de unidades e professores,
 // expondo na internet e-mails, telefones e IDs de login. Agora ela lê UM documento (publico/vitrine)
 // que contém só o que aparece na tela:
-//   unidades:    { [id]: { nome, cidade, estado, enderecoCompleto, linkGoogleMaps, localizacao, mentorNome } }
+//   unidades:    { [id]: { nome, cidade, estado, enderecoCompleto, linkGoogleMaps, localizacao, mentorNome, pais, modalidadesIds } }
 //   (mentorNome: só o nome do mentor responsável, para a caixa de dúvidas do primeiro acesso)
 //   professores: { [id]: nome }
 // Bônus: 1 leitura por visita em vez de (nº de unidades + nº de professores).
@@ -19,15 +19,20 @@ export const VITRINE_CAMINHO = ['publico', 'vitrine'];
 const refVitrine = () => doc(db, ...VITRINE_CAMINHO);
 
 // Únicos campos da unidade que a página pública usa.
-const CAMPOS_PUBLICOS_UNIDADE = ['nome', 'cidade', 'estado', 'enderecoCompleto', 'linkGoogleMaps', 'localizacao', 'mentorNome'];
+const CAMPOS_PUBLICOS_UNIDADE = ['nome', 'cidade', 'estado', 'enderecoCompleto', 'linkGoogleMaps', 'localizacao', 'mentorNome', 'pais'];
+// Campo em lista: as modalidades habilitadas na unidade (o cadastro do professor mostra só essas). Sem o campo = todas.
+const CAMPOS_PUBLICOS_UNIDADE_LISTA = ['modalidadesIds'];
 
-export const ehCampoPublicoUnidade = (campo) => CAMPOS_PUBLICOS_UNIDADE.includes(campo);
+export const ehCampoPublicoUnidade = (campo) => CAMPOS_PUBLICOS_UNIDADE.includes(campo) || CAMPOS_PUBLICOS_UNIDADE_LISTA.includes(campo);
 
 export function dadosPublicosUnidade(dados) {
     const publico = {};
     for (const campo of CAMPOS_PUBLICOS_UNIDADE) {
         const valor = dados?.[campo];
         if (typeof valor === 'string' && valor.trim() !== '') publico[campo] = valor;
+    }
+    for (const campo of CAMPOS_PUBLICOS_UNIDADE_LISTA) {
+        if (Array.isArray(dados?.[campo])) publico[campo] = dados[campo].map(String);
     }
     return publico;
 }

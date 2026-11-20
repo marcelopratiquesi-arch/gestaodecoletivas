@@ -58,6 +58,7 @@
     "approveConfirm": "Approve {{name}} as a teacher at {{unit}}?",
     "approved": "{{name}} approved. Now link their classes in the teachers list.",
     "modalities": "Class types",
+    "birth": "Date of birth",
     "noModalities": "not provided",
     "documentOk": "✓ ID document provided (stored securely)",
     "link": {

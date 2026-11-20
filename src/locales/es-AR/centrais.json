@@ -69,6 +69,7 @@
     "workshops": "Workshops"
   },
   "cadastro": {
+    "nascimento": "Fecha de nacimiento",
     "nome": "Nombre",
     "email": "E-mail",
     "telefone": "Teléfono",

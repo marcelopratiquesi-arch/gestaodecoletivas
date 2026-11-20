@@ -35,6 +35,7 @@ import { contratoVazio, validarContrato } from "../utils/contrato";
 import { documentoValido, formatarDocumento, tipoDocumentoPadrao } from "../utils/documento";
 import { documentoNoLote, gravarComAviso, lerDocumento, ERRO_DOCUMENTO_EM_USO } from "../services/documentoService";
 import { mensagemSeContatoEmUso, sincronizarEAvisar } from "../services/contatoService";
+import { lerNascimento, nascimentoValido } from "../services/meuCadastroService";
 import { normalizarPais } from "../utils/feriados";
 
 const temGoogle = (u) => (u?.providerData || []).some((p) => p.providerId === "google.com");
@@ -69,6 +70,7 @@ export default function AtualizarCadastro() {
   const [docTipo, setDocTipo] = useState(() => tipoDocumentoPadrao(i18n.language));
   const [docNumero, setDocNumero] = useState("");
   const [docAnterior, setDocAnterior] = useState(null); // documento já guardado (ex.: informado pelo admin)
+  const [nascimento, setNascimento] = useState(""); // professor: data de nascimento (opcional), gaveta privada
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState("");
   const [emailFinal, setEmailFinal] = useState("");
@@ -104,13 +106,14 @@ export default function AtualizarCadastro() {
   // Se o documento já está guardado (informado antes), o campo já vem preenchido.
   useEffect(() => {
     if (!uid || !precisaAtualizarCadastro) return;
+    if (souProfessor) lerNascimento(uid).then((d) => { if (d) setNascimento((v) => v || d); }).catch((e) => console.error(e));
     lerDocumento(uid).then((d) => {
       if (!d) return;
       setDocAnterior(d);
       setDocTipo(d.tipo);
       setDocNumero((v) => v || formatarDocumento(d.tipo, d.numero));
     }).catch((e) => console.error(e));
-  }, [uid, precisaAtualizarCadastro]);
+  }, [uid, precisaAtualizarCadastro, souProfessor]);
 
   // Líder que também é professor (cadastro de professor ligado a este login): pode continuar como professor.
   const professorId = souLider && !eraLoginDeUnidade ? professorLigadoAoLogin(uid, catalogs?.professores || []) : null;
@@ -143,6 +146,7 @@ export default function AtualizarCadastro() {
 
     if (!documentoValido(docTipo, docNumero)) { setPasso("dados"); return setErro(t("document.errors.invalid")); }
     if (modalidades.length > LIMITE_MODALIDADES) { setPasso("dados"); return setErro(t("accessRequest.errors.modalities")); }
+    if (souProfessor && !nascimentoValido(nascimento)) { setPasso("dados"); return setErro(t("accessRequest.errors.birth")); }
     const contratoOk = souProfessor ? validarContrato(contrato) : null;
     if (contratoOk && !contratoOk.ok) { setPasso("dados"); return setErro(t(`accessRequest.contract.errors.${contratoOk.erro}`)); }
 
@@ -199,6 +203,7 @@ export default function AtualizarCadastro() {
         });
       }
       documentoNoLote(batch, { uid, tipo: docTipo, numero: docNumero, anterior: docAnterior });
+      if (souProfessor && nascimento) batch.set(doc(db, "nascimentos", uid), { nascimento, atualizadoEm: serverTimestamp() });
       await gravarComAviso(batch);
 
       // Reserva de e-mail/telefone (F3 parte A): depois de salvo; se já é de outra pessoa, só avisa.
@@ -439,7 +444,18 @@ export default function AtualizarCadastro() {
             <CampoDocumento id="atu-documento" tipo={docTipo} onTipo={setDocTipo} valor={docNumero} onValor={setDocNumero} />
             <p className="text-[11px] text-zinc-500 ml-1">{t("document.hint")}</p>
           </div>
-          {souProfessor && <SeletorModalidades id="atu-modalidades" valor={modalidades} onChange={setModalidades} desabilitado={salvando} />}
+          {souProfessor && <SeletorModalidades id="atu-modalidades" valor={modalidades} onChange={setModalidades} unidade={(unidadesPublicas || []).find((u) => String(u.id) === String(userData?.unidadeId))} desabilitado={salvando} />}
+          {souProfessor && (
+            <div className="space-y-1">
+              <label htmlFor="atu-nascimento" className={classeRotulo}>{t("accessRequest.fields.birth")}</label>
+              <input
+                id="atu-nascimento" type="date" value={nascimento} min="1920-01-01" max={new Date().toISOString().slice(0, 10)}
+                onChange={(e) => setNascimento(e.target.value)} disabled={salvando}
+                className="w-full bg-zinc-900/50 border border-zinc-700 text-white font-bold px-4 py-3 rounded-xl focus:border-red-600 outline-none [color-scheme:dark]"
+              />
+              <p className="text-[11px] text-zinc-500 ml-1">{t("accessRequest.hints.birth")}</p>
+            </div>
+          )}
           {souProfessor && <CampoContrato id="atu-contrato" valor={contrato} onChange={setContrato} unidades={unidadesPublicas || []} desabilitado={salvando} />}
           {souLider && (
             <div className="space-y-1.5">

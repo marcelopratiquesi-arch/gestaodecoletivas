@@ -1,0 +1,94 @@
+// "Meu cadastro" do professor: os dados pessoais salvam NA HORA (sem aprovação), em todos os lugares onde aparecem:
+//  - crachá usuarios/{uid}: nome, telefone, país e e-mail de CONTATO (o e-mail de login nunca muda por aqui);
+//  - ficha da grade professores/{id} (a ligada ao login): nome, telefone, país e e-mail, que alimentam a Central e as abas;
+//  - documento (CPF/DNI/SSN): gaveta privada do crachá + reserva (documentoService), nunca no crachá aberto;
+//  - data de nascimento: gaveta privada nascimentos/{uid} (só a pessoa, o admin, o mentor e o líder da unidade leem);
+//  - reserva de e-mail/telefone (contatoService) e uma linha na auditoria (sem documento nem nascimento).
+// O contrato (CLT/SAVER) NÃO passa por aqui: continua pedindo aprovação (atualizacaoProfessorService).
+import { addDoc, collection, deleteDoc, doc, getDoc, serverTimestamp, writeBatch } from "firebase/firestore";
+import { db } from "./firebase";
+import { documentoNoLote, gravarComAviso, lerDocumento } from "./documentoService";
+import { mensagemSeContatoEmUso, sincronizarEAvisar } from "./contatoService";
+
+/** Data de nascimento guardada ("AAAA-MM-DD") ou "". Sem permissão ou sem registro = "". */
+export async function lerNascimento(uid) {
+  try {
+    const snap = await getDoc(doc(db, "nascimentos", uid));
+    return snap.exists() ? String(snap.data().nascimento || "") : "";
+  } catch (e) {
+    if (e?.code === "permission-denied") return "";
+    throw e;
+  }
+}
+
+/** Documento guardado do próprio professor ({ tipo, numero }) ou null. */
+export const lerMeuDocumento = (uid) => lerDocumento(uid);
+
+/** Data válida entre 1920 e hoje. Vazio é aceito (a data é opcional). */
+export function nascimentoValido(valor) {
+  if (!valor) return true;
+  if (!/^(19|20)\d{2}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(valor)) return false;
+  const d = new Date(`${valor}T12:00:00`);
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === valor && valor >= "1920-01-01" && d <= new Date();
+}
+
+/**
+ * Salva tudo de uma vez só.
+ * @param {object} p
+ *  uid, fichaId ("" se não há ficha ligada),
+ *  antes: { nome, telefone, pais, emailContato, emailLogin, documento: {tipo,numero}|null, nascimento },
+ *  depois: { nome, telefone, pais, emailContato, documento: {tipo,numero}|null, nascimento },
+ *  precisaMarcarDocumento: true quando o crachá ainda não tem documentoOk.
+ * @returns {Promise<{ ok: true } | { ok: false, erro: "contato" , mensagem: string }>}
+ */
+export async function salvarMeuCadastro({ uid, fichaId, antes, depois, precisaMarcarDocumento = false, nomeParaAuditoria }, t) {
+  const emailAntes = antes.emailContato || antes.emailLogin || "";
+  const emailDepois = depois.emailContato || "";
+  const dono = { uid, professorId: fichaId || undefined };
+
+  // Parte B: e-mail/telefone novo que já é de outra pessoa não é salvo.
+  const bloqueio = await mensagemSeContatoEmUso({
+    dono,
+    antes: { email: emailAntes, telefone: antes.telefone, pais: antes.pais },
+    depois: { email: emailDepois, telefone: depois.telefone, pais: depois.pais },
+  }, t);
+  if (bloqueio) return { ok: false, erro: "contato", mensagem: bloqueio };
+
+  // 1) Documento primeiro: se já é de outra pessoa o banco recusa e nada mais é salvo.
+  const docMudou = depois.documento && (!antes.documento || antes.documento.tipo !== depois.documento.tipo || antes.documento.numero !== depois.documento.numero);
+  if (docMudou) {
+    const lote = writeBatch(db);
+    documentoNoLote(lote, { uid, tipo: depois.documento.tipo, numero: depois.documento.numero, anterior: antes.documento, marcarCracha: precisaMarcarDocumento });
+    await gravarComAviso(lote);
+  }
+
+  // 2) Crachá + ficha + nascimento, tudo junto ou nada.
+  const lote = writeBatch(db);
+  lote.update(doc(db, "usuarios", uid), { nome: depois.nome, telefone: depois.telefone, pais: depois.pais, emailContato: emailDepois });
+  if (fichaId) lote.update(doc(db, "professores", String(fichaId)), { nome: depois.nome, telefone: depois.telefone, pais: depois.pais, email: emailDepois, updatedAt: serverTimestamp() });
+  if (depois.nascimento && depois.nascimento !== antes.nascimento) lote.set(doc(db, "nascimentos", uid), { nascimento: depois.nascimento, atualizadoEm: serverTimestamp() });
+  await lote.commit();
+  if (!depois.nascimento && antes.nascimento) await deleteDoc(doc(db, "nascimentos", uid));
+
+  // 3) Reserva de e-mail/telefone (se já é de outra pessoa, só avisa) e auditoria (sem dado sensível).
+  await sincronizarEAvisar({
+    dono,
+    antes: { email: emailAntes, telefone: antes.telefone, pais: antes.pais },
+    depois: { email: emailDepois, telefone: depois.telefone, pais: depois.pais },
+  }, t);
+  try {
+    const mudou = [];
+    if (antes.nome !== depois.nome) mudou.push(`Nome: ${antes.nome || "-"} ➔ ${depois.nome}`);
+    if (antes.telefone !== depois.telefone || antes.pais !== depois.pais) mudou.push(`Telefone: ${antes.telefone || "-"} ➔ ${depois.telefone} (${depois.pais})`);
+    if (emailAntes !== emailDepois) mudou.push(`E-mail de contato: ${emailAntes || "-"} ➔ ${emailDepois || "-"}`);
+    if (docMudou) mudou.push("Documento atualizado");
+    if (depois.nascimento !== antes.nascimento) mudou.push("Data de nascimento atualizada");
+    if (mudou.length) {
+      await addDoc(collection(db, "auditoria_configuracoes"), {
+        tipoAcao: "ALTERADA", modulo: "CONFIGURACOES", descricao: "Professor atualizou o próprio cadastro (Meu cadastro).",
+        diffExtras: mudou.join(" | "), unidadeNome: "-", usuarioAcaoNome: nomeParaAuditoria || depois.nome, usuarioAcaoId: uid, dataAcao: serverTimestamp(),
+      });
+    }
+  } catch (e) { console.error("Falha ao gravar auditoria", e); }
+  return { ok: true };
+}

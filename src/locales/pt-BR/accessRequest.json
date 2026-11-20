@@ -1,33 +1,35 @@
 {
   "contract": {
-    "title": "Você é CLT ou Saver?",
+    "title": "Você é CLT ou SAVER?",
     "clt": "CLT",
-    "saver": "Saver",
+    "saver": "SAVER",
     "cltHint": "CLT: você recebe o valor normal da aula.",
-    "saverHint": "Saver: acadêmico/estagiário. Nos seus horários de estágio, na unidade onde é Saver, a aula paga o valor de acadêmico.",
-    "howMany": "Em quantas unidades você é Saver no SALÃO DE MUSCULAÇÃO?",
+    "saverHint": "SAVER: acadêmico/estagiário. Nos seus horários de estágio, na unidade onde é SAVER, a aula paga o valor de acadêmico.",
+    "howMany": "Em quantas unidades você é SAVER no SALÃO DE MUSCULAÇÃO?",
     "unit": "Unidade {{n}}",
     "unitPlaceholder": "Escolha a unidade",
-    "hours": "Dias e horários em que você trabalha como Saver",
+    "hours": "Horário em que você trabalha como SAVER (de segunda a sexta)",
     "day": "Dia",
     "from": "Início",
     "to": "às",
     "until": "Fim",
     "addHour": "Adicionar horário",
     "removeHour": "Tirar horário",
-    "rule": "Aula dada fora desses dias e horários, ou em outra unidade, paga o valor normal.",
+    "rule": "Aula dada fora desse horário, ou em outra unidade, paga o valor normal.",
     "pending": "Contrato",
     "declared": "O professor informou: {{value}}",
     "useDeclared": "Usar",
     "record": "Contrato do professor",
+    "daysShort": {"0": "DOM", "1": "SEG", "2": "TER", "3": "QUA", "4": "QUI", "5": "SEX", "6": "SÁB"},
     "days": {"0": "Domingo", "1": "Segunda", "2": "Terça", "3": "Quarta", "4": "Quinta", "5": "Sexta", "6": "Sábado"},
-    "errors": {"unit": "Escolha a unidade onde você é Saver.", "sameUnit": "A mesma unidade foi escolhida duas vezes.", "hours": "Informe pelo menos um dia e horário.", "hour": "Confira os horários: o fim precisa ser depois do início.", "tooMany": "Informação demais. Tire alguma.", "type": "Escolha CLT ou Saver."}
+    "errors": {"unit": "Escolha a unidade onde você é SAVER.", "sameUnit": "A mesma unidade foi escolhida duas vezes.", "hours": "Informe pelo menos um horário.", "hour": "Confira os horários: o fim precisa ser depois do início.", "tooMany": "Informação demais. Tire alguma.", "type": "Escolha CLT ou SAVER."}
   },
   "leader": "Líder da unidade",
   "logout": "Sair ({{email}})",
   "loadingUnits": "Carregando unidades...",
   "noUnits": "Não foi possível carregar a lista de unidades. Fale com o seu mentor.",
   "fields": {
+    "birth": "Data de nascimento",
     "name": "Nome completo",
     "namePlaceholder": "Ex: Maria Silva",
     "phone": "WhatsApp",
@@ -62,6 +64,7 @@
     "retry": "Se precisar, corrija os dados e envie de novo."
   },
   "errors": {
+    "birth": "Confira a data de nascimento.",
     "name": "Digite seu nome completo.",
     "phone": "Digite um WhatsApp válido.",
     "unit": "Escolha pelo menos uma unidade.",
@@ -90,7 +93,9 @@
     "teacherUnit": "Escolha a sua unidade principal. O líder pode incluir outras unidades depois.",
     "modalities": "Toque nas modalidades em que você dá aula. Só aparecem as modalidades cadastradas no sistema.",
     "modalitiesLoading": "Carregando as modalidades...",
-    "modalitiesNone": "Nenhuma modalidade disponível agora. Tente de novo em instantes."
+    "modalitiesNone": "Nenhuma modalidade disponível agora. Tente de novo em instantes.",
+    "modalitiesPickUnit": "Escolha a unidade primeiro: aparecem só as modalidades dela.",
+    "birth": "Serve para a equipe te dar os parabéns. Só você e quem gerencia a sua unidade veem."
   },
   "approver": {
     "lider": "Quem aprova: o mentor da unidade ou o administrador.",

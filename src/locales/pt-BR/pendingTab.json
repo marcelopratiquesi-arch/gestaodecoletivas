@@ -58,6 +58,7 @@
     "approveConfirm": "Aprovar {{name}} como professor(a) da unidade {{unit}}?",
     "approved": "{{name}} aprovado(a). Agora ligue as aulas dele(a) pelo cadastro de professores.",
     "modalities": "Modalidades",
+    "birth": "Nascimento",
     "noModalities": "não informadas",
     "documentOk": "✓ Documento informado (guardado em local protegido)",
     "link": {

@@ -1,6 +1,6 @@
 {
   "title": "Meu cadastro",
-  "subtitle": "Mude o seu contrato (CLT ou Saver, unidades e horários). O líder da sua unidade, o seu mentor ou o administrador confere antes de valer.",
+  "subtitle": "Seus dados pessoais salvam na hora. A mudança de contrato (CLT ou SAVER, unidades e horários) o líder da sua unidade, o seu mentor ou o administrador confere antes de valer.",
   "current": "O que vale hoje",
   "noFicha": "Seu nome ainda não está ligado a um cadastro da grade. Peça ao líder da sua unidade.",
   "change": "Pedir mudança",
@@ -22,7 +22,7 @@
   },
   "review": {
     "title": "Atualizações de contrato para conferir",
-    "subtitle": "Professores pediram para mudar CLT ou Saver. Aprovado, a mudança entra no cadastro e vale para o valor da aula.",
+    "subtitle": "Professores pediram para mudar CLT ou SAVER. Aprovado, a mudança entra no cadastro e vale para o valor da aula.",
     "before": "Hoje",
     "after": "Pedido",
     "approve": "Aprovar",
@@ -31,5 +31,28 @@
     "refusePrompt": "Motivo da recusa para {{name}} (opcional):",
     "noFicha": "Este professor ainda não está ligado a um cadastro da grade. Ligue antes de aprovar.",
     "error": "Não foi possível concluir. Tente de novo."
+  },
+  "me": {
+    "title": "Dados pessoais",
+    "contractTitle": "Contrato",
+    "name": "Nome completo",
+    "country": "País",
+    "phone": "WhatsApp",
+    "document": "Documento",
+    "birth": "Data de nascimento",
+    "birthHint": "Serve para a equipe te dar os parabéns. Só você e quem gerencia a sua unidade veem.",
+    "contactEmail": "E-mail de contato",
+    "contactEmailHint": "É o e-mail que a equipe usa para falar com você. Pode trocar quando quiser.",
+    "loginEmail": "E-mail de login",
+    "loginEmailHint": "É a conta Google com que você entra no sistema. Não muda por aqui.",
+    "save": "Salvar meus dados",
+    "saved": "Dados salvos.",
+    "errors": {
+      "name": "Informe o nome completo.",
+      "phone": "Informe o WhatsApp com DDD.",
+      "email": "Confira o e-mail de contato.",
+      "birth": "Confira a data de nascimento.",
+      "save": "Não foi possível salvar. Tente de novo."
+    }
   }
 }

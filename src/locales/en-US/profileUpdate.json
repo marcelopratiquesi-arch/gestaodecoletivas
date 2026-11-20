@@ -1,6 +1,6 @@
 {
   "title": "My profile",
-  "subtitle": "Change your contract (CLT or Saver, units and hours). Your unit leader, your mentor or the administrator checks it before it takes effect.",
+  "subtitle": "Your personal data saves right away. A contract change (CLT or SAVER, units and hours) is checked by your unit leader, your mentor or the admin before it applies.",
   "current": "What applies today",
   "noFicha": "Your name is not linked to a schedule record yet. Ask your unit leader.",
   "change": "Request a change",
@@ -31,5 +31,28 @@
     "refusePrompt": "Reason for refusing {{name}} (optional):",
     "noFicha": "This teacher is not linked to a schedule record yet. Link it before approving.",
     "error": "Could not finish. Try again."
+  },
+  "me": {
+    "title": "Personal data",
+    "contractTitle": "Contract",
+    "name": "Full name",
+    "country": "Country",
+    "phone": "WhatsApp",
+    "document": "ID document",
+    "birth": "Date of birth",
+    "birthHint": "So the team can wish you a happy birthday. Only you and the people who manage your unit see it.",
+    "contactEmail": "Contact e-mail",
+    "contactEmailHint": "The e-mail the team uses to reach you. You can change it any time.",
+    "loginEmail": "Login e-mail",
+    "loginEmailHint": "The Google account you sign in with. It does not change here.",
+    "save": "Save my data",
+    "saved": "Data saved.",
+    "errors": {
+      "name": "Enter your full name.",
+      "phone": "Enter your WhatsApp with area code.",
+      "email": "Check the contact e-mail.",
+      "birth": "Check the date of birth.",
+      "save": "Could not save. Try again."
+    }
   }
 }

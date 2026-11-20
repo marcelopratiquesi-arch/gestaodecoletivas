@@ -3,12 +3,15 @@
 // O valor volta como texto "Zumba, Pilates" (o mesmo campo "modalidades" de sempre).
 import { useTranslation } from "react-i18next";
 import { Loader2, Check } from "lucide-react";
-import { useModalidadesAtivas, modalidadesDoTexto, LIMITE_MODALIDADES } from "./acessoDados";
+import { useModalidadesAtivas, modalidadesDaUnidade, modalidadesDoTexto, LIMITE_MODALIDADES } from "./acessoDados";
 import { classeRotulo } from "./AcessoUI";
 
-export default function SeletorModalidades({ id, valor, onChange, desabilitado = false }) {
+// `unidade` (da vitrine pública): mostra só as modalidades dela. null = ainda sem unidade escolhida (pede para escolher antes);
+// sem a propriedade = todas as modalidades ativas (professor antigo sem unidade no crachá).
+export default function SeletorModalidades({ id, valor, onChange, unidade, desabilitado = false }) {
   const { t } = useTranslation();
-  const lista = useModalidadesAtivas();
+  const todas = useModalidadesAtivas();
+  const lista = todas === null ? null : unidade === undefined ? todas : modalidadesDaUnidade(todas, unidade);
   const escolhidas = new Set(modalidadesDoTexto(valor));
 
   function alternar(nome) {
@@ -22,7 +25,9 @@ export default function SeletorModalidades({ id, valor, onChange, desabilitado =
   return (
     <div className="space-y-2">
       <p id={id} className={classeRotulo}>{t("accessRequest.fields.modalities")}</p>
-      {lista === null ? (
+      {unidade === null ? (
+        <p className="text-xs text-zinc-500">{t("accessRequest.hints.modalitiesPickUnit")}</p>
+      ) : lista === null ? (
         <p className="text-xs text-zinc-500 flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> {t("accessRequest.hints.modalitiesLoading")}</p>
       ) : lista.length === 0 ? (
         <p className="text-xs text-zinc-500">{t("accessRequest.hints.modalitiesNone")}</p>
