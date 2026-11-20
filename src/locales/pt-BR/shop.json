@@ -89,6 +89,9 @@
       "empty": "Ninguém nesta lista",
       "download": "Baixar planilha",
       "sheet": "Quem fez",
+      "clear": "Limpar lista",
+      "clearConfirm": "Apagar os {{count}} participantes deste workshop? O workshop também sai do perfil dos professores ligados. Depois você pode importar de novo.",
+      "cleared": "Lista limpa.",
       "partDownload": "Baixar planilha",
       "partLinkedTo": "Ligado a",
       "partPhone": "Telefone"
