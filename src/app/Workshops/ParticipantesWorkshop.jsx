@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import { Loader2, Download } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import ModalWorkshop from './ModalWorkshop';
-import { lerParticipantes, ligarParticipante, removerParticipante, acertarContador } from '../../services/participantesWorkshopService';
+import { lerParticipantes, ligarParticipante, removerParticipante, removerTodosParticipantes, acertarContador } from '../../services/participantesWorkshopService';
 import { normalizarNome } from '../../utils/repetidos';
 
 const botao = 'px-5 py-3 rounded-xl font-black text-xs uppercase tracking-wide flex items-center justify-center gap-2 transition-all';
@@ -54,6 +54,14 @@ export default function ParticipantesWorkshop({ workshop, professores, unidades,
     setConfirmando(null); setOcupado(false);
   };
 
+  const limparTudo = async () => {
+    if (!window.confirm(t('shop.ws.who.clearConfirm', { count: lista.length }))) return;
+    setOcupado(true);
+    try { await removerTodosParticipantes({ workshop, todos: lista, fichas: professores }); toast.success(t('shop.ws.who.cleared')); await carregar(); }
+    catch (e) { console.error(e); toast.error(t('shop.ws.imp.saveError')); }
+    setOcupado(false);
+  };
+
   const ligar = async (ficha) => {
     setOcupado(true);
     try {
@@ -87,6 +95,7 @@ export default function ParticipantesWorkshop({ workshop, professores, unidades,
       rodape={<>
         <span className="text-xs text-slate-500 mr-auto">{t('shop.ws.part.deleteNote')}</span>
         <button type="button" onClick={onClose} className={`${botao} text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700`}>{t('shop.ws.imp.close')}</button>
+        {lista?.length > 0 && <button type="button" onClick={limparTudo} disabled={ocupado} className={`${botao} border border-slate-200 dark:border-slate-600 text-red-600 hover:bg-red-50 disabled:opacity-60`}>{t('shop.ws.who.clear')}</button>}
         <button type="button" onClick={baixar} disabled={!lista?.length} className={`${botao} border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-white disabled:opacity-60`}><Download className="w-4 h-4" /> {t('shop.ws.who.partDownload')}</button>
         <button type="button" onClick={onImportar} className={`${botao} bg-red-600 text-white hover:bg-red-700`}>{t('shop.ws.importBtn')}</button>
       </>}>

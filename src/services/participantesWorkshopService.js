@@ -122,6 +122,16 @@ export async function removerParticipante({ workshop, participante, todos, ficha
   await gravarEmLotes(ops);
 }
 
+/** Esvazia a lista do workshop (importou no workshop errado): apaga todos os participantes e tira o workshop do perfil dos professores. */
+export async function removerTodosParticipantes({ workshop, todos, fichas }) {
+  const fichasPorId = new Map((fichas || []).map((f) => [String(f.id), f]));
+  const ops = todos.map((p) => (batch) => batch.delete(refParticipante(workshop.id, p.id)));
+  const profs = new Set(todos.flatMap((p) => p.professorIds || []).map(String));
+  profs.forEach((pid) => { if (fichasPorId.has(pid)) ops.push(espelhoNoProfessor(workshop, pid, fichasPorId, { tirar: true })); });
+  ops.push(contador(workshop, 0));
+  await gravarEmLotes(ops);
+}
+
 /** Acerta o contador do workshop se ficou diferente da lista (ex.: uma gravação em lotes falhou no meio). */
 export async function acertarContador(workshop, total) {
   if (Number(workshop.totalParticipantes || 0) === total) return;
