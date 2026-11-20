@@ -53,6 +53,7 @@
       "how_v": "email + phone", "how_a": "review", "how_c": "no match",
       "notCount": "does not count",
       "fichas": "{{count}} records",
+      "noCheckin": "Nobody has a check-in in this file, so everyone with an approved payment counts (already ticked). Unpaid people are left out.",
       "legend": "Green: email and phone match the same instructor (if they have records in other units, the workshop applies to all). Yellow: only one matches, pick the right instructor or \"none\". Gray: nobody in the registry, the person is kept on the list (name, email and phone; admin only) to link later if they become an instructor.",
       "marked": "{{count}} person(s) selected to save",
       "nothing": "Select at least one person.",

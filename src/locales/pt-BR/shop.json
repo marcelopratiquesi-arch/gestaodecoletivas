@@ -53,6 +53,7 @@
       "how_v": "e-mail + telefone", "how_a": "confira", "how_c": "ninguém achado",
       "notCount": "não conta",
       "fichas": "{{count}} fichas",
+      "noCheckin": "Neste arquivo ninguém tem check-in marcado, então valem todos com pagamento aprovado (já vêm marcados). Quem não pagou fica de fora.",
       "legend": "Verde: e-mail e telefone batem com o mesmo professor (se ele tem fichas em outras unidades, o workshop vale em todas). Amarelo: só um dos dois bate, escolha o professor certo ou \"nenhum\". Cinza: ninguém no cadastro, a pessoa fica guardada na lista (nome, e-mail e telefone; só o admin vê) para ligar depois se virar professor.",
       "marked": "{{count}} pessoa(s) marcada(s) para gravar",
       "nothing": "Marque ao menos uma pessoa.",

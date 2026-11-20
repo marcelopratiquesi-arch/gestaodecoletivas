@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import { Loader2, FileSpreadsheet } from 'lucide-react';
 import ModalWorkshop from './ModalWorkshop';
 import { lerArquivoXlsx, lerParticipantes, gravarImportacao } from '../../services/participantesWorkshopService';
-import { montarConferencia } from '../../utils/importarParticipantes';
+import { montarConferencia, arquivoUsaCheckin } from '../../utils/importarParticipantes';
 import { dataBr } from '../../utils/workshopCadastro';
 
 const botao = 'px-5 py-3 rounded-xl font-black text-xs uppercase tracking-wide flex items-center justify-center gap-2 transition-all';
@@ -22,7 +22,7 @@ export default function ImportarLista({ workshop, professores, unidades, onClose
   const [passo, setPasso] = useState(1);
   const [ocupado, setOcupado] = useState(false);
   const [erro, setErro] = useState('');
-  const [arquivo, setArquivo] = useState(null); // { nome, dataIso, local, total }
+  const [arquivo, setArquivo] = useState(null); // { nome, dataIso, local, total, semCheckin }
   const [linhas, setLinhas] = useState([]);
   const [existentes, setExistentes] = useState([]);
   const [resultado, setResultado] = useState(null);
@@ -45,7 +45,7 @@ export default function ImportarLista({ workshop, professores, unidades, onClose
       if (lida.erro || !lida.linhas.length) { setErro(t('shop.ws.imp.badFile')); setOcupado(false); return; }
       const ja = await lerParticipantes(workshop.id);
       setExistentes(ja);
-      setArquivo({ nome: f.name, dataIso: lida.dataIso, local: lida.local, total: lida.linhas.length });
+      setArquivo({ nome: f.name, dataIso: lida.dataIso, local: lida.local, total: lida.linhas.length, semCheckin: !arquivoUsaCheckin(lida.linhas) });
       setLinhas(montarConferencia(lida.linhas, professores));
       setPasso(2);
     } catch (err) {
@@ -125,6 +125,7 @@ export default function ImportarLista({ workshop, professores, unidades, onClose
             {arquivo.dataIso && <span className="text-slate-500">{t('shop.ws.imp.fileDate')}: {dataBr(arquivo.dataIso)}</span>}
           </div>
           {dataDiferente && <div className="p-3 rounded-xl bg-amber-50 text-amber-700 text-sm font-bold">{t('shop.ws.imp.dateWarn', { file: dataBr(arquivo.dataIso), ws: dataBr(workshop.data) })}</div>}
+          {arquivo.semCheckin && <div className="p-3 rounded-xl bg-amber-50 text-amber-700 text-sm font-bold">{t('shop.ws.imp.noCheckin')}</div>}
           {existentes.length > 0 && <div className="text-xs text-slate-500">{t('shop.ws.imp.already', { count: existentes.length })}</div>}
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -143,7 +144,7 @@ export default function ImportarLista({ workshop, professores, unidades, onClose
               </thead>
               <tbody>
                 {linhas.map((l, i) => {
-                  const mostra = l.cls === 'x' && l.incluir ? l.achado : l.cls;
+                  const mostra = l.cls === 'x' ? l.achado : l.cls;
                   return (
                     <tr key={l.id} className={`border-t border-slate-100 dark:border-slate-700 border-l-4 ${BARRA[l.cls]} ${l.cls === 'x' && !l.incluir ? 'opacity-60' : ''}`}>
                       <td className="p-2"><input type="checkbox" checked={l.incluir} onChange={(e) => mudar(i, 'incluir', e.target.checked)} aria-label={t('shop.ws.imp.include')} /></td>

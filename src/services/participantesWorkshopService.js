@@ -42,10 +42,15 @@ const itemDoWorkshop = (workshop, por) => ({
 
 /** Lista de gravações em lotes pequenos. */
 async function gravarEmLotes(operacoes) {
-  for (let i = 0; i < operacoes.length; i += TAMANHO_LOTE) {
-    const batch = writeBatch(db);
-    operacoes.slice(i, i + TAMANHO_LOTE).forEach((op) => op(batch));
-    await batch.commit();
+  const lotes = [];
+  for (let i = 0; i < operacoes.length; i += TAMANHO_LOTE) lotes.push(operacoes.slice(i, i + TAMANHO_LOTE));
+  // Vários lotes ao mesmo tempo (4 por vez): bem mais rápido que um por um, e cada lote continua independente.
+  for (let i = 0; i < lotes.length; i += 4) {
+    await Promise.all(lotes.slice(i, i + 4).map((ops) => {
+      const batch = writeBatch(db);
+      ops.forEach((op) => op(batch));
+      return batch.commit();
+    }));
   }
 }
 
