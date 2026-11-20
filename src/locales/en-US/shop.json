@@ -89,6 +89,9 @@
       "empty": "Nobody on this list",
       "download": "Download spreadsheet",
       "sheet": "Who did",
+      "clear": "Clear list",
+      "clearConfirm": "Delete all {{count}} participants of this workshop? It is also removed from the linked teachers' profiles. You can import again afterwards.",
+      "cleared": "List cleared.",
       "partDownload": "Download spreadsheet",
       "partLinkedTo": "Linked to",
       "partPhone": "Phone"
