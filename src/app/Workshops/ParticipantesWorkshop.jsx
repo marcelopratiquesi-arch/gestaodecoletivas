@@ -2,7 +2,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Download } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import ModalWorkshop from './ModalWorkshop';
 import { lerParticipantes, ligarParticipante, removerParticipante, acertarContador } from '../../services/participantesWorkshopService';
 import { normalizarNome } from '../../utils/repetidos';
@@ -65,6 +66,19 @@ export default function ParticipantesWorkshop({ workshop, professores, unidades,
     setOcupado(false);
   };
 
+  const baixar = () => {
+    const dados = (lista || []).map((p) => ({
+      [t('shop.ws.part.name')]: p.nome,
+      [t('shop.ws.part.status')]: p.status === 'ligado' ? t('shop.ws.part.statusLinked') : t('shop.ws.part.statusNone'),
+      [t('shop.ws.who.partLinkedTo')]: nomesLigados(p).join(' · '),
+      Email: p.email || '',
+      [t('shop.ws.who.partPhone')]: p.telefone || '',
+    }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(dados), t('shop.ws.part.title').slice(0, 31));
+    XLSX.writeFile(wb, `Participantes_${String(workshop.nome).replace(/s+/g, '_')}.xlsx`);
+  };
+
   const ligados = (lista || []).filter((p) => p.status === 'ligado').length;
   const sem = (lista || []).length - ligados;
 
@@ -73,6 +87,7 @@ export default function ParticipantesWorkshop({ workshop, professores, unidades,
       rodape={<>
         <span className="text-xs text-slate-500 mr-auto">{t('shop.ws.part.deleteNote')}</span>
         <button type="button" onClick={onClose} className={`${botao} text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700`}>{t('shop.ws.imp.close')}</button>
+        <button type="button" onClick={baixar} disabled={!lista?.length} className={`${botao} border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-white disabled:opacity-60`}><Download className="w-4 h-4" /> {t('shop.ws.who.partDownload')}</button>
         <button type="button" onClick={onImportar} className={`${botao} bg-red-600 text-white hover:bg-red-700`}>{t('shop.ws.importBtn')}</button>
       </>}>
       {lista === null ? <div className="flex justify-center py-10 text-slate-400"><Loader2 className="w-6 h-6 animate-spin" /></div> : (
