@@ -19,5 +19,9 @@
     "pratiquePlay": "Pratique Play",
     "backup": "Copia de Seguridad",
     "lideres": "Líderes"
+  },
+  "bar": {
+    "panel": "Panel",
+    "settings": "Configuración"
   }
 }

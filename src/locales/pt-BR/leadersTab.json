@@ -173,5 +173,42 @@
     "end": "Encerrar",
     "document": "Documento (CPF)",
     "pickUnit": "Clique numa unidade para ver os detalhes."
+  },
+  "requests": {
+    "title": "Pedidos de acesso",
+    "show": "Mostrar",
+    "hide": "Recolher"
+  },
+  "desk": {
+    "subtitle": "Cadastro de todos os líderes por unidade. Cada unidade tem até 2 líderes, e uma pessoa pode liderar várias unidades.",
+    "searchByDoc": "Buscar pelo documento",
+    "listLabel": "Lista de líderes",
+    "filterTabs": "Filtrar por situação",
+    "clear": "Limpar",
+    "contact": "Contato",
+    "confirmed": "Confirmado(a)",
+    "nobody": "Ninguém responde por esta unidade",
+    "pick": "Escolher",
+    "openSheet": "Abrir ficha",
+    "whatsSecond": "WhatsApp do 2º líder",
+    "neverLogged": "Nunca entrou",
+    "showRequests": "Ver pedidos",
+    "hideRequests": "Fechar pedidos",
+    "requestsWho_one": "{{names}} pediu acesso.",
+    "requestsWho_other": "{{names}} pediram acesso.",
+    "requestsGeneric": "Há pedidos aguardando sua resposta.",
+    "and": "e",
+    "andMore_one": "e mais {{count}} pessoa",
+    "andMore_other": "e mais {{count}} pessoas",
+    "checkText": "{{name}} entrou com o login antigo da unidade e assumiu como líder com a conta Google. Confira se é a pessoa certa.",
+    "notThisPerson": "Não é ela/ele",
+    "mainLeader": "Líder principal",
+    "registered": "Cadastro",
+    "docSent": "Enviado",
+    "docMissing": "Não enviado",
+    "seeDocument": "Ver documento",
+    "alsoLeads": "Também lidera",
+    "noOther": "Nenhuma outra unidade",
+    "invite": "Convidar"
   }
 }

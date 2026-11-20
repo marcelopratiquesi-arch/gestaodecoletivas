@@ -173,5 +173,42 @@
     "end": "End",
     "document": "Document (SSN)",
     "pickUnit": "Click a unit to see its details."
+  },
+  "requests": {
+    "title": "Access requests",
+    "show": "Show",
+    "hide": "Hide"
+  },
+  "desk": {
+    "subtitle": "Every unit's leaders in one place. Each unit has up to 2 leaders, and one person can lead several units.",
+    "searchByDoc": "Search by document",
+    "listLabel": "Leaders list",
+    "filterTabs": "Filter by status",
+    "clear": "Clear",
+    "contact": "Contact",
+    "confirmed": "Confirmed",
+    "nobody": "Nobody is in charge of this unit",
+    "pick": "Choose",
+    "openSheet": "Open details",
+    "whatsSecond": "2nd leader's WhatsApp",
+    "neverLogged": "Never signed in",
+    "showRequests": "See requests",
+    "hideRequests": "Close requests",
+    "requestsWho_one": "{{names}} asked for access.",
+    "requestsWho_other": "{{names}} asked for access.",
+    "requestsGeneric": "There are requests waiting for you.",
+    "and": "and",
+    "andMore_one": "and {{count}} more person",
+    "andMore_other": "and {{count}} more people",
+    "checkText": "{{name}} signed in with the unit's old login and took over as leader with their Google account. Check that it is the right person.",
+    "notThisPerson": "Not this person",
+    "mainLeader": "Main leader",
+    "registered": "Registered",
+    "docSent": "Sent",
+    "docMissing": "Not sent",
+    "seeDocument": "See document",
+    "alsoLeads": "Also leads",
+    "noOther": "No other unit",
+    "invite": "Invite"
   }
 }

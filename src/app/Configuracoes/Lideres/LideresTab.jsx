@@ -14,7 +14,7 @@ import { createUserWithEmailAndPassword, getAuth, signOut } from "firebase/auth"
 import { initializeApp, getApp, deleteApp } from "firebase/app";
 import { useTranslation } from "react-i18next";
 import {
-  UserPlus, Loader2, Edit2, Check, KeyRound, ScanSearch,
+  UserPlus, Loader2, Edit2, Check, KeyRound, ScanSearch, Inbox, ChevronDown, Plus, IdCard, UserCheck, Users,
 } from "lucide-react";
 import { db } from "../../../services/firebase";
 import { useAuth } from "../../../contexts/AuthContext";
@@ -27,6 +27,10 @@ import { ConviteModal, PrazoModal } from "./TemporariosSecao";
 import { useLideresTemporarios } from "./useLideresTemporarios";
 import { ListaLideres } from "./ListaLideres";
 import { FichaDaUnidade } from "./FichaDaUnidade";
+import { ListaLideresComputador } from "./ListaLideresComputador";
+import { FichaLateral } from "./FichaLateral";
+import { BTN, BTN_PRI } from "./pecasComputador";
+import { useTelaGrande } from "../ui/useTelaGrande";
 import { useOrdenacao } from "../ui/useOrdenacao";
 import { CabecalhoDoModal } from "../ui/CabecalhoDoModal";
 import { useFiltroCascata } from "../ui/useFiltroCascata";
@@ -46,6 +50,7 @@ const SENHA_MINIMA = 6;
 // País da unidade em sigla (cadastros antigos guardam o nome por extenso; sem país = Brasil).
 const NOME_PAIS = { Brasil: "BR", Argentina: "AR", "Estados Unidos": "US" };
 const siglaPais = (u) => NOME_PAIS[u.pais] || u.pais || "BR";
+const PAIS_POR_EXTENSO = { BR: "Brasil", AR: "Argentina", US: "Estados Unidos" };
 const emailValido = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 
 // Como o líder entra no sistema (só para mostrar na tela).
@@ -68,7 +73,8 @@ export function LideresTab() {
   const { t } = useTranslation();
   const { userData } = useAuth();
   const { catalogs, loadingCatalogs } = useCatalogs();
-  const { total: totalPendencias, pedidos: pedidosPendentes } = usePedidosPendentes();
+  const { total: totalPendencias, pedidos: pedidosPendentes, extras: pedidosOutraUnidade } = usePedidosPendentes();
+  const computador = useTelaGrande(); // >= 1024 px: desenho do computador; abaixo disso, o do celular (inalterado)
 
   const role = String(userData?.role || "").trim().toLowerCase();
   const userId = userData?.id || userData?.uid;
@@ -78,6 +84,10 @@ export function LideresTab() {
 
   const [situacao, setSituacao] = useState("todas"); // todas | com | sem | conferir | temporarios
   const [selecionadaId, setSelecionadaId] = useState(null); // unidade com a ficha aberta
+  // Bloco "Pedidos de acesso": começa sempre recolhido (as pendências da migração ficam discretas).
+  const [pedidosAbertos, setPedidosAbertos] = useState(false);
+  const mudarPedidosAbertos = setPedidosAbertos;
+  const fecharFicha = useCallback(() => setSelecionadaId(null), []);
   const [mostrarBuscaDoc, setMostrarBuscaDoc] = useState(false);
   const pedidosRef = useRef(null);
   const [processando, setProcessando] = useState(null);
@@ -124,7 +134,19 @@ export function LideresTab() {
   const uidsDeAcesso = useMemo(() => minhasUnidades.flatMap((u) => [
     u.liderUid, u.lider2Uid, tipoDeAcesso(u) === "antigo" ? u.uidLogin : null,
   ]), [minhasUnidades]);
-  const { acessoDe, carregando: carregandoAcessos } = useUltimosAcessos(uidsDeAcesso);
+  const { acessoDe, crachaDe, carregando: carregandoAcessos } = useUltimosAcessos(uidsDeAcesso);
+
+  // Nomes de quem pediu acesso (barra "Pedidos de acesso" no computador): até 4 nomes e "e mais N".
+  const textoDosPedidos = useMemo(() => {
+    const nomes = [...(pedidosPendentes || []), ...(pedidosOutraUnidade || [])].map((p) => p.nome || p.email).filter(Boolean);
+    const unicos = [...new Set(nomes)];
+    if (!unicos.length) return t("leadersTab.desk.requestsGeneric");
+    const mostrados = unicos.slice(0, 4);
+    const mais = unicos.length - mostrados.length;
+    const lista = mais > 0 ? `${mostrados.join(", ")} ${t("leadersTab.desk.andMore", { count: mais })}`
+      : mostrados.length > 1 ? `${mostrados.slice(0, -1).join(", ")} ${t("leadersTab.desk.and")} ${mostrados.at(-1)}` : mostrados[0];
+    return t("leadersTab.desk.requestsWho", { count: unicos.length, names: lista });
+  }, [pedidosPendentes, pedidosOutraUnidade, t]);
 
   // Pedidos de acesso pelo Google por unidade (para "Escolher líder": quem já pediu aquela unidade).
   const pedidosPorUnidade = useMemo(() => {
@@ -147,6 +169,10 @@ export function LideresTab() {
   // Líderes temporários (ativos e convites), por unidade. As ações e a auditoria são as de antes.
   const todasUnidades = useMemo(() => catalogs?.unidades || [], [catalogs?.unidades]);
   const temp = useLideresTemporarios({ role, escopos, unidades: todasUnidades, registrarAuditoria });
+
+  // "Também lidera" (ficha do computador): outras unidades em que a mesma pessoa é 1º ou 2º líder.
+  const outrasUnidades = useCallback((uid, menosId) => todasUnidades.filter((x) =>
+    String(x.id) !== String(menosId) && (x.liderUid === uid || x.lider2Uid === uid)), [todasUnidades]);
 
   // Lista (Opção B): cada unidade com o último acesso do líder (ou do login antigo) e se tem temporário.
   const linhasTodas = useMemo(() => filtro.resultado.map((u) => {
@@ -179,6 +205,7 @@ export function LideresTab() {
   // "Escolher líder": se alguém já pediu esta unidade pelo Google, leva aos pedidos; senão abre a escolha.
   function escolherLider(u) {
     if ((pedidosPorUnidade.get(String(u.id)) || 0) > 0 && pedidosRef.current) {
+      mudarPedidosAbertos(true);
       pedidosRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
       setSelecionadaId(null);
       return;
@@ -365,12 +392,116 @@ export function LideresTab() {
 
   if (!podeAcessar) return null;
 
-  return (
-    <div className="p-3 sm:p-6 space-y-4">
-      {/* PEDIDOS DE ACESSO (login pelo Google) */}
+  // Ações da ficha (a mesma lista serve à ficha do celular e à do computador).
+  const acoesDaFicha = (u) => ({
+    escolher: () => escolherLider(u),
+    cadastrar: () => abrirNovo(u),
+    confirmar: () => confirmar(u),
+    prorrogar: (c) => temp.abrirPrazo(c),
+    efetivar: (c) => temp.efetivarAgora(c),
+    encerrar: (c) => temp.encerrarAgora(c),
+    cancelarConvite: (c) => temp.cancelar(c),
+    definirTemporario: () => temp.abrirConvite(u),
+    adicionarSegundo: () => setTornarLider({ vaga: 2, unidade: u }),
+    documentoSegundo: () => setDocAlvo({ id: u.lider2Uid, nome: u.lider2Nome, email: u.lider2Email }),
+    tirarSegundo: () => remover(u, 2),
+    editar: () => abrirEditar(u),
+    documento: () => setDocAlvo({ id: u.liderUid, nome: u.liderNome, email: u.liderEmail }),
+    trocar: () => abrirNovo(u),
+    remover: () => remover(u),
+  });
+  const abrirPedidos = () => { mudarPedidosAbertos(true); pedidosRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }); };
+  const algumaJanelaAberta = !!(modal || tornarLider || docAlvo || temp.convidando || temp.prorrogando);
+
+  // ===== COMPUTADOR (>= 1024 px): central de cadastro com tudo à vista + ficha por cima, pela direita =====
+  const conteudoComputador = (
+    <>
+      {/* cabeçalho da página */}
+      <div className="flex justify-between items-end gap-4 flex-wrap">
+        <div className="flex gap-3.5 items-center min-w-0">
+          <span aria-hidden="true" className="w-[52px] h-[52px] rounded-[14px] bg-slate-900 text-white inline-flex items-center justify-center shrink-0 dark:bg-white dark:text-slate-900"><Users className="w-[26px] h-[26px]" /></span>
+          <div className="min-w-0">
+            <h1 className="m-0 text-[28px] font-black leading-tight text-slate-900 dark:text-white">{t("leadersTab.title")}</h1>
+            <p className="mt-1 mb-0 text-[13px] text-slate-600 dark:text-slate-400">{t("leadersTab.desk.subtitle")}</p>
+          </div>
+        </div>
+        <div className="flex gap-2 flex-wrap">
+          <button type="button" onClick={() => setMostrarBuscaDoc((v) => !v)} aria-expanded={mostrarBuscaDoc}
+            className={`${BTN} ${mostrarBuscaDoc ? "!border-red-600 !text-red-700" : ""}`}><IdCard className="w-4 h-4" /> {t("leadersTab.desk.searchByDoc")}</button>
+          <button type="button" onClick={() => setTornarLider({ vaga: 1, unidade: null })} className={BTN}><UserCheck className="w-4 h-4" /> {t("leadersTab.promote.button")}</button>
+          <button type="button" onClick={() => abrirNovo(null)} className={BTN_PRI}><Plus className="w-4 h-4" /> {t("leadersTab.new")}</button>
+        </div>
+      </div>
+
+      {mostrarBuscaDoc && (
+        <div className="p-4 rounded-2xl border border-slate-200 bg-white dark:bg-slate-900 dark:border-slate-800">
+          <BuscaDocumento aoCadastrar={cadastrarPeloDocumento} aoEscolherPessoa={() => setTornarLider({ vaga: 1, unidade: null })} aoIrParaPedido={abrirPedidos} />
+        </div>
+      )}
+
+      {/* PEDIDOS DE ACESSO: barra fina, recolhível, fechada por padrão; some quando não há pedidos */}
       {totalPendencias > 0 && (
-        <div ref={pedidosRef} className="scroll-mt-4 rounded-2xl border border-slate-200 bg-white dark:bg-slate-900 dark:border-slate-800">
-          <PendenciasTab />
+        <section ref={pedidosRef} aria-label={t("leadersTab.requests.title")} className="scroll-mt-24 rounded-xl border border-slate-200 border-l-4 border-l-red-600 bg-white overflow-hidden dark:bg-slate-900 dark:border-slate-800">
+          <div className="flex items-center gap-3.5 px-4 py-3 flex-wrap">
+            <UserPlus className="w-5 h-5 text-red-600 shrink-0" aria-hidden="true" />
+            <div className="flex items-center gap-2">
+              <span className="text-[15px] font-black text-slate-900 dark:text-white">{t("leadersTab.requests.title")}</span>
+              <span className="px-2 py-0.5 rounded-full bg-red-600 text-white text-[11px] font-black">{totalPendencias}</span>
+            </div>
+            <span className="flex-1 min-w-[240px] text-[13px] text-slate-600 dark:text-slate-400">{textoDosPedidos}</span>
+            <button type="button" onClick={() => mudarPedidosAbertos(!pedidosAbertos)} aria-expanded={pedidosAbertos} className={`${BTN} !h-[38px]`}>
+              {pedidosAbertos ? t("leadersTab.desk.hideRequests") : t("leadersTab.desk.showRequests")}
+              <ChevronDown className={`w-4 h-4 transition-transform ${pedidosAbertos ? "rotate-180" : ""}`} aria-hidden="true" />
+            </button>
+          </div>
+          {pedidosAbertos && <div className="border-t border-slate-100 dark:border-slate-800"><PendenciasTab /></div>}
+        </section>
+      )}
+      {temp.erro && <p className="text-xs font-bold text-red-700 bg-red-50 border border-red-200 p-3 rounded-xl">{temp.erro}</p>}
+
+      <ListaLideresComputador linhas={linhas} total={linhasTodas.length} chips={chips} situacao={situacao} setSituacao={setSituacao}
+        filtro={filtro} mostrarMentor={role === "admin"} ordenacao={ordenacao} nomeMentor={nomeMentor}
+        carregando={loadingCatalogs} carregandoAcessos={carregandoAcessos} acessoDe={acessoDe} pais={siglaPais} processando={processando}
+        onAbrir={(u) => setSelecionadaId(u.id)}
+        acoes={{
+          confirmar: (u) => confirmar(u),
+          editar: (u) => abrirEditar(u),
+          documento: (u) => setDocAlvo({ id: u.liderUid, nome: u.liderNome, email: u.liderEmail }),
+          escolher: (u) => escolherLider(u),
+          cadastrar: (u) => abrirNovo(u),
+        }} />
+
+      {selecionada && (
+        <FichaLateral key={selecionada.u.id} u={selecionada.u} pais={siglaPais(selecionada.u)}
+          nomePais={t(`common.countries.${siglaPais(selecionada.u)}`, PAIS_POR_EXTENSO[siglaPais(selecionada.u)] || siglaPais(selecionada.u))}
+          nomeMentor={role === "admin" ? nomeMentor(selecionada.u.mentorId) : ""} ocupado={processando === selecionada.u.id}
+          acessoDe={acessoDe} crachaDe={crachaDe} carregandoAcessos={carregandoAcessos}
+          outrasUnidades={(uid) => outrasUnidades(uid, selecionada.u.id)}
+          temps={temp.porUnidade.get(String(selecionada.u.id))} tempOcupado={temp.ocupado}
+          onFechar={fecharFicha} pausarEsc={algumaJanelaAberta}
+          seloPrincipal={<SeloRepetido selo={selosRepetidos.get(`cracha:${selecionada.u.liderUid}`)} detalheDe={(o) => o.email || ""} />}
+          seloSegundo={<SeloRepetido selo={selosRepetidos.get(`cracha:${selecionada.u.lider2Uid}`)} detalheDe={(o) => o.email || ""} />}
+          acoes={acoesDaFicha(selecionada.u)} />
+      )}
+    </>
+  );
+
+  return (
+    <div className={computador ? "space-y-4" : "p-3 sm:p-6 space-y-4"}>
+      {computador ? conteudoComputador : (<>
+      {/* ===== CELULAR (< 1024 px): Opção B, como já estava ===== */}
+      {/* PEDIDOS DE ACESSO (login pelo Google): barra com o número e botão de recolher/abrir (começa recolhida) */}
+      {totalPendencias > 0 && (
+        <div ref={pedidosRef} className="scroll-mt-4 rounded-2xl border border-slate-200 bg-white dark:bg-slate-800 dark:border-slate-700 overflow-hidden">
+          <button type="button" onClick={() => mudarPedidosAbertos(!pedidosAbertos)} aria-expanded={pedidosAbertos}
+            className="w-full min-h-[52px] px-4 py-3 flex items-center gap-3 text-left hover:bg-slate-50 dark:hover:bg-slate-700/40">
+            <Inbox className="w-5 h-5 text-red-600 shrink-0" aria-hidden="true" />
+            <span className="flex-1 min-w-0 text-[15px] font-black text-slate-900 dark:text-white">{t("leadersTab.requests.title")}</span>
+            <span className="min-w-[1.75rem] h-7 px-2 rounded-full bg-red-600 text-white text-xs font-black inline-flex items-center justify-center">{totalPendencias}</span>
+            <span className="text-xs font-extrabold text-red-700 dark:text-red-400 whitespace-nowrap">{pedidosAbertos ? t("leadersTab.requests.hide") : t("leadersTab.requests.show")}</span>
+            <ChevronDown className={`w-5 h-5 text-slate-500 shrink-0 transition-transform ${pedidosAbertos ? "rotate-180" : ""}`} aria-hidden="true" />
+          </button>
+          {pedidosAbertos && <div className="border-t border-slate-100 dark:border-slate-700"><PendenciasTab /></div>}
         </div>
       )}
       {temp.erro && <p className="text-xs font-bold text-red-700 bg-red-50 border border-red-200 p-3 rounded-xl">{temp.erro}</p>}
@@ -392,7 +523,7 @@ export function LideresTab() {
             abaixoDosFiltros={mostrarBuscaDoc && (
               <BuscaDocumento aoCadastrar={cadastrarPeloDocumento}
                 aoEscolherPessoa={() => setTornarLider({ vaga: 1, unidade: null })}
-                aoIrParaPedido={() => pedidosRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })} />
+                aoIrParaPedido={() => { mudarPedidosAbertos(true); pedidosRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }); }} />
             )} />
         </div>
 
@@ -430,6 +561,8 @@ export function LideresTab() {
           )}
         </div>
       </div>
+
+      </>)}
 
       {docAlvo && <DocumentoModal alvo={docAlvo} abaId="lideres" onClose={() => setDocAlvo(null)} />}
       {temp.convidando && (

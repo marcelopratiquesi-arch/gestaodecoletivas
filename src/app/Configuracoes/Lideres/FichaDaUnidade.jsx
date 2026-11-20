@@ -1,7 +1,6 @@
 // Painel de detalhes da unidade (aba Líderes, Opção B): no computador fica ao lado da lista; no celular
 // (< 1024 px) abre em tela cheia por cima da lista — a lista continua montada embaixo, então filtro, busca
 // e rolagem ficam como estavam ao voltar. Só mostra e chama ações que já existem.
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronLeft, Copy, Loader2, Mail, MessageCircle, Phone, X } from "lucide-react";
 import { linkWhatsApp } from "../../../centrais/contato";
@@ -10,6 +9,8 @@ import { diaDoFim, diasRestantes, fimDoTemporario } from "../../../utils/tempora
 import { telefoneParaExibir } from "../ui/telefone";
 import { FlagIcon } from "../ui/Bandeira";
 import { SELO_CONFERIR, SELO_NEUTRO } from "./estiloLideres";
+import { useAvisoCopiado } from "./useAvisoCopiado";
+import { AvisoCopiado } from "./avisoCopiado";
 
 const ROT = "text-[10px] font-extrabold uppercase tracking-widest text-slate-500 dark:text-slate-400";
 const BLOCO = "flex flex-col gap-2 p-3.5 rounded-2xl border border-slate-200 bg-white dark:bg-slate-900 dark:border-slate-700";
@@ -17,16 +18,6 @@ const ICONE = "inline-flex items-center justify-center w-9 h-9 lg:w-[30px] lg:h-
 const BT = "min-h-[46px] lg:min-h-[38px] px-3 rounded-xl border border-slate-200 bg-white text-left text-[13px] font-bold text-slate-700 hover:border-slate-400 hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-200 disabled:opacity-50";
 const BT_PERIGO = "min-h-[46px] lg:min-h-[38px] px-3 rounded-xl border border-red-200 bg-white text-left text-[13px] font-bold text-red-700 hover:bg-red-50 dark:bg-slate-900 dark:border-red-800 dark:text-red-400 disabled:opacity-50";
 const BT_DESTAQUE = "min-h-[46px] lg:min-h-[40px] px-3 rounded-xl bg-red-600 hover:bg-red-700 text-white text-[13px] font-extrabold disabled:opacity-60 inline-flex items-center justify-center gap-2";
-
-// "Copiado" rápido no rodapé da tela.
-function useAvisoCopiado() {
-  const [visivel, setVisivel] = useState(false);
-  const copiar = async (texto) => {
-    try { await navigator.clipboard.writeText(String(texto)); setVisivel(true); setTimeout(() => setVisivel(false), 1500); }
-    catch (e) { console.error("Não foi possível copiar:", e); }
-  };
-  return { visivel, copiar };
-}
 
 function UltimoAcesso({ quando, como, carregando }) {
   const { t, i18n } = useTranslation();
@@ -211,9 +202,7 @@ export function FichaDaUnidade({ u, nomeMentor, pais, ocupado, acessoDe, carrega
         </div>
       </aside>
 
-      {visivel && (
-        <div role="status" className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] px-4 py-2 rounded-xl bg-slate-900 text-white text-sm font-bold shadow-lg">{t("centrais.copiado")}</div>
-      )}
+      <AvisoCopiado visivel={visivel} />
     </div>
   );
 }
