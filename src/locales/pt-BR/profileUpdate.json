@@ -30,7 +30,8 @@
     "approveConfirm": "Aprovar a mudança de {{name}}?\n\n{{value}}",
     "refusePrompt": "Motivo da recusa para {{name}} (opcional):",
     "noFicha": "Este professor ainda não está ligado a um cadastro da grade. Ligue antes de aprovar.",
-    "error": "Não foi possível concluir. Tente de novo."
+    "error": "Não foi possível concluir. Tente de novo.",
+    "modalities": "Modalidades"
   },
   "me": {
     "title": "Dados pessoais",
@@ -53,7 +54,8 @@
       "email": "Confira o e-mail de contato.",
       "birth": "Confira a data de nascimento.",
       "save": "Não foi possível salvar. Tente de novo."
-    }
+    },
+    "modalities": "Modalidades"
   },
   "subtitleAll": "Seus dados pessoais salvam na hora. Mantenha tudo atualizado: é por aqui que a equipe fala com você.",
   "units": {
@@ -78,7 +80,17 @@
       "choose": "Escolha uma unidade.",
       "max": "Você já tem {{max}} pedidos aguardando análise.",
       "profile": "Salve o seu nome e o seu WhatsApp acima antes de pedir outra unidade.",
-      "send": "Não foi possível enviar. Tente de novo."
-    }
+      "send": "Não foi possível enviar. Tente de novo.",
+      "noFicha": "Seu nome ainda não está ligado a um cadastro da grade. Peça ao líder da sua unidade."
+    },
+    "teacherRequestTitle": "Pedir unidade nova",
+    "teacherRequestHint": "O líder ou o mentor da unidade que você escolher vai analisar. Se aprovarem, a unidade aparece para você."
+  },
+  "unitReview": {
+    "title": "Pedidos de unidade nova para conferir",
+    "subtitle": "Professores pediram para dar aula em mais uma unidade. Aprovado, a unidade entra na grade deles.",
+    "approveConfirm": "Aprovar a unidade {{unit}} para {{name}}?",
+    "refusePrompt": "Motivo da recusa para {{name}} (opcional):",
+    "already": "Já é desta unidade"
   }
 }

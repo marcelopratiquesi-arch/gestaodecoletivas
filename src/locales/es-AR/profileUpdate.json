@@ -30,7 +30,8 @@
     "approveConfirm": "¿Aprobar el cambio de {{name}}?\n\n{{value}}",
     "refusePrompt": "Motivo del rechazo para {{name}} (opcional):",
     "noFicha": "Este profesor todavía no está vinculado a un registro de la grilla. Vinculalo antes de aprobar.",
-    "error": "No se pudo completar. Probá de nuevo."
+    "error": "No se pudo completar. Probá de nuevo.",
+    "modalities": "Modalidades"
   },
   "me": {
     "title": "Datos personales",
@@ -53,7 +54,8 @@
       "email": "Revisá el e-mail de contacto.",
       "birth": "Revisá la fecha de nacimiento.",
       "save": "No se pudo guardar. Probá de nuevo."
-    }
+    },
+    "modalities": "Modalidades"
   },
   "subtitleAll": "Tus datos personales se guardan al instante. Mantené todo actualizado: por acá el equipo se comunica con vos.",
   "units": {
@@ -78,7 +80,17 @@
       "choose": "Elegí una unidad.",
       "max": "Ya tenés {{max}} pedidos esperando análisis.",
       "profile": "Guardá tu nombre y tu WhatsApp arriba antes de pedir otra unidad.",
-      "send": "No se pudo enviar. Probá de nuevo."
-    }
+      "send": "No se pudo enviar. Probá de nuevo.",
+      "noFicha": "Tu nombre todavía no está vinculado a una ficha de la grilla. Pedíselo al líder de tu unidad."
+    },
+    "teacherRequestTitle": "Pedir unidad nueva",
+    "teacherRequestHint": "El líder o el mentor de la unidad que elijas lo va a analizar. Si lo aprueban, la unidad aparece para vos."
+  },
+  "unitReview": {
+    "title": "Pedidos de unidad nueva para revisar",
+    "subtitle": "Profesores pidieron dar clases en una unidad más. Aprobado, la unidad entra en su grilla.",
+    "approveConfirm": "¿Aprobar la unidad {{unit}} para {{name}}?",
+    "refusePrompt": "Motivo del rechazo para {{name}} (opcional):",
+    "already": "Ya es de esta unidad"
   }
 }

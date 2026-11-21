@@ -300,7 +300,7 @@ service cloud.firestore {
     // qualquer outro campo, e apagar a ficha, é só do admin (que também junta fichas e liga crachás).
     function camposDeFichaDoProfessor() {
       return ['nome', 'email', 'pais', 'telefone', 'status', 'documentoOk', 'uidLogin', 'workshops',
-              'updatedAt', 'createdAt', 'createdBy', 'roleCreator', 'tipoContrato', 'saverLocais'];
+              'updatedAt', 'createdAt', 'createdBy', 'roleCreator', 'tipoContrato', 'saverLocais', 'modalidades'];
     }
     match /professores/{professorId} {
       allow read: if logado();
@@ -1081,7 +1081,8 @@ service cloud.firestore {
         let d = request.resource.data;
         let cracha = get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data;
         return logado() && request.auth.uid == uid && cracha.get('role', '').lower() == 'professor'
-          && d.keys().hasOnly(['uid', 'nome', 'unidadeId', 'vinculoId', 'tipoContrato', 'saverLocais', 'status', 'criadoEm'])
+          && d.keys().hasOnly(['uid', 'nome', 'unidadeId', 'vinculoId', 'tipoContrato', 'saverLocais', 'modalidades', 'status', 'criadoEm'])
+          && d.get('modalidades', '') is string && d.get('modalidades', '').size() <= 300
           && d.uid == request.auth.uid
           && d.status == 'pendente' && d.criadoEm == request.time
           && d.nome is string && d.nome.size() >= 3 && d.nome.size() <= 80
@@ -1097,6 +1098,38 @@ service cloud.firestore {
         && camposAlterados().hasOnly(['status', 'motivo', 'analisadoPor', 'analisadoPorNome', 'analisadoEm'])
         && request.resource.data.status in ['aprovado', 'recusado'];
       allow delete: if (logado() && request.auth.uid == uid) || souAdmin();
+    }
+
+    // ===================== PEDIDO DE UNIDADE NOVA DO PROFESSOR (pedidos_unidade_professor) =====================
+    // O professor pede para dar aula em mais uma unidade (pelo Meu cadastro). Um documento por unidade pedida
+    // (id = login + "_" + unidade). Quem confere: admin, mentor da unidade pedida e líder dela. Aprovado = cria o vínculo
+    // (professor x unidade) na grade, o que a regra de vinculos já permite a eles.
+    match /pedidos_unidade_professor/{pid} {
+      function pupVerificador(unidadeId) {
+        return unidadeId is string && (souAdmin()
+          || (logado() && meuPapel() == 'mentor' && mentorDaUnidadeId(unidadeId))
+          || (logado() && liderDestaUnidade(unidadeId)));
+      }
+      function pupValido() {
+        let d = request.resource.data;
+        return logado() && souProfessor()
+          && d.keys().hasOnly(['uid', 'nome', 'professorId', 'unidadeId', 'unidadeNome', 'status', 'criadoEm'])
+          && d.uid == request.auth.uid
+          && d.unidadeId is string && d.unidadeId != ''
+          && pid == request.auth.uid + '_' + d.unidadeId
+          && exists(/databases/$(database)/documents/unidades/$(d.unidadeId))
+          && d.professorId is string && d.professorId != ''
+          && d.status == 'pendente' && d.criadoEm == request.time
+          && d.nome is string && d.nome.size() >= 3 && d.nome.size() <= 80
+          && d.get('unidadeNome', '') is string && d.get('unidadeNome', '').size() <= 120;
+      }
+      allow read: if logado() && (resource.data.get('uid', '') == request.auth.uid || pupVerificador(resource.data.get('unidadeId', '')));
+      allow create: if pupValido();
+      allow update: if pupValido() && resource.data.uid == request.auth.uid;
+      allow update: if resource.data.status == 'pendente' && pupVerificador(resource.data.unidadeId)
+        && camposAlterados().hasOnly(['status', 'motivo', 'analisadoPor', 'analisadoPorNome', 'analisadoEm'])
+        && request.resource.data.status in ['aprovado', 'recusado'];
+      allow delete: if logado() && (resource.data.uid == request.auth.uid || souAdmin());
     }
 
     // ===================== CERTIFICADOS DE WORKSHOP DO PROFESSOR (certificados_professor) =====================
@@ -1202,8 +1235,8 @@ service cloud.firestore {
     // (No Firestore, se QUALQUER regra libera, a ação passa; por isso as coleções com regra própria precisam estar na
     // lista de exceções de leitura e de escrita aqui embaixo.)
     match /{colecao}/{resto=**} {
-      allow read: if logado() && !(colecao in ['feriados_propostas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'documentos_privados', 'nascimentos', 'documentos_do_pedido', 'documentos_unicos', 'documentos_ficha', 'documentos_professor', 'contatos_unicos', 'telemetria_leituras', 'tabela_precos', 'workshops_cadastro', 'certificados_professor', 'atualizacoes_professor', 'indicadores_mensais', 'auditoria_financeiro', 'unipower_stock', 'unipower_workshops', 'unipower_transacoes']);
-      allow write: if souAdmin() && !(colecao in ['feriados', 'feriados_propostas', 'usuarios', 'publico', 'validacoes', 'aulas', 'aulas_publicas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'resumos_mensais', 'documentos_privados', 'nascimentos', 'documentos_do_pedido', 'documentos_unicos', 'professores', 'documentos_ficha', 'documentos_professor', 'contatos_unicos', 'telemetria_leituras', 'tabela_precos', 'workshops_cadastro', 'certificados_professor', 'atualizacoes_professor', 'unidades', 'configuracoes', 'vinculos']);
+      allow read: if logado() && !(colecao in ['feriados_propostas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'documentos_privados', 'nascimentos', 'documentos_do_pedido', 'documentos_unicos', 'documentos_ficha', 'documentos_professor', 'contatos_unicos', 'telemetria_leituras', 'tabela_precos', 'workshops_cadastro', 'certificados_professor', 'atualizacoes_professor', 'pedidos_unidade_professor', 'indicadores_mensais', 'auditoria_financeiro', 'unipower_stock', 'unipower_workshops', 'unipower_transacoes']);
+      allow write: if souAdmin() && !(colecao in ['feriados', 'feriados_propostas', 'usuarios', 'publico', 'validacoes', 'aulas', 'aulas_publicas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'resumos_mensais', 'documentos_privados', 'nascimentos', 'documentos_do_pedido', 'documentos_unicos', 'professores', 'documentos_ficha', 'documentos_professor', 'contatos_unicos', 'telemetria_leituras', 'tabela_precos', 'workshops_cadastro', 'certificados_professor', 'atualizacoes_professor', 'pedidos_unidade_professor', 'unidades', 'configuracoes', 'vinculos']);
     }
   }
 }

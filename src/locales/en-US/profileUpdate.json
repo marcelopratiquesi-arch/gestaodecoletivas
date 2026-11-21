@@ -30,7 +30,8 @@
     "approveConfirm": "Approve {{name}}'s change?\n\n{{value}}",
     "refusePrompt": "Reason for refusing {{name}} (optional):",
     "noFicha": "This teacher is not linked to a schedule record yet. Link it before approving.",
-    "error": "Could not finish. Try again."
+    "error": "Could not finish. Try again.",
+    "modalities": "Modalities"
   },
   "me": {
     "title": "Personal data",
@@ -53,7 +54,8 @@
       "email": "Check the contact e-mail.",
       "birth": "Check the date of birth.",
       "save": "Could not save. Try again."
-    }
+    },
+    "modalities": "Modalities"
   },
   "subtitleAll": "Your personal details are saved right away. Keep everything up to date: this is how the team reaches you.",
   "units": {
@@ -78,7 +80,17 @@
       "choose": "Choose a unit.",
       "max": "You already have {{max}} requests waiting for review.",
       "profile": "Save your name and WhatsApp above before requesting another unit.",
-      "send": "Could not send. Try again."
-    }
+      "send": "Could not send. Try again.",
+      "noFicha": "Your name is not linked to a schedule record yet. Ask your unit leader."
+    },
+    "teacherRequestTitle": "Request a new unit",
+    "teacherRequestHint": "The leader or mentor of the unit you choose will review it. If approved, the unit shows up for you."
+  },
+  "unitReview": {
+    "title": "New unit requests to review",
+    "subtitle": "Teachers asked to teach in one more unit. Once approved, the unit joins their schedule.",
+    "approveConfirm": "Approve unit {{unit}} for {{name}}?",
+    "refusePrompt": "Reason for declining {{name}} (optional):",
+    "already": "Already in this unit"
   }
 }

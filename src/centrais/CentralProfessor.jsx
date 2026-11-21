@@ -430,6 +430,10 @@ export default function CentralProfessor({ id: professorId, z, textoVoltar, onFe
         <Campo rotulo={t('centrais.professor.modalidades')}>
           {modalidades.length > 0 ? modalidades.map((m) => m.nome).join(', ') : t('centrais.semAulaNaGrade')}
         </Campo>
+        {/* O que o próprio professor informou no Meu cadastro (aprovado por líder/mentor); as de cima vêm da grade. */}
+        {String(professor.modalidades || '').trim() && (
+          <Campo rotulo={t('centrais.professor.modalidadesInformadas')}>{professor.modalidades}</Campo>
+        )}
         <CampoDocumento pode={podeVerDocumento} chave={String(professor.id)} leitor={lerDocumentoDaGrade} />
         <CampoNascimento pode={podeVerNascimento} uid={professor.uidLogin} />
         <CampoUltimoAcesso uid={professor.uidLogin} />

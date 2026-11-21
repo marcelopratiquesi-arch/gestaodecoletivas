@@ -1,4 +1,4 @@
-// Pedidos de atualização de contrato (CLT ou Saver) feitos pelos professores, no topo da aba Professores.
+// Pedidos de atualização de contrato (CLT ou Saver) e de modalidades feitos pelos professores, no topo da aba Professores.
 // Quem confere: o líder da unidade, o mentor dela ou o admin. Aprovado = entra na ficha (vale para o valor da aula).
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -84,6 +84,12 @@ export default function AtualizacoesAConferir() {
               <div className="text-xs space-y-1">
                 <p><span className="text-slate-500">{t("profileUpdate.review.before")}:</span> <b>{resumoContrato(ficha || {}, nomeDaUnidade)}</b></p>
                 <p><span className="text-slate-500">{t("profileUpdate.review.after")}:</span> <b className="text-red-600">{resumoContrato(p, nomeDaUnidade)}</b></p>
+                {typeof p.modalidades === "string" && (
+                  <p>
+                    <span className="text-slate-500">{t("profileUpdate.review.modalities")}:</span> <b>{ficha?.modalidades || "-"}</b>
+                    {" ➔ "}<b className={p.modalidades === (ficha?.modalidades || "") ? "" : "text-red-600"}>{p.modalidades || "-"}</b>
+                  </p>
+                )}
                 {!ficha && <p className="text-amber-600 font-bold">{t("profileUpdate.review.noFicha")}</p>}
               </div>
               <div className="flex gap-2 justify-end">

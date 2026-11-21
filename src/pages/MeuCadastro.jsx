@@ -4,6 +4,8 @@
 //     no crachá, na ficha da grade e nas gavetas privadas (ver services/meuCadastroService.js). O e-mail de login é só leitura.
 //  2) CONTRATO (CLT ou SAVER, unidades e horários): pede a mudança; o líder da unidade, o mentor dela ou o admin conferem, e só
 //     depois de aprovado vale para o valor da aula (ver services/atualizacaoProfessorService.js). Só professor.
+//     O contrato leva junto as MODALIDADES (texto na ficha) e também precisa de aprovação.
+//  2b) UNIDADE NOVA (professor): pedido à parte, aprovado pelo líder/mentor da unidade pedida (meuCadastro/UnidadesDoProfessor).
 //  3) MINHAS UNIDADES (mentor e líder): lista; o líder também pode pedir outra unidade (pasta meuCadastro/).
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -17,9 +19,12 @@ import { documentoValido, formatarDocumento, limparDocumento, tipoDocumentoDoPai
 import { normalizarPais } from "../utils/feriados";
 import { ehLider, unidadesDoLider } from "../permissions";
 import MinhasUnidades from "./meuCadastro/MinhasUnidades";
+import UnidadesDoProfessor from "./meuCadastro/UnidadesDoProfessor";
+import SeletorModalidades from "../components/acesso/SeletorModalidades";
+import { modalidadesDoTexto } from "../components/acesso/acessoDados";
 import { CAMPO, CAMPO_LEITURA, CARTAO, ROTULO, SECAO } from "./meuCadastro/estilos";
 import { PAISES, DDI_MAP, formatarTelefone, exemploDeTelefone } from "../app/Configuracoes/ui/telefone";
-import { fichasDoLogin, opcoesDeUnidadeDoProfessor } from "../utils/unidadeDoProfessor";
+import { fichasDoLogin, idsDasUnidadesDoProfessor, opcoesDeUnidadeDoProfessor } from "../utils/unidadeDoProfessor";
 import { desistirDaAtualizacao, enviarAtualizacao, lerMinhaAtualizacao } from "../services/atualizacaoProfessorService";
 import { ERRO_DOCUMENTO_EM_USO } from "../services/documentoService";
 import { lerMeuDocumento, lerNascimento, nascimentoValido, salvarMeuCadastro } from "../services/meuCadastroService";
@@ -123,6 +128,16 @@ export default function MeuCadastro() {
   // ===== 2) CONTRATO =====
   const [pedido, setPedido] = useState(undefined); // undefined = lendo; null = nunca pediu
   const [contrato, setContrato] = useState(contratoVazio());
+  const modalidadesAtuais = typeof ficha?.modalidades === "string" ? ficha.modalidades : String(userData?.modalidades || "");
+  const [modalidades, setModalidades] = useState("");
+  const idsDasUnidades = useMemo(() => idsDasUnidadesDoProfessor({ userData, ficha, vinculos: catalogs?.vinculos || [] }), [userData, ficha, catalogs?.vinculos]);
+  // Modalidades que a pessoa pode escolher: as habilitadas nas unidades dela (se alguma unidade ainda não foi configurada, todas).
+  const unidadeParaModalidades = useMemo(() => {
+    const dela = unidades.filter((u) => idsDasUnidades.includes(String(u.id)));
+    if (!dela.length) return undefined;
+    if (dela.some((u) => !Array.isArray(u.modalidadesIds))) return undefined;
+    return { modalidadesIds: [...new Set(dela.flatMap((u) => u.modalidadesIds.map(String)))] };
+  }, [unidades, idsDasUnidades]);
   const [iniciado, setIniciado] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState("");
@@ -133,10 +148,11 @@ export default function MeuCadastro() {
   }, [uid, t]);
   useEffect(() => { if (souProfessor) carregar(); }, [carregar, souProfessor]);
   // O formulário começa com o contrato que vale hoje (o da ficha), sem refazer enquanto a pessoa mexe.
-  useEffect(() => { if (!iniciado && catalogs) { setContrato(atual); setIniciado(true); } }, [atual, catalogs, iniciado]);
+  useEffect(() => { if (!iniciado && catalogs) { setContrato(atual); setModalidades(modalidadesAtuais); setIniciado(true); } }, [atual, modalidadesAtuais, catalogs, iniciado]);
 
   const pendente = pedido?.status === "pendente";
-  const semMudanca = mesmoContrato(contrato, atual);
+  const mesmasModalidades = modalidadesDoTexto(modalidades).join(",") === modalidadesDoTexto(modalidadesAtuais).join(",");
+  const semMudanca = mesmoContrato(contrato, atual) && mesmasModalidades;
 
   async function enviar(e) {
     e.preventDefault();
@@ -147,7 +163,7 @@ export default function MeuCadastro() {
     if (!destino) return setErro(t("profileUpdate.errors.noUnit"));
     setEnviando(true);
     try {
-      await enviarAtualizacao({ uid, nome: userData?.nome || user?.email || "-", unidadeId: destino.unidadeId, vinculoId: destino.vinculoId, contrato: ok.valor });
+      await enviarAtualizacao({ uid, nome: userData?.nome || user?.email || "-", unidadeId: destino.unidadeId, vinculoId: destino.vinculoId, contrato: ok.valor, modalidades });
       await carregar();
     } catch (err) { console.error(err); setErro(t("profileUpdate.errors.send")); } finally { setEnviando(false); }
   }
@@ -241,6 +257,9 @@ export default function MeuCadastro() {
       {/* ===== MINHAS UNIDADES (mentor e líder) ===== */}
       {(souLider || souMentor) && <MinhasUnidades cracha={userData} uid={uid} emailLogin={user?.email} unidades={unidades} />}
 
+      {/* ===== UNIDADES DO PROFESSOR (lista + pedido de unidade nova) ===== */}
+      {souProfessor && <UnidadesDoProfessor uid={uid} nome={userData?.nome || ""} ficha={ficha} unidades={unidades} idsMinhas={idsDasUnidades} />}
+
       {/* ===== CONTRATO (só professor; pede a mudança e precisa de aprovação) ===== */}
       {souProfessor && <h2 className={SECAO}>{t("profileUpdate.me.contractTitle")}</h2>}
       {!souProfessor ? null : !destino ? (
@@ -252,6 +271,7 @@ export default function MeuCadastro() {
           <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
             <p className="text-[10px] font-black uppercase tracking-wider text-slate-500">{t("profileUpdate.current")}</p>
             <p className="font-black text-slate-800 dark:text-white mt-1">{resumoContrato(atual, nomeDaUnidade)}</p>
+            <p className="text-sm font-bold text-slate-600 dark:text-slate-300 mt-1">{t("profileUpdate.me.modalities")}: {modalidadesAtuais || "-"}</p>
             {!ficha && <p className="text-xs text-amber-600 mt-2">{t("profileUpdate.noFicha")}</p>}
           </div>
 
@@ -261,6 +281,7 @@ export default function MeuCadastro() {
             <div className={`p-4 rounded-2xl border text-sm space-y-1 ${faixa.cor}`}>
               <p className="font-black flex items-center gap-2"><faixa.Icone className="w-4 h-4" /> {t(`profileUpdate.status.${pedido.status}`)}</p>
               <p className="font-bold">{resumoContrato(pedido, nomeDaUnidade)}</p>
+              {typeof pedido.modalidades === "string" && <p className="font-bold">{t("profileUpdate.me.modalities")}: {pedido.modalidades || "-"}</p>}
               {pedido.status === "recusado" && pedido.motivo && <p>{t("profileUpdate.reason", { reason: pedido.motivo })}</p>}
               {pendente && <button type="button" onClick={desistir} disabled={enviando} className="text-xs font-black uppercase underline">{t("profileUpdate.cancelRequest")}</button>}
             </div>
@@ -268,6 +289,7 @@ export default function MeuCadastro() {
 
           <form onSubmit={enviar} className={cartao}>
             <h3 className="font-black text-slate-800 dark:text-white uppercase">{t("profileUpdate.change")}</h3>
+            <SeletorModalidades claro id="meu-modalidades" valor={modalidades} onChange={setModalidades} unidade={unidadeParaModalidades} desabilitado={enviando} />
             <CampoContrato claro id="meu-contrato" valor={contrato} onChange={setContrato} unidades={unidades} desabilitado={enviando} />
             {erro && <p className="text-xs font-bold text-red-600 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-lg p-3">{erro}</p>}
             <p className="text-[11px] text-slate-500 dark:text-slate-400">{t("profileUpdate.approvalHint")}</p>

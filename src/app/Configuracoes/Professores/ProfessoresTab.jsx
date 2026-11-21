@@ -38,6 +38,7 @@ import JuntarFichasModal from "../Backup/JuntarFichasModal";
 import { liberarContatos, mensagemSeContatoEmUso, sincronizarEAvisar } from "../../../services/contatoService";
 import CertificadosAVerificar from "./CertificadosAVerificar";
 import AtualizacoesAConferir from "./AtualizacoesAConferir";
+import PedidosUnidadeAConferir from "./PedidosUnidadeAConferir";
 import CertificadosDoProfessor from "./CertificadosDoProfessor";
 
 import { CelulaContato } from "../ui/CelulaContato";
@@ -518,6 +519,7 @@ export function ProfessoresTab() {
       {/* PEDIDOS DE ACESSO DE PROFESSORES (login pessoal pelo Google) */}
       <PedidosProfessor />
       <AtualizacoesAConferir />
+      <PedidosUnidadeAConferir />
       <CertificadosAVerificar />
       {/* HEADER E KPIS */}
       <CabecalhoDaAba abaId="professores" icone={UserPlus} titulo={t('teachersTab.title', 'Gestão de Professores')} subtitulo={t('teachersTab.subtitle', 'Controle de base e vínculos com as unidades.')}
