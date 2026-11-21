@@ -3,12 +3,12 @@
 // o mentor dela ou o admin verifica (aba Professores). Recusado: o professor corrige e reenvia.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Award, Camera, CheckCircle2, Clock, Loader2, Trash2, XCircle, AlertTriangle } from "lucide-react";
+import { Award, Camera, CheckCircle2, Clock, Loader2, Trash2, XCircle, AlertTriangle, GraduationCap } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { useCatalogs } from "../contexts/CatalogContext";
 import { apagarCertificado, enviarCertificado, listarMeusCertificados, listarWorkshopsEscolhiveis } from "../services/certificadoService";
 import { comprimirImagem } from "../utils/imagem";
-import { opcoesDeUnidadeDoProfessor } from "../utils/unidadeDoProfessor";
+import { fichasDoLogin, opcoesDeUnidadeDoProfessor } from "../utils/unidadeDoProfessor";
 
 const ESTILO = {
   pendente: { cor: "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300", Icone: Clock },
@@ -22,8 +22,15 @@ const hojeISO = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
 
+// Dia / mês / ano para o "calendarinho" de cada workshop.
+function partesDaData(data, idioma) {
+  const d = new Date(`${data}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return null;
+  return { dia: String(d.getDate()).padStart(2, "0"), mes: d.toLocaleDateString(idioma, { month: "short" }).replace(".", ""), ano: String(d.getFullYear()) };
+}
+
 export default function MeusWorkshops() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user, userData } = useAuth();
   const { catalogs } = useCatalogs();
   // Admin em "Ver como professor": envia no lugar do professor; o certificado fica na conta (login) dele.
@@ -57,6 +64,18 @@ export default function MeusWorkshops() {
   useEffect(() => {
     listarWorkshopsEscolhiveis(hojeISO()).then(setCadastrados).catch((e) => { console.error(e); setCadastrados([]); setErro(t("certificates.errors.loadList")); });
   }, [t]);
+
+  // Workshops que JÁ CONSTAM no cadastro dele (ficha da grade: os que a equipe lançou, os da lista importada e os de certificado verificado).
+  // Vem do catálogo: zero leituras. Junta as fichas do mesmo login sem repetir, do mais novo para o mais antigo.
+  const feitos = useMemo(() => {
+    const fichas = vendoComo ? (fichaVista ? [fichaVista] : []) : fichasDoLogin(catalogs, uid, userData);
+    const unicos = new Map();
+    fichas.forEach((f) => (f.workshops || []).forEach((w) => {
+      const chave = w.workshopId ? `wk_${w.workshopId}` : (w.id || `${w.nome}|${w.data}`);
+      if (!unicos.has(chave)) unicos.set(chave, w);
+    }));
+    return [...unicos.values()].sort((a, b) => String(b.data || "").localeCompare(String(a.data || "")));
+  }, [catalogs, uid, userData, vendoComo, fichaVista]);
 
   // Já constam: no perfil (catálogo, sem leitura) ou em certificado enviado e não recusado.
   const jaConsta = useMemo(() => {
@@ -120,6 +139,51 @@ export default function MeusWorkshops() {
         </h1>
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">{t("certificates.subtitle")}</p>
       </div>
+
+      {/* ===== WORKSHOPS QUE JÁ CONSTAM NO CADASTRO ===== */}
+      <section className="space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-lg font-black text-slate-800 dark:text-white flex items-center gap-2"><GraduationCap className="w-5 h-5 text-red-600" /> {t("certificates.done.title")}</h2>
+          {feitos.length > 0 && <span className="text-xs font-bold text-slate-500 dark:text-slate-400">{t("certificates.done.count", { count: feitos.length })}</span>}
+        </div>
+        <p className="text-xs text-slate-500 dark:text-slate-400">{t("certificates.done.hint")}</p>
+        {feitos.length === 0 ? (
+          <p className="text-sm text-slate-400 font-bold py-3">{t("certificates.done.empty")}</p>
+        ) : (
+          <div className="space-y-2.5">
+            {feitos.map((w, i) => {
+              const parte = partesDaData(w.data, i18n.language);
+              const ano = String(w.data || "").slice(0, 4);
+              const novoAno = i === 0 || ano !== String(feitos[i - 1].data || "").slice(0, 4);
+              const registrado = w.em ? new Date(w.em) : null;
+              return (
+                <div key={w.id || `${w.nome}-${i}`}>
+                  {novoAno && ano && <h3 className="pt-1 pb-1.5 text-[11px] font-black text-slate-400 uppercase tracking-widest">{ano}</h3>}
+                  <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 px-4 py-3.5 flex items-center gap-4">
+                    <div className="w-12 shrink-0 text-center leading-none">
+                      {parte ? (
+                        <>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase">{parte.mes}</p>
+                          <p className="text-2xl font-black text-slate-700 dark:text-slate-200 my-0.5 tabular-nums">{parte.dia}</p>
+                          <p className="text-[10px] font-semibold text-slate-400">{parte.ano}</p>
+                        </>
+                      ) : <p className="text-[10px] font-bold text-slate-400">-</p>}
+                    </div>
+                    <div className="min-w-0 flex-1 space-y-1.5">
+                      <p className="font-bold text-slate-800 dark:text-white break-words leading-snug">{w.nome}</p>
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
+                        {w.modalidade && <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200 font-bold">{w.modalidade}</span>}
+                        {registrado && !Number.isNaN(registrado.getTime()) && <span>{t("certificates.done.registered", { date: registrado.toLocaleDateString(i18n.language) })}</span>}
+                      </div>
+                    </div>
+                    <span className="shrink-0 inline-flex items-center gap-1 text-[10px] font-black uppercase px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"><CheckCircle2 className="w-3 h-3" /> {t("certificates.done.ok")}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
 
       {vendoComo && !uid ? (
         <div className="flex gap-2 text-sm text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-xl p-4">

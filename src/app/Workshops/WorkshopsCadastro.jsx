@@ -3,10 +3,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
-import { Calendar, Loader2, Plus, X, Copy, Edit, Trash2, Users, ListPlus, Search, Upload, Award, UserCheck } from 'lucide-react';
+import { Loader2, Plus, X, Copy, Edit, Trash2, Users, ListPlus, Search, Upload, Award, UserCheck, ShoppingBag, MapPin, UserRound } from 'lucide-react';
 import { useCatalogs } from '../../contexts/CatalogContext';
 import { useAuth } from '../../contexts/AuthContext';
 import ModalWorkshop from './ModalWorkshop';
+import { CabecalhoDaAba, CaixaDeNumeros, BotaoPrincipal, BotaoSecundario } from '../Configuracoes/ui/CabecalhoDaAba';
+import { MenuDeAcoes } from '../Configuracoes/ui/MenuDeAcoes';
+import { temaDaAba } from '../Configuracoes/ui/temas';
 import { planejarCompletarModalidade } from '../../utils/completarModalidade';
 import { gravarWorkshopsCompletados } from '../../services/certificadoService';
 import ImportarLista from './ImportarLista';
@@ -22,14 +25,25 @@ import {
 import { documentoValido, limparDocumento, tipoDocumentoPadrao } from '../../utils/documento';
 
 const FORM_VAZIO = { nome: '', modalidade: 'Power Core', data: '', local: '', status: 'agendado', titularNome: '', titularProfessorId: '' };
-const COR_STATUS = {
-  realizado: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
-  agendado: 'bg-slate-100 text-slate-700 dark:bg-slate-900/40 dark:text-slate-300',
-  cancelado: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
+// Cores só de status: verde = realizado, âmbar = agendado (pendente), vermelho = cancelado.
+const STATUS_ESTILO = {
+  realizado: { chip: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300', ponto: 'bg-emerald-500' },
+  agendado: { chip: 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300', ponto: 'bg-amber-500' },
+  cancelado: { chip: 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300', ponto: 'bg-red-500' },
 };
-const input = 'w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold outline-none focus:border-red-500 text-slate-800 dark:text-white';
-const rotulo = 'text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1 block';
+// Campos e rótulos das janelas: o visual do Cronograma (regra do sistema).
+const input = 'w-full p-3 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-white rounded-xl text-sm font-bold uppercase outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100';
+const rotulo = 'text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 block';
 const botao = 'px-5 py-3 rounded-xl font-black text-xs uppercase tracking-wide flex items-center justify-center gap-2 transition-all';
+// Filtros da lista: campos cinza-claros, sem borda pesada (igual aos filtros das outras abas).
+const campoFiltro = 'rounded-xl bg-slate-100 dark:bg-slate-900 px-3 py-2.5 text-xs font-bold text-slate-600 dark:text-slate-300';
+
+// Dia / mês / ano para o "calendarinho" de cada linha.
+function partesDaData(data, idioma) {
+  const d = new Date(`${data}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return null;
+  return { dia: String(d.getDate()).padStart(2, '0'), mes: d.toLocaleDateString(idioma, { month: 'short' }).replace('.', ''), ano: String(d.getFullYear()) };
+}
 
 const Modal = ModalWorkshop;
 
@@ -59,7 +73,6 @@ export default function WorkshopsCadastro() {
   const [dup, setDup] = useState(null); // { original, nome, data, status }
   const [rapido, setRapido] = useState(null); // [{...campos}]
   const [salvando, setSalvando] = useState(false);
-  const [confirmando, setConfirmando] = useState(null);
 
   // Admin: completa a modalidade dos workshops antigos que já estão nos professores (zero leituras: usa o que já está carregado).
   async function completarModalidades() {
@@ -167,10 +180,9 @@ export default function WorkshopsCadastro() {
   // ----- excluir -----
   const excluir = async (w) => {
     if (Number(w.totalParticipantes || 0) > 0) { toast.error(t('shop.ws.deleteBlocked')); return; }
-    if (confirmando !== w.id) { setConfirmando(w.id); setTimeout(() => setConfirmando((c) => (c === w.id ? null : c)), 3500); return; }
+    if (!window.confirm(t('shop.ws.deleteAsk', { name: w.nome }))) return;
     try { await excluirWorkshop(w.id); toast.success(t('shop.ws.deleted')); }
     catch (err) { toast.error(err?.code === 'tem-participantes' ? t('shop.ws.deleteBlocked') : t('shop.ws.deleteError')); }
-    setConfirmando(null);
   };
 
   // ----- cadastro rápido -----
@@ -196,81 +208,97 @@ export default function WorkshopsCadastro() {
 
   if (lista === null) return <div className="flex py-20 justify-center text-slate-400"><Loader2 className="w-8 h-8 animate-spin" /></div>;
 
+  const tema = temaDaAba('workshops');
+  const filtrosAtivos = filtroStatus !== 'todos' || busca || fModal || fAno;
+  const limparFiltros = () => { setFiltroStatus('todos'); setBusca(''); setFModal(''); setFAno(''); };
+  const itensMais = [
+    { id: 'rapido', rotulo: t('shop.ws.quick'), icone: ListPlus, onClick: abrirRapido, oculto: !podeEditar },
+    { id: 'completar', rotulo: t('shop.ws.fillModality'), icone: Award, onClick: completarModalidades, oculto: !souAdmin, desabilitado: salvando },
+  ];
+
   return (
-    <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
-      <div className="flex flex-col xl:flex-row xl:justify-between xl:items-center gap-4">
-        <div className="flex items-center gap-3">
-          <div className="p-3 bg-slate-100 text-slate-600 dark:bg-slate-900/30 dark:text-slate-400 rounded-xl"><Calendar className="w-6 h-6" /></div>
-          <div>
-            <h2 className="text-xl font-black text-slate-800 dark:text-white uppercase">{t('shop.ws.title')}</h2>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('shop.ws.subtitle')}</p>
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={() => setVerQuem(true)} className={`${botao} bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-700`}><UserCheck className="w-4 h-4" /> {t('shop.ws.who.btn')}</button>
-          {souAdmin && <button type="button" onClick={completarModalidades} disabled={salvando || lista === null} className={`${botao} bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-60`}><Award className="w-4 h-4" /> {t('shop.ws.fillModality')}</button>}
-          {podeEditar && <button type="button" onClick={abrirRapido} className={`${botao} bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-700`}><ListPlus className="w-4 h-4" /> {t('shop.ws.quick')}</button>}
-          {podeEditar && <button type="button" onClick={abrirNovo} className={`${botao} bg-red-600 text-white hover:bg-red-700 shadow-lg shadow-slate-500/20`}><Plus className="w-4 h-4" /> {t('shop.ws.newBtn')}</button>}
-        </div>
-      </div>
+    <div className="space-y-6 animate-in fade-in duration-300">
+      <CabecalhoDaAba abaId="workshops" icone={ShoppingBag} titulo={t('shop.ws.title')} subtitulo={t('shop.ws.subtitle')}
+        numeros={<CaixaDeNumeros abaId="workshops" itens={[
+          { id: 'todos', rotulo: t('shop.ws.stAll'), valor: contagem.todos, onClick: () => setFiltroStatus('todos'), ativo: filtroStatus === 'todos' },
+          { id: 'realizado', rotulo: t('shop.ws.stRealizado'), valor: contagem.realizado, cor: 'text-emerald-600', onClick: () => setFiltroStatus('realizado'), ativo: filtroStatus === 'realizado' },
+          { id: 'agendado', rotulo: t('shop.ws.stAgendado'), valor: contagem.agendado, cor: 'text-amber-600', onClick: () => setFiltroStatus('agendado'), ativo: filtroStatus === 'agendado' },
+          { id: 'cancelado', rotulo: t('shop.ws.stCancelado'), valor: contagem.cancelado, cor: 'text-red-500', onClick: () => setFiltroStatus('cancelado'), ativo: filtroStatus === 'cancelado' },
+        ]} />}>
+        <BotaoSecundario icone={UserCheck} onClick={() => setVerQuem(true)}>{t('shop.ws.who.btn')}</BotaoSecundario>
+        {itensMais.some((i) => !i.oculto) && <MenuDeAcoes itens={itensMais} />}
+        {podeEditar && <BotaoPrincipal abaId="workshops" icone={Plus} onClick={abrirNovo}>{t('shop.ws.newBtn')}</BotaoPrincipal>}
+      </CabecalhoDaAba>
 
       {erroCarga && <div className="p-3 rounded-xl bg-red-50 text-red-600 text-sm font-bold">{t('shop.ws.loadError')}</div>}
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {[['todos', 'stAll'], ['realizado', 'stRealizado'], ['agendado', 'stAgendado'], ['cancelado', 'stCancelado']].map(([k, rot]) => (
-          <button key={k} type="button" onClick={() => setFiltroStatus(k)}
-            className={`text-left p-4 rounded-2xl border bg-white dark:bg-slate-800 transition-all ${filtroStatus === k ? 'border-slate-500 ring-1 ring-red-500' : 'border-slate-200 dark:border-slate-700 hover:border-slate-300'}`}>
-            <span className="block text-2xl font-black text-slate-800 dark:text-white tabular-nums">{contagem[k]}</span>
-            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{t(`shop.ws.${rot}`)}</span>
-          </button>
-        ))}
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input type="search" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder={t('shop.ws.search')} aria-label={t('shop.ws.search')} className={`${input} pl-9`} />
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/40 p-3 flex flex-wrap items-center gap-3">
+        <div className="relative flex-1 min-w-[220px] group">
+          <Search className={`w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 transition-colors ${tema.lupa}`} />
+          <input type="search" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder={t('shop.ws.search')} aria-label={t('shop.ws.search')}
+            className={`w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-slate-200 ${tema.foco}`} />
         </div>
-        <select value={fModal} onChange={(e) => setFModal(e.target.value)} className={`${input} !w-auto`} aria-label={t('shop.ws.modality')}>
+        <select value={fModal} onChange={(e) => setFModal(e.target.value)} className={`${campoFiltro} ${tema.foco}`} aria-label={t('shop.ws.modality')}>
           <option value="">{t('shop.ws.allModalities')}</option>
           {MODALIDADES_WORKSHOP.map((m) => <option key={m} value={m}>{m}</option>)}
         </select>
-        <select value={fAno} onChange={(e) => setFAno(e.target.value)} className={`${input} !w-auto`} aria-label={t('shop.ws.date')}>
+        <select value={fAno} onChange={(e) => setFAno(e.target.value)} className={`${campoFiltro} ${tema.foco}`} aria-label={t('shop.ws.date')}>
           <option value="">{t('shop.ws.allYears')}</option>
           {anos.map((a) => <option key={a} value={a}>{a}</option>)}
         </select>
+        {filtrosAtivos && (
+          <button type="button" onClick={limparFiltros} className="flex items-center gap-1 text-xs font-bold text-slate-500 hover:text-red-600 px-2 py-2">
+            <X className="w-3.5 h-3.5" /> {t('filtroPadrao.clear')}
+          </button>
+        )}
       </div>
 
-      <div className="space-y-3">
-        {visiveis.map((w) => (
-          <div key={w.id} className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-            <div className="space-y-2 min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="px-2 py-1 text-[9px] font-black uppercase rounded-md tracking-widest bg-slate-100 text-slate-700 dark:bg-slate-900/40 dark:text-slate-300">{w.modalidade}</span>
-                <span className={`px-2 py-1 text-[9px] font-black uppercase rounded-md tracking-widest ${COR_STATUS[w.status] || ''}`}>{t(`shop.ws.status.${w.status}`)}</span>
-                <span className="flex items-center gap-1 text-[10px] font-bold text-slate-500 uppercase bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded-md"><Calendar className="w-3 h-3" /> {dataBr(w.data)}</span>
+      <div className="space-y-2.5">
+        {visiveis.map((w, i) => {
+          const parte = partesDaData(w.data, i18n.language);
+          const ano = String(w.data || '').slice(0, 4);
+          const novoAno = i === 0 || ano !== String(visiveis[i - 1].data || '').slice(0, 4);
+          const est = STATUS_ESTILO[w.status] || STATUS_ESTILO.agendado;
+          const itens = [
+            { id: 'importar', rotulo: t('shop.ws.importBtn'), icone: Upload, onClick: () => setImportando(w), oculto: !souAdmin },
+            { id: 'duplicar', rotulo: t('shop.ws.duplicate'), icone: Copy, onClick: () => abrirDup(w), oculto: !podeEditar },
+            { id: 'editar', rotulo: t('shop.ws.edit'), icone: Edit, onClick: () => abrirEditar(w), oculto: !podeEditar },
+            { id: 'excluir', rotulo: t('shop.ws.delete'), icone: Trash2, onClick: () => excluir(w), tipo: 'perigo', oculto: !podeEditar },
+          ];
+          return (
+            <React.Fragment key={w.id}>
+              {novoAno && ano && <h3 className="pt-2 text-[11px] font-black text-slate-400 uppercase tracking-widest">{ano}</h3>}
+              <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 transition-colors px-4 py-3.5 flex items-center gap-4">
+                <div className="w-12 shrink-0 text-center leading-none" title={dataBr(w.data)}>
+                  {parte ? (
+                    <>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase">{parte.mes}</p>
+                      <p className="text-2xl font-black text-slate-700 dark:text-slate-200 my-0.5 tabular-nums">{parte.dia}</p>
+                      <p className="text-[10px] font-semibold text-slate-400">{parte.ano}</p>
+                    </>
+                  ) : <p className="text-[10px] font-bold text-slate-400">{dataBr(w.data)}</p>}
+                </div>
+                <div className="min-w-0 flex-1 space-y-1.5">
+                  <p className="font-bold text-slate-800 dark:text-white break-words leading-snug">{w.nome}</p>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-slate-500 dark:text-slate-400">
+                    <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200 font-bold">{w.modalidade}</span>
+                    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md font-bold ${est.chip}`}><span className={`w-1.5 h-1.5 rounded-full ${est.ponto}`} />{t(`shop.ws.status.${w.status}`)}</span>
+                    {w.local && <span className="inline-flex items-center gap-1"><MapPin className="w-3 h-3" /> {w.local}</span>}
+                    <span className="inline-flex items-center gap-1"><UserRound className="w-3 h-3" /> {w.titularNome || t('shop.ws.noTitular')}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  {souAdmin ? (
+                    <button type="button" onClick={() => setVerPart(w)} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"><Users className="w-3.5 h-3.5" /> {t('shop.ws.participantsBtn', { count: w.totalParticipantes || 0 })}</button>
+                  ) : (
+                    <span className="flex items-center gap-1.5 text-xs font-bold text-slate-400 px-2"><Users className="w-3.5 h-3.5" /> {w.totalParticipantes || 0}</span>
+                  )}
+                  {itens.some((x) => !x.oculto) && <MenuDeAcoes itens={itens} />}
+                </div>
               </div>
-              <h3 className="text-lg font-black text-slate-800 dark:text-white uppercase tracking-tight break-words">{w.nome}</h3>
-              <p className="text-xs text-slate-500 flex flex-wrap gap-x-5 gap-y-1">
-                <span>{t('shop.ws.place')}: <b className="text-slate-700 dark:text-slate-200">{w.local || '—'}</b></span>
-                <span>{t('shop.ws.titular')}: <b className="text-slate-700 dark:text-slate-200">{w.titularNome || t('shop.ws.noTitular')}</b></span>
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2 shrink-0">
-              {souAdmin ? (
-                <>
-                  <button type="button" onClick={() => setVerPart(w)} className="flex items-center gap-1 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-xs font-black hover:bg-slate-50 dark:hover:bg-slate-700"><Users className="w-3.5 h-3.5" /> {t('shop.ws.participantsBtn', { count: w.totalParticipantes || 0 })}</button>
-                  <button type="button" onClick={() => setImportando(w)} className="flex items-center gap-1 px-3 py-2 rounded-lg bg-red-600 text-white text-xs font-black hover:bg-red-700"><Upload className="w-3.5 h-3.5" /> {t('shop.ws.importBtn')}</button>
-                </>
-              ) : (
-                <span className="flex items-center gap-1 text-[11px] font-bold text-slate-400 border border-dashed border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2"><Users className="w-3.5 h-3.5" /> {w.totalParticipantes || 0}</span>
-              )}
-              {podeEditar && <button type="button" onClick={() => abrirDup(w)} className="flex items-center gap-1 px-3 py-2 rounded-lg border border-slate-300 text-slate-700 dark:text-slate-300 text-xs font-black hover:bg-slate-50 dark:hover:bg-slate-900/30"><Copy className="w-3.5 h-3.5" /> {t('shop.ws.duplicate')}</button>}
-              {podeEditar && <button type="button" onClick={() => abrirEditar(w)} className="flex items-center gap-1 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-xs font-black hover:bg-slate-50 dark:hover:bg-slate-700"><Edit className="w-3.5 h-3.5" /> {t('shop.ws.edit')}</button>}
-              {podeEditar && <button type="button" onClick={() => excluir(w)} className="flex items-center gap-1 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 text-red-600 text-xs font-black hover:bg-red-50 dark:hover:bg-red-900/20"><Trash2 className="w-3.5 h-3.5" /> {confirmando === w.id ? t('shop.ws.confirmDelete') : t('shop.ws.delete')}</button>}
-            </div>
-          </div>
-        ))}
+            </React.Fragment>
+          );
+        })}
         {visiveis.length === 0 && <div className="py-12 text-center text-slate-400 text-xs font-bold uppercase tracking-widest border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-3xl">{t('shop.ws.none')}</div>}
       </div>
 
