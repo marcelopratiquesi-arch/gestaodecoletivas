@@ -54,5 +54,31 @@
       "birth": "Confira a data de nascimento.",
       "save": "Não foi possível salvar. Tente de novo."
     }
+  },
+  "subtitleAll": "Seus dados pessoais salvam na hora. Mantenha tudo atualizado: é por aqui que a equipe fala com você.",
+  "units": {
+    "title": "Minhas unidades",
+    "none": "Você ainda não tem unidades ligadas ao seu acesso.",
+    "leader1": "1º líder",
+    "leader2": "2º líder",
+    "requestTitle": "Pedir outra unidade",
+    "requestHint": "O mentor da unidade (ou o administrador) vai analisar o seu pedido. Pedir não garante que será aceito.",
+    "choose": "Unidade",
+    "choosePlaceholder": "Escolha a unidade",
+    "request": "Enviar pedido",
+    "cancel": "Desistir",
+    "dismiss": "Tirar da lista",
+    "status": {
+      "pendente": "Aguardando análise",
+      "recusado": "Recusado",
+      "aprovado": "Aprovado"
+    },
+    "errors": {
+      "load": "Não foi possível carregar os seus pedidos.",
+      "choose": "Escolha uma unidade.",
+      "max": "Você já tem {{max}} pedidos aguardando análise.",
+      "profile": "Salve o seu nome e o seu WhatsApp acima antes de pedir outra unidade.",
+      "send": "Não foi possível enviar. Tente de novo."
+    }
   }
 }

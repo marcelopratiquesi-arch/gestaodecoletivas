@@ -602,7 +602,7 @@ service cloud.firestore {
         // "Último acesso": a própria pessoa carimba só esse campo, com a hora do servidor (a aba Mentores mostra).
         if (request.auth.uid == uid && logado() && camposAlterados().hasOnly(['ultimoAcesso'])
             && request.resource.data.ultimoAcesso == request.time)
-        // "Meu cadastro" do professor: ele mesmo salva na hora os dados de contato (nome, telefone, país, e-mail de contato).
+        // "Meu cadastro" (todos os papéis): a própria pessoa salva na hora os dados de contato (nome, telefone, país, e-mail de contato).
         // O e-mail de LOGIN (email) e o papel não mudam por aqui. Fica em 2º lugar e começa pelas checagens baratas
         // (esta regra já usa quase todo o limite de 1000 verificações do banco: no fim da lista o professor não chegava a ser avaliado).
         || (request.auth.uid == uid && camposAlterados().hasOnly(['nome', 'telefone', 'pais', 'emailContato'])
@@ -610,7 +610,7 @@ service cloud.firestore {
             && request.resource.data.telefone is string && request.resource.data.telefone.size() >= 6 && request.resource.data.telefone.size() <= 30
             && request.resource.data.get('pais', 'BR') in ['BR', 'AR', 'US']
             && request.resource.data.get('emailContato', '') is string && request.resource.data.get('emailContato', '').size() <= 120
-            && papelDoAlvo() == 'professor' && logado())
+            && papelDoAlvo() in ['professor', 'lider', 'unidade', 'mentor', 'admin', 'administrador', 'master'] && logado())
         // Depois de gravar o documento na gaveta privada, a PRÓPRIA pessoa só marca "documentoOk" no crachá
         // (o banco confere que o documento existe de verdade, na mesma gravação ou antes).
         || (request.auth.uid == uid && logado() && camposAlterados().hasOnly(['documentoOk'])

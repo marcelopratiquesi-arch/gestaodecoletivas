@@ -1,8 +1,10 @@
-// "Meu cadastro" (professor), em duas partes:
+// "Meu cadastro" de TODOS os papéis (admin, mentor, líder e professor):
+//  0) Só a PRÓPRIA pessoa (crachá de verdade: no "Ver como" do admin continua sendo o do admin).
 //  1) DADOS PESSOAIS (nome, WhatsApp, país, e-mail de contato, documento, nascimento): salvam NA HORA, sem aprovação,
 //     no crachá, na ficha da grade e nas gavetas privadas (ver services/meuCadastroService.js). O e-mail de login é só leitura.
 //  2) CONTRATO (CLT ou SAVER, unidades e horários): pede a mudança; o líder da unidade, o mentor dela ou o admin conferem, e só
-//     depois de aprovado vale para o valor da aula (ver services/atualizacaoProfessorService.js).
+//     depois de aprovado vale para o valor da aula (ver services/atualizacaoProfessorService.js). Só professor.
+//  3) MINHAS UNIDADES (mentor e líder): lista; o líder também pode pedir outra unidade (pasta meuCadastro/).
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AlertTriangle, CheckCircle2, Clock, Loader2, UserCog, XCircle } from "lucide-react";
@@ -13,27 +15,37 @@ import CampoDocumento from "../components/acesso/CampoDocumento";
 import { contratoVazio, mesmoContrato, resumoContrato, validarContrato } from "../utils/contrato";
 import { documentoValido, formatarDocumento, limparDocumento, tipoDocumentoDoPais } from "../utils/documento";
 import { normalizarPais } from "../utils/feriados";
+import { ehLider, unidadesDoLider } from "../permissions";
+import MinhasUnidades from "./meuCadastro/MinhasUnidades";
+import { CAMPO, CAMPO_LEITURA, CARTAO, ROTULO, SECAO } from "./meuCadastro/estilos";
 import { PAISES, DDI_MAP, formatarTelefone, exemploDeTelefone } from "../app/Configuracoes/ui/telefone";
 import { fichasDoLogin, opcoesDeUnidadeDoProfessor } from "../utils/unidadeDoProfessor";
 import { desistirDaAtualizacao, enviarAtualizacao, lerMinhaAtualizacao } from "../services/atualizacaoProfessorService";
 import { ERRO_DOCUMENTO_EM_USO } from "../services/documentoService";
 import { lerMeuDocumento, lerNascimento, nascimentoValido, salvarMeuCadastro } from "../services/meuCadastroService";
 
-// Visual dos campos (igual ao do Cronograma): rótulo pequeno, campo branco com borda cinza e foco vermelho.
-const ROTULO = "text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 block";
-const CAMPO = "w-full p-3 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-white rounded-xl text-sm font-bold uppercase outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100";
-const CAMPO_LEITURA = "w-full p-3 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-xl text-sm font-bold outline-none cursor-not-allowed";
-const SECAO = "text-[11px] font-black uppercase tracking-widest text-red-600";
-
 export default function MeuCadastro() {
   const { t } = useTranslation();
-  const { user, userData } = useAuth();
+  // Sempre o crachá de VERDADE de quem entrou: no "Ver como" do admin, o Meu cadastro continua sendo o do próprio admin.
+  const { user, crachaReal } = useAuth();
+  const userData = crachaReal;
+  const papel = String(userData?.role || "").trim().toLowerCase();
+  const souProfessor = papel === "professor";
+  const souLider = ehLider(papel);
+  const souMentor = papel === "mentor";
   const { catalogs } = useCatalogs();
   const uid = user?.uid;
-  const unidades = catalogs?.unidades || [];
+  const unidades = useMemo(() => catalogs?.unidades || [], [catalogs?.unidades]);
   const nomeDaUnidade = (id) => unidades.find((u) => String(u.id) === String(id))?.nome || id;
 
   const ficha = fichasDoLogin(catalogs, uid, userData)[0] || null;
+  // Unidades em que sou líder (1º ou 2º): nome e telefone novos também vão para elas.
+  const unidadesDoLiderPessoa = useMemo(() => {
+    if (!souLider) return [];
+    const minhas = new Set(unidadesDoLider(userData));
+    return unidades.filter((u) => minhas.has(String(u.id)) && (u.liderUid === uid || u.lider2Uid === uid)).map((u) => ({ id: u.id, vaga: u.lider2Uid === uid && u.liderUid !== uid ? 2 : 1 }));
+  }, [souLider, userData, unidades, uid]);
+
   const atual = useMemo(() => (ficha?.tipoContrato === "saver" ? { tipoContrato: "saver", saverLocais: ficha.saverLocais || [] } : contratoVazio()), [ficha]);
   const destino = opcoesDeUnidadeDoProfessor({ userData, uid, catalogs })[0] || null;
 
@@ -94,7 +106,7 @@ export default function MeuCadastro() {
     try {
       const documento = { tipo: docTipo, numero: limparDocumento(docNumero) };
       const r = await salvarMeuCadastro({
-        uid, fichaId: ficha?.id || "", precisaMarcarDocumento: userData?.documentoOk !== true, nomeParaAuditoria: nomeLimpo,
+        uid, fichaId: ficha?.id || "", unidadesDoLider: unidadesDoLiderPessoa, precisaMarcarDocumento: userData?.documentoOk !== true, nomeParaAuditoria: nomeLimpo,
         antes: { ...guardado, emailLogin: user?.email || "" },
         depois: { nome: nomeLimpo, telefone: telefone.trim(), pais, emailContato: mail, documento, nascimento },
       }, t);
@@ -119,7 +131,7 @@ export default function MeuCadastro() {
     if (!uid) return;
     try { setPedido(await lerMinhaAtualizacao(uid)); } catch (e) { console.error(e); setPedido(null); setErro(t("profileUpdate.errors.load")); }
   }, [uid, t]);
-  useEffect(() => { carregar(); }, [carregar]);
+  useEffect(() => { if (souProfessor) carregar(); }, [carregar, souProfessor]);
   // O formulário começa com o contrato que vale hoje (o da ficha), sem refazer enquanto a pessoa mexe.
   useEffect(() => { if (!iniciado && catalogs) { setContrato(atual); setIniciado(true); } }, [atual, catalogs, iniciado]);
 
@@ -151,7 +163,7 @@ export default function MeuCadastro() {
     recusado: { cor: "bg-red-50 border-red-200 text-red-800 dark:bg-red-500/10 dark:border-red-500/30 dark:text-red-300", Icone: XCircle },
   }[pedido?.status] || null;
 
-  const cartao = "p-5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm space-y-4";
+  const cartao = CARTAO;
 
   return (
     <div className="p-4 md:p-8 max-w-3xl mx-auto space-y-6">
@@ -160,7 +172,7 @@ export default function MeuCadastro() {
           <span className="p-2 bg-red-600 text-white rounded-lg"><UserCog className="w-6 h-6" /></span>
           {t("profileUpdate.title")}
         </h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">{t("profileUpdate.subtitle")}</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">{t(souProfessor ? "profileUpdate.subtitle" : "profileUpdate.subtitleAll")}</p>
       </div>
 
       {/* ===== DADOS PESSOAIS (salvam na hora) ===== */}
@@ -226,9 +238,12 @@ export default function MeuCadastro() {
         )}
       </form>
 
-      {/* ===== CONTRATO (pede a mudança; precisa de aprovação) ===== */}
-      <h2 className={SECAO}>{t("profileUpdate.me.contractTitle")}</h2>
-      {!destino ? (
+      {/* ===== MINHAS UNIDADES (mentor e líder) ===== */}
+      {(souLider || souMentor) && <MinhasUnidades cracha={userData} uid={uid} emailLogin={user?.email} unidades={unidades} />}
+
+      {/* ===== CONTRATO (só professor; pede a mudança e precisa de aprovação) ===== */}
+      {souProfessor && <h2 className={SECAO}>{t("profileUpdate.me.contractTitle")}</h2>}
+      {!souProfessor ? null : !destino ? (
         <div className="flex gap-2 text-sm text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-xl p-4">
           <AlertTriangle className="w-5 h-5 shrink-0" /> {t("certificates.noUnit")}
         </div>

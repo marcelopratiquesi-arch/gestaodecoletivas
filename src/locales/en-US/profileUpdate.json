@@ -54,5 +54,31 @@
       "birth": "Check the date of birth.",
       "save": "Could not save. Try again."
     }
+  },
+  "subtitleAll": "Your personal details are saved right away. Keep everything up to date: this is how the team reaches you.",
+  "units": {
+    "title": "My units",
+    "none": "You do not have any units linked to your access yet.",
+    "leader1": "1st leader",
+    "leader2": "2nd leader",
+    "requestTitle": "Request another unit",
+    "requestHint": "The unit's mentor (or the administrator) will review your request. Asking does not guarantee approval.",
+    "choose": "Unit",
+    "choosePlaceholder": "Choose the unit",
+    "request": "Send request",
+    "cancel": "Withdraw",
+    "dismiss": "Remove from list",
+    "status": {
+      "pendente": "Waiting for review",
+      "recusado": "Declined",
+      "aprovado": "Approved"
+    },
+    "errors": {
+      "load": "Could not load your requests.",
+      "choose": "Choose a unit.",
+      "max": "You already have {{max}} requests waiting for review.",
+      "profile": "Save your name and WhatsApp above before requesting another unit.",
+      "send": "Could not send. Try again."
+    }
   }
 }

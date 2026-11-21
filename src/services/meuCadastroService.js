@@ -1,6 +1,7 @@
-// "Meu cadastro" do professor: os dados pessoais salvam NA HORA (sem aprovação), em todos os lugares onde aparecem:
+// "Meu cadastro" (todos os papéis: admin, mentor, líder e professor): os dados pessoais salvam NA HORA (sem aprovação), em todos os lugares onde aparecem:
 //  - crachá usuarios/{uid}: nome, telefone, país e e-mail de CONTATO (o e-mail de login nunca muda por aqui);
-//  - ficha da grade professores/{id} (a ligada ao login): nome, telefone, país e e-mail, que alimentam a Central e as abas;
+//  - líder: o nome e o telefone também vão para a(s) unidade(s) dele (liderNome/liderTelefone ou lider2...), que alimentam a aba Líderes e a Central;
+//  - ficha da grade professores/{id} (a ligada ao login, se houver; vale para professor e para líder que também dá aula): nome, telefone, país e e-mail, que alimentam a Central e as abas;
 //  - documento (CPF/DNI/SSN): gaveta privada do crachá + reserva (documentoService), nunca no crachá aberto;
 //  - data de nascimento: gaveta privada nascimentos/{uid} (só a pessoa, o admin, o mentor e o líder da unidade leem);
 //  - reserva de e-mail/telefone (contatoService) e uma linha na auditoria (sem documento nem nascimento).
@@ -36,12 +37,13 @@ export function nascimentoValido(valor) {
  * Salva tudo de uma vez só.
  * @param {object} p
  *  uid, fichaId ("" se não há ficha ligada),
+ *  unidadesDoLider: [{ id, vaga: 1|2 }] unidades em que a pessoa é líder (para copiar nome e telefone; [] se não é líder),
  *  antes: { nome, telefone, pais, emailContato, emailLogin, documento: {tipo,numero}|null, nascimento },
  *  depois: { nome, telefone, pais, emailContato, documento: {tipo,numero}|null, nascimento },
  *  precisaMarcarDocumento: true quando o crachá ainda não tem documentoOk.
  * @returns {Promise<{ ok: true } | { ok: false, erro: "contato" , mensagem: string }>}
  */
-export async function salvarMeuCadastro({ uid, fichaId, antes, depois, precisaMarcarDocumento = false, nomeParaAuditoria }, t) {
+export async function salvarMeuCadastro({ uid, fichaId, unidadesDoLider = [], antes, depois, precisaMarcarDocumento = false, nomeParaAuditoria }, t) {
   const emailAntes = antes.emailContato || antes.emailLogin || "";
   const emailDepois = depois.emailContato || "";
   const dono = { uid, professorId: fichaId || undefined };
@@ -66,6 +68,10 @@ export async function salvarMeuCadastro({ uid, fichaId, antes, depois, precisaMa
   const lote = writeBatch(db);
   lote.update(doc(db, "usuarios", uid), { nome: depois.nome, telefone: depois.telefone, pais: depois.pais, emailContato: emailDepois });
   if (fichaId) lote.update(doc(db, "professores", String(fichaId)), { nome: depois.nome, telefone: depois.telefone, pais: depois.pais, email: emailDepois, updatedAt: serverTimestamp() });
+  unidadesDoLider.forEach(({ id, vaga }) => {
+    const p = vaga === 2 ? "lider2" : "lider";
+    lote.update(doc(db, "unidades", String(id)), { [`${p}Nome`]: depois.nome, [`${p}Telefone`]: depois.telefone });
+  });
   if (depois.nascimento && depois.nascimento !== antes.nascimento) lote.set(doc(db, "nascimentos", uid), { nascimento: depois.nascimento, atualizadoEm: serverTimestamp() });
   await lote.commit();
   if (!depois.nascimento && antes.nascimento) await deleteDoc(doc(db, "nascimentos", uid));
@@ -85,7 +91,7 @@ export async function salvarMeuCadastro({ uid, fichaId, antes, depois, precisaMa
     if (depois.nascimento !== antes.nascimento) mudou.push("Data de nascimento atualizada");
     if (mudou.length) {
       await addDoc(collection(db, "auditoria_configuracoes"), {
-        tipoAcao: "ALTERADA", modulo: "CONFIGURACOES", descricao: "Professor atualizou o próprio cadastro (Meu cadastro).",
+        tipoAcao: "ALTERADA", modulo: "CONFIGURACOES", descricao: "A própria pessoa atualizou o cadastro (Meu cadastro).",
         diffExtras: mudou.join(" | "), unidadeNome: "-", usuarioAcaoNome: nomeParaAuditoria || depois.nome, usuarioAcaoId: uid, dataAcao: serverTimestamp(),
       });
     }
