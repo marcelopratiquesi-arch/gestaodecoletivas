@@ -44,6 +44,7 @@ export const MOTIVOS_CANCELAMENTO = {
   'Chuva/Clima': 'weather',
   'Outros': 'other',
   'Recesso/Feriado': 'recessHoliday',
+  'Reforma': 'renovation',
   'RECESSO/FERIADO AUTOMÁTICO': 'autoRecess',
 };
 

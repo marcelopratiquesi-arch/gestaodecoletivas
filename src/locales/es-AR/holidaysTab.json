@@ -9,7 +9,8 @@
   "types": {
     "recess": "Receso",
     "national": "Feriado Nacional",
-    "municipal": "Feriado Municipal"
+    "municipal": "Feriado Municipal",
+    "renovation": "Remodelación"
   },
   "processing": "Procesando...",
   "create": "Crear Receso",
@@ -129,5 +130,12 @@
     "upToDate": "Ya están todas las unidades de esta ciudad.",
     "confirmAdd": "¿Agregar {{count}} unidad(es) de {{city}} a este feriado?\n\n{{names}}",
     "done": "{{count}} unidad(es) agregada(s)."
+  },
+  "renovation": {
+    "nameLabel": "Motivo / observación",
+    "namePlaceholder": "Ej.: Remodelación del piso y la recepción",
+    "scopeNote": "La remodelación solo vale para las unidades que elijas abajo. En el período sus clases aparecen como \"unidad en remodelación\": sin pago y sin pendiente.",
+    "nowFilter": "En remodelación ahora",
+    "inProgress": "En curso"
   }
 }

@@ -21,7 +21,10 @@ import {
   idValidacao, deduplicarValidacoes, regraDePrazo, hojeLocal, mesLocal, dataLocal,
   alunosValidos, LIMITE_ALUNOS, MIN_JUSTIFICATIVA, DIAS_RETROATIVOS_LIDER, pendenciasDoProfessor
 } from '../../utils/validacoes';
-import { feriadoNoDia, ehCancelamentoAutomaticoDeFeriado } from '../../utils/feriados';
+import { feriadoNoDia, ehCancelamentoAutomaticoDeFeriado, ehReforma } from '../../utils/feriados';
+
+// Cancelamento automático de feriado/recesso ("Recesso/Feriado") ou de unidade fechada para reforma ("Reforma").
+const MOTIVOS_AUTOMATICOS = ['Recesso/Feriado', 'Reforma'];
 import { aulaNaGradeDoDia, datasEntre, somarDias } from '../../utils/agendaAulas';
 import { invalidarCacheInicio } from '../../services/cacheInicio';
 import { useValidacoesDoProfessor, meuProfessorId } from '../../hooks/useValidacoesDoProfessor';
@@ -581,11 +584,14 @@ export default function ValidacaoDiariaPage() {
 
         if (validacao) {
             status = validacao.status;
-        } else if (feriadoNoDia(dataString, unidadeValida, catalogs.feriados)) {
+        } else {
             // Regra única de feriado (src/utils/feriados.js): só a unidade dentro da abrangência do feriado.
-            status = 'cancelada';
-            dadosValidacao = { motivoCancelamento: 'Recesso/Feriado', status: 'cancelada' };
-            feriadoAutomatico = true;
+            const feriadoDoDia = feriadoNoDia(dataString, unidadeValida, catalogs.feriados);
+            if (feriadoDoDia) {
+                status = 'cancelada';
+                dadosValidacao = { motivoCancelamento: ehReforma(feriadoDoDia) ? 'Reforma' : 'Recesso/Feriado', status: 'cancelada' };
+                feriadoAutomatico = true;
+            }
         }
 
         const prazo = regraDePrazo(role, dataString);
@@ -738,7 +744,7 @@ export default function ValidacaoDiariaPage() {
         if (!prazo.pode) return alert(mensagemPrazo(prazo.motivo));
     }
     if (item && item.status === 'cancelada' && !isMaster) {
-        if (item.validacao?.motivoCancelamento === 'Recesso/Feriado') return alert(t('dailyValidation.alerts.holidayInfo'));
+        if (MOTIVOS_AUTOMATICOS.includes(item.validacao?.motivoCancelamento)) return alert(t(item.validacao.motivoCancelamento === 'Reforma' ? 'dailyValidation.alerts.renovationInfo' : 'dailyValidation.alerts.holidayInfo'));
         return alert(t('dailyValidation.alerts.blockedCanceled'));
     }
     setAcaoAtual({ tipo, item }); setModalOpen(true);
@@ -755,7 +761,7 @@ export default function ValidacaoDiariaPage() {
 
   const handleReverterCancelamento = async () => {
       if (!acaoAtual?.item) return;
-      if (!acaoAtual.item.validacao?.id && acaoAtual.item.validacao?.motivoCancelamento === 'Recesso/Feriado') return alert(t('dailyValidation.alerts.autoHolidayRevert'));
+      if (!acaoAtual.item.validacao?.id && MOTIVOS_AUTOMATICOS.includes(acaoAtual.item.validacao?.motivoCancelamento)) return alert(t('dailyValidation.alerts.autoHolidayRevert'));
       if (!acaoAtual.item.validacao?.id) return;
       const prazo = regraDePrazo(role, acaoAtual.item.data);
       if (!prazo.pode) return alert(mensagemPrazo(prazo.motivo));

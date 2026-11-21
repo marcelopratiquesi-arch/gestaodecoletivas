@@ -33,7 +33,8 @@
     "recessHoliday": "Recess/Holiday",
     "autoRecess": "Automatic Recess/Holiday",
     "recessNamed": "Recess: {{name}}",
-    "recess": "Recess"
+    "recess": "Recess",
+    "renovation": "Unit under renovation"
   },
   "substitutionReasons": {
     "holderMedicalLeave": "Main Teacher on Medical Leave",

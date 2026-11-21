@@ -78,5 +78,18 @@ export function feriadoNoDia(dataAAAAMMDD, unidade, feriados = []) {
   }) || null;
 }
 
+// REFORMA: tipo de recesso para unidade fechada em obra. Funciona igual aos outros (a aula do período é cancelada, sem
+// pagamento e sem pendência), mas só vale para unidades escolhidas e as telas dizem "unidade em reforma" em vez de "feriado".
+export const TIPO_REFORMA = 'Reforma';
+export const ehReforma = (feriado) => feriado?.tipo === TIPO_REFORMA;
+
+// Esta reforma está valendo hoje? (`hoje` = "AAAA-MM-DD")
+export function reformaEmAndamento(feriado, hoje) {
+  if (!ehReforma(feriado)) return false;
+  const inicio = normalizarData(feriado.dataInicio);
+  const fim = normalizarData(feriado.dataFim) || inicio;
+  return Boolean(inicio) && hoje >= inicio && hoje <= fim;
+}
+
 // Cancelamentos que o sistema antigo gravava no banco ao criar um feriado.
 export const ehCancelamentoAutomaticoDeFeriado = (validacao) => validacao?.validadoPor === 'SISTEMA_FERIADO';

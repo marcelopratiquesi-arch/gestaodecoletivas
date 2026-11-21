@@ -9,7 +9,8 @@
   "types": {
     "recess": "Recess",
     "national": "National Holiday",
-    "municipal": "Local Holiday"
+    "municipal": "Local Holiday",
+    "renovation": "Renovation"
   },
   "processing": "Processing...",
   "create": "Create Recess",
@@ -129,5 +130,12 @@
     "upToDate": "All units of this city are already included.",
     "confirmAdd": "Add {{count}} unit(s) in {{city}} to this holiday?\n\n{{names}}",
     "done": "{{count}} unit(s) added."
+  },
+  "renovation": {
+    "nameLabel": "Reason / note",
+    "namePlaceholder": "E.g. Floor and reception renovation",
+    "scopeNote": "Renovation only applies to the units you choose below. During the period their classes show as \"unit under renovation\": no payment and no pending item.",
+    "nowFilter": "Under renovation now",
+    "inProgress": "In progress"
   }
 }

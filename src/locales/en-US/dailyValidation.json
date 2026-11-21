@@ -100,7 +100,8 @@
     "confirmHolidayValidation": "This day is a holiday at this unit. Confirm the unit was open and the class happened?",
     "alreadyValidated": "validated with {{count}} student(s)",
     "alreadyCanceled": "canceled ({{motivo}})",
-    "confirmOverwrite": "Someone else already recorded this class: {{comoEsta}}. Your screen was out of date.\n\nSave your record over it?"
+    "confirmOverwrite": "Someone else already recorded this class: {{comoEsta}}. Your screen was out of date.\n\nSave your record over it?",
+    "renovationInfo": "ℹ️ INFORMATION\n\nThis class was canceled automatically because the unit is closed for renovation in this period."
   },
   "deadline": {
     "closedMonthTeacher": "This month is already closed. Anything left behind can no longer be validated or changed by the teacher. If something needs fixing, talk to the unit leader.",
