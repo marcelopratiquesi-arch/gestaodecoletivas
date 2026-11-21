@@ -9,8 +9,8 @@ const PAGE_RULES = {
   validacao_diaria: ["admin", "mentor", "lider", "unidade", "professor"],
   // Certificados de workshop (o professor envia; quem confere usa a aba Professores das Configurações)
   certificados: ["professor"],
-  // Meu cadastro (o professor pede a mudança de CLT/Saver; líder, mentor ou admin conferem na aba Professores)
-  meu_cadastro: ["professor"],
+  // Meu cadastro: todos os papéis (dados pessoais salvam na hora; o professor ainda pede mudança de contrato, o líder pede outra unidade)
+  meu_cadastro: ["admin", "mentor", "lider", "unidade", "professor"],
   validacao_coletiva: ["admin", "mentor"],
   financeiro: ["admin", "mentor"],
   configuracoes: ["admin", "mentor", "lider", "unidade"],

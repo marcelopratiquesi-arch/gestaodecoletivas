@@ -30,7 +30,8 @@
     "approveConfirm": "Aprovar a mudança de {{name}}?\n\n{{value}}",
     "refusePrompt": "Motivo da recusa para {{name}} (opcional):",
     "noFicha": "Este professor ainda não está ligado a um cadastro da grade. Ligue antes de aprovar.",
-    "error": "Não foi possível concluir. Tente de novo."
+    "error": "Não foi possível concluir. Tente de novo.",
+    "modalities": "Modalidades"
   },
   "me": {
     "title": "Dados pessoais",
@@ -53,6 +54,90 @@
       "email": "Confira o e-mail de contato.",
       "birth": "Confira a data de nascimento.",
       "save": "Não foi possível salvar. Tente de novo."
+    },
+    "modalities": "Modalidades"
+  },
+  "subtitleAll": "Seus dados pessoais salvam na hora. Mantenha tudo atualizado: é por aqui que a equipe fala com você.",
+  "units": {
+    "title": "Minhas unidades",
+    "none": "Você ainda não tem unidades ligadas ao seu acesso.",
+    "leader1": "1º líder",
+    "leader2": "2º líder",
+    "requestTitle": "Pedir outra unidade",
+    "requestHint": "O mentor da unidade (ou o administrador) vai analisar o seu pedido. Pedir não garante que será aceito.",
+    "choose": "Unidade",
+    "choosePlaceholder": "Escolha a unidade",
+    "request": "Enviar pedido",
+    "cancel": "Desistir",
+    "dismiss": "Tirar da lista",
+    "status": {
+      "pendente": "Aguardando análise",
+      "recusado": "Recusado",
+      "aprovado": "Aprovado"
+    },
+    "errors": {
+      "load": "Não foi possível carregar os seus pedidos.",
+      "choose": "Escolha uma unidade.",
+      "max": "Você já tem {{max}} pedidos aguardando análise.",
+      "profile": "Salve o seu nome e o seu WhatsApp acima antes de pedir outra unidade.",
+      "send": "Não foi possível enviar. Tente de novo.",
+      "noFicha": "Seu nome ainda não está ligado a um cadastro da grade. Peça ao líder da sua unidade."
+    },
+    "teacherRequestTitle": "Pedir unidade nova",
+    "teacherRequestHint": "O líder ou o mentor da unidade que você escolher vai analisar. Se aprovarem, a unidade aparece para você."
+  },
+  "unitReview": {
+    "title": "Pedidos de unidade nova para conferir",
+    "subtitle": "Professores pediram para dar aula em mais uma unidade. Aprovado, a unidade entra na grade deles.",
+    "approveConfirm": "Aprovar a unidade {{unit}} para {{name}}?",
+    "refusePrompt": "Motivo da recusa para {{name}} (opcional):",
+    "already": "Já é desta unidade"
+  },
+  "bank": {
+    "title": "Banco Inter",
+    "hint": "Informe a agência e a conta do {{bank}} para receber pelas aulas. Quem vê: você, o líder e o mentor da sua unidade e o administrador. Por enquanto não é obrigatório.",
+    "agency": "Agência",
+    "account": "Conta (com o dígito)",
+    "save": "Salvar dados do banco",
+    "saved": "Dados do banco salvos.",
+    "remove": "Remover",
+    "removeConfirm": "Remover os dados do banco?",
+    "errors": {
+      "load": "Não foi possível carregar os dados do banco.",
+      "agency": "Confira a agência (de 3 a 5 números, ex.: 0001).",
+      "account": "Confira a conta com o dígito (ex.: 1234567-8).",
+      "save": "Não foi possível salvar. Tente de novo."
+    }
+  },
+  "gate": {
+    "title": "Complete o seu cadastro",
+    "intro": "Falta preencher: {{fields}}. É rápido e fica salvo.",
+    "postponeHint_one": "Você pode deixar para depois mais {{count}} vez (1 por dia). Depois disso, só segue completando.",
+    "postponeHint_other": "Você pode deixar para depois mais {{count}} vezes (1 por dia). Depois disso, só segue completando.",
+    "locked": "Para continuar usando o sistema, complete o cadastro agora.",
+    "later": "Lembrar depois",
+    "save": "Salvar e conferir",
+    "logout": "Sair",
+    "fields": {
+      "nome": "nome completo",
+      "telefone": "WhatsApp",
+      "pais": "país",
+      "nascimento": "data de nascimento",
+      "documento": "documento (CPF/DNI/SSN)"
+    },
+    "lockedDocument": "Sem o documento não dá para continuar: informe agora (não dá para deixar para depois).",
+    "documentInUse": "Este documento já está cadastrado em outra pessoa. Fale com o seu mentor ou com o gestor."
+  },
+  "incomplete": {
+    "badge": "Cadastro incompleto",
+    "badgeShort": "Incompleto",
+    "filter": "Incompletos",
+    "tip": "Falta: {{fields}}",
+    "fields": {
+      "nome": "nome",
+      "telefone": "WhatsApp",
+      "documento": "documento",
+      "nascimento": "data de nascimento"
     }
   }
 }

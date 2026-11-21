@@ -30,7 +30,8 @@
     "approveConfirm": "¿Aprobar el cambio de {{name}}?\n\n{{value}}",
     "refusePrompt": "Motivo del rechazo para {{name}} (opcional):",
     "noFicha": "Este profesor todavía no está vinculado a un registro de la grilla. Vinculalo antes de aprobar.",
-    "error": "No se pudo completar. Probá de nuevo."
+    "error": "No se pudo completar. Probá de nuevo.",
+    "modalities": "Modalidades"
   },
   "me": {
     "title": "Datos personales",
@@ -53,6 +54,90 @@
       "email": "Revisá el e-mail de contacto.",
       "birth": "Revisá la fecha de nacimiento.",
       "save": "No se pudo guardar. Probá de nuevo."
+    },
+    "modalities": "Modalidades"
+  },
+  "subtitleAll": "Tus datos personales se guardan al instante. Mantené todo actualizado: por acá el equipo se comunica con vos.",
+  "units": {
+    "title": "Mis unidades",
+    "none": "Todavía no tenés unidades vinculadas a tu acceso.",
+    "leader1": "1.º líder",
+    "leader2": "2.º líder",
+    "requestTitle": "Pedir otra unidad",
+    "requestHint": "El mentor de la unidad (o el administrador) va a analizar tu pedido. Pedir no garantiza que sea aceptado.",
+    "choose": "Unidad",
+    "choosePlaceholder": "Elegí la unidad",
+    "request": "Enviar pedido",
+    "cancel": "Desistir",
+    "dismiss": "Sacar de la lista",
+    "status": {
+      "pendente": "Esperando análisis",
+      "recusado": "Rechazado",
+      "aprovado": "Aprobado"
+    },
+    "errors": {
+      "load": "No se pudieron cargar tus pedidos.",
+      "choose": "Elegí una unidad.",
+      "max": "Ya tenés {{max}} pedidos esperando análisis.",
+      "profile": "Guardá tu nombre y tu WhatsApp arriba antes de pedir otra unidad.",
+      "send": "No se pudo enviar. Probá de nuevo.",
+      "noFicha": "Tu nombre todavía no está vinculado a una ficha de la grilla. Pedíselo al líder de tu unidad."
+    },
+    "teacherRequestTitle": "Pedir unidad nueva",
+    "teacherRequestHint": "El líder o el mentor de la unidad que elijas lo va a analizar. Si lo aprueban, la unidad aparece para vos."
+  },
+  "unitReview": {
+    "title": "Pedidos de unidad nueva para revisar",
+    "subtitle": "Profesores pidieron dar clases en una unidad más. Aprobado, la unidad entra en su grilla.",
+    "approveConfirm": "¿Aprobar la unidad {{unit}} para {{name}}?",
+    "refusePrompt": "Motivo del rechazo para {{name}} (opcional):",
+    "already": "Ya es de esta unidad"
+  },
+  "bank": {
+    "title": "Banco Inter",
+    "hint": "Informá la agencia y la cuenta del {{bank}} para cobrar tus clases. Quién lo ve: vos, el líder y el mentor de tu unidad y el administrador. Por ahora no es obligatorio.",
+    "agency": "Agencia",
+    "account": "Cuenta (con el dígito)",
+    "save": "Guardar datos del banco",
+    "saved": "Datos del banco guardados.",
+    "remove": "Quitar",
+    "removeConfirm": "¿Quitar los datos del banco?",
+    "errors": {
+      "load": "No se pudieron cargar los datos del banco.",
+      "agency": "Revisá la agencia (de 3 a 5 números, ej.: 0001).",
+      "account": "Revisá la cuenta con el dígito (ej.: 1234567-8).",
+      "save": "No se pudo guardar. Probá de nuevo."
+    }
+  },
+  "gate": {
+    "title": "Completá tu registro",
+    "intro": "Falta completar: {{fields}}. Es rápido y queda guardado.",
+    "postponeHint_one": "Podés dejarlo para después {{count}} vez más (1 por día). Después de eso, tenés que completarlo para seguir.",
+    "postponeHint_other": "Podés dejarlo para después {{count}} veces más (1 por día). Después de eso, tenés que completarlo para seguir.",
+    "locked": "Para seguir usando el sistema, completá tu registro ahora.",
+    "later": "Recordármelo después",
+    "save": "Guardar y revisar",
+    "logout": "Salir",
+    "fields": {
+      "nome": "nombre completo",
+      "telefone": "WhatsApp",
+      "pais": "país",
+      "nascimento": "fecha de nacimiento",
+      "documento": "documento (CPF/DNI/SSN)"
+    },
+    "lockedDocument": "Sin el documento no se puede continuar: informalo ahora (no se puede dejar para después).",
+    "documentInUse": "Este documento ya está registrado en otra persona. Hablá con tu mentor o con el gestor."
+  },
+  "incomplete": {
+    "badge": "Registro incompleto",
+    "badgeShort": "Incompleto",
+    "filter": "Incompletos",
+    "tip": "Falta: {{fields}}",
+    "fields": {
+      "nome": "nombre",
+      "telefone": "WhatsApp",
+      "documento": "documento",
+      "nascimento": "fecha de nacimiento"
     }
   }
 }

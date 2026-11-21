@@ -27,7 +27,8 @@ import { Campo, Vazio, Numero, EstadoCarga, SeletorDeMes } from './pecas/Basicos
 import { GraficoBarras, EvolucaoMeses } from './pecas/Graficos';
 import { BOTAO_PRINCIPAL, BOTAO_BRANCO, TH, TD, SELO_ATIVO, SELO_INATIVO } from './pecas/cores';
 import { QuadroEmDia, GradeSemanal } from './secoes';
-import { CampoDocumento, CampoNascimento, CampoUltimoAcesso } from './CamposDaPessoa';
+import { CampoBancoInter, CampoDocumento, CampoNascimento, CampoUltimoAcesso } from './CamposDaPessoa';
+import { professorTemBancoInter } from '../utils/dadosBancarios';
 import { lerDocumento } from '../services/documentoService';
 import { ehLider } from '../permissions';
 import { lerDocumentoDaFicha } from '../services/documentoFichaService';
@@ -138,6 +139,8 @@ export default function CentralProfessor({ id: professorId, z, textoVoltar, onFe
   const podeVerDocumento = ['admin', 'administrador', 'master', 'mentor'].includes(papelDeQuemOlha);
   // Nascimento: admin, mentor e líder da unidade (o banco confere a unidade).
   const podeVerNascimento = podeVerDocumento || ehLider(papelDeQuemOlha);
+  // Banco Inter (só professor do Brasil): a própria pessoa, admin, mentor e líder da unidade (quem paga). O banco confere.
+  const podeVerBanco = professorTemBancoInter(professor.pais) && (podeVerNascimento || ehOProprioProfessor(userData, professor));
   // O documento que a própria pessoa atualizou em "Meu cadastro" (gaveta do login) vale mais que o antigo da ficha.
   const lerDocumentoDaGrade = async (id) => (professor.uidLogin ? await lerDocumento(professor.uidLogin) : null) || (await lerDocumentoDaFicha(id));
   const ativo = professor.status === 'ativo';
@@ -430,8 +433,13 @@ export default function CentralProfessor({ id: professorId, z, textoVoltar, onFe
         <Campo rotulo={t('centrais.professor.modalidades')}>
           {modalidades.length > 0 ? modalidades.map((m) => m.nome).join(', ') : t('centrais.semAulaNaGrade')}
         </Campo>
+        {/* O que o próprio professor informou no Meu cadastro (aprovado por líder/mentor); as de cima vêm da grade. */}
+        {String(professor.modalidades || '').trim() && (
+          <Campo rotulo={t('centrais.professor.modalidadesInformadas')}>{professor.modalidades}</Campo>
+        )}
         <CampoDocumento pode={podeVerDocumento} chave={String(professor.id)} leitor={lerDocumentoDaGrade} />
         <CampoNascimento pode={podeVerNascimento} uid={professor.uidLogin} />
+        <CampoBancoInter pode={podeVerBanco} uid={professor.uidLogin} />
         <CampoUltimoAcesso uid={professor.uidLogin} />
       </div>
       {pode.cfgProfessores && (

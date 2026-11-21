@@ -1,8 +1,12 @@
-// "Meu cadastro" (professor), em duas partes:
+// "Meu cadastro" de TODOS os papéis (admin, mentor, líder e professor):
+//  0) Só a PRÓPRIA pessoa (crachá de verdade: no "Ver como" do admin continua sendo o do admin).
 //  1) DADOS PESSOAIS (nome, WhatsApp, país, e-mail de contato, documento, nascimento): salvam NA HORA, sem aprovação,
 //     no crachá, na ficha da grade e nas gavetas privadas (ver services/meuCadastroService.js). O e-mail de login é só leitura.
 //  2) CONTRATO (CLT ou SAVER, unidades e horários): pede a mudança; o líder da unidade, o mentor dela ou o admin conferem, e só
-//     depois de aprovado vale para o valor da aula (ver services/atualizacaoProfessorService.js).
+//     depois de aprovado vale para o valor da aula (ver services/atualizacaoProfessorService.js). Só professor.
+//     O contrato leva junto as MODALIDADES (texto na ficha) e também precisa de aprovação.
+//  2b) UNIDADE NOVA (professor): pedido à parte, aprovado pelo líder/mentor da unidade pedida (meuCadastro/UnidadesDoProfessor).
+//  3) MINHAS UNIDADES (mentor e líder): lista; o líder também pode pedir outra unidade (pasta meuCadastro/).
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AlertTriangle, CheckCircle2, Clock, Loader2, UserCog, XCircle } from "lucide-react";
@@ -13,27 +17,39 @@ import CampoDocumento from "../components/acesso/CampoDocumento";
 import { contratoVazio, mesmoContrato, resumoContrato, validarContrato } from "../utils/contrato";
 import { documentoValido, formatarDocumento, limparDocumento, tipoDocumentoDoPais } from "../utils/documento";
 import { normalizarPais } from "../utils/feriados";
+import { ehLider } from "../permissions";
+import { vagasDeLiderDaPessoa } from "../utils/lideranca";
+import MinhasUnidades from "./meuCadastro/MinhasUnidades";
+import UnidadesDoProfessor from "./meuCadastro/UnidadesDoProfessor";
+import BancoInter from "./meuCadastro/BancoInter";
+import { professorTemBancoInter } from "../utils/dadosBancarios";
+import SeletorModalidades from "../components/acesso/SeletorModalidades";
+import { modalidadesDoTexto } from "../components/acesso/acessoDados";
+import { CAMPO, CAMPO_LEITURA, CARTAO, ROTULO, SECAO } from "./meuCadastro/estilos";
 import { PAISES, DDI_MAP, formatarTelefone, exemploDeTelefone } from "../app/Configuracoes/ui/telefone";
-import { fichasDoLogin, opcoesDeUnidadeDoProfessor } from "../utils/unidadeDoProfessor";
+import { fichasDoLogin, idsDasUnidadesDoProfessor, opcoesDeUnidadeDoProfessor } from "../utils/unidadeDoProfessor";
 import { desistirDaAtualizacao, enviarAtualizacao, lerMinhaAtualizacao } from "../services/atualizacaoProfessorService";
 import { ERRO_DOCUMENTO_EM_USO } from "../services/documentoService";
 import { lerMeuDocumento, lerNascimento, nascimentoValido, salvarMeuCadastro } from "../services/meuCadastroService";
 
-// Visual dos campos (igual ao do Cronograma): rótulo pequeno, campo branco com borda cinza e foco vermelho.
-const ROTULO = "text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 block";
-const CAMPO = "w-full p-3 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-white rounded-xl text-sm font-bold uppercase outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100";
-const CAMPO_LEITURA = "w-full p-3 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-xl text-sm font-bold outline-none cursor-not-allowed";
-const SECAO = "text-[11px] font-black uppercase tracking-widest text-red-600";
-
 export default function MeuCadastro() {
   const { t } = useTranslation();
-  const { user, userData } = useAuth();
+  // Sempre o crachá de VERDADE de quem entrou: no "Ver como" do admin, o Meu cadastro continua sendo o do próprio admin.
+  const { user, crachaReal, recarregarCracha } = useAuth();
+  const userData = crachaReal;
+  const papel = String(userData?.role || "").trim().toLowerCase();
+  const souProfessor = papel === "professor";
+  const souLider = ehLider(papel);
+  const souMentor = papel === "mentor";
   const { catalogs } = useCatalogs();
   const uid = user?.uid;
-  const unidades = catalogs?.unidades || [];
+  const unidades = useMemo(() => catalogs?.unidades || [], [catalogs?.unidades]);
   const nomeDaUnidade = (id) => unidades.find((u) => String(u.id) === String(id))?.nome || id;
 
   const ficha = fichasDoLogin(catalogs, uid, userData)[0] || null;
+  // Unidades em que sou líder (1º ou 2º): nome e telefone novos também vão para elas.
+  const unidadesDoLiderPessoa = useMemo(() => vagasDeLiderDaPessoa(unidades, userData, uid), [userData, unidades, uid]);
+
   const atual = useMemo(() => (ficha?.tipoContrato === "saver" ? { tipoContrato: "saver", saverLocais: ficha.saverLocais || [] } : contratoVazio()), [ficha]);
   const destino = opcoesDeUnidadeDoProfessor({ userData, uid, catalogs })[0] || null;
 
@@ -89,12 +105,12 @@ export default function MeuCadastro() {
     if (telefone.replace(/\D/g, "").length < 8) return setErroDados(t("profileUpdate.me.errors.phone"));
     if (mail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)) return setErroDados(t("profileUpdate.me.errors.email"));
     if (!documentoValido(docTipo, docNumero)) return setErroDados(t("document.errors.invalid"));
-    if (!nascimentoValido(nascimento)) return setErroDados(t("profileUpdate.me.errors.birth"));
+    if (!nascimento || !nascimentoValido(nascimento)) return setErroDados(t("profileUpdate.me.errors.birth"));
     setSalvandoDados(true);
     try {
       const documento = { tipo: docTipo, numero: limparDocumento(docNumero) };
       const r = await salvarMeuCadastro({
-        uid, fichaId: ficha?.id || "", precisaMarcarDocumento: userData?.documentoOk !== true, nomeParaAuditoria: nomeLimpo,
+        uid, fichaId: ficha?.id || "", unidadesDoLider: unidadesDoLiderPessoa, precisaMarcarDocumento: userData?.documentoOk !== true, nomeParaAuditoria: nomeLimpo,
         antes: { ...guardado, emailLogin: user?.email || "" },
         depois: { nome: nomeLimpo, telefone: telefone.trim(), pais, emailContato: mail, documento, nascimento },
       }, t);
@@ -102,6 +118,7 @@ export default function MeuCadastro() {
       setNome(nomeLimpo);
       setGuardado({ nome: nomeLimpo, telefone: telefone.trim(), pais, emailContato: mail, documento, nascimento });
       setSalvoOk(true);
+      recarregarCracha(); // o aviso de cadastro incompleto lê o crachá: tem de ver o que acabou de ser salvo
     } catch (err) {
       console.error(err);
       setErroDados(err?.message === ERRO_DOCUMENTO_EM_USO ? t("document.errors.inUse") : t("profileUpdate.me.errors.save"));
@@ -111,6 +128,16 @@ export default function MeuCadastro() {
   // ===== 2) CONTRATO =====
   const [pedido, setPedido] = useState(undefined); // undefined = lendo; null = nunca pediu
   const [contrato, setContrato] = useState(contratoVazio());
+  const modalidadesAtuais = typeof ficha?.modalidades === "string" ? ficha.modalidades : String(userData?.modalidades || "");
+  const [modalidades, setModalidades] = useState("");
+  const idsDasUnidades = useMemo(() => idsDasUnidadesDoProfessor({ userData, ficha, vinculos: catalogs?.vinculos || [] }), [userData, ficha, catalogs?.vinculos]);
+  // Modalidades que a pessoa pode escolher: as habilitadas nas unidades dela (se alguma unidade ainda não foi configurada, todas).
+  const unidadeParaModalidades = useMemo(() => {
+    const dela = unidades.filter((u) => idsDasUnidades.includes(String(u.id)));
+    if (!dela.length) return undefined;
+    if (dela.some((u) => !Array.isArray(u.modalidadesIds))) return undefined;
+    return { modalidadesIds: [...new Set(dela.flatMap((u) => u.modalidadesIds.map(String)))] };
+  }, [unidades, idsDasUnidades]);
   const [iniciado, setIniciado] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState("");
@@ -119,12 +146,13 @@ export default function MeuCadastro() {
     if (!uid) return;
     try { setPedido(await lerMinhaAtualizacao(uid)); } catch (e) { console.error(e); setPedido(null); setErro(t("profileUpdate.errors.load")); }
   }, [uid, t]);
-  useEffect(() => { carregar(); }, [carregar]);
+  useEffect(() => { if (souProfessor) carregar(); }, [carregar, souProfessor]);
   // O formulário começa com o contrato que vale hoje (o da ficha), sem refazer enquanto a pessoa mexe.
-  useEffect(() => { if (!iniciado && catalogs) { setContrato(atual); setIniciado(true); } }, [atual, catalogs, iniciado]);
+  useEffect(() => { if (!iniciado && catalogs) { setContrato(atual); setModalidades(modalidadesAtuais); setIniciado(true); } }, [atual, modalidadesAtuais, catalogs, iniciado]);
 
   const pendente = pedido?.status === "pendente";
-  const semMudanca = mesmoContrato(contrato, atual);
+  const mesmasModalidades = modalidadesDoTexto(modalidades).join(",") === modalidadesDoTexto(modalidadesAtuais).join(",");
+  const semMudanca = mesmoContrato(contrato, atual) && mesmasModalidades;
 
   async function enviar(e) {
     e.preventDefault();
@@ -135,7 +163,7 @@ export default function MeuCadastro() {
     if (!destino) return setErro(t("profileUpdate.errors.noUnit"));
     setEnviando(true);
     try {
-      await enviarAtualizacao({ uid, nome: userData?.nome || user?.email || "-", unidadeId: destino.unidadeId, vinculoId: destino.vinculoId, contrato: ok.valor });
+      await enviarAtualizacao({ uid, nome: userData?.nome || user?.email || "-", unidadeId: destino.unidadeId, vinculoId: destino.vinculoId, contrato: ok.valor, modalidades });
       await carregar();
     } catch (err) { console.error(err); setErro(t("profileUpdate.errors.send")); } finally { setEnviando(false); }
   }
@@ -151,7 +179,7 @@ export default function MeuCadastro() {
     recusado: { cor: "bg-red-50 border-red-200 text-red-800 dark:bg-red-500/10 dark:border-red-500/30 dark:text-red-300", Icone: XCircle },
   }[pedido?.status] || null;
 
-  const cartao = "p-5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm space-y-4";
+  const cartao = CARTAO;
 
   return (
     <div className="p-4 md:p-8 max-w-3xl mx-auto space-y-6">
@@ -160,7 +188,7 @@ export default function MeuCadastro() {
           <span className="p-2 bg-red-600 text-white rounded-lg"><UserCog className="w-6 h-6" /></span>
           {t("profileUpdate.title")}
         </h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">{t("profileUpdate.subtitle")}</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">{t(souProfessor ? "profileUpdate.subtitle" : "profileUpdate.subtitleAll")}</p>
       </div>
 
       {/* ===== DADOS PESSOAIS (salvam na hora) ===== */}
@@ -183,7 +211,7 @@ export default function MeuCadastro() {
                 </select>
               </div>
               <div>
-                <label htmlFor="mc-nasc" className={ROTULO}>{t("profileUpdate.me.birth")}</label>
+                <label htmlFor="mc-nasc" className={ROTULO}>{t("profileUpdate.me.birth")} *</label>
                 <input id="mc-nasc" type="date" value={nascimento} min="1920-01-01" max={new Date().toISOString().slice(0, 10)} onChange={(e) => setNascimento(e.target.value)} disabled={salvandoDados} className={CAMPO} />
               </div>
             </div>
@@ -226,9 +254,18 @@ export default function MeuCadastro() {
         )}
       </form>
 
-      {/* ===== CONTRATO (pede a mudança; precisa de aprovação) ===== */}
-      <h2 className={SECAO}>{t("profileUpdate.me.contractTitle")}</h2>
-      {!destino ? (
+      {/* ===== BANCO INTER (só professor do Brasil) ===== */}
+      {souProfessor && guardado && professorTemBancoInter(guardado.pais) && <BancoInter uid={uid} nome={userData?.nome || ""} />}
+
+      {/* ===== MINHAS UNIDADES (mentor e líder) ===== */}
+      {(souLider || souMentor) && <MinhasUnidades cracha={userData} uid={uid} emailLogin={user?.email} unidades={unidades} />}
+
+      {/* ===== UNIDADES DO PROFESSOR (lista + pedido de unidade nova) ===== */}
+      {souProfessor && <UnidadesDoProfessor uid={uid} nome={userData?.nome || ""} ficha={ficha} unidades={unidades} idsMinhas={idsDasUnidades} />}
+
+      {/* ===== CONTRATO (só professor; pede a mudança e precisa de aprovação) ===== */}
+      {souProfessor && <h2 className={SECAO}>{t("profileUpdate.me.contractTitle")}</h2>}
+      {!souProfessor ? null : !destino ? (
         <div className="flex gap-2 text-sm text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-xl p-4">
           <AlertTriangle className="w-5 h-5 shrink-0" /> {t("certificates.noUnit")}
         </div>
@@ -237,6 +274,7 @@ export default function MeuCadastro() {
           <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
             <p className="text-[10px] font-black uppercase tracking-wider text-slate-500">{t("profileUpdate.current")}</p>
             <p className="font-black text-slate-800 dark:text-white mt-1">{resumoContrato(atual, nomeDaUnidade)}</p>
+            <p className="text-sm font-bold text-slate-600 dark:text-slate-300 mt-1">{t("profileUpdate.me.modalities")}: {modalidadesAtuais || "-"}</p>
             {!ficha && <p className="text-xs text-amber-600 mt-2">{t("profileUpdate.noFicha")}</p>}
           </div>
 
@@ -246,6 +284,7 @@ export default function MeuCadastro() {
             <div className={`p-4 rounded-2xl border text-sm space-y-1 ${faixa.cor}`}>
               <p className="font-black flex items-center gap-2"><faixa.Icone className="w-4 h-4" /> {t(`profileUpdate.status.${pedido.status}`)}</p>
               <p className="font-bold">{resumoContrato(pedido, nomeDaUnidade)}</p>
+              {typeof pedido.modalidades === "string" && <p className="font-bold">{t("profileUpdate.me.modalities")}: {pedido.modalidades || "-"}</p>}
               {pedido.status === "recusado" && pedido.motivo && <p>{t("profileUpdate.reason", { reason: pedido.motivo })}</p>}
               {pendente && <button type="button" onClick={desistir} disabled={enviando} className="text-xs font-black uppercase underline">{t("profileUpdate.cancelRequest")}</button>}
             </div>
@@ -253,6 +292,7 @@ export default function MeuCadastro() {
 
           <form onSubmit={enviar} className={cartao}>
             <h3 className="font-black text-slate-800 dark:text-white uppercase">{t("profileUpdate.change")}</h3>
+            <SeletorModalidades claro id="meu-modalidades" valor={modalidades} onChange={setModalidades} unidade={unidadeParaModalidades} desabilitado={enviando} />
             <CampoContrato claro id="meu-contrato" valor={contrato} onChange={setContrato} unidades={unidades} desabilitado={enviando} />
             {erro && <p className="text-xs font-bold text-red-600 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-lg p-3">{erro}</p>}
             <p className="text-[11px] text-slate-500 dark:text-slate-400">{t("profileUpdate.approvalHint")}</p>

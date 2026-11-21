@@ -1,4 +1,4 @@
-// "Atualizar cadastro" do professor, dentro do app: ele pede a mudança do CONTRATO (CLT ou Saver, unidades e horários) e
+// "Atualizar cadastro" do professor, dentro do app: ele pede a mudança do CONTRATO (CLT ou Saver, unidades e horários) e das MODALIDADES e
 // o líder da unidade, o mentor dela ou o admin conferem. Só depois de aprovado a mudança entra na ficha, que é a que
 // vale para o valor da aula (a ficha só o gestor altera). Coleção atualizacoes_professor/{login}: um pedido por professor.
 import { collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, setDoc, where, writeBatch } from "firebase/firestore";
@@ -15,10 +15,10 @@ export async function lerMinhaAtualizacao(uid) {
 }
 
 /** Envia (ou reenvia) o pedido. `vinculoId` só quando a unidade vem de um vínculo (crachá antigo sem unidade). */
-export async function enviarAtualizacao({ uid, nome, unidadeId, vinculoId, contrato }) {
+export async function enviarAtualizacao({ uid, nome, unidadeId, vinculoId, contrato, modalidades = "" }) {
   await setDoc(doc(db, "atualizacoes_professor", uid), {
     uid, nome, unidadeId: String(unidadeId), ...(vinculoId ? { vinculoId: String(vinculoId) } : {}),
-    tipoContrato: contrato.tipoContrato, saverLocais: contrato.saverLocais, status: "pendente", criadoEm: serverTimestamp(),
+    tipoContrato: contrato.tipoContrato, saverLocais: contrato.saverLocais, modalidades: String(modalidades || ""), status: "pendente", criadoEm: serverTimestamp(),
   });
 }
 
@@ -34,19 +34,21 @@ export async function listarAtualizacoesPendentes({ admin, unidadeIds }) {
   return snaps.flatMap((s) => s.docs.map((d) => ({ id: d.id, ...d.data() })));
 }
 
-/** Aprova: grava o contrato em TODAS as fichas ligadas a esse login e fecha o pedido (tudo junto ou nada). */
+/** Aprova: grava o contrato (e as modalidades, se o pedido trouxe) em TODAS as fichas ligadas a esse login e fecha o pedido (tudo junto ou nada). */
 export async function aprovarAtualizacao({ pedido, fichas, quem, nomeDaUnidade }) {
   if (!fichas.length) throw new Error("SEM_FICHA");
   const batch = writeBatch(db);
   fichas.forEach((f) => batch.update(doc(db, "professores", String(f.id)), {
     tipoContrato: pedido.tipoContrato, saverLocais: pedido.saverLocais || [], updatedAt: serverTimestamp(),
+    ...(typeof pedido.modalidades === "string" ? { modalidades: pedido.modalidades } : {}),
   }));
   batch.update(doc(db, "atualizacoes_professor", pedido.id), {
     status: "aprovado", analisadoPor: quem.id, analisadoPorNome: quem.nome, analisadoEm: serverTimestamp(),
   });
   await batch.commit();
   await auditar("Atualização de contrato do professor aprovada.", pedido, quem,
-    `Contrato: ${resumoContrato(fichas[0], nomeDaUnidade)} ➔ ${resumoContrato(pedido, nomeDaUnidade)}`);
+    [`Contrato: ${resumoContrato(fichas[0], nomeDaUnidade)} ➔ ${resumoContrato(pedido, nomeDaUnidade)}`,
+      typeof pedido.modalidades === "string" ? `Modalidades: ${fichas[0].modalidades || "-"} ➔ ${pedido.modalidades || "-"}` : ""].filter(Boolean).join(" | "));
 }
 
 export async function recusarAtualizacao({ pedido, motivo, quem }) {

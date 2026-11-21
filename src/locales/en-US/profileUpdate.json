@@ -30,7 +30,8 @@
     "approveConfirm": "Approve {{name}}'s change?\n\n{{value}}",
     "refusePrompt": "Reason for refusing {{name}} (optional):",
     "noFicha": "This teacher is not linked to a schedule record yet. Link it before approving.",
-    "error": "Could not finish. Try again."
+    "error": "Could not finish. Try again.",
+    "modalities": "Modalities"
   },
   "me": {
     "title": "Personal data",
@@ -53,6 +54,90 @@
       "email": "Check the contact e-mail.",
       "birth": "Check the date of birth.",
       "save": "Could not save. Try again."
+    },
+    "modalities": "Modalities"
+  },
+  "subtitleAll": "Your personal details are saved right away. Keep everything up to date: this is how the team reaches you.",
+  "units": {
+    "title": "My units",
+    "none": "You do not have any units linked to your access yet.",
+    "leader1": "1st leader",
+    "leader2": "2nd leader",
+    "requestTitle": "Request another unit",
+    "requestHint": "The unit's mentor (or the administrator) will review your request. Asking does not guarantee approval.",
+    "choose": "Unit",
+    "choosePlaceholder": "Choose the unit",
+    "request": "Send request",
+    "cancel": "Withdraw",
+    "dismiss": "Remove from list",
+    "status": {
+      "pendente": "Waiting for review",
+      "recusado": "Declined",
+      "aprovado": "Approved"
+    },
+    "errors": {
+      "load": "Could not load your requests.",
+      "choose": "Choose a unit.",
+      "max": "You already have {{max}} requests waiting for review.",
+      "profile": "Save your name and WhatsApp above before requesting another unit.",
+      "send": "Could not send. Try again.",
+      "noFicha": "Your name is not linked to a schedule record yet. Ask your unit leader."
+    },
+    "teacherRequestTitle": "Request a new unit",
+    "teacherRequestHint": "The leader or mentor of the unit you choose will review it. If approved, the unit shows up for you."
+  },
+  "unitReview": {
+    "title": "New unit requests to review",
+    "subtitle": "Teachers asked to teach in one more unit. Once approved, the unit joins their schedule.",
+    "approveConfirm": "Approve unit {{unit}} for {{name}}?",
+    "refusePrompt": "Reason for declining {{name}} (optional):",
+    "already": "Already in this unit"
+  },
+  "bank": {
+    "title": "Banco Inter",
+    "hint": "Enter your {{bank}} branch and account to be paid for your classes. Who can see it: you, your unit's leader and mentor, and the administrator. Not required for now.",
+    "agency": "Branch",
+    "account": "Account (with check digit)",
+    "save": "Save bank details",
+    "saved": "Bank details saved.",
+    "remove": "Remove",
+    "removeConfirm": "Remove the bank details?",
+    "errors": {
+      "load": "Could not load the bank details.",
+      "agency": "Check the branch (3 to 5 digits, e.g. 0001).",
+      "account": "Check the account with the check digit (e.g. 1234567-8).",
+      "save": "Could not save. Try again."
+    }
+  },
+  "gate": {
+    "title": "Complete your profile",
+    "intro": "Still missing: {{fields}}. It is quick and gets saved.",
+    "postponeHint_one": "You can put it off {{count}} more time (once a day). After that, you must complete it to go on.",
+    "postponeHint_other": "You can put it off {{count}} more times (once a day). After that, you must complete it to go on.",
+    "locked": "To keep using the system, complete your profile now.",
+    "later": "Remind me later",
+    "save": "Save and review",
+    "logout": "Log out",
+    "fields": {
+      "nome": "full name",
+      "telefone": "WhatsApp",
+      "pais": "country",
+      "nascimento": "date of birth",
+      "documento": "ID document (CPF/DNI/SSN)"
+    },
+    "lockedDocument": "You cannot continue without the ID document: enter it now (it cannot be postponed).",
+    "documentInUse": "This document is already registered to someone else. Talk to your mentor or the manager."
+  },
+  "incomplete": {
+    "badge": "Incomplete profile",
+    "badgeShort": "Incomplete",
+    "filter": "Incomplete",
+    "tip": "Missing: {{fields}}",
+    "fields": {
+      "nome": "name",
+      "telefone": "WhatsApp",
+      "documento": "ID document",
+      "nascimento": "date of birth"
     }
   }
 }

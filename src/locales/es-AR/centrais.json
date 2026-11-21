@@ -76,7 +76,9 @@
     "pais": "País",
     "acesso": "Acceso al sistema",
     "cpf": "CPF",
-    "documento": "Documento"
+    "documento": "Documento",
+    "agencia": "Agencia",
+    "conta": "Cuenta"
   },
   "emDia": {
     "titulo": "¿Está todo al día?",
@@ -430,6 +432,7 @@
       "editar": "Agregar o quitar workshops",
       "ultimo": "Último: {{nome}}",
       "colPor": "Agregado por"
-    }
+    },
+    "modalidadesInformadas": "Modalidades informadas"
   }
 }

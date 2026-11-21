@@ -3,12 +3,14 @@
 // e só se a pessoa logada tem direito (o banco também confere). PADRÃO: não deixar a Central sem esses dois campos.
 import { useEffect, useState } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
-import { IdCard } from 'lucide-react';
+import { IdCard, Landmark } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { db } from '../services/firebase';
 import { formatarDocumento } from '../utils/documento';
 import { formatarNascimento } from '../utils/nascimento';
 import { lerNascimento } from '../services/meuCadastroService';
+import { lerDadosBancarios } from '../services/dadosBancariosService';
+import { formatarConta, NOME_BANCO } from '../utils/dadosBancarios';
 import { Campo } from './pecas/Basicos';
 import Contato from './pecas/Contato';
 import { UltimoAcessoTexto } from './secoes';
@@ -46,6 +48,25 @@ export function CampoDocumento({ pode, chave, leitor, rotulo }) {
 
 // Data de nascimento (gaveta privada nascimentos/{login}): só admin, mentor e líder da unidade leem (o banco confere).
 // Sem login ainda, não há onde ler: aparece "não informado".
+// Banco Inter do professor do Brasil (gaveta dados_bancarios/{login}): a própria pessoa, admin, mentor e líder da unidade leem.
+export function CampoBancoInter({ pode, uid }) {
+  const { t } = useTranslation();
+  const { carregando, dado, erro } = useLeituraUnica(pode && !!uid, uid, lerDadosBancarios);
+  if (!pode) return null;
+  return (
+    <Campo rotulo={NOME_BANCO} falta={!carregando && !dado}>
+      {carregando ? '…' : erro ? t('centrais.naoCarregou') : dado
+        ? (
+          <div className="space-y-1">
+            <div className="flex items-center gap-1.5"><span className="text-[10px] font-black uppercase text-slate-500">{t('centrais.cadastro.agencia')}</span><Contato icone={Landmark} texto={dado.agencia} copiar /></div>
+            <div className="flex items-center gap-1.5"><span className="text-[10px] font-black uppercase text-slate-500">{t('centrais.cadastro.conta')}</span><Contato icone={Landmark} texto={formatarConta(dado.conta)} copiar /></div>
+          </div>
+        )
+        : t('centrais.naoInformado')}
+    </Campo>
+  );
+}
+
 export function CampoNascimento({ pode, uid }) {
   const { t } = useTranslation();
   const { carregando, dado, erro } = useLeituraUnica(pode && !!uid, uid, lerNascimento);

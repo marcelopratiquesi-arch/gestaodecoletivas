@@ -40,6 +40,8 @@ import { CelulaAcesso } from "../ui/CelulaAcesso";
 import { ColunaOrdenavel, CLASSE_TITULO } from "../ui/ColunaOrdenavel";
 import { MenuDeAcoes } from "../ui/MenuDeAcoes";
 import { Selo } from "../ui/Selo";
+import SeloCadastroIncompleto from "../ui/SeloCadastroIncompleto";
+import { faltaDoCracha } from "../../../utils/cadastroCompleto";
 import { useOrdenacao } from "../ui/useOrdenacao";
 import { FlagIcon } from "../ui/Bandeira";
 import { PAIS_CONFIG, PAISES, DDI_MAP, PAIS_PADRAO as PAIS_DEFAULT, formatarTelefone, exemploDeTelefone as getPhonePlaceholder } from "../ui/telefone";
@@ -177,12 +179,13 @@ export function MentoresTab() {
           segundo: !m.mentorPrincipalId && !!segundoDe(mentores, m.id),
           nunca: !ms,
           parado: !!ms && agoraMs - ms > 30 * 86400000,
+          incompleto: faltaDoCracha(m).length > 0,
       };
   }, [unidadesDe, mentores, agoraMs]);
   const soDaSituacao = useCallback((m) => situacao === 'todos' || situacaoDe(m)[situacao] === true, [situacao, situacaoDe]);
   const contagemSituacao = useMemo(() => {
       const base = mentores.filter(soDoStatus);
-      const c = { todos: base.length, com: 0, sem: 0, segundo: 0, parado: 0, nunca: 0 };
+      const c = { todos: base.length, com: 0, sem: 0, segundo: 0, parado: 0, nunca: 0, incompleto: 0 };
       base.forEach(m => { const s = situacaoDe(m); Object.keys(c).forEach(k => { if (k !== 'todos' && s[k]) c[k]++; }); });
       return c;
   }, [mentores, soDoStatus, situacaoDe]);
@@ -313,7 +316,7 @@ export function MentoresTab() {
         if (bloqueio) { setSalvando(false); return setErro(bloqueio); }
 
         await setDoc(doc(db, "convites_acesso", emailGoogle), {
-          // Documento opcional: o mentor novo só o copia para a gaveta privada dele no 1º acesso (pages/InformarDocumento).
+          // Documento opcional: o mentor novo só o copia para a gaveta privada dele no 1º acesso (components/CadastroObrigatorio).
           ...(docNumero.trim() ? { documento: { tipo: docTipo, numero: limparDocumento(docNumero) } } : {}),
           papel: "mentor",
           status: "pendente",
@@ -492,6 +495,7 @@ export function MentoresTab() {
               { id: "segundo", rotulo: t('mentorsTab.filter.second') },
               { id: "parado", rotulo: t('mentorsTab.filter.stale') },
               { id: "nunca", rotulo: t('mentorsTab.filter.never') },
+              { id: "incompleto", rotulo: t('profileUpdate.incomplete.filter') },
             ].map((f) => (
               <button key={f.id} type="button" onClick={() => setSituacao(f.id)} aria-pressed={situacao === f.id}
                 className={`px-3.5 py-2 rounded-lg text-xs font-black uppercase flex items-center gap-2 transition-colors ${situacao === f.id
@@ -500,7 +504,7 @@ export function MentoresTab() {
                 {f.rotulo}
                 <span className={`min-w-[1.5rem] px-1.5 py-0.5 rounded-md text-[10px] text-center ${situacao === f.id
                   ? "bg-red-600 text-white"
-                  : (f.id === "parado" || f.id === "nunca" || f.id === "sem") && contagemSituacao[f.id] > 0 ? "bg-amber-100 text-amber-700" : "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-300"}`}>{contagemSituacao[f.id]}</span>
+                  : (f.id === "parado" || f.id === "nunca" || f.id === "sem" || f.id === "incompleto") && contagemSituacao[f.id] > 0 ? "bg-amber-100 text-amber-700" : "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-300"}`}>{contagemSituacao[f.id]}</span>
               </button>
             ))}
           </div>
@@ -583,6 +587,7 @@ export function MentoresTab() {
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <LinkCentral tipo="mentor" alvo={m} className="font-black text-slate-800 dark:text-white text-base uppercase">{m.nome}</LinkCentral>
                         <SeloRepetido selo={selosRepetidos.get(`cracha:${m.id}`)} detalheDe={(o) => o.email || ""} />
+                        <SeloCadastroIncompleto falta={faltaDoCracha(m)} />
                       </div>
                       <div className="mt-1.5 space-y-1.5">
                         {principal && <div><Selo tipo="tema" abaId="mentores" icone={Users}>{t('mentorsTab.second.badge', { name: principal.nome || '-' })}</Selo></div>}

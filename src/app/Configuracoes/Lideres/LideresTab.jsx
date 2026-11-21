@@ -35,6 +35,7 @@ import { useFiltroCascata } from "../ui/useFiltroCascata";
 import { useUltimosAcessos } from "../ui/useUltimosAcessos";
 import { paraData } from "../../../utils/ultimoAcesso";
 import SeloRepetido from "../ui/SeloRepetido";
+import { faltaDoCracha } from "../../../utils/cadastroCompleto";
 import { useSelosRepetidos } from "../ui/useSelosRepetidos";
 import { DocumentoModal, BuscaDocumento, AvisoDocumento } from "../Documento/DocumentoModal";
 import i18n from "../../../i18n";
@@ -64,6 +65,7 @@ const DA_SITUACAO = {
   sem: (l) => !l.u.liderUid,
   conferir: (l) => l.u.liderAConferir === true && !!l.u.liderUid,
   temporarios: (l) => l.temTemporario,
+  incompleto: (l) => l.incompleto,
 };
 
 // Computador (>= 1024 px): a tabela de antes (LideresTabela). Celular: a Opção B, aqui embaixo.
@@ -134,7 +136,7 @@ function LideresCelular() {
   const uidsDeAcesso = useMemo(() => minhasUnidades.flatMap((u) => [
     u.liderUid, u.lider2Uid, tipoDeAcesso(u) === "antigo" ? u.uidLogin : null,
   ]), [minhasUnidades]);
-  const { acessoDe, carregando: carregandoAcessos } = useUltimosAcessos(uidsDeAcesso);
+  const { acessoDe, cadastroDe, carregando: carregandoAcessos } = useUltimosAcessos(uidsDeAcesso);
 
   // Pedidos de acesso pelo Google por unidade (para "Escolher líder": quem já pediu aquela unidade).
   const pedidosPorUnidade = useMemo(() => {
@@ -166,12 +168,13 @@ function LideresCelular() {
       u, loginAntigo,
       ultimo: acessoDe(u.liderUid || (loginAntigo ? u.uidLogin : null)),
       temTemporario: !!(doTemp && (doTemp.temporarios.length || doTemp.convites.length)),
+      incompleto: (!!u.liderUid && faltaDoCracha(cadastroDe(u.liderUid)).length > 0) || (!!u.lider2Uid && faltaDoCracha(cadastroDe(u.lider2Uid)).length > 0),
     };
-  }), [filtro.resultado, acessoDe, temp.porUnidade]);
+  }), [filtro.resultado, acessoDe, cadastroDe, temp.porUnidade]);
 
   // Botões arredondados: Todas · Com líder · Sem líder · A conferir · Temporários (cada um com a contagem).
-  const chips = ["todas", "com", "sem", "conferir", "temporarios"].map((id) => ({
-    id, rotulo: t(`leadersTab.listB.chip.${id}`), n: linhasTodas.filter(DA_SITUACAO[id]).length,
+  const chips = ["todas", "com", "sem", "conferir", "temporarios", "incompleto"].map((id) => ({
+    id, rotulo: id === "incompleto" ? t("profileUpdate.incomplete.filter") : t(`leadersTab.listB.chip.${id}`), n: linhasTodas.filter(DA_SITUACAO[id]).length,
   }));
   const linhasDaSituacao = useMemo(() => linhasTodas.filter(DA_SITUACAO[situacao] || DA_SITUACAO.todas), [linhasTodas, situacao]);
 

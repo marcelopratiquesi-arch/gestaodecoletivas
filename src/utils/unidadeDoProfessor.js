@@ -20,3 +20,11 @@ const nomeDe = (catalogs, id) => (catalogs?.unidades || []).find((u) => String(u
 export function fichasDoLogin(catalogs, uid, userData) {
   return (catalogs?.professores || []).filter((p) => (p.uidLogin && p.uidLogin === uid) || (userData?.professorId && String(p.id) === String(userData.professorId)));
 }
+
+/** Ids das unidades em que o professor está: a do crachá + as dos vínculos da ficha dele (vínculo inativo não conta). */
+export function idsDasUnidadesDoProfessor({ userData, ficha, vinculos = [] }) {
+  const ids = new Set();
+  if (userData?.unidadeId) ids.add(String(userData.unidadeId));
+  if (ficha) vinculos.forEach((v) => { if (String(v.professorId) === String(ficha.id) && v.unidadeId && v.status !== "inativo") ids.add(String(v.unidadeId)); });
+  return [...ids];
+}

@@ -18,8 +18,6 @@ const entrouPeloGoogle = (firebaseUser) => temProvedor(firebaseUser, "google.com
 // Admin fica para uma próxima etapa.
 // Professor NÃO migra: o login antigo dele deixa de valer e ele pede acesso (ver professorDeLoginAntigo).
 const PAPEIS_QUE_MIGRAM = ["lider", "unidade", "mentor"];
-// Quem precisa informar o documento de identificação (CPF/DNI/SSN). Professor entra numa etapa futura.
-const PAPEIS_COM_DOCUMENTO = ["lider", "unidade", "mentor", "professor", "admin", "administrador", "master"];
 
 const CHAVE_VISAO = "pratique_visao_admin";
 const lerVisaoGuardada = () => {
@@ -257,11 +255,6 @@ export function AuthProvider({ children }) {
       precisaAtualizarCadastro: !!crachaReal
         && PAPEIS_QUE_MIGRAM.includes(String(crachaReal.role || "").trim().toLowerCase())
         && crachaReal.loginGoogle !== true,
-      // Já atualizou o cadastro mas ainda não informou o documento: tela obrigatória (ver PrivateRoute e pages/InformarDocumento).
-      precisaDocumento: !!crachaReal
-        && PAPEIS_COM_DOCUMENTO.includes(String(crachaReal.role || "").trim().toLowerCase())
-        && crachaReal.documentoOk !== true
-        && !(PAPEIS_QUE_MIGRAM.includes(String(crachaReal.role || "").trim().toLowerCase()) && crachaReal.loginGoogle !== true),
       role: userData?.role || null,
       isAdmin: userData?.role === "admin",
       isMentor: userData?.role === "mentor",

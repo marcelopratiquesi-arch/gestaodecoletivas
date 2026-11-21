@@ -38,6 +38,7 @@ import JuntarFichasModal from "../Backup/JuntarFichasModal";
 import { liberarContatos, mensagemSeContatoEmUso, sincronizarEAvisar } from "../../../services/contatoService";
 import CertificadosAVerificar from "./CertificadosAVerificar";
 import AtualizacoesAConferir from "./AtualizacoesAConferir";
+import PedidosUnidadeAConferir from "./PedidosUnidadeAConferir";
 import CertificadosDoProfessor from "./CertificadosDoProfessor";
 
 import { CelulaContato } from "../ui/CelulaContato";
@@ -45,6 +46,11 @@ import { CelulaAcesso } from "../ui/CelulaAcesso";
 import { ColunaOrdenavel, CLASSE_TITULO } from "../ui/ColunaOrdenavel";
 import { MenuDeAcoes } from "../ui/MenuDeAcoes";
 import { Selo } from "../ui/Selo";
+import SeloCadastroIncompleto from "../ui/SeloCadastroIncompleto";
+import { faltaNaLista } from "../../../utils/cadastroCompleto";
+
+// O que falta no cadastro da ficha (a ficha só sabe de nascimento quando a pessoa tem login: "nascimentoOk" espelhado do crachá).
+const faltaDaFicha = (p) => faltaNaLista({ nome: p.nome, telefone: p.telefone, documentoOk: p.documentoOk, nascimentoOk: p.nascimentoOk, temLogin: !!p.uidLogin });
 import { useOrdenacao } from "../ui/useOrdenacao";
 import { useUltimosAcessos } from "../ui/useUltimosAcessos";
 import { FlagIcon } from "../ui/Bandeira";
@@ -183,6 +189,7 @@ export function ProfessoresTab() {
   const soDoStatus = useCallback((p) => {
       if (!statusFiltro) return true;
       if (statusFiltro === "semDocumento") return p.status === "ativo" && !p.documentoOk;
+      if (statusFiltro === "incompleto") return p.status === "ativo" && faltaDaFicha(p).length > 0;
       return (statusFiltro === "ativo") === (p.status === "ativo");
   }, [statusFiltro]);
   const filtro = useFiltroCascata(meusProfessores, {
@@ -230,7 +237,8 @@ export function ProfessoresTab() {
       const ativos = meusProfessores.filter(p => p.status === 'ativo').length;
       const inativos = meusProfessores.filter(p => p.status !== 'ativo').length;
       const semDocumento = meusProfessores.filter(p => p.status === 'ativo' && !p.documentoOk).length;
-      return { total: meusProfessores.length, ativos, inativos, semDocumento };
+      const incompletos = meusProfessores.filter(p => p.status === 'ativo' && faltaDaFicha(p).length > 0).length;
+      return { total: meusProfessores.length, ativos, inativos, semDocumento, incompletos };
   }, [meusProfessores]);
 
   // Selo "possível repetido": compara as fichas que esta tela já tem (0 leituras novas).
@@ -518,6 +526,7 @@ export function ProfessoresTab() {
       {/* PEDIDOS DE ACESSO DE PROFESSORES (login pessoal pelo Google) */}
       <PedidosProfessor />
       <AtualizacoesAConferir />
+      <PedidosUnidadeAConferir />
       <CertificadosAVerificar />
       {/* HEADER E KPIS */}
       <CabecalhoDaAba abaId="professores" icone={UserPlus} titulo={t('teachersTab.title', 'Gestão de Professores')} subtitulo={t('teachersTab.subtitle', 'Controle de base e vínculos com as unidades.')}
@@ -526,6 +535,7 @@ export function ProfessoresTab() {
           { id: "ativo", rotulo: t('teachersTab.stats.active', 'Ativos'), valor: kpis.ativos, cor: "text-emerald-600", onClick: () => setStatusFiltro("ativo"), ativo: statusFiltro === "ativo" },
           { id: "inativo", rotulo: t('teachersTab.stats.inactive', 'Inativos'), valor: kpis.inativos, cor: "text-red-500", onClick: () => setStatusFiltro("inativo"), ativo: statusFiltro === "inativo" },
           { id: "semDocumento", rotulo: t('teachersTab.stats.noDocument'), valor: kpis.semDocumento, cor: "text-amber-600", onClick: () => setStatusFiltro("semDocumento"), ativo: statusFiltro === "semDocumento" },
+          { id: "incompleto", rotulo: t('profileUpdate.incomplete.filter'), valor: kpis.incompletos, cor: "text-amber-600", onClick: () => setStatusFiltro("incompleto"), ativo: statusFiltro === "incompleto" },
         ]} />}>
         {role === "admin" && (
           <BotaoSecundario icone={corrigindoBase ? Loader2 : Layers} onClick={corrigirEmailsAntigos} disabled={corrigindoBase} girar={corrigindoBase}>
@@ -598,8 +608,9 @@ export function ProfessoresTab() {
                                             } : undefined}
                                         />
                                     </div>
-                                    {(p.documentoOk || qtdWorkshops > 0) && (
+                                    {(p.documentoOk || qtdWorkshops > 0 || (p.status === "ativo" && faltaDaFicha(p).length > 0)) && (
                                         <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
+                                            {p.status === "ativo" && <SeloCadastroIncompleto falta={faltaDaFicha(p)} />}
                                             {p.documentoOk && <Selo tipo="tema" abaId="professores" icone={IdCard} title={t('teachersTab.cpf.hasDocument')}>{t('teachersTab.cpf.badge')}</Selo>}
                                             {qtdWorkshops > 0 && (
                                                 <button type="button" onClick={() => setProfWorkshops(p)} title={t('teachersTab.workshopsBadgeTip')}>
