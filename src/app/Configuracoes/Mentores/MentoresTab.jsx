@@ -316,7 +316,7 @@ export function MentoresTab() {
         if (bloqueio) { setSalvando(false); return setErro(bloqueio); }
 
         await setDoc(doc(db, "convites_acesso", emailGoogle), {
-          // Documento opcional: o mentor novo só o copia para a gaveta privada dele no 1º acesso (pages/InformarDocumento).
+          // Documento opcional: o mentor novo só o copia para a gaveta privada dele no 1º acesso (components/CadastroObrigatorio).
           ...(docNumero.trim() ? { documento: { tipo: docTipo, numero: limparDocumento(docNumero) } } : {}),
           papel: "mentor",
           status: "pendente",

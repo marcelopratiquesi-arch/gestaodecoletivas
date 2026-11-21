@@ -122,8 +122,11 @@
       "nome": "nombre completo",
       "telefone": "WhatsApp",
       "pais": "país",
-      "nascimento": "fecha de nacimiento"
-    }
+      "nascimento": "fecha de nacimiento",
+      "documento": "documento (CPF/DNI/SSN)"
+    },
+    "lockedDocument": "Sin el documento no se puede continuar: informalo ahora (no se puede dejar para después).",
+    "documentInUse": "Este documento ya está registrado en otra persona. Hablá con tu mentor o con el gestor."
   },
   "incomplete": {
     "badge": "Registro incompleto",

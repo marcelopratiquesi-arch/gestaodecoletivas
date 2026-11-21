@@ -1,14 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import { faltaNaLista, faltaDoCracha, camposFaltando, hojeLocal, proximoAdiamento, situacaoDoAdiamento, entraNaRegraDoCadastro } from '../../src/utils/cadastroCompleto';
 
-const completo = { nome: 'Ana Souza', telefone: '(31) 98888-7777', pais: 'BR', nascimentoOk: true, role: 'professor' };
+const completo = { nome: 'Ana Souza', telefone: '(31) 98888-7777', pais: 'BR', documentoOk: true, nascimentoOk: true, role: 'professor' };
 
 describe('o que falta no cadastro', () => {
   it('cadastro completo não falta nada', () => {
     expect(camposFaltando({ cracha: completo })).toEqual([]);
   });
   it('aponta nome, telefone, país e nascimento que faltam', () => {
-    expect(camposFaltando({ cracha: { role: 'mentor' } })).toEqual(['nome', 'telefone', 'pais', 'nascimento']);
+    expect(camposFaltando({ cracha: { role: 'mentor' } })).toEqual(['nome', 'telefone', 'pais', 'documento', 'nascimento']);
     expect(camposFaltando({ cracha: { ...completo, telefone: '123' } })).toEqual(['telefone']);
     expect(camposFaltando({ cracha: { ...completo, nascimentoOk: undefined } })).toEqual(['nascimento']);
   });
@@ -33,6 +33,11 @@ describe('adiar o aviso: 1 por dia, trava no 3º dia', () => {
     const c2 = { ...c1, ...proximoAdiamento(c1, '2026-11-22') };
     expect(situacaoDoAdiamento(c2, '2026-11-22')).toMatchObject({ adiadoHoje: true, travado: false });
     expect(situacaoDoAdiamento(c2, '2026-11-23')).toMatchObject({ travado: true, podeAdiar: false, adiadoHoje: false });
+  });
+  it('documento faltando trava na hora, sem adiar', () => {
+    expect(camposFaltando({ cracha: { ...completo, documentoOk: undefined } })).toEqual(['documento']);
+    expect(situacaoDoAdiamento({}, '2026-11-21', true)).toMatchObject({ travado: true, podeAdiar: false, adiadoHoje: false });
+    expect(situacaoDoAdiamento({ cadastroAdiamentos: 1, cadastroAdiadoEm: '2026-11-21' }, '2026-11-21', true)).toMatchObject({ travado: true, adiadoHoje: false });
   });
   it('hoje em "AAAA-MM-DD" e só os papéis com acesso entram na regra', () => {
     expect(hojeLocal(new Date(2026, 10, 5))).toBe('2026-11-05');

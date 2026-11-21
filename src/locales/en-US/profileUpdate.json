@@ -122,8 +122,11 @@
       "nome": "full name",
       "telefone": "WhatsApp",
       "pais": "country",
-      "nascimento": "date of birth"
-    }
+      "nascimento": "date of birth",
+      "documento": "ID document (CPF/DNI/SSN)"
+    },
+    "lockedDocument": "You cannot continue without the ID document: enter it now (it cannot be postponed).",
+    "documentInUse": "This document is already registered to someone else. Talk to your mentor or the manager."
   },
   "incomplete": {
     "badge": "Incomplete profile",

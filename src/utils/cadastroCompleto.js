@@ -1,8 +1,8 @@
 // "Cadastro completo": o que cada pessoa precisa ter preenchido e a regra de adiar o aviso. Funções puras, com teste
 // (tests/unit/cadastroCompleto.test.js).
 //
-// Obrigatórios (decisão do dono): nome, WhatsApp, país e data de nascimento. O documento (CPF/DNI/SSN) continua pela tela
-// obrigatória própria ("Informar documento"), que trava na hora. E-mail de contato e Banco Inter são opcionais por enquanto.
+// Obrigatórios (decisão do dono): nome, WhatsApp, país, documento (CPF/DNI/SSN) e data de nascimento. O DOCUMENTO trava na hora
+// (sem adiar, como era a antiga tela "Informar documento"); os outros têm as chances de adiar. E-mail de contato e Banco Inter são opcionais.
 //
 // Aviso de cadastro incompleto: a pessoa pode ADIAR 1 vez por dia; no 3º dia o aviso trava (só sai completando ou saindo do
 // sistema). A contagem fica no crachá (cadastroAdiamentos / cadastroAdiadoEm), então vale no celular e no computador.
@@ -19,7 +19,7 @@ export function hojeLocal(agora = new Date()) {
 }
 
 /**
- * Lista do que falta: "nome" | "telefone" | "pais" | "nascimento".
+ * Lista do que falta: "nome" | "telefone" | "pais" | "documento" | "nascimento".
  * `paisDaUnidade` = país da unidade do crachá (crachá antigo sem "pais" usa o da unidade).
  * `temNascimento` = a data já está guardada (a marca "nascimentoOk" do crachá também vale).
  */
@@ -29,13 +29,15 @@ export function camposFaltando({ cracha, paisDaUnidade = "", temNascimento = fal
   if (digitos(cracha?.telefone).length < 8) falta.push("telefone");
   const pais = String(cracha?.pais || paisDaUnidade || "").toUpperCase();
   if (!PAISES_VALIDOS.includes(pais)) falta.push("pais");
+  if (cracha?.documentoOk !== true) falta.push("documento");
   if (!(cracha?.nascimentoOk === true || temNascimento)) falta.push("nascimento");
   return falta;
 }
 
-/** Em que pé está o adiamento: já adiou hoje? ainda pode adiar? travou? */
-export function situacaoDoAdiamento(cracha, hoje = hojeLocal()) {
+/** Em que pé está o adiamento: já adiou hoje? ainda pode adiar? travou? `travaNaHora` = falta o documento (não adia). */
+export function situacaoDoAdiamento(cracha, hoje = hojeLocal(), travaNaHora = false) {
   const usados = Math.max(0, Number(cracha?.cadastroAdiamentos) || 0);
+  if (travaNaHora) return { usados, adiadoHoje: false, travado: true, podeAdiar: false, restantes: 0 };
   const adiadoHoje = usados > 0 && cracha?.cadastroAdiadoEm === hoje;
   const travado = !adiadoHoje && usados >= MAX_ADIAMENTOS;
   return { usados, adiadoHoje, travado, podeAdiar: !adiadoHoje && !travado, restantes: Math.max(0, MAX_ADIAMENTOS - usados) };

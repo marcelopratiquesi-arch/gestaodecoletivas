@@ -1,5 +1,7 @@
 // Aviso OBRIGATÓRIO de cadastro incompleto (admin, mentor, líder e professor). Aparece por cima do sistema quando falta
-// nome, WhatsApp, país ou data de nascimento (o documento tem a própria tela obrigatória).
+// nome, WhatsApp, país, documento (CPF/DNI/SSN) ou data de nascimento.
+//  - DOCUMENTO trava NA HORA (sem "lembrar depois"), como a antiga tela "Informar documento". Antes de pedir, o sistema procura
+//    o documento já informado (gaveta, pedido de acesso ou convite) e só copia (services/recuperarDocumento.js).
 //  - Mostra SÓ o que falta; a pessoa preenche ali mesmo, salva e vai para "Meu cadastro" conferir.
 //  - "Lembrar depois": 1 vez por dia. No 3º dia trava (só sai completando ou saindo do sistema).
 //  - A contagem fica no crachá (vale no celular e no computador). Regras e conta: utils/cadastroCompleto.js.
@@ -13,6 +15,10 @@ import PopupFlutuante from "./PopupFlutuante";
 import { useAuth } from "../contexts/AuthContext";
 import { useCatalogs } from "../contexts/CatalogContext";
 import { camposFaltando, entraNaRegraDoCadastro, proximoAdiamento, situacaoDoAdiamento } from "../utils/cadastroCompleto";
+import CampoDocumento from "./acesso/CampoDocumento";
+import { documentoValido, limparDocumento, tipoDocumentoDoPais } from "../utils/documento";
+import { ERRO_DOCUMENTO_EM_USO } from "../services/documentoService";
+import { recuperarDocumentoJaInformado } from "../services/recuperarDocumento";
 import { PAISES, DDI_MAP, formatarTelefone, exemploDeTelefone } from "../app/Configuracoes/ui/telefone";
 import { normalizarPais } from "../utils/feriados";
 import { fichasDoLogin } from "../utils/unidadeDoProfessor";
@@ -52,11 +58,26 @@ export default function CadastroObrigatorio() {
     return () => { vivo = false; };
   }, [precisaLer, uid]);
 
+  // Sem documento: antes de pedir, procura o que já foi informado (UMA vez por entrada) e só copia.
+  const semDocumento = regra && crachaReal?.documentoOk !== true;
+  const [recuperacao, setRecuperacao] = useState(null); // { uid, erro? }
+  useEffect(() => {
+    if (!semDocumento) return undefined;
+    let vivo = true;
+    recuperarDocumentoJaInformado({ uid, email: crachaRef.current?.email || user?.email })
+      .then(async (achou) => { if (!vivo) return; if (achou) await recarregarCracha(); setRecuperacao({ uid }); })
+      .catch((e) => { console.error(e); if (vivo) setRecuperacao({ uid, erro: e?.message === ERRO_DOCUMENTO_EM_USO ? "inUse" : "x" }); });
+    return () => { vivo = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [semDocumento, uid]);
+  const procurando = semDocumento && recuperacao?.uid !== uid;
+
   const unidades = catalogs?.unidades;
   const paisDaUnidade = (unidades || []).find((u) => String(u.id) === String(crachaReal?.unidadeId))?.pais || "";
-  const esperando = !regra || (semMarca && catalogoPendente) || (precisaLer && lido?.uid !== uid) || (!!crachaReal?.unidadeId && !crachaReal?.pais && loadingCatalogs);
+  const esperando = !regra || procurando || (semMarca && catalogoPendente) || (precisaLer && lido?.uid !== uid) || (!!crachaReal?.unidadeId && !crachaReal?.pais && loadingCatalogs);
   const falta = esperando ? [] : camposFaltando({ cracha: crachaReal, paisDaUnidade, temNascimento: lido?.uid === uid && lido.tem });
-  const sit = situacaoDoAdiamento(crachaReal);
+  // Documento faltando = trava na hora (sem "lembrar depois").
+  const sit = situacaoDoAdiamento(crachaReal, undefined, falta.includes("documento"));
   const [adiadoAgora, setAdiadoAgora] = useState(false);
 
   // Formulário (começa com o que já existe).
@@ -65,6 +86,8 @@ export default function CadastroObrigatorio() {
   const [pais, setPais] = useState(paisInicial);
   const [telefone, setTelefone] = useState(formatarTelefone(String(crachaReal?.telefone || ""), paisInicial));
   const [nascimento, setNascimento] = useState("");
+  const [docTipo, setDocTipo] = useState(tipoDocumentoDoPais(paisInicial));
+  const [docNumero, setDocNumero] = useState("");
   const [ocupado, setOcupado] = useState(false);
   const [erro, setErro] = useState("");
 
@@ -76,10 +99,13 @@ export default function CadastroObrigatorio() {
   const faltaTelefone = falta.includes("telefone");
   const faltaPais = falta.includes("pais");
   const faltaNascimento = falta.includes("nascimento");
+  const faltaDocumento = falta.includes("documento");
+  const paisDoForm = faltaPais ? pais : paisInicial;
 
   function trocarPais(p) {
     setPais(p);
     setTelefone((v) => formatarTelefone(v, p));
+    setDocTipo(tipoDocumentoDoPais(p));
   }
 
   async function salvar(e) {
@@ -89,6 +115,7 @@ export default function CadastroObrigatorio() {
     const telefoneFinal = (faltaTelefone ? telefone : String(crachaReal.telefone || "")).trim();
     if (nomeLimpo.length < 3) return setErro(t("profileUpdate.me.errors.name"));
     if (telefoneFinal.replace(/\D/g, "").length < 8) return setErro(t("profileUpdate.me.errors.phone"));
+    if (faltaDocumento && !documentoValido(docTipo, docNumero)) return setErro(t("document.errors.invalid"));
     if (faltaNascimento && (!nascimento || !nascimentoValido(nascimento))) return setErro(t("profileUpdate.me.errors.birth"));
     const paisAntes = normalizarPais(crachaReal.pais || paisDaUnidade);
     const mail = String(crachaReal.emailContato || crachaReal.email || user?.email || "");
@@ -97,15 +124,16 @@ export default function CadastroObrigatorio() {
     try {
       const r = await salvarMeuCadastro({
         uid, fichaId: ficha?.id || "", unidadesDoLider: vagasDeLiderDaPessoa(unidades, crachaReal, uid), nomeParaAuditoria: nomeLimpo,
+        precisaMarcarDocumento: faltaDocumento,
         antes: { nome: String(crachaReal.nome || ""), telefone: String(crachaReal.telefone || ""), pais: paisAntes, emailContato: mail, emailLogin: user?.email || "", documento: null, nascimento: "" },
-        depois: { nome: nomeLimpo, telefone: telefoneFinal, pais: faltaPais ? pais : paisAntes, emailContato: mail, documento: null, nascimento: faltaNascimento ? nascimento : "" },
+        depois: { nome: nomeLimpo, telefone: telefoneFinal, pais: faltaPais ? pais : paisAntes, emailContato: mail, documento: faltaDocumento ? { tipo: docTipo, numero: limparDocumento(docNumero) } : null, nascimento: faltaNascimento ? nascimento : "" },
       }, t);
       if (!r.ok) return setErro(r.mensagem);
       await recarregarCracha();
       navigate("/app/meu-cadastro");
     } catch (err) {
       console.error(err);
-      setErro(t("profileUpdate.me.errors.save"));
+      setErro(err?.message === ERRO_DOCUMENTO_EM_USO ? t("profileUpdate.gate.documentInUse") : t("profileUpdate.me.errors.save"));
     } finally { setOcupado(false); }
   }
 
@@ -139,7 +167,7 @@ export default function CadastroObrigatorio() {
       <form id="form-cadastro-obrigatorio" onSubmit={salvar} className="p-5 space-y-4">
         <p className="text-sm font-bold text-slate-700 dark:text-slate-200 normal-case">{t("profileUpdate.gate.intro", { fields: nomesDosCampos })}</p>
         <p className={`text-xs font-bold normal-case ${sit.travado ? "text-red-600" : "text-slate-500 dark:text-slate-400"}`}>
-          {sit.travado ? t("profileUpdate.gate.locked") : t("profileUpdate.gate.postponeHint", { count: sit.restantes })}
+          {faltaDocumento ? t("profileUpdate.gate.lockedDocument") : sit.travado ? t("profileUpdate.gate.locked") : t("profileUpdate.gate.postponeHint", { count: sit.restantes })}
         </p>
 
         {faltaNome && (
@@ -160,9 +188,16 @@ export default function CadastroObrigatorio() {
           <div>
             <label htmlFor="co-tel" className={ROTULO}>{t("profileUpdate.me.phone")} *</label>
             <div className="flex gap-2">
-              <span className="px-3 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200 text-sm font-black">{DDI_MAP[faltaPais ? pais : paisInicial]}</span>
-              <input id="co-tel" value={telefone} onChange={(e) => setTelefone(formatarTelefone(e.target.value, faltaPais ? pais : paisInicial))} inputMode="tel" placeholder={exemploDeTelefone(faltaPais ? pais : paisInicial)} disabled={ocupado} className={CAMPO} />
+              <span className="px-3 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200 text-sm font-black">{DDI_MAP[paisDoForm]}</span>
+              <input id="co-tel" value={telefone} onChange={(e) => setTelefone(formatarTelefone(e.target.value, paisDoForm))} inputMode="tel" placeholder={exemploDeTelefone(paisDoForm)} disabled={ocupado} className={CAMPO} />
             </div>
+          </div>
+        )}
+        {faltaDocumento && (
+          <div>
+            <span className={ROTULO}>{t("profileUpdate.me.document")} *</span>
+            <CampoDocumento claro id="co-doc" key={paisDoForm} tipoDoPais={tipoDocumentoDoPais(paisDoForm)} tipo={docTipo} onTipo={setDocTipo} valor={docNumero} onValor={setDocNumero} desabilitado={ocupado} />
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 normal-case mt-1">{t("document.hint")}</p>
           </div>
         )}
         {faltaNascimento && (
@@ -172,6 +207,7 @@ export default function CadastroObrigatorio() {
             <p className="text-[11px] text-slate-500 dark:text-slate-400 normal-case mt-1">{t("profileUpdate.me.birthHint")}</p>
           </div>
         )}
+        {!erro && recuperacao?.erro === "inUse" && <p role="alert" className="text-xs font-bold text-red-600 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-lg p-3 normal-case">{t("profileUpdate.gate.documentInUse")}</p>}
         {erro && <p role="alert" className="text-xs font-bold text-red-600 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-lg p-3 normal-case">{erro}</p>}
       </form>
     </PopupFlutuante>
