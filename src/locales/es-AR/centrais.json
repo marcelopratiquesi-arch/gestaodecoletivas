@@ -76,7 +76,9 @@
     "pais": "País",
     "acesso": "Acceso al sistema",
     "cpf": "CPF",
-    "documento": "Documento"
+    "documento": "Documento",
+    "agencia": "Agencia",
+    "conta": "Cuenta"
   },
   "emDia": {
     "titulo": "¿Está todo al día?",

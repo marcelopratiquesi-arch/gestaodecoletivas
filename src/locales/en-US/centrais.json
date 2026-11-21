@@ -76,7 +76,9 @@
     "pais": "Country",
     "acesso": "System access",
     "cpf": "Tax ID (CPF)",
-    "documento": "Document"
+    "documento": "Document",
+    "agencia": "Branch",
+    "conta": "Account"
   },
   "emDia": {
     "titulo": "Is everything up to date?",

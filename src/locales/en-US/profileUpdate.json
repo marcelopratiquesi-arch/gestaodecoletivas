@@ -92,5 +92,21 @@
     "approveConfirm": "Approve unit {{unit}} for {{name}}?",
     "refusePrompt": "Reason for declining {{name}} (optional):",
     "already": "Already in this unit"
+  },
+  "bank": {
+    "title": "Banco Inter",
+    "hint": "Enter your {{bank}} branch and account to be paid for your classes. Who can see it: you, your unit's leader and mentor, and the administrator. Not required for now.",
+    "agency": "Branch",
+    "account": "Account (with check digit)",
+    "save": "Save bank details",
+    "saved": "Bank details saved.",
+    "remove": "Remove",
+    "removeConfirm": "Remove the bank details?",
+    "errors": {
+      "load": "Could not load the bank details.",
+      "agency": "Check the branch (3 to 5 digits, e.g. 0001).",
+      "account": "Check the account with the check digit (e.g. 1234567-8).",
+      "save": "Could not save. Try again."
+    }
   }
 }

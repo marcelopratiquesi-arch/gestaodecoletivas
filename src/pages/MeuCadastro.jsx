@@ -20,6 +20,8 @@ import { normalizarPais } from "../utils/feriados";
 import { ehLider, unidadesDoLider } from "../permissions";
 import MinhasUnidades from "./meuCadastro/MinhasUnidades";
 import UnidadesDoProfessor from "./meuCadastro/UnidadesDoProfessor";
+import BancoInter from "./meuCadastro/BancoInter";
+import { professorTemBancoInter } from "../utils/dadosBancarios";
 import SeletorModalidades from "../components/acesso/SeletorModalidades";
 import { modalidadesDoTexto } from "../components/acesso/acessoDados";
 import { CAMPO, CAMPO_LEITURA, CARTAO, ROTULO, SECAO } from "./meuCadastro/estilos";
@@ -253,6 +255,9 @@ export default function MeuCadastro() {
           </>
         )}
       </form>
+
+      {/* ===== BANCO INTER (só professor do Brasil) ===== */}
+      {souProfessor && guardado && professorTemBancoInter(guardado.pais) && <BancoInter uid={uid} nome={userData?.nome || ""} />}
 
       {/* ===== MINHAS UNIDADES (mentor e líder) ===== */}
       {(souLider || souMentor) && <MinhasUnidades cracha={userData} uid={uid} emailLogin={user?.email} unidades={unidades} />}

@@ -1100,6 +1100,27 @@ service cloud.firestore {
       allow delete: if (logado() && request.auth.uid == uid) || souAdmin();
     }
 
+    // ===================== DADOS BANCÁRIOS DO PROFESSOR (dados_bancarios) =====================
+    // Banco Inter (agência e conta) de quem recebe pelas aulas: gaveta privada, id = login da pessoa; nunca no crachá aberto,
+    // na ficha nem em lista. Lê: a própria pessoa, o admin, o mentor e o líder da unidade dela (quem paga). Grava: só o
+    // próprio professor (e o admin, para ajudar). O número não vai para a auditoria.
+    match /dados_bancarios/{uid} {
+      function bancoValido() {
+        let d = request.resource.data;
+        return d.keys().hasOnly(['banco', 'agencia', 'conta', 'atualizadoEm'])
+          && d.banco == 'inter'
+          && d.agencia is string && d.agencia.matches('^[0-9]{3,5}$')
+          && d.conta is string && d.conta.matches('^[0-9]{4,15}$')
+          && d.atualizadoEm == request.time;
+      }
+      function unidadeDoBanco() { return get(/databases/$(database)/documents/usuarios/$(uid)).data.get('unidadeId', ''); }
+      allow read: if (autenticado() && request.auth.uid == uid) || souAdmin()
+        || (logado() && meuPapel() == 'mentor' && mentorDaUnidadeId(unidadeDoBanco()))
+        || (logado() && liderDestaUnidade(unidadeDoBanco()));
+      allow create, update: if bancoValido() && ((logado() && request.auth.uid == uid && meuPapel() == 'professor') || souAdmin());
+      allow delete: if souAdmin() || (autenticado() && request.auth.uid == uid);
+    }
+
     // ===================== PEDIDO DE UNIDADE NOVA DO PROFESSOR (pedidos_unidade_professor) =====================
     // O professor pede para dar aula em mais uma unidade (pelo Meu cadastro). Um documento por unidade pedida
     // (id = login + "_" + unidade). Quem confere: admin, mentor da unidade pedida e líder dela. Aprovado = cria o vínculo
@@ -1235,8 +1256,8 @@ service cloud.firestore {
     // (No Firestore, se QUALQUER regra libera, a ação passa; por isso as coleções com regra própria precisam estar na
     // lista de exceções de leitura e de escrita aqui embaixo.)
     match /{colecao}/{resto=**} {
-      allow read: if logado() && !(colecao in ['feriados_propostas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'documentos_privados', 'nascimentos', 'documentos_do_pedido', 'documentos_unicos', 'documentos_ficha', 'documentos_professor', 'contatos_unicos', 'telemetria_leituras', 'tabela_precos', 'workshops_cadastro', 'certificados_professor', 'atualizacoes_professor', 'pedidos_unidade_professor', 'indicadores_mensais', 'auditoria_financeiro', 'unipower_stock', 'unipower_workshops', 'unipower_transacoes']);
-      allow write: if souAdmin() && !(colecao in ['feriados', 'feriados_propostas', 'usuarios', 'publico', 'validacoes', 'aulas', 'aulas_publicas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'resumos_mensais', 'documentos_privados', 'nascimentos', 'documentos_do_pedido', 'documentos_unicos', 'professores', 'documentos_ficha', 'documentos_professor', 'contatos_unicos', 'telemetria_leituras', 'tabela_precos', 'workshops_cadastro', 'certificados_professor', 'atualizacoes_professor', 'pedidos_unidade_professor', 'unidades', 'configuracoes', 'vinculos']);
+      allow read: if logado() && !(colecao in ['feriados_propostas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'documentos_privados', 'nascimentos', 'documentos_do_pedido', 'documentos_unicos', 'documentos_ficha', 'documentos_professor', 'contatos_unicos', 'telemetria_leituras', 'tabela_precos', 'workshops_cadastro', 'certificados_professor', 'atualizacoes_professor', 'pedidos_unidade_professor', 'dados_bancarios', 'indicadores_mensais', 'auditoria_financeiro', 'unipower_stock', 'unipower_workshops', 'unipower_transacoes']);
+      allow write: if souAdmin() && !(colecao in ['feriados', 'feriados_propostas', 'usuarios', 'publico', 'validacoes', 'aulas', 'aulas_publicas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'resumos_mensais', 'documentos_privados', 'nascimentos', 'documentos_do_pedido', 'documentos_unicos', 'professores', 'documentos_ficha', 'documentos_professor', 'contatos_unicos', 'telemetria_leituras', 'tabela_precos', 'workshops_cadastro', 'certificados_professor', 'atualizacoes_professor', 'pedidos_unidade_professor', 'dados_bancarios', 'unidades', 'configuracoes', 'vinculos']);
     }
   }
 }

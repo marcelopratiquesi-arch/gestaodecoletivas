@@ -92,5 +92,21 @@
     "approveConfirm": "Aprovar a unidade {{unit}} para {{name}}?",
     "refusePrompt": "Motivo da recusa para {{name}} (opcional):",
     "already": "Já é desta unidade"
+  },
+  "bank": {
+    "title": "Banco Inter",
+    "hint": "Informe a agência e a conta do {{bank}} para receber pelas aulas. Quem vê: você, o líder e o mentor da sua unidade e o administrador. Por enquanto não é obrigatório.",
+    "agency": "Agência",
+    "account": "Conta (com o dígito)",
+    "save": "Salvar dados do banco",
+    "saved": "Dados do banco salvos.",
+    "remove": "Remover",
+    "removeConfirm": "Remover os dados do banco?",
+    "errors": {
+      "load": "Não foi possível carregar os dados do banco.",
+      "agency": "Confira a agência (de 3 a 5 números, ex.: 0001).",
+      "account": "Confira a conta com o dígito (ex.: 1234567-8).",
+      "save": "Não foi possível salvar. Tente de novo."
+    }
   }
 }
