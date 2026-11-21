@@ -65,5 +65,13 @@
   "noModalityToday": "Hoje ({{day}}) não tem {{modality}} nesta unidade.",
   "seeFullWeek": "Ver semana completa",
   "filterHint": "Toque numa modalidade para filtrar a grade",
-  "clearModalityFilter": "Limpar filtro"
+  "clearModalityFilter": "Limpar filtro",
+  "reformNow": {
+    "title": "Unidade fechada para reforma",
+    "text": "Sem aulas de {{ini}} a {{fim}}. As aulas voltam em {{retorno}}."
+  },
+  "reformSoon": {
+    "title": "Reforma programada",
+    "text": "A unidade vai fechar de {{ini}} a {{fim}}, sem aulas nesse período. As aulas voltam em {{retorno}}."
+  }
 }

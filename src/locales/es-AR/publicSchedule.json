@@ -65,5 +65,13 @@
   "noModalityToday": "Hoy ({{day}}) no hay {{modality}} en esta sede.",
   "seeFullWeek": "Ver semana completa",
   "filterHint": "Tocá una modalidad para filtrar la grilla",
-  "clearModalityFilter": "Limpiar filtro"
+  "clearModalityFilter": "Limpiar filtro",
+  "reformNow": {
+    "title": "Unidad cerrada por remodelación",
+    "text": "Sin clases del {{ini}} al {{fim}}. Las clases vuelven el {{retorno}}."
+  },
+  "reformSoon": {
+    "title": "Remodelación programada",
+    "text": "La unidad cerrará del {{ini}} al {{fim}}, sin clases en ese período. Las clases vuelven el {{retorno}}."
+  }
 }
