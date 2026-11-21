@@ -600,20 +600,28 @@ service cloud.firestore {
       // O banco limita cada verificação a 1000 operações; esta regra é longa, então a ordem importa.
       allow update:
         // "Último acesso": a própria pessoa carimba só esse campo, com a hora do servidor (a aba Mentores mostra).
-        if (request.auth.uid == uid && logado() && camposAlterados().hasOnly(['ultimoAcesso'])
+        if (request.auth.uid == uid && camposAlterados().hasOnly(['ultimoAcesso']) && logado()
             && request.resource.data.ultimoAcesso == request.time)
-        // "Meu cadastro" (todos os papéis): a própria pessoa salva na hora os dados de contato (nome, telefone, país, e-mail de contato).
+        // "Meu cadastro" (todos os papéis): a própria pessoa salva na hora os dados de contato (nome, telefone, país, e-mail de contato),
+        // a marca "nascimentoOk" e o adiamento do aviso de cadastro incompleto.
         // O e-mail de LOGIN (email) e o papel não mudam por aqui. Fica em 2º lugar e começa pelas checagens baratas
         // (esta regra já usa quase todo o limite de 1000 verificações do banco: no fim da lista o professor não chegava a ser avaliado).
-        || (request.auth.uid == uid && camposAlterados().hasOnly(['nome', 'telefone', 'pais', 'emailContato'])
-            && request.resource.data.nome is string && request.resource.data.nome.size() >= 3 && request.resource.data.nome.size() <= 80
-            && request.resource.data.telefone is string && request.resource.data.telefone.size() >= 6 && request.resource.data.telefone.size() <= 30
+        || (request.auth.uid == uid && camposAlterados().hasOnly(['nome', 'telefone', 'pais', 'emailContato', 'nascimentoOk', 'cadastroAdiamentos', 'cadastroAdiadoEm'])
+            && camposAlterados().size() > 0
+            && (!camposAlterados().hasAny(['nome']) || (request.resource.data.nome is string && request.resource.data.nome.size() >= 3 && request.resource.data.nome.size() <= 80))
+            && (!camposAlterados().hasAny(['telefone']) || (request.resource.data.telefone is string && request.resource.data.telefone.size() >= 6 && request.resource.data.telefone.size() <= 30))
             && request.resource.data.get('pais', 'BR') in ['BR', 'AR', 'US']
             && request.resource.data.get('emailContato', '') is string && request.resource.data.get('emailContato', '').size() <= 120
+            // "nascimentoOk": marca de que a data de nascimento já está na gaveta (o banco confere que ela existe de verdade).
+            && (!camposAlterados().hasAny(['nascimentoOk']) || (request.resource.data.nascimentoOk == true && existsAfter(/databases/$(database)/documents/nascimentos/$(uid))))
+            // Adiar o aviso de cadastro incompleto: 1 por dia, no máximo 3 contados (a tela trava no 3º dia).
+            && (!camposAlterados().hasAny(['cadastroAdiamentos', 'cadastroAdiadoEm'])
+                || (request.resource.data.cadastroAdiamentos is int && request.resource.data.cadastroAdiamentos >= 0 && request.resource.data.cadastroAdiamentos <= 3
+                    && request.resource.data.cadastroAdiadoEm is string && request.resource.data.cadastroAdiadoEm.size() == 10))
             && papelDoAlvo() in ['professor', 'lider', 'unidade', 'mentor', 'admin', 'administrador', 'master'] && logado())
         // Depois de gravar o documento na gaveta privada, a PRÓPRIA pessoa só marca "documentoOk" no crachá
         // (o banco confere que o documento existe de verdade, na mesma gravação ou antes).
-        || (request.auth.uid == uid && logado() && camposAlterados().hasOnly(['documentoOk'])
+        || (request.auth.uid == uid && camposAlterados().hasOnly(['documentoOk']) && logado()
             && request.resource.data.documentoOk == true && existsAfter(caminhoDocumentoUsuario(uid)))
         // Atualização de cadastro (troca do login antigo pelo login pessoal do Google): a própria pessoa
         // atualiza SÓ os dados de contato, e só depois de conectar o Google à conta. O papel não muda,

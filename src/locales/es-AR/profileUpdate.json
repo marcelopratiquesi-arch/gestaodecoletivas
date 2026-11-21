@@ -108,5 +108,21 @@
       "account": "Revisá la cuenta con el dígito (ej.: 1234567-8).",
       "save": "No se pudo guardar. Probá de nuevo."
     }
+  },
+  "gate": {
+    "title": "Completá tu registro",
+    "intro": "Falta completar: {{fields}}. Es rápido y queda guardado.",
+    "postponeHint_one": "Podés dejarlo para después {{count}} vez más (1 por día). Después de eso, tenés que completarlo para seguir.",
+    "postponeHint_other": "Podés dejarlo para después {{count}} veces más (1 por día). Después de eso, tenés que completarlo para seguir.",
+    "locked": "Para seguir usando el sistema, completá tu registro ahora.",
+    "later": "Recordármelo después",
+    "save": "Guardar y revisar",
+    "logout": "Salir",
+    "fields": {
+      "nome": "nombre completo",
+      "telefone": "WhatsApp",
+      "pais": "país",
+      "nascimento": "fecha de nacimiento"
+    }
   }
 }

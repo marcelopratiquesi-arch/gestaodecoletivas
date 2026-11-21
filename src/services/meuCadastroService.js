@@ -6,7 +6,7 @@
 //  - data de nascimento: gaveta privada nascimentos/{uid} (só a pessoa, o admin, o mentor e o líder da unidade leem);
 //  - reserva de e-mail/telefone (contatoService) e uma linha na auditoria (sem documento nem nascimento).
 // O contrato (CLT/SAVER) NÃO passa por aqui: continua pedindo aprovação (atualizacaoProfessorService).
-import { addDoc, collection, deleteDoc, doc, getDoc, serverTimestamp, writeBatch } from "firebase/firestore";
+import { addDoc, collection, deleteDoc, doc, getDoc, serverTimestamp, updateDoc, writeBatch } from "firebase/firestore";
 import { db } from "./firebase";
 import { documentoNoLote, gravarComAviso, lerDocumento } from "./documentoService";
 import { mensagemSeContatoEmUso, sincronizarEAvisar } from "./contatoService";
@@ -21,6 +21,12 @@ export async function lerNascimento(uid) {
     throw e;
   }
 }
+
+/** Quem já tinha a data guardada antes da marca existir: coloca a marca no crachá (o banco confere que a data existe). */
+export const marcarNascimentoOk = (uid) => updateDoc(doc(db, "usuarios", uid), { nascimentoOk: true });
+
+/** "Lembrar depois" do aviso de cadastro incompleto: grava no crachá a contagem do adiamento (ver utils/cadastroCompleto). */
+export const adiarAvisoDoCadastro = (uid, campos) => updateDoc(doc(db, "usuarios", uid), campos);
 
 /** Documento guardado do próprio professor ({ tipo, numero }) ou null. */
 export const lerMeuDocumento = (uid) => lerDocumento(uid);
@@ -66,7 +72,8 @@ export async function salvarMeuCadastro({ uid, fichaId, unidadesDoLider = [], an
 
   // 2) Crachá + ficha + nascimento, tudo junto ou nada.
   const lote = writeBatch(db);
-  lote.update(doc(db, "usuarios", uid), { nome: depois.nome, telefone: depois.telefone, pais: depois.pais, emailContato: emailDepois });
+  // "nascimentoOk": marca no crachá de que a data já está guardada (o aviso de cadastro incompleto lê isso sem ler a gaveta).
+  lote.update(doc(db, "usuarios", uid), { nome: depois.nome, telefone: depois.telefone, pais: depois.pais, emailContato: emailDepois, ...(depois.nascimento ? { nascimentoOk: true } : {}) });
   if (fichaId) lote.update(doc(db, "professores", String(fichaId)), { nome: depois.nome, telefone: depois.telefone, pais: depois.pais, email: emailDepois, updatedAt: serverTimestamp() });
   unidadesDoLider.forEach(({ id, vaga }) => {
     const p = vaga === 2 ? "lider2" : "lider";

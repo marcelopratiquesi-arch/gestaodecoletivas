@@ -25,6 +25,7 @@ Quando o usuário disser "modal", "pop-up" ou "janela", ou pedir para criar qual
 - Cada pop-up precisa de uma `chaveMemoria` única (ex.: `mentores.popupMentor`). Ao mudar o tamanho/posição padrão, mude a chave (ex.: sufixo `.v2`) para ninguém ficar com a posição antiga.
 - Props: `titulo`, `onFechar`, `children`, `rodape`, `chaveMemoria`, `bloquearFechar`, `largura`, `altura`, `larguraMinima`, `alturaMinima`, `rotuloFechar`.
 - Confirmações pequenas ("tem certeza?") podem continuar simples; não precisa virar janela arrastável.
+- **Exceção `obrigatorio`** (só para aviso que a pessoa TEM de resolver, hoje o de cadastro incompleto em `CadastroObrigatorio.jsx`): escurece de leve e trava a tela de trás, sem X e sem Esc. Não use em pop-up comum.
 
 **Campos dentro do pop-up (visual exato do Cronograma, não inventar outro):**
 - Rótulo: `text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 block`.

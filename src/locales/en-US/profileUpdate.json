@@ -108,5 +108,21 @@
       "account": "Check the account with the check digit (e.g. 1234567-8).",
       "save": "Could not save. Try again."
     }
+  },
+  "gate": {
+    "title": "Complete your profile",
+    "intro": "Still missing: {{fields}}. It is quick and gets saved.",
+    "postponeHint_one": "You can put it off {{count}} more time (once a day). After that, you must complete it to go on.",
+    "postponeHint_other": "You can put it off {{count}} more times (once a day). After that, you must complete it to go on.",
+    "locked": "To keep using the system, complete your profile now.",
+    "later": "Remind me later",
+    "save": "Save and review",
+    "logout": "Log out",
+    "fields": {
+      "nome": "full name",
+      "telefone": "WhatsApp",
+      "pais": "country",
+      "nascimento": "date of birth"
+    }
   }
 }

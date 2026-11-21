@@ -17,7 +17,8 @@ import CampoDocumento from "../components/acesso/CampoDocumento";
 import { contratoVazio, mesmoContrato, resumoContrato, validarContrato } from "../utils/contrato";
 import { documentoValido, formatarDocumento, limparDocumento, tipoDocumentoDoPais } from "../utils/documento";
 import { normalizarPais } from "../utils/feriados";
-import { ehLider, unidadesDoLider } from "../permissions";
+import { ehLider } from "../permissions";
+import { vagasDeLiderDaPessoa } from "../utils/lideranca";
 import MinhasUnidades from "./meuCadastro/MinhasUnidades";
 import UnidadesDoProfessor from "./meuCadastro/UnidadesDoProfessor";
 import BancoInter from "./meuCadastro/BancoInter";
@@ -34,7 +35,7 @@ import { lerMeuDocumento, lerNascimento, nascimentoValido, salvarMeuCadastro } f
 export default function MeuCadastro() {
   const { t } = useTranslation();
   // Sempre o crachá de VERDADE de quem entrou: no "Ver como" do admin, o Meu cadastro continua sendo o do próprio admin.
-  const { user, crachaReal } = useAuth();
+  const { user, crachaReal, recarregarCracha } = useAuth();
   const userData = crachaReal;
   const papel = String(userData?.role || "").trim().toLowerCase();
   const souProfessor = papel === "professor";
@@ -47,11 +48,7 @@ export default function MeuCadastro() {
 
   const ficha = fichasDoLogin(catalogs, uid, userData)[0] || null;
   // Unidades em que sou líder (1º ou 2º): nome e telefone novos também vão para elas.
-  const unidadesDoLiderPessoa = useMemo(() => {
-    if (!souLider) return [];
-    const minhas = new Set(unidadesDoLider(userData));
-    return unidades.filter((u) => minhas.has(String(u.id)) && (u.liderUid === uid || u.lider2Uid === uid)).map((u) => ({ id: u.id, vaga: u.lider2Uid === uid && u.liderUid !== uid ? 2 : 1 }));
-  }, [souLider, userData, unidades, uid]);
+  const unidadesDoLiderPessoa = useMemo(() => vagasDeLiderDaPessoa(unidades, userData, uid), [userData, unidades, uid]);
 
   const atual = useMemo(() => (ficha?.tipoContrato === "saver" ? { tipoContrato: "saver", saverLocais: ficha.saverLocais || [] } : contratoVazio()), [ficha]);
   const destino = opcoesDeUnidadeDoProfessor({ userData, uid, catalogs })[0] || null;
@@ -108,7 +105,7 @@ export default function MeuCadastro() {
     if (telefone.replace(/\D/g, "").length < 8) return setErroDados(t("profileUpdate.me.errors.phone"));
     if (mail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)) return setErroDados(t("profileUpdate.me.errors.email"));
     if (!documentoValido(docTipo, docNumero)) return setErroDados(t("document.errors.invalid"));
-    if (!nascimentoValido(nascimento)) return setErroDados(t("profileUpdate.me.errors.birth"));
+    if (!nascimento || !nascimentoValido(nascimento)) return setErroDados(t("profileUpdate.me.errors.birth"));
     setSalvandoDados(true);
     try {
       const documento = { tipo: docTipo, numero: limparDocumento(docNumero) };
@@ -121,6 +118,7 @@ export default function MeuCadastro() {
       setNome(nomeLimpo);
       setGuardado({ nome: nomeLimpo, telefone: telefone.trim(), pais, emailContato: mail, documento, nascimento });
       setSalvoOk(true);
+      recarregarCracha(); // o aviso de cadastro incompleto lê o crachá: tem de ver o que acabou de ser salvo
     } catch (err) {
       console.error(err);
       setErroDados(err?.message === ERRO_DOCUMENTO_EM_USO ? t("document.errors.inUse") : t("profileUpdate.me.errors.save"));
@@ -213,7 +211,7 @@ export default function MeuCadastro() {
                 </select>
               </div>
               <div>
-                <label htmlFor="mc-nasc" className={ROTULO}>{t("profileUpdate.me.birth")}</label>
+                <label htmlFor="mc-nasc" className={ROTULO}>{t("profileUpdate.me.birth")} *</label>
                 <input id="mc-nasc" type="date" value={nascimento} min="1920-01-01" max={new Date().toISOString().slice(0, 10)} onChange={(e) => setNascimento(e.target.value)} disabled={salvandoDados} className={CAMPO} />
               </div>
             </div>

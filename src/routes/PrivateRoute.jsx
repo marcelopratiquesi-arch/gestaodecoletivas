@@ -1,6 +1,7 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import i18n from "../i18n";
+import CadastroObrigatorio from "../components/CadastroObrigatorio";
 
 export default function PrivateRoute({ children }) {
   const { userData, loading, aguardandoAprovacao, precisaAtualizarCadastro, precisaDocumento } = useAuth();
@@ -20,5 +21,11 @@ export default function PrivateRoute({ children }) {
   // 5) cadastro atualizado, mas ainda sem o documento de identificação (CPF/DNI/SSN)
   if (precisaDocumento) return <Navigate to="/informar-documento" replace />;
 
-  return children;
+  // 6) acesso liberado: se o cadastro estiver incompleto, o aviso obrigatório aparece por cima (ver CadastroObrigatorio)
+  return (
+    <>
+      {children}
+      <CadastroObrigatorio />
+    </>
+  );
 }

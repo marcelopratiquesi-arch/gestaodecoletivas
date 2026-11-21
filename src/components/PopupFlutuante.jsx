@@ -4,6 +4,8 @@ import { X } from 'lucide-react';
 // Pop-up flutuante: sem fundo escuro (a tela de trás continua visível e clicável), arrastável pela barra de título,
 // redimensionável pelo canto, fecha com Esc. Tamanho e posição ficam lembrados no navegador (chaveMemoria).
 // No celular (tela estreita) vira tela cheia, sem arrastar nem redimensionar.
+// EXCEÇÃO `obrigatorio` (só para aviso que a pessoa tem de resolver, ex.: cadastro incompleto): escurece de leve e trava a tela
+// de trás, sem X e sem Esc. Não use em pop-up comum.
 
 const LARGURA_CELULAR = 768;
 const MARGEM = 8;
@@ -39,7 +41,7 @@ const caixaPadrao = (largura, altura) => {
 };
 
 export default function PopupFlutuante({
-  titulo, onFechar, children, rodape, chaveMemoria, bloquearFechar = false,
+  titulo, onFechar, children, rodape, chaveMemoria, bloquearFechar = false, obrigatorio = false,
   largura = 480, altura = 720, larguraMinima = 360, alturaMinima = 380, rotuloFechar = 'Fechar',
 }) {
   const [celular, setCelular] = useState(() => window.innerWidth < LARGURA_CELULAR);
@@ -50,10 +52,10 @@ export default function PopupFlutuante({
 
   // Esc fecha
   useEffect(() => {
-    const aoTeclar = (e) => { if (e.key === 'Escape' && !bloquearFechar) onFechar(); };
+    const aoTeclar = (e) => { if (e.key === 'Escape' && !bloquearFechar && !obrigatorio) onFechar(); };
     window.addEventListener('keydown', aoTeclar);
     return () => window.removeEventListener('keydown', aoTeclar);
-  }, [onFechar, bloquearFechar]);
+  }, [onFechar, bloquearFechar, obrigatorio]);
 
   // Janela mudou de tamanho: mantém o pop-up dentro da tela
   useEffect(() => {
@@ -92,6 +94,8 @@ export default function PopupFlutuante({
   const estilo = celular ? undefined : { left: caixa.x, top: caixa.y, width: caixa.w, height: caixa.h };
 
   return (
+    <>
+    {obrigatorio && <div aria-hidden="true" className="fixed inset-0 z-[59] bg-slate-900/40" />}
     <div
       role="dialog"
       aria-label={titulo}
@@ -103,7 +107,7 @@ export default function PopupFlutuante({
         className={`px-5 py-3.5 flex justify-between items-center bg-gradient-to-r from-red-600 to-red-700 shrink-0 select-none touch-none ${celular ? '' : 'cursor-move'}`}
       >
         <h3 className="font-black text-base text-white uppercase tracking-tight">{titulo}</h3>
-        <button type="button" onClick={() => !bloquearFechar && onFechar()} disabled={bloquearFechar} aria-label={rotuloFechar} title={`${rotuloFechar} (Esc)`} className="w-8 h-8 flex items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/30 transition-colors cursor-pointer"><X className="w-4 h-4" /></button>
+        {!obrigatorio && <button type="button" onClick={() => !bloquearFechar && onFechar()} disabled={bloquearFechar} aria-label={rotuloFechar} title={`${rotuloFechar} (Esc)`} className="w-8 h-8 flex items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/30 transition-colors cursor-pointer"><X className="w-4 h-4" /></button>}
       </div>
 
       {rodape && <div className="shrink-0 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-5 py-2.5">{rodape}</div>}
@@ -119,5 +123,6 @@ export default function PopupFlutuante({
         />
       )}
     </div>
+    </>
   );
 }
