@@ -4,10 +4,11 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { db } from '../../services/firebase';
 import { collection, getDocs, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 import { lerVitrine } from '../../services/vitrinePublica';
+import { reformaPublicaDaUnidade } from '../../utils/reformaPublica';
 import {
   Search, Clock, ChevronRight, Loader2,
   Printer, ArrowLeft, Dumbbell, Sun, Moon, ChevronDown, MapPin, Navigation, LocateFixed, Map, List, Check,
-  X, Share2, AlertTriangle, CalendarDays, CalendarClock
+  X, Share2, AlertTriangle, CalendarDays, CalendarClock, Hammer
 } from 'lucide-react';
 import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
 import { LANGUAGES, formatWeekday, getDiaSemana } from '../../utils/formatters';
@@ -206,6 +207,7 @@ export default function PublicSchedule() {
   const [unidades, setUnidades] = useState([]);
   const [modalidadesMap, setModalidadesMap] = useState({});
   const [professoresMap, setProfessoresMap] = useState({});
+  const [reformas, setReformas] = useState({}); // unidades fechadas para reforma (vem da vitrine)
 
   const [loading, setLoading] = useState(true);
   const [loadingGrade, setLoadingGrade] = useState(false);
@@ -308,6 +310,7 @@ export default function PublicSchedule() {
             setUnidades(uList);
             setModalidadesMap(mAbs);
             setProfessoresMap(pAbs);
+            setReformas(vitrine?.reformas || {});
         } catch (e) { console.error(e); } finally { setLoading(false); }
     };
     init();
@@ -423,6 +426,12 @@ export default function PublicSchedule() {
   };
 
   const unidadeSelecionadaId = unidadeSelecionada?.id;
+  // Reforma da unidade aberta: "agora" = fechada hoje (a grade some na tela); "em-breve" = só um aviso. Na IMPRESSÃO nada muda.
+  const reformaDaUnidade = useMemo(
+    () => (unidadeSelecionadaId ? reformaPublicaDaUnidade(reformas, unidadeSelecionadaId, new Date().toLocaleDateString('en-CA')) : null),
+    [reformas, unidadeSelecionadaId]
+  );
+  const dataCurta = (d) => new Date(`${d}T12:00:00`).toLocaleDateString(i18n.language, { day: '2-digit', month: '2-digit' });
   useEffect(() => {
       if (!unidadeSelecionadaId) return;
       setLoadingGrade(true);
@@ -984,6 +993,26 @@ export default function PublicSchedule() {
                 <div className="ph-center"><h1 className="ph-title">{unidadeSelecionada.nome}</h1><p className="ph-sub">{t('publicSchedule.boardTitle', 'Quadro Happy Zone')}</p></div>
                 <div className="ph-right"><div className="bg-white p-1 rounded"><img src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent("https://gestaodecoletivas.vercel.app/horarios")}`} alt="QR" className="w-16 h-16"/></div></div>
             </div>
+
+            {/* 🟢 AVISO DE REFORMA (só na tela; a impressão continua igual). Fechada hoje: some a grade que vem depois do aviso. */}
+            {reformaDaUnidade && (
+                <>
+                    {reformaDaUnidade.estado === 'agora' && <style>{`@media screen { .aviso-reforma-agora ~ * { display: none !important; } }`}</style>}
+                    <div role="status" className={`screen-only print:hidden mb-4 md:mb-6 rounded-2xl border p-4 md:p-5 flex items-start gap-3 ${reformaDaUnidade.estado === 'agora' ? 'aviso-reforma-agora' : ''} ${isDarkMode ? 'bg-amber-500/10 border-amber-500/30 text-amber-100' : 'bg-amber-50 border-amber-200 text-amber-900'}`}>
+                        <Hammer className="w-6 h-6 shrink-0 mt-0.5"/>
+                        <div className="min-w-0">
+                            <p className="font-black uppercase tracking-wide text-sm md:text-base">
+                                {reformaDaUnidade.estado === 'agora' ? t('publicSchedule.reformNow.title') : t('publicSchedule.reformSoon.title')}
+                            </p>
+                            <p className="text-sm font-semibold mt-1">
+                                {reformaDaUnidade.estado === 'agora'
+                                    ? t('publicSchedule.reformNow.text', { ini: dataCurta(reformaDaUnidade.ini), fim: dataCurta(reformaDaUnidade.fim), retorno: dataCurta(reformaDaUnidade.retorno) })
+                                    : t('publicSchedule.reformSoon.text', { ini: dataCurta(reformaDaUnidade.ini), fim: dataCurta(reformaDaUnidade.fim), retorno: dataCurta(reformaDaUnidade.retorno) })}
+                            </p>
+                        </div>
+                    </div>
+                </>
+            )}
 
             {/* 🟢 RESUMO E LEGENDA CLICÁVEL (só na tela) */}
             {!loadingGrade && gradeUnidade.length > 0 && (

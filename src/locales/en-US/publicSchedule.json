@@ -65,5 +65,13 @@
   "noModalityToday": "There is no {{modality}} at this unit today ({{day}}).",
   "seeFullWeek": "See full week",
   "filterHint": "Tap a modality to filter the schedule",
-  "clearModalityFilter": "Clear filter"
+  "clearModalityFilter": "Clear filter",
+  "reformNow": {
+    "title": "Unit closed for renovation",
+    "text": "No classes from {{ini}} to {{fim}}. Classes resume on {{retorno}}."
+  },
+  "reformSoon": {
+    "title": "Renovation scheduled",
+    "text": "The unit will close from {{ini}} to {{fim}}, with no classes in that period. Classes resume on {{retorno}}."
+  }
 }

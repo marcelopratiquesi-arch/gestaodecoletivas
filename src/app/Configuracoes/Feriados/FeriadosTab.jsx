@@ -9,6 +9,7 @@ import {
 } from 'firebase/firestore';
 import { Calendar, Plus, Trash2, Loader2, CalendarDays, MapPin, Search, CheckSquare, Square, Check, X, Inbox, Pencil, RefreshCw, Hammer } from 'lucide-react';
 import { formatDate as formatarData } from '../../../utils/formatters';
+import { publicarReforma, removerReformaDaVitrine } from '../../../services/vitrinePublica';
 import { ESCOPOS_FERIADO, escopoDoFeriado, normalizarPais, normalizarTexto, ehCancelamentoAutomaticoDeFeriado, feriadoAplicaNaUnidade, unidadesDeExcecao, TIPO_REFORMA, ehReforma, reformaEmAndamento } from '../../../utils/feriados';
 import { impactoDoFeriado, comecaNoPassado, feriadosParecidos } from '../../../utils/feriadosImpacto';
 import { montarFeriado, feriadoDaProposta, ESCOPOS_DO_MENTOR, STATUS_PROPOSTA, CAMPOS_DE_ABRANGENCIA } from '../../../utils/feriadosProposta';
@@ -215,6 +216,9 @@ export function FeriadosTab() {
         // Campos de abrangência que não servem mais (ex.: trocou de estado para país) saem do documento.
         const limpar = Object.fromEntries(CAMPOS_DE_ABRANGENCIA.filter(c => !(c in novoFeriado)).map(c => [c, deleteField()]));
         await updateDoc(doc(db, 'feriados', editandoId), { ...novoFeriado, ...limpar, atualizadoPor: userId || null, atualizadoEm: serverTimestamp() });
+        // Página pública: reforma editada atualiza o aviso; se deixou de ser reforma, tira o aviso.
+        if (ehReforma(novoFeriado)) await publicarReforma(editandoId, novoFeriado);
+        else if (ehReforma(antigo)) await removerReformaDaVitrine(editandoId);
         await registrarLogAuditoria('ALTERADA', `${form.tipo} editado.`, form.nome,
             `De: ${formatDate(antigo.dataInicio)} até ${formatDate(antigo.dataFim)} | ${descreverAbrangencia(antigo)}  ➔  Para: ${formatDate(form.dataInicio)} até ${formatDate(form.dataFim)} | ${abrangencia}`);
         setEditandoId(null);
@@ -225,7 +229,9 @@ export function FeriadosTab() {
       }
 
       // O feriado é calculado na hora por todas as telas (src/utils/feriados.js): não grava mais cancelamentos em massa.
-      await addDoc(collection(db, "feriados"), { ...novoFeriado, criadoPor: userId || null, criadoEm: serverTimestamp() });
+      const feriadoCriado = await addDoc(collection(db, "feriados"), { ...novoFeriado, criadoPor: userId || null, criadoEm: serverTimestamp() });
+      // Página pública: unidade em reforma ganha o aviso "fechada para reforma" em /horarios.
+      if (ehReforma(novoFeriado)) await publicarReforma(feriadoCriado.id, novoFeriado);
 
       await registrarLogAuditoria(
           'NOVA',
@@ -302,6 +308,7 @@ export function FeriadosTab() {
         status: STATUS_PROPOSTA.APROVADA, decididoPor: userId || null, decididoEm: serverTimestamp(), feriadoId: feriadoRef.id,
       });
       await lote.commit();
+      if (ehReforma(feriado)) await publicarReforma(feriadoRef.id, feriado);
       await registrarLogAuditoria('NOVA', `Proposta de feriado aprovada (de ${proposta.propostoPorNome || 'mentor'}).`, proposta.nome,
         `Período: ${formatDate(proposta.dataInicio)} até ${formatDate(proposta.dataFim)} | Abrangência: ${abrangencia}`);
       setPropostas(prev => prev.filter(p => p.id !== proposta.id));
@@ -356,6 +363,7 @@ export function FeriadosTab() {
       }
 
       await deleteDoc(doc(db, "feriados", feriado.id));
+      if (ehReforma(feriado)) await removerReformaDaVitrine(feriado.id);
 
       // 🟢 AUDITORIA
       await registrarLogAuditoria('EXCLUÍDA', 'Evento removido do calendário.', feriado.nome, `O recesso/feriado foi deletado do sistema. Cancelamentos automáticos removidos: ${automaticos.length}`);

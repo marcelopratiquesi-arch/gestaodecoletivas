@@ -6,6 +6,7 @@
 //   unidades:    { [id]: { nome, cidade, estado, enderecoCompleto, linkGoogleMaps, localizacao, mentorNome, pais, modalidadesIds } }
 //   (mentorNome: só o nome do mentor responsável, para a caixa de dúvidas do primeiro acesso)
 //   professores: { [id]: nome }
+//   reformas:    { [idDoFeriado]: { unidadeIds, ini, fim } }  (tipo Reforma: a página avisa "fechada para reforma", ver utils/reformaPublica.js)
 // Bônus: 1 leitura por visita em vez de (nº de unidades + nº de professores).
 //
 // As telas de cadastro chamam as funções abaixo depois de salvar. Se alguma falhar, o cadastro
@@ -14,6 +15,7 @@
 import { doc, getDoc, getDocs, collection, query, where, setDoc, updateDoc, deleteField, serverTimestamp, FieldPath } from 'firebase/firestore';
 import { db } from './firebase';
 import { reconstruirAulasPublicas } from './aulasPublicas';
+import { dadosPublicosReforma } from '../utils/reformaPublica';
 
 export const VITRINE_CAMINHO = ['publico', 'vitrine'];
 const refVitrine = () => doc(db, ...VITRINE_CAMINHO);
@@ -69,6 +71,19 @@ export async function removerProfessorDaVitrine(id) {
     } catch (e) { avisar('remover o professor', e); }
 }
 
+/** Reforma criada/editada/aprovada: grava só o que a página pública precisa (unidades e datas; o motivo fica de fora). */
+export async function publicarReforma(id, feriado) {
+    try {
+        await updateDoc(refVitrine(), new FieldPath('reformas', id), dadosPublicosReforma(feriado), 'atualizadoEm', serverTimestamp());
+    } catch (e) { avisar('publicar a reforma', e); }
+}
+
+export async function removerReformaDaVitrine(id) {
+    try {
+        await updateDoc(refVitrine(), new FieldPath('reformas', id), deleteField(), 'atualizadoEm', serverTimestamp());
+    } catch (e) { avisar('remover a reforma', e); }
+}
+
 // Limite de 1 MiB por documento no Firestore; paramos antes, com folga.
 const LIMITE_BYTES = 900 * 1024;
 
@@ -77,12 +92,20 @@ const LIMITE_BYTES = 900 * 1024;
  * Custa 1 leitura por unidade + 1 por professor (+ as aulas, ver aulasPublicas.js), e 1 gravação. Retorna os totais.
  */
 export async function reconstruirVitrine() {
-    const [uSnap, pSnap, mSnap] = await Promise.all([
+    const [uSnap, pSnap, mSnap, fSnap] = await Promise.all([
         getDocs(collection(db, 'unidades')),
         getDocs(collection(db, 'professores')),
         // Nome do mentor responsável de cada unidade (mentores e admins que cuidam de unidades).
         getDocs(query(collection(db, 'usuarios'), where('role', 'in', ['mentor', 'admin', 'Admin']))),
+        // Reformas (tipo Reforma) que ainda não terminaram: a página pública avisa as unidades fechadas.
+        getDocs(collection(db, 'feriados')),
     ]);
+    const hoje = new Date().toLocaleDateString('en-CA');
+    const reformas = {};
+    fSnap.forEach(d => {
+        const f = d.data();
+        if (f.tipo === 'Reforma' && (f.dataFim || f.dataInicio) >= hoje) reformas[d.id] = dadosPublicosReforma(f);
+    });
     const nomeMentor = new Map(mSnap.docs.map(d => [d.id, String(d.data().nome || '')]));
     const unidades = {};
     uSnap.forEach(d => {
@@ -93,10 +116,10 @@ export async function reconstruirVitrine() {
     const professores = {};
     pSnap.forEach(d => { professores[d.id] = String(d.data().nome || ''); });
 
-    const tamanho = new Blob([JSON.stringify({ unidades, professores })]).size;
+    const tamanho = new Blob([JSON.stringify({ unidades, professores, reformas })]).size;
     if (tamanho > LIMITE_BYTES) throw new Error(`Vitrine grande demais (${Math.round(tamanho / 1024)} KB).`);
 
-    await setDoc(refVitrine(), { unidades, professores, atualizadoEm: serverTimestamp() });
+    await setDoc(refVitrine(), { unidades, professores, reformas, atualizadoEm: serverTimestamp() });
     // A grade pública (aulas sem o valor) é refeita junto: custa 1 leitura por aula.
     const grade = await reconstruirAulasPublicas();
     return { unidades: Object.keys(unidades).length, professores: Object.keys(professores).length, aulas: grade.aulas, tamanhoKb: Math.round(tamanho / 1024) };
@@ -106,6 +129,6 @@ export async function reconstruirVitrine() {
 export async function lerVitrine() {
     const snap = await getDoc(refVitrine());
     if (!snap.exists()) return null;
-    const { unidades = {}, professores = {} } = snap.data();
-    return { unidades, professores };
+    const { unidades = {}, professores = {}, reformas = {} } = snap.data();
+    return { unidades, professores, reformas };
 }
