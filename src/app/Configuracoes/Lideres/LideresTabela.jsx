@@ -38,6 +38,8 @@ import { CelulaAcesso } from "../ui/CelulaAcesso";
 import { ColunaOrdenavel, CLASSE_TITULO } from "../ui/ColunaOrdenavel";
 import { MenuDeAcoes } from "../ui/MenuDeAcoes";
 import { Selo } from "../ui/Selo";
+import SeloCadastroIncompleto from "../ui/SeloCadastroIncompleto";
+import { faltaDoCracha } from "../../../utils/cadastroCompleto";
 import { useOrdenacao } from "../ui/useOrdenacao";
 import { useUltimosAcessos } from "../ui/useUltimosAcessos";
 import { paraData } from "../../../utils/ultimoAcesso";
@@ -120,10 +122,19 @@ export function LideresTabela() {
   // Filtro padrão (busca + país → estado → mentor), no navegador sobre as unidades já carregadas.
   // A situação (com/sem líder/a conferir) continua sendo o seletor próprio desta aba.
   const nomeMentor = useCallback((id) => mentores.find((m) => m.id === id)?.nome, [mentores]);
+  // Coluna "Acesso": último acesso do 1º e do 2º líder (ou do login antigo da unidade, enquanto existir).
+  // Cada crachá é lido uma vez por sessão (ver useUltimosAcessos); o mesmo crachá diz se o cadastro está incompleto.
+  const uidsDeAcesso = useMemo(() => minhasUnidades.flatMap((u) => [
+    u.liderUid, u.lider2Uid, tipoDeAcesso(u) === "antigo" ? u.uidLogin : null,
+  ]), [minhasUnidades]);
+  const { acessoDe, cadastroDe, carregando: carregandoAcessos } = useUltimosAcessos(uidsDeAcesso);
+  const faltaDoLider = useCallback((uid) => faltaDoCracha(cadastroDe(uid)), [cadastroDe]);
+  const unidadeIncompleta = useCallback((u) => (!!u.liderUid && faltaDoLider(u.liderUid).length > 0) || (!!u.lider2Uid && faltaDoLider(u.lider2Uid).length > 0), [faltaDoLider]);
   const soDaSituacao = useCallback((u) => situacao === "todas"
     || (situacao === "com" && u.liderUid)
     || (situacao === "sem" && !u.liderUid)
-    || (situacao === "conferir" && u.liderUid && u.liderAConferir === true), [situacao]);
+    || (situacao === "conferir" && u.liderUid && u.liderAConferir === true)
+    || (situacao === "incompleto" && unidadeIncompleta(u)), [situacao, unidadeIncompleta]);
   const filtro = useFiltroCascata(minhasUnidades, {
     getPais: siglaPais,
     getEstados: (u) => [u.estado],
@@ -132,12 +143,6 @@ export function LideresTabela() {
     nomeMentor,
     extra: soDaSituacao,
   });
-  // Coluna "Acesso": último acesso do 1º e do 2º líder (ou do login antigo da unidade, enquanto existir).
-  // Cada crachá é lido uma vez por sessão (ver useUltimosAcessos).
-  const uidsDeAcesso = useMemo(() => minhasUnidades.flatMap((u) => [
-    u.liderUid, u.lider2Uid, tipoDeAcesso(u) === "antigo" ? u.uidLogin : null,
-  ]), [minhasUnidades]);
-  const { acessoDe, carregando: carregandoAcessos } = useUltimosAcessos(uidsDeAcesso);
 
   // Todas as colunas ordenam (A→Z / Z→A). Sem clique: líder "a conferir" primeiro, depois a unidade de A a Z.
   const colunas = useMemo(() => ({
@@ -155,8 +160,9 @@ export function LideresTabela() {
   const kpis = useMemo(() => {
     const comLider = minhasUnidades.filter((u) => u.liderUid).length;
     const aConferir = minhasUnidades.filter((u) => u.liderUid && u.liderAConferir === true).length;
-    return { total: minhasUnidades.length, comLider, semLider: minhasUnidades.length - comLider, aConferir };
-  }, [minhasUnidades]);
+    const incompletos = minhasUnidades.filter(unidadeIncompleta).length;
+    return { total: minhasUnidades.length, comLider, semLider: minhasUnidades.length - comLider, aConferir, incompletos };
+  }, [minhasUnidades, unidadeIncompleta]);
 
   const registrarAuditoria = async (tipoAcao, descricao, unidadeNome, detalhes) => {
     try {
@@ -382,6 +388,7 @@ export function LideresTabela() {
           { id: "com", rotulo: t("leadersTab.filter.with"), valor: kpis.comLider, cor: "text-emerald-600", onClick: () => setSituacao("com"), ativo: situacao === "com" },
           { id: "sem", rotulo: t("leadersTab.filter.without"), valor: kpis.semLider, cor: "text-red-500", onClick: () => setSituacao("sem"), ativo: situacao === "sem" },
           { id: "conferir", rotulo: t("leadersTab.filter.toCheck"), valor: kpis.aConferir, cor: "text-amber-600", onClick: () => setSituacao("conferir"), ativo: situacao === "conferir" },
+          { id: "incompleto", rotulo: t("profileUpdate.incomplete.filter"), valor: kpis.incompletos, cor: "text-amber-600", onClick: () => setSituacao("incompleto"), ativo: situacao === "incompleto" },
         ]} />
         {mostrarBuscaDoc && (
           <BuscaDocumento aoCadastrar={cadastrarPeloDocumento} aoEscolherPessoa={() => setTornarLider({ vaga: 1, unidade: null })} aoIrParaPedido={abrirPedidos} />
@@ -429,6 +436,7 @@ export function LideresTabela() {
               { id: "com", rotulo: t("leadersTab.filter.with"), n: kpis.comLider },
               { id: "sem", rotulo: t("leadersTab.filter.without"), n: kpis.semLider },
               { id: "conferir", rotulo: t("leadersTab.filter.toCheck"), n: kpis.aConferir },
+              { id: "incompleto", rotulo: t("profileUpdate.incomplete.filter"), n: kpis.incompletos },
             ].map((f) => (
               <button key={f.id} type="button" onClick={() => setSituacao(f.id)} aria-pressed={situacao === f.id}
                 className={`px-3.5 py-2 rounded-lg text-xs font-black uppercase flex items-center gap-2 transition-colors ${situacao === f.id
@@ -437,7 +445,7 @@ export function LideresTabela() {
                 {f.rotulo}
                 <span className={`min-w-[1.5rem] px-1.5 py-0.5 rounded-md text-[10px] text-center ${situacao === f.id
                   ? "bg-red-600 text-white"
-                  : f.id === "conferir" && f.n > 0 ? "bg-amber-100 text-amber-700" : "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-300"}`}>{f.n}</span>
+                  : (f.id === "conferir" || f.id === "incompleto") && f.n > 0 ? "bg-amber-100 text-amber-700" : "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-300"}`}>{f.n}</span>
               </button>
             ))}
           </div>
@@ -484,6 +492,7 @@ export function LideresTabela() {
                                 <LinkCentral tipo="lider" alvo={u} className="font-black text-slate-800 dark:text-slate-100 uppercase">{u.liderNome || "-"}</LinkCentral>
                                 <SeloRepetido selo={selosRepetidos.get(`cracha:${u.liderUid}`)} detalheDe={(o) => o.email || ""} />
                                 {u.liderAConferir === true && <Selo tipo="aviso" icone={AlertTriangle}>{t("leadersTab.toCheck")}</Selo>}
+                                <SeloCadastroIncompleto falta={faltaDoLider(u.liderUid)} />
                               </div>
                               <CelulaContato email={u.liderEmail} telefone={u.liderTelefone} pais={pais} />
                             </div>
@@ -493,6 +502,7 @@ export function LideresTabela() {
                                   <LinkCentral tipo="lider2" alvo={u} className="font-black text-slate-800 dark:text-slate-100 uppercase">{u.lider2Nome || "-"}</LinkCentral>
                                   <SeloRepetido selo={selosRepetidos.get(`cracha:${u.lider2Uid}`)} detalheDe={(o) => o.email || ""} />
                                   <Selo tipo="tema" abaId="lideres">{t("leadersTab.second.badge")}</Selo>
+                                  <SeloCadastroIncompleto falta={faltaDoLider(u.lider2Uid)} />
                                 </div>
                                 <CelulaContato email={u.lider2Email} telefone={u.lider2Telefone} pais={pais} />
                               </div>

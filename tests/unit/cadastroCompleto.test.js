@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { camposFaltando, hojeLocal, proximoAdiamento, situacaoDoAdiamento, entraNaRegraDoCadastro } from '../../src/utils/cadastroCompleto';
+import { faltaNaLista, faltaDoCracha, camposFaltando, hojeLocal, proximoAdiamento, situacaoDoAdiamento, entraNaRegraDoCadastro } from '../../src/utils/cadastroCompleto';
 
 const completo = { nome: 'Ana Souza', telefone: '(31) 98888-7777', pais: 'BR', nascimentoOk: true, role: 'professor' };
 
@@ -39,5 +39,23 @@ describe('adiar o aviso: 1 por dia, trava no 3º dia', () => {
     expect(entraNaRegraDoCadastro({ role: 'Mentor' })).toBe(true);
     expect(entraNaRegraDoCadastro({ role: 'bloqueado' })).toBe(false);
     expect(entraNaRegraDoCadastro(null)).toBe(false);
+  });
+});
+
+describe("cadastro incompleto nas listas (abas e Centrais)", () => {
+  const ok = { nome: "Ana Souza", telefone: "(31) 98888-7777", documentoOk: true, nascimentoOk: true };
+  it("nada falta: lista vazia", () => { expect(faltaNaLista(ok)).toEqual([]); });
+  it("aponta documento e nascimento que faltam", () => {
+    expect(faltaNaLista({ ...ok, documentoOk: undefined })).toEqual(["documento"]);
+    expect(faltaNaLista({ ...ok, nascimentoOk: undefined })).toEqual(["nascimento"]);
+    expect(faltaNaLista({ nome: "A", telefone: "1" })).toEqual(["nome", "telefone", "documento", "nascimento"]);
+  });
+  it("quem não tem login não é cobrado do nascimento", () => {
+    expect(faltaNaLista({ ...ok, nascimentoOk: undefined, temLogin: false })).toEqual([]);
+  });
+  it("crachá: só conta o nascimento de quem tem login Google; crachá desconhecido não aponta nada", () => {
+    expect(faltaDoCracha({ ...ok, loginGoogle: true, nascimentoOk: false })).toEqual(["nascimento"]);
+    expect(faltaDoCracha({ ...ok, nascimentoOk: false })).toEqual([]);
+    expect(faltaDoCracha(null)).toEqual([]);
   });
 });

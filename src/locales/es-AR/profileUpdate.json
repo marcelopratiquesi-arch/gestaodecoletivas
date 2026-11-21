@@ -124,5 +124,17 @@
       "pais": "país",
       "nascimento": "fecha de nacimiento"
     }
+  },
+  "incomplete": {
+    "badge": "Registro incompleto",
+    "badgeShort": "Incompleto",
+    "filter": "Incompletos",
+    "tip": "Falta: {{fields}}",
+    "fields": {
+      "nome": "nombre",
+      "telefone": "WhatsApp",
+      "documento": "documento",
+      "nascimento": "fecha de nacimiento"
+    }
   }
 }

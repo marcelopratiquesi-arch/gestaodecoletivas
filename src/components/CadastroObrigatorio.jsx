@@ -5,7 +5,7 @@
 //  - A contagem fica no crachá (vale no celular e no computador). Regras e conta: utils/cadastroCompleto.js.
 //  - Sempre olha o crachá de VERDADE (no "Ver como" do admin, é o cadastro do próprio admin).
 //  - A data de nascimento fica numa gaveta à parte: quem ainda não tem a marca "nascimentoOk" faz UMA leitura por entrada.
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Loader2, LogOut } from "lucide-react";
@@ -30,8 +30,14 @@ export default function CadastroObrigatorio() {
   const regra = !!uid && entraNaRegraDoCadastro(crachaReal);
 
   // Quem ainda não tem a marca faz UMA leitura da gaveta de nascimento; se a data já existe, coloca a marca (sem incomodar).
-  const precisaLer = regra && crachaReal?.nascimentoOk !== true;
+  // Professor: espera o catálogo carregar para poder marcar também a ficha dele (a lista de Professores lê a ficha).
+  const catalogoPendente = String(crachaReal?.role || "").toLowerCase() === "professor" && loadingCatalogs;
+  const semMarca = regra && crachaReal?.nascimentoOk !== true;
+  const precisaLer = semMarca && !catalogoPendente;
   const [lido, setLido] = useState(null); // { uid, tem }
+  const catalogsRef = useRef(catalogs);
+  const crachaRef = useRef(crachaReal);
+  useEffect(() => { catalogsRef.current = catalogs; crachaRef.current = crachaReal; });
   useEffect(() => {
     if (!precisaLer) return undefined;
     let vivo = true;
@@ -39,7 +45,7 @@ export default function CadastroObrigatorio() {
       .then((n) => {
         if (!vivo) return;
         setLido({ uid, tem: !!n });
-        if (n) marcarNascimentoOk(uid).catch((e) => console.warn("Marca de nascimento não gravada:", e?.code));
+        if (n) marcarNascimentoOk(uid, fichasDoLogin(catalogsRef.current, uid, crachaRef.current)[0]?.id || "").catch((e) => console.warn("Marca de nascimento não gravada:", e?.code));
       })
       // Não conseguiu ler: não incomoda (melhor não cobrar do que cobrar o que já foi informado).
       .catch((e) => { console.error(e); if (vivo) setLido({ uid, tem: true }); });
@@ -48,7 +54,7 @@ export default function CadastroObrigatorio() {
 
   const unidades = catalogs?.unidades;
   const paisDaUnidade = (unidades || []).find((u) => String(u.id) === String(crachaReal?.unidadeId))?.pais || "";
-  const esperando = !regra || (precisaLer && lido?.uid !== uid) || (!!crachaReal?.unidadeId && !crachaReal?.pais && loadingCatalogs);
+  const esperando = !regra || (semMarca && catalogoPendente) || (precisaLer && lido?.uid !== uid) || (!!crachaReal?.unidadeId && !crachaReal?.pais && loadingCatalogs);
   const falta = esperando ? [] : camposFaltando({ cracha: crachaReal, paisDaUnidade, temNascimento: lido?.uid === uid && lido.tem });
   const sit = situacaoDoAdiamento(crachaReal);
   const [adiadoAgora, setAdiadoAgora] = useState(false);

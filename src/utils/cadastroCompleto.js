@@ -47,6 +47,24 @@ export function proximoAdiamento(cracha, hoje = hojeLocal()) {
   return { cadastroAdiamentos: usados + 1, cadastroAdiadoEm: hoje };
 }
 
+/**
+ * O que falta para a PESSOA SER LISTADA como "cadastro incompleto" nas abas (Mentores, Líderes, Professores) e nas Centrais.
+ * Usa só o que a lista já tem (zero leituras novas): nome, telefone, documento ("documentoOk") e nascimento ("nascimentoOk").
+ * O nascimento só conta de quem tem login (sem login a pessoa não tem como preencher; o gestor cuida do resto).
+ * Devolve "nome" | "telefone" | "documento" | "nascimento".
+ */
+export function faltaNaLista({ nome, telefone, documentoOk, nascimentoOk, temLogin = true }) {
+  const falta = [];
+  if (String(nome || "").trim().length < 3) falta.push("nome");
+  if (digitos(telefone).length < 8) falta.push("telefone");
+  if (documentoOk !== true) falta.push("documento");
+  if (temLogin && nascimentoOk !== true) falta.push("nascimento");
+  return falta;
+}
+
+/** Igual a faltaNaLista, a partir do crachá (usuarios/{uid}). Crachá desconhecido = não aponta nada. */
+export const faltaDoCracha = (c) => (c ? faltaNaLista({ nome: c.nome, telefone: c.telefone, documentoOk: c.documentoOk, nascimentoOk: c.nascimentoOk, temLogin: c.loginGoogle === true }) : []);
+
 /** Papéis que entram na regra (quem tem acesso de verdade ao sistema). */
 export const PAPEIS_DO_CADASTRO = ["admin", "administrador", "master", "mentor", "lider", "unidade", "professor"];
 export const entraNaRegraDoCadastro = (cracha) => PAPEIS_DO_CADASTRO.includes(String(cracha?.role || "").trim().toLowerCase());

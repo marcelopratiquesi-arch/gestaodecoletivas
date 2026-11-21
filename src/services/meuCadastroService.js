@@ -23,7 +23,13 @@ export async function lerNascimento(uid) {
 }
 
 /** Quem já tinha a data guardada antes da marca existir: coloca a marca no crachá (o banco confere que a data existe). */
-export const marcarNascimentoOk = (uid) => updateDoc(doc(db, "usuarios", uid), { nascimentoOk: true });
+export async function marcarNascimentoOk(uid, fichaId = "") {
+  const lote = writeBatch(db);
+  lote.update(doc(db, "usuarios", uid), { nascimentoOk: true });
+  // A lista de Professores só lê fichas: a marca também vai para a ficha ligada ao login (se houver).
+  if (fichaId) lote.update(doc(db, "professores", String(fichaId)), { nascimentoOk: true });
+  await lote.commit();
+}
 
 /** "Lembrar depois" do aviso de cadastro incompleto: grava no crachá a contagem do adiamento (ver utils/cadastroCompleto). */
 export const adiarAvisoDoCadastro = (uid, campos) => updateDoc(doc(db, "usuarios", uid), campos);
@@ -74,7 +80,7 @@ export async function salvarMeuCadastro({ uid, fichaId, unidadesDoLider = [], an
   const lote = writeBatch(db);
   // "nascimentoOk": marca no crachá de que a data já está guardada (o aviso de cadastro incompleto lê isso sem ler a gaveta).
   lote.update(doc(db, "usuarios", uid), { nome: depois.nome, telefone: depois.telefone, pais: depois.pais, emailContato: emailDepois, ...(depois.nascimento ? { nascimentoOk: true } : {}) });
-  if (fichaId) lote.update(doc(db, "professores", String(fichaId)), { nome: depois.nome, telefone: depois.telefone, pais: depois.pais, email: emailDepois, updatedAt: serverTimestamp() });
+  if (fichaId) lote.update(doc(db, "professores", String(fichaId)), { nome: depois.nome, telefone: depois.telefone, pais: depois.pais, email: emailDepois, updatedAt: serverTimestamp(), ...(depois.nascimento ? { nascimentoOk: true } : {}) });
   unidadesDoLider.forEach(({ id, vaga }) => {
     const p = vaga === 2 ? "lider2" : "lider";
     lote.update(doc(db, "unidades", String(id)), { [`${p}Nome`]: depois.nome, [`${p}Telefone`]: depois.telefone });

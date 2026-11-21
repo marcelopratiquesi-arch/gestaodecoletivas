@@ -124,5 +124,17 @@
       "pais": "country",
       "nascimento": "date of birth"
     }
+  },
+  "incomplete": {
+    "badge": "Incomplete profile",
+    "badgeShort": "Incomplete",
+    "filter": "Incomplete",
+    "tip": "Missing: {{fields}}",
+    "fields": {
+      "nome": "name",
+      "telefone": "WhatsApp",
+      "documento": "ID document",
+      "nascimento": "date of birth"
+    }
   }
 }

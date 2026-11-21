@@ -316,7 +316,8 @@ service cloud.firestore {
       // "Meu cadastro": o professor atualiza na hora só o CONTATO da PRÓPRIA ficha (a ligada ao login dele).
       // Contrato, documento, status e vínculo continuam com quem gerencia.
       allow update: if logado() && souProfessor() && resource.data.get('uidLogin', '') == request.auth.uid
-        && camposAlterados().hasOnly(['nome', 'email', 'pais', 'telefone', 'updatedAt'])
+        && camposAlterados().hasOnly(['nome', 'email', 'pais', 'telefone', 'updatedAt', 'nascimentoOk'])
+        && (!camposAlterados().hasAny(['nascimentoOk']) || (request.resource.data.nascimentoOk == true && existsAfter(/databases/$(database)/documents/nascimentos/$(request.auth.uid))))
         && request.resource.data.nome is string && request.resource.data.nome.size() >= 3 && request.resource.data.nome.size() <= 80
         && request.resource.data.get('telefone', '') is string && request.resource.data.get('telefone', '').size() <= 30
         && request.resource.data.get('pais', 'BR') in ['BR', 'AR', 'US']

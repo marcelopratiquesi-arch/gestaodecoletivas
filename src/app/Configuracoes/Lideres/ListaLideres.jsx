@@ -27,6 +27,7 @@ function SeloDoLider({ l }) {
   const { t } = useTranslation();
   if (l.u.liderAConferir === true) return <span className={SELO_CONFERIR}>{t("leadersTab.toCheck")}</span>;
   if (l.temTemporario) return <span className={SELO_NEUTRO}>{t("leadersTab.listB.tempShort")}</span>;
+  if (l.incompleto) return <span className={SELO_NEUTRO}>{t("profileUpdate.incomplete.badgeShort")}</span>;
   if (l.u.lider2Uid) return <span className={SELO_NEUTRO}>+1</span>;
   return null;
 }

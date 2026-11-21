@@ -27,6 +27,8 @@ beforeEach(async () => {
     await setDoc(doc(db, 'unidades/uniA'), { nome: 'A', mentorId: 'mentor1' });
     await setDoc(doc(db, 'usuarios/liderA'), { role: 'lider', unidadeId: 'uniA', unidadeIds: ['uniA'], nome: 'Líder A', telefone: '31999990000', loginGoogle: true });
     await setDoc(doc(db, 'usuarios/profA'), { role: 'professor', unidadeId: 'uniA', nome: 'Prof A', telefone: '31999990000', loginGoogle: true });
+    await setDoc(doc(db, 'professores/fichaA'), { nome: 'PROF A', uidLogin: 'profA', status: 'ativo' });
+    await setDoc(doc(db, 'professores/fichaB'), { nome: 'PROF B', uidLogin: 'profB', status: 'ativo' });
   });
 });
 
@@ -82,5 +84,23 @@ describe('completar tudo de uma vez (o que o aviso salva)', () => {
     b.set(doc(d, 'nascimentos/liderA'), { nascimento: '1985-02-03', atualizadoEm: serverTimestamp() });
     b.update(doc(d, 'usuarios/liderA'), { nome: 'LIDER A', telefone: '(31) 98888-7777', pais: 'BR', emailContato: 'a@x.com', nascimentoOk: true });
     await assertSucceeds(b.commit());
+  });
+});
+
+describe('ficha do professor espelha a marca (a lista de Professores lê fichas)', () => {
+  it('a própria pessoa grava a marca na própria ficha junto com o crachá, e só com a data guardada', async () => {
+    await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), 'nascimentos/profA'), { nascimento: '1990-05-17' }));
+    const d = como('profA');
+    const b = writeBatch(d);
+    b.update(doc(d, 'usuarios/profA'), { nascimentoOk: true });
+    b.update(doc(d, 'professores/fichaA'), { nascimentoOk: true });
+    await assertSucceeds(b.commit());
+  });
+  it('NÃO grava a marca na ficha sem a data, na ficha de outro, nem outros campos junto', async () => {
+    await assertFails(updateDoc(doc(como('profA'), 'professores/fichaA'), { nascimentoOk: true }));
+    await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), 'nascimentos/profA'), { nascimento: '1990-05-17' }));
+    await assertFails(updateDoc(doc(como('profA'), 'professores/fichaB'), { nascimentoOk: true }));
+    await assertFails(updateDoc(doc(como('profA'), 'professores/fichaA'), { nascimentoOk: true, tipoContrato: 'saver' }));
+    await assertFails(updateDoc(doc(como('liderA'), 'professores/fichaA'), { nascimentoOk: true }));
   });
 });
