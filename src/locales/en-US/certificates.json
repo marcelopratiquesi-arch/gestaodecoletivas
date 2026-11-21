@@ -67,5 +67,14 @@
   },
   "loadingList": "Loading workshops...",
   "alreadyListed": "already listed",
-  "viewAsNoLogin": "This teacher has no login in the system yet, so the certificate has nowhere to go. Add their workshop from the Teachers tab (Workshops button)."
+  "viewAsNoLogin": "This teacher has no login in the system yet, so the certificate has nowhere to go. Add their workshop from the Teachers tab (Workshops button).",
+  "done": {
+    "title": "Workshops you have completed",
+    "count_one": "{{count}} workshop",
+    "count_other": "{{count}} workshops",
+    "hint": "These are the workshops on your record, including the ones the team added for you. Missing one? Send the certificate below.",
+    "empty": "There are no workshops on your record yet.",
+    "registered": "Added on {{date}}",
+    "ok": "On record"
+  }
 }

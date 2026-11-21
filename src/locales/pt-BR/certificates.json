@@ -67,5 +67,14 @@
   },
   "loadingList": "Carregando workshops...",
   "alreadyListed": "já consta",
-  "viewAsNoLogin": "Este professor ainda não tem login no sistema, então o certificado não tem onde ficar. Adicione o workshop dele pela aba Professores (botão Workshops)."
+  "viewAsNoLogin": "Este professor ainda não tem login no sistema, então o certificado não tem onde ficar. Adicione o workshop dele pela aba Professores (botão Workshops).",
+  "done": {
+    "title": "Workshops que você já fez",
+    "count_one": "{{count}} workshop",
+    "count_other": "{{count}} workshops",
+    "hint": "Estes são os workshops que constam no seu cadastro, incluindo os que a equipe lançou por você. Faltou algum? Envie o certificado logo abaixo.",
+    "empty": "Ainda não há workshops no seu cadastro.",
+    "registered": "Registrado em {{date}}",
+    "ok": "No cadastro"
+  }
 }

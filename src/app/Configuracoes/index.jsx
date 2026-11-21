@@ -136,7 +136,7 @@ export default function ConfiguracoesPage() {
                 const ativo = activeTab === tab.id;
                 return (
                   <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)} aria-current={ativo ? "page" : undefined}
-                    className={`inline-flex items-center gap-2 h-10 px-3 rounded-[10px] text-sm whitespace-nowrap shrink-0 transition-colors ${ativo
+                    className={`inline-flex items-center gap-2 h-10 px-3 rounded-[10px] text-sm whitespace-nowrap shrink-0 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-red-300 focus-visible:ring-offset-1 ${ativo
                       ? "bg-red-600 text-white font-extrabold"
                       : "font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"}`}>
                     <Icon className="w-[17px] h-[17px] shrink-0" aria-hidden="true" />
