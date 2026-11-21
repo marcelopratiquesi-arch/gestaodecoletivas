@@ -7,9 +7,9 @@ import {
   collection, addDoc, getDocs, deleteDoc, doc, updateDoc, deleteField,
   writeBatch, query, where, serverTimestamp
 } from 'firebase/firestore';
-import { Calendar, Plus, Trash2, Loader2, CalendarDays, MapPin, Search, CheckSquare, Square, Check, X, Inbox, Pencil, RefreshCw } from 'lucide-react';
+import { Calendar, Plus, Trash2, Loader2, CalendarDays, MapPin, Search, CheckSquare, Square, Check, X, Inbox, Pencil, RefreshCw, Hammer } from 'lucide-react';
 import { formatDate as formatarData } from '../../../utils/formatters';
-import { ESCOPOS_FERIADO, escopoDoFeriado, normalizarPais, normalizarTexto, ehCancelamentoAutomaticoDeFeriado, feriadoAplicaNaUnidade, unidadesDeExcecao } from '../../../utils/feriados';
+import { ESCOPOS_FERIADO, escopoDoFeriado, normalizarPais, normalizarTexto, ehCancelamentoAutomaticoDeFeriado, feriadoAplicaNaUnidade, unidadesDeExcecao, TIPO_REFORMA, ehReforma, reformaEmAndamento } from '../../../utils/feriados';
 import { impactoDoFeriado, comecaNoPassado, feriadosParecidos } from '../../../utils/feriadosImpacto';
 import { montarFeriado, feriadoDaProposta, ESCOPOS_DO_MENTOR, STATUS_PROPOSTA, CAMPOS_DE_ABRANGENCIA } from '../../../utils/feriadosProposta';
 import { useTranslation } from 'react-i18next';
@@ -19,7 +19,7 @@ import { CabecalhoDaAba } from '../ui/CabecalhoDaAba';
 import { BotaoDeLinha } from '../ui/BotaoDeLinha';
 
 // Tipo gravado no banco (português) -> chave de tradução.
-const TIPOS_FERIADO = { 'Recesso': 'recess', 'Feriado Nacional': 'national', 'Feriado Municipal': 'municipal' };
+const TIPOS_FERIADO = { 'Recesso': 'recess', 'Feriado Nacional': 'national', 'Feriado Municipal': 'municipal', [TIPO_REFORMA]: 'renovation' };
 const PAISES = ['BR', 'AR', 'US'];
 
 const FORM_INICIAL = { nome: '', dataInicio: '', dataFim: '', tipo: 'Recesso', escopo: 'rede', pais: 'BR', estado: '', cidade: '', unidadeIds: [], unidadesExcecao: [] };
@@ -45,6 +45,7 @@ export function FeriadosTab() {
   const [filtroAno, setFiltroAno] = useState('');
   const [filtroEscopo, setFiltroEscopo] = useState('');
   const [buscaLista, setBuscaLista] = useState('');
+  const [soReformaAgora, setSoReformaAgora] = useState(false); // só as unidades fechadas para reforma hoje
   const [processando, setProcessando] = useState(false);
   const [buscaUnidade, setBuscaUnidade] = useState('');
   const [buscaExcecao, setBuscaExcecao] = useState('');
@@ -144,6 +145,10 @@ export function FeriadosTab() {
       }
   }
 
+  // Reforma só vale para unidades escolhidas (nunca rede, país, estado ou cidade inteiros).
+  const alterarTipo = (tipo) => setForm(prev => (tipo === TIPO_REFORMA
+      ? { ...prev, tipo, escopo: 'unidades', estado: '', cidade: '', unidadesExcecao: [], nome: prev.nome || 'Reforma' }
+      : { ...prev, tipo }));
   const alterarEscopo = (escopo) => setForm(prev => ({ ...prev, escopo, estado: '', cidade: '', unidadeIds: [], unidadesExcecao: [] }));
 
   const alterarCidade = (cidade) => setForm(prev => ({ ...prev, cidade, unidadeIds: sugerirUnidadesDaCidade(cidade) }));
@@ -367,6 +372,7 @@ export function FeriadosTab() {
       proximos: feriados.filter(f => (f.dataFim || f.dataInicio) >= hojeStr).length,
       passados: feriados.filter(f => (f.dataFim || f.dataInicio) < hojeStr).length,
       todos: feriados.length,
+      reformaAgora: feriados.filter(f => reformaEmAndamento(f, hojeStr)).length,
   }), [feriados, hojeStr]);
   const anosDosFeriados = useMemo(
       () => [...new Set(feriados.map(f => String(f.dataInicio || '').slice(0, 4)).filter(a => /^\d{4}$/.test(a)))].sort().reverse(),
@@ -376,14 +382,22 @@ export function FeriadosTab() {
       const termo = normalizarTexto(buscaLista);
       const lista = feriados.filter(f => {
           const fim = f.dataFim || f.dataInicio || '';
-          if (filtroPeriodo === 'proximos' && fim < hojeStr) return false;
-          if (filtroPeriodo === 'passados' && fim >= hojeStr) return false;
+          if (soReformaAgora) { if (!reformaEmAndamento(f, hojeStr)) return false; }
+          else if (filtroPeriodo === 'proximos' && fim < hojeStr) return false;
+          else if (filtroPeriodo === 'passados' && fim >= hojeStr) return false;
           if (filtroAno && String(f.dataInicio || '').slice(0, 4) !== filtroAno) return false;
           if (filtroEscopo && escopoDoFeriado(f) !== filtroEscopo) return false;
           return !termo || normalizarTexto(f.nome).includes(termo);
       });
       return filtroPeriodo === 'passados' ? [...lista].reverse() : lista; // passados: o mais recente primeiro
-  }, [feriados, filtroPeriodo, filtroAno, filtroEscopo, buscaLista, hojeStr]);
+  }, [feriados, filtroPeriodo, filtroAno, filtroEscopo, buscaLista, hojeStr, soReformaAgora]);
+
+  // Nomes das unidades de uma reforma (3 primeiras + quantas mais).
+  const nomesDasUnidades = (f) => {
+      const todas = catalogs?.unidades || [];
+      const nomes = (f.unidadeIds || []).map(id => todas.find(u => String(u.id) === String(id))?.nome).filter(Boolean);
+      return nomes.length > 3 ? `${nomes.slice(0, 3).join(', ')} +${nomes.length - 3}` : nomes.join(', ');
+  };
 
   const inputClass = "w-full p-3 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500";
   const labelClass = "text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1 block";
@@ -404,8 +418,8 @@ export function FeriadosTab() {
         <form onSubmit={handleSave} className="space-y-5">
           <div className="flex flex-col xl:flex-row gap-4 items-end">
             <div className="flex-1 w-full">
-              <label className={labelClass}>{t('holidaysTab.eventName')}</label>
-              <input className={inputClass} value={form.nome} onChange={e => setForm({...form, nome: e.target.value})} placeholder={t('holidaysTab.eventPlaceholder')} />
+              <label className={labelClass}>{form.tipo === TIPO_REFORMA ? t('holidaysTab.renovation.nameLabel') : t('holidaysTab.eventName')}</label>
+              <input className={inputClass} value={form.nome} onChange={e => setForm({...form, nome: e.target.value})} placeholder={form.tipo === TIPO_REFORMA ? t('holidaysTab.renovation.namePlaceholder') : t('holidaysTab.eventPlaceholder')} />
             </div>
 
             <div className="w-full xl:w-40">
@@ -420,31 +434,36 @@ export function FeriadosTab() {
 
             <div className="w-full xl:w-44">
               <label className={labelClass}>{t('holidaysTab.type')}</label>
-              <select className={inputClass} value={form.tipo} onChange={e => setForm({...form, tipo: e.target.value})}>
+              <select className={inputClass} value={form.tipo} onChange={e => alterarTipo(e.target.value)}>
                 <option value="Recesso">{t('holidaysTab.types.recess')}</option>
                 <option value="Feriado Nacional">{t('holidaysTab.types.national')}</option>
                 <option value="Feriado Municipal">{t('holidaysTab.types.municipal')}</option>
+                <option value={TIPO_REFORMA}>{t('holidaysTab.types.renovation')}</option>
               </select>
             </div>
           </div>
 
           {/* 🟢 ABRANGÊNCIA */}
           <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 p-4 space-y-4">
-            <div>
-              <label className={`${labelClass} flex items-center gap-1`}><MapPin className="w-3.5 h-3.5"/> {t('holidaysTab.scope')}</label>
-              <div className="flex flex-wrap gap-2">
-                {escoposDisponiveis.map(escopo => (
-                  <button
-                    key={escopo}
-                    type="button"
-                    onClick={() => alterarEscopo(escopo)}
-                    className={`px-4 py-2 rounded-lg text-xs font-bold uppercase border transition-colors ${form.escopo === escopo ? 'bg-red-600 text-white border-red-600' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:border-red-300'}`}
-                  >
-                    {t(`holidaysTab.scopes.${escopo}`)}
-                  </button>
-                ))}
+            {form.tipo === TIPO_REFORMA ? (
+              <p className="text-xs font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2 flex items-start gap-2"><Hammer className="w-4 h-4 shrink-0 mt-0.5"/> {t('holidaysTab.renovation.scopeNote')}</p>
+            ) : (
+              <div>
+                <label className={`${labelClass} flex items-center gap-1`}><MapPin className="w-3.5 h-3.5"/> {t('holidaysTab.scope')}</label>
+                <div className="flex flex-wrap gap-2">
+                  {escoposDisponiveis.map(escopo => (
+                    <button
+                      key={escopo}
+                      type="button"
+                      onClick={() => alterarEscopo(escopo)}
+                      className={`px-4 py-2 rounded-lg text-xs font-bold uppercase border transition-colors ${form.escopo === escopo ? 'bg-red-600 text-white border-red-600' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:border-red-300'}`}
+                    >
+                      {t(`holidaysTab.scopes.${escopo}`)}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {form.escopo === 'pais' && (
               <div className="w-full md:w-64">
@@ -557,6 +576,7 @@ export function FeriadosTab() {
                     <span className={`px-2 py-1 text-[10px] font-bold uppercase rounded border ${p.status === STATUS_PROPOSTA.APROVADA ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : p.status === STATUS_PROPOSTA.RECUSADA ? 'bg-red-50 text-red-700 border-red-100' : 'bg-amber-50 text-amber-700 border-amber-100'}`}>
                       {t(`holidaysTab.proposals.status.${p.status || 'pendente'}`)}
                     </span>
+                    {ehReforma(p) && <span className="px-2 py-1 text-[10px] font-bold uppercase rounded border bg-amber-50 text-amber-700 border-amber-100 flex items-center gap-1"><Hammer className="w-3 h-3"/> {t('holidaysTab.types.renovation')}</span>}
                     <span className="px-2 py-1 text-[10px] font-bold uppercase rounded border bg-slate-50 text-slate-600 border-slate-200 flex items-center gap-1">
                       <MapPin className="w-3 h-3"/> {descreverAbrangencia(p)}
                     </span>
@@ -602,6 +622,10 @@ export function FeriadosTab() {
               {t(`holidaysTab.filters.${chave}`)} ({n})
             </button>
           ))}
+          <button type="button" onClick={() => setSoReformaAgora(v => !v)} aria-pressed={soReformaAgora}
+            className={`px-3 py-2 rounded-lg text-xs font-bold uppercase border transition-colors flex items-center gap-1.5 ${soReformaAgora ? 'bg-amber-500 text-white border-amber-500' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:border-amber-300'}`}>
+            <Hammer className="w-3.5 h-3.5"/> {t('holidaysTab.renovation.nowFilter')} ({contagem.reformaAgora})
+          </button>
           <select className={`${inputClass} !w-auto`} value={filtroAno} onChange={e => setFiltroAno(e.target.value)}>
             <option value="">{t('holidaysTab.filters.allYears')}</option>
             {anosDosFeriados.map(a => <option key={a} value={a}>{a}</option>)}
@@ -625,14 +649,17 @@ export function FeriadosTab() {
                 <div className="flex justify-between items-start">
                     <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-2">
-                        <span className={`px-2 py-1 text-[10px] font-bold uppercase rounded border ${String(f.tipo || '').includes('Feriado') ? 'bg-red-50 text-red-700 border-red-100 dark:bg-red-900/30 dark:text-red-400' : 'bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-900/30 dark:text-amber-400'}`}>
+                        <span className={`px-2 py-1 text-[10px] font-bold uppercase rounded border flex items-center gap-1 ${String(f.tipo || '').includes('Feriado') ? 'bg-red-50 text-red-700 border-red-100 dark:bg-red-900/30 dark:text-red-400' : 'bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-900/30 dark:text-amber-400'}`}>
+                        {ehReforma(f) && <Hammer className="w-3 h-3"/>}
                         {TIPOS_FERIADO[f.tipo] ? t(`holidaysTab.types.${TIPOS_FERIADO[f.tipo]}`) : f.tipo}
                         </span>
+                        {reformaEmAndamento(f, hojeStr) && <span className="px-2 py-1 text-[10px] font-bold uppercase rounded bg-amber-500 text-white">{t('holidaysTab.renovation.inProgress')}</span>}
                         <span className="px-2 py-1 text-[10px] font-bold uppercase rounded border bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-900/40 dark:text-slate-300 dark:border-slate-700 flex items-center gap-1">
                           <MapPin className="w-3 h-3"/> {descreverAbrangencia(f)}
                         </span>
                     </div>
                     <h4 className="font-bold text-slate-800 dark:text-white text-lg mb-1">{f.nome}</h4>
+                    {ehReforma(f) && nomesDasUnidades(f) && <p className="text-sm font-bold text-slate-600 dark:text-slate-300 mb-1">{nomesDasUnidades(f)}</p>}
                     <div className="text-sm font-medium text-slate-500 dark:text-slate-400 flex items-center gap-2">
                         <CalendarDays className="w-4 h-4"/>
                         {t('holidaysTab.range', { start: formatDate(f.dataInicio), end: formatDate(f.dataFim) })}

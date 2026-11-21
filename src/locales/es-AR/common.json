@@ -33,7 +33,8 @@
     "recessHoliday": "Receso/Feriado",
     "autoRecess": "Receso/Feriado automático",
     "recessNamed": "Receso: {{name}}",
-    "recess": "Receso"
+    "recess": "Receso",
+    "renovation": "Unidad en remodelación"
   },
   "substitutionReasons": {
     "holderMedicalLeave": "Certificado del Titular",

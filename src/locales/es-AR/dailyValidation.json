@@ -100,7 +100,8 @@
     "confirmHolidayValidation": "Este día es feriado en esta unidad. ¿Confirmás que la unidad abrió y la clase se dio?",
     "alreadyValidated": "validada con {{count}} alumno(s)",
     "alreadyCanceled": "cancelada ({{motivo}})",
-    "confirmOverwrite": "Otra persona ya registró esta clase: {{comoEsta}}. Tu pantalla estaba desactualizada.\n\n¿Guardar tu registro encima?"
+    "confirmOverwrite": "Otra persona ya registró esta clase: {{comoEsta}}. Tu pantalla estaba desactualizada.\n\n¿Guardar tu registro encima?",
+    "renovationInfo": "ℹ️ INFORMACIÓN\n\nEsta clase se canceló automáticamente porque la unidad está cerrada por remodelación en este período."
   },
   "deadline": {
     "closedMonthTeacher": "Este mes ya fue cerrado. Lo que quedó pendiente ya no puede ser validado ni modificado por el profesor. Si necesitás corregir, hablá con el líder de la unidad.",
