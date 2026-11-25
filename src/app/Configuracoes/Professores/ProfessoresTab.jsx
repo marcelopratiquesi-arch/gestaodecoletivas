@@ -29,7 +29,7 @@ import { ehLider, unidadesDoLider, ehDoMeuEscopo } from '../../../permissions';
 import PedidosProfessor from "../Pendencias/PedidosProfessor";
 import { BuscaDocumento } from "../Documento/DocumentoModal";
 import { FiltroPadrao } from "../ui/FiltroPadrao";
-import { CabecalhoDoModal } from "../ui/CabecalhoDoModal";
+import PopupFlutuante from "../../../components/PopupFlutuante";
 import { BotaoDeLinha } from "../ui/BotaoDeLinha";
 import { CabecalhoDaAba, CaixaDeNumeros, BotaoPrincipal, BotaoSecundario } from "../ui/CabecalhoDaAba";
 import { useFiltroCascata } from "../ui/useFiltroCascata";
@@ -779,30 +779,43 @@ export function ProfessoresTab() {
 
       {/* MODAL 2: FORMULÁRIO COMPLETO COM BANDEIRA, MÁSCARA E AUDITORIA */}
       {modalFormAberto && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in zoom-in duration-200">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200 dark:border-slate-700 flex flex-col max-h-[90vh]">
-            <CabecalhoDoModal abaId="professores" icone={Edit2}
-              titulo={profEditando ? t('teachersTab.formModal.editTitle', 'Editar Professor') : t('teachersTab.formModal.newTitle', 'Novo Cadastro')}
-              subtitulo={t('teachersTab.formModal.desc', 'Preencha os dados e clique em salvar.')}
-              onFechar={() => setModalFormAberto(false)} />
-
-            <form onSubmit={salvarProfessor} className="p-6 space-y-5 overflow-y-auto custom-scrollbar">
+        <PopupFlutuante
+          titulo={profEditando ? t('teachersTab.formModal.editTitle', 'Editar Professor') : t('teachersTab.formModal.newTitle', 'Novo Cadastro')}
+          onFechar={() => setModalFormAberto(false)}
+          bloquearFechar={salvando}
+          rotuloFechar={t('teachersTab.formModal.cancel', 'Cancelar')}
+          chaveMemoria="professores.popupFicha"
+          largura={540}
+          altura={780}
+          rodape={
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={() => setModalFormAberto(false)} disabled={salvando} className="px-4 py-2.5 rounded-xl text-xs font-black uppercase bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200 disabled:opacity-50">
+                {t('teachersTab.formModal.cancel', 'Cancelar')}
+              </button>
+              <button type="submit" form="form-professor" disabled={salvando} className="px-6 py-2.5 rounded-xl text-xs font-black uppercase bg-red-600 hover:bg-red-700 text-white flex items-center gap-2 disabled:opacity-50 transition-transform active:scale-95">
+                {salvando ? <Loader2 className="w-4 h-4 animate-spin"/> : (profEditando ? t('teachersTab.formModal.saveEdit', 'Salvar Alterações') : <><CheckCircle2 className="w-4 h-4"/> {t('teachersTab.formModal.saveNew', 'Concluir Cadastro')}</>)}
+              </button>
+            </div>
+          }
+        >
+            <form id="form-professor" onSubmit={salvarProfessor} className="p-5 space-y-5">
+                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 normal-case">{t('teachersTab.formModal.desc', 'Preencha os dados e clique em salvar.')}</p>
                 {erro && <div className="text-red-600 text-sm font-bold bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 p-4 rounded-xl flex items-center gap-2"><AlertTriangle className="w-5 h-5 flex-shrink-0"/> {erro}</div>}
                 {sucesso && <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-300 text-sm rounded-xl border border-emerald-100 dark:border-emerald-800 flex items-center gap-2"><CheckCircle2 className="w-5 h-5 flex-shrink-0"/> {sucesso}</div>}
                 
                 <div>
-                    <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 pl-1">{t('teachersTab.formModal.loginEmail', 'E-mail (Login Fixo)')}</label>
+                    <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 block">{t('teachersTab.formModal.loginEmail', 'E-mail (Login Fixo)')}</label>
                     <div className="relative">
                         <Mail className="absolute left-4 top-3.5 w-4 h-4 text-slate-400"/>
-                        <input type="email" className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-emerald-500 rounded-xl text-sm font-bold outline-none transition-all dark:text-white normal-case" value={email} onChange={e => setEmail(e.target.value)} placeholder={t('teachersTab.verifyModal.emailPlaceholder')} />
+                        <input type="email" className="w-full pl-11 pr-4 py-3 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-white rounded-xl text-sm font-bold outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100 normal-case" value={email} onChange={e => setEmail(e.target.value)} placeholder={t('teachersTab.verifyModal.emailPlaceholder')} />
                     </div>
                 </div>
 
                 <div>
-                    <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 pl-1">{t('teachersTab.formModal.fullName', 'Nome Completo')}</label>
+                    <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 block">{t('teachersTab.formModal.fullName', 'Nome Completo')}</label>
                     <div className="relative">
                         <User className="absolute left-4 top-3.5 w-4 h-4 text-slate-400"/>
-                        <input id="ed-nome" className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-emerald-500 rounded-xl text-sm font-bold outline-none transition-all dark:text-white" value={nome} onChange={e => setNome(e.target.value)} autoFocus placeholder={t('teachersTab.formModal.namePlaceholder', 'Nome do Professor')} />
+                        <input id="ed-nome" className="w-full pl-11 pr-4 py-3 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-white rounded-xl text-sm font-bold outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100" value={nome} onChange={e => setNome(e.target.value)} autoFocus placeholder={t('teachersTab.formModal.namePlaceholder', 'Nome do Professor')} />
                     </div>
                 </div>
 
@@ -838,11 +851,11 @@ export function ProfessoresTab() {
                 {/* DATA DE NASCIMENTO: só de quem já tem login (a data fica na gaveta do login). Admin e mentor preenchem e corrigem. */}
                 {profEditando && (
                     <div className="space-y-1 normal-case">
-                        <label htmlFor="ed-nasc" className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 pl-1">{t('leadersTab.modal.edit.birth')}</label>
+                        <label htmlFor="ed-nasc" className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 block">{t('leadersTab.modal.edit.birth')}</label>
                         {profEditando.uidLogin && veDocumento ? (
                             <>
                                 <input id="ed-nasc" type="date" value={nascimento} min="1920-01-01" max={new Date().toISOString().slice(0, 10)} onChange={(e) => setNascimento(e.target.value)} disabled={salvando || carregandoNasc}
-                                    className="w-full p-3 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-white rounded-xl text-sm font-bold outline-none focus:border-emerald-500" />
+                                    className="w-full p-3 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-white rounded-xl text-sm font-bold outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100" />
                                 <p className="text-[11px] text-slate-500 pl-1">{t('leadersTab.modal.edit.birthHint')}</p>
                             </>
                         ) : (
@@ -885,12 +898,12 @@ export function ProfessoresTab() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="flex gap-2">
                         <div className="w-2/5">
-                            <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 pl-1">{t('teachersTab.formModal.country', 'País')}</label>
+                            <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 block">{t('teachersTab.formModal.country', 'País')}</label>
                             <div className="relative">
                                 <select 
                                     value={pais} 
                                     onChange={e => { setPais(e.target.value); setTelefone(formatarTelefone(telefone, e.target.value)); }}
-                                    className="w-full pl-3 pr-7 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-emerald-500 rounded-xl text-xs font-bold outline-none transition-all dark:text-white appearance-none"
+                                    className="w-full pl-3 pr-7 py-3 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-white rounded-xl text-xs font-bold outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100 appearance-none"
                                 >
                                     {PAISES.map(p => <option key={p.id} value={p.id}>{t(`common.countries.${p.id}`, p.nome)}</option>)}
                                 </select>
@@ -898,7 +911,7 @@ export function ProfessoresTab() {
                             </div>
                         </div>
                         <div className="w-3/5">
-                            <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 pl-1 flex items-center justify-between">
+                            <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 flex items-center justify-between">
                                 <span>{t('teachersTab.formModal.whatsapp', 'WhatsApp')} <span className="text-red-500">*</span></span>
                                 <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border font-black ${PAIS_CONFIG[pais]?.badgeClass}`}>
                                     <FlagIcon pais={pais} /> {DDI_MAP[pais]}
@@ -907,7 +920,7 @@ export function ProfessoresTab() {
                             <div className="relative">
                                 <Phone className="absolute left-4 top-3.5 w-4 h-4 text-slate-400"/>
                                 <input id="ed-tel"
-                                    className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-emerald-500 rounded-xl text-sm font-bold outline-none transition-all dark:text-white" 
+                                    className="w-full pl-11 pr-4 py-3 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-white rounded-xl text-sm font-bold outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100" 
                                     value={telefone} 
                                     onChange={e => setTelefone(formatarTelefone(e.target.value, pais))} 
                                     placeholder={getPhonePlaceholder(pais)} 
@@ -917,9 +930,9 @@ export function ProfessoresTab() {
                         </div>
                     </div>
                     <div>
-                        <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 pl-1">{t('teachersTab.formModal.status', 'Status')}</label>
+                        <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 block">{t('teachersTab.formModal.status', 'Status')}</label>
                         <div className="relative">
-                            <select className="w-full pl-4 pr-10 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-emerald-500 rounded-xl text-sm font-bold outline-none appearance-none transition-all dark:text-white" value={status} onChange={e => setStatus(e.target.value)}>
+                            <select className="w-full pl-4 pr-10 py-3 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-white rounded-xl text-sm font-bold outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100 appearance-none" value={status} onChange={e => setStatus(e.target.value)}>
                                 <option value="ativo">✅ {t('teachersTab.formModal.statusActive', 'ATIVO')}</option>
                                 <option value="inativo">🚫 {t('teachersTab.formModal.statusInactive', 'INATIVO')}</option>
                             </select>
@@ -935,10 +948,10 @@ export function ProfessoresTab() {
                         </div>
                         {minhasUnidades.length > 0 && (
                             <div>
-                                <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 pl-1">{t('teachersTab.formModal.autoLink', 'Vincular Automaticamente a:')}</label>
+                                <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 block">{t('teachersTab.formModal.autoLink', 'Vincular Automaticamente a:')}</label>
                                 <div className="relative">
                                     <select 
-                                        className="w-full pl-4 pr-10 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-emerald-500 rounded-xl text-sm font-bold outline-none appearance-none transition-all dark:text-white"
+                                        className="w-full pl-4 pr-10 py-3 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-white rounded-xl text-sm font-bold outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100 appearance-none"
                                         value={unidadeSelecionadaId} 
                                         onChange={e => setUnidadeSelecionadaId(e.target.value)}
                                     >
@@ -952,17 +965,8 @@ export function ProfessoresTab() {
                     </div>
                 )}
 
-                <div className="flex justify-end gap-3 pt-6 border-t border-slate-100 dark:border-slate-700 shrink-0 mt-6">
-                    <button type="button" onClick={() => setModalFormAberto(false)} className="px-6 py-3 rounded-xl font-bold text-xs uppercase text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
-                        {t('teachersTab.formModal.cancel', 'Cancelar')}
-                    </button>
-                    <button type="submit" disabled={salvando} className="px-8 py-3 bg-emerald-600 text-white rounded-xl font-bold text-xs uppercase shadow-lg shadow-emerald-500/30 hover:bg-emerald-700 hover:-translate-y-0.5 transition-all flex items-center gap-2 disabled:opacity-50 disabled:transform-none">
-                        {salvando ? <Loader2 className="w-4 h-4 animate-spin"/> : (profEditando ? t('teachersTab.formModal.saveEdit', 'Salvar Alterações') : <><CheckCircle2 className="w-4 h-4"/> {t('teachersTab.formModal.saveNew', 'Concluir Cadastro')}</>)}
-                    </button>
-                </div>
             </form>
-          </div>
-        </div>
+        </PopupFlutuante>
       )}
 
       {profWorkshops && (
