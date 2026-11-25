@@ -144,8 +144,9 @@ describe('quem corrige o documento', () => {
     await assertSucceeds(gravar('mentor1', 'liderA', { numero: CPF2, anterior: { tipo: 'cpf', numero: CPF } }));
     await assertSucceeds(gravar('outroLider', 'outroLider'));
   });
-  it('mentor NÃO marca o crachá de outra pessoa', async () => {
-    await assertFails(gravar('mentor1', 'liderA', { marcar: true }));
+  it('mentor marca o crachá só de líder da unidade dele (janela Editar); o de outra unidade não', async () => {
+    await assertFails(gravar('mentor2', 'liderA', { marcar: true }));
+    await assertSucceeds(gravar('mentor1', 'liderA', { marcar: true }));
   });
 });
 

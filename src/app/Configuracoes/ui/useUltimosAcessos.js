@@ -9,6 +9,14 @@ const guardados = new Map(); // uid -> carimbo do último acesso (ou null = nunc
 const cadastros = new Map(); // uid -> o que o selo "cadastro incompleto" precisa (vem do MESMO crachá lido: 0 leituras a mais)
 const falharam = new Set(); // uids que não deu para ler nesta sessão (não fica "carregando" para sempre)
 const GRUPO = 30;
+const ouvintes = new Set(); // telas que precisam redesenhar quando um cadastro é corrigido na própria tela
+
+/** Depois de salvar um cadastro na janela Editar: atualiza o que o selo "cadastro incompleto" enxerga, sem ler o banco de novo. */
+export function atualizarCadastroGuardado(uid, campos) {
+  const id = String(uid);
+  cadastros.set(id, { ...(cadastros.get(id) || {}), ...campos });
+  ouvintes.forEach((f) => f());
+}
 const pendente = (uid) => !guardados.has(uid) && !falharam.has(uid);
 
 async function buscarFaltando(uids) {
@@ -20,7 +28,7 @@ async function buscarFaltando(uids) {
       const achados = new Map(snap.docs.map((d) => [d.id, d.data().ultimoAcesso || null]));
       snap.docs.forEach((d) => {
         const x = d.data();
-        cadastros.set(d.id, { nome: x.nome, telefone: x.telefone, documentoOk: x.documentoOk, nascimentoOk: x.nascimentoOk, loginGoogle: x.loginGoogle });
+        cadastros.set(d.id, { nome: x.nome, telefone: x.telefone, documentoOk: x.documentoOk, nascimentoOk: x.nascimentoOk, loginGoogle: x.loginGoogle, pais: x.pais });
       });
       for (const uid of grupo) guardados.set(uid, achados.get(uid) ?? null);
     } catch (e) {

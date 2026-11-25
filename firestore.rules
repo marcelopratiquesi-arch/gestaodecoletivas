@@ -342,8 +342,9 @@ service cloud.firestore {
         || (logado() && exists(/databases/$(database)/documents/solicitacoes_acesso/$(uid))
             && (liderDoPedidoProfessor(get(/databases/$(database)/documents/solicitacoes_acesso/$(uid)).data)
                 || mentorDoPedido(get(/databases/$(database)/documents/solicitacoes_acesso/$(uid)).data)));
-      allow create, update: if nascimentoValido() && ((autenticado() && request.auth.uid == uid) || souAdmin());
-      allow delete: if souAdmin() || (autenticado() && request.auth.uid == uid);
+      // O mentor também preenche/corrige a data dos líderes das unidades dele (janela "Editar" da aba Líderes).
+      allow create, update: if nascimentoValido() && ((autenticado() && request.auth.uid == uid) || souAdmin() || mentorDoLider(uid));
+      allow delete: if souAdmin() || (autenticado() && request.auth.uid == uid) || mentorDoLider(uid);
     }
 
     // Vínculo professor × unidade (Etapa 2). Cria e apaga: admin, mentor da unidade e líder da unidade. Nunca se edita
@@ -640,8 +641,16 @@ service cloud.firestore {
         || souAdmin()
         // Líder temporário (só quando o alvo tem prazo: a checagem barata vem primeiro por causa do limite de 1000 verificações).
         || ('temporarioAte' in resource.data && logado() && meuPapel() == 'mentor' && mentorMexeNoTemporario())
+        // Mentor: corrige nome, e-mail e telefone; e, na janela "Editar" da aba Líderes, completa o cadastro do líder DELE (país e as marcas
+        // de documento/nascimento, que o banco só aceita se o dado existe de verdade; "documentoOk" volta a false quando o CPF é apagado).
+        // Está junto da regra antiga de propósito: reaproveita as checagens já feitas (o banco limita cada verificação a 1000 operações).
         || (logado() && meuPapel() == 'mentor' && papelDoAlvo() in ['lider', 'unidade', 'professor']
-            && camposAlterados().hasOnly(['nome', 'email', 'telefone']))
+            && (camposAlterados().hasOnly(['nome', 'email', 'telefone'])
+                || (camposAlterados().hasOnly(['nome', 'telefone', 'pais', 'nascimentoOk', 'documentoOk'])
+                    && request.resource.data.get('pais', 'BR') in ['BR', 'AR', 'US']
+                    && (!camposAlterados().hasAny(['nascimentoOk']) || (request.resource.data.nascimentoOk == true && existsAfter(/databases/$(database)/documents/nascimentos/$(uid))))
+                    && (!camposAlterados().hasAny(['documentoOk']) || request.resource.data.documentoOk == false || existsAfter(caminhoDocumentoUsuario(uid)))
+                    && mentorDoLider(uid))))
         || (logado() && meuPapel() in papeisLider() && papelDoAlvo() == 'professor'
             && camposAlterados().hasOnly(['nome', 'email']))
         // Mentor muda a liderança de UMA unidade DELE no crachá de alguém (aba Líderes; o admin já pode tudo acima).
