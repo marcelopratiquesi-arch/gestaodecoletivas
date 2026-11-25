@@ -13,7 +13,7 @@ self.addEventListener("push", (e) => {
   e.waitUntil(self.registration.showNotification(titulo, {
     body: dados.texto || "",
     icon: "/icons/icon-192.png",
-    badge: "/icons/icon-192.png",
+    badge: "/icons/badge-96.png", // desenho branco, sem fundo (barra do Android)
     data: { link: dados.link || "/app" },
   }));
 });
