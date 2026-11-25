@@ -93,10 +93,11 @@ describe('data de nascimento (gaveta privada)', () => {
     await assertFails(setDoc(doc(novo, 'nascimentos/profA'), nasc()));
     await assertFails(getDoc(doc(como('profB'), 'nascimentos/semCracha')));
   });
-  it('ninguém grava a de outra pessoa (só o admin)', async () => {
+  it('ninguém grava a de outra pessoa (só o admin e o mentor da unidade)', async () => {
     await assertFails(setDoc(doc(como('profB'), 'nascimentos/profA'), nasc()));
     await assertFails(setDoc(doc(como('liderA'), 'nascimentos/profA'), nasc()));
-    await assertFails(setDoc(doc(como('mentor1'), 'nascimentos/profA'), nasc()));
+    await assertFails(setDoc(doc(como('mentor2'), 'nascimentos/profA'), nasc())); // mentor de OUTRA unidade
+    await assertSucceeds(setDoc(doc(como('mentor1'), 'nascimentos/profA'), nasc())); // mentor da unidade dele (janela Editar)
     await assertSucceeds(setDoc(doc(como('admin1'), 'nascimentos/profA'), nasc()));
   });
   it('leem: o dono, o admin, o mentor e o líder da unidade; os de outra unidade e outros professores não', async () => {
