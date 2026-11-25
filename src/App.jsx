@@ -5,6 +5,7 @@ import { PlayerProvider } from "./contexts/PlayerContext";
 import { CatalogProvider } from "./contexts/CatalogContext";
 import AvisoNovaVersao from "./components/AvisoNovaVersao";
 import AvisoTemporario from "./components/AvisoTemporario";
+import BotaoInstalar from "./components/BotaoInstalar";
 
 export default function App() {
   return (
@@ -14,6 +15,7 @@ export default function App() {
         <AppRoutes />
         <AvisoNovaVersao />
         <AvisoTemporario />
+        <BotaoInstalar />
       </CatalogProvider>
     </PlayerProvider>
   );
