@@ -73,5 +73,19 @@
   "reformSoon": {
     "title": "Renovation scheduled",
     "text": "The unit will close from {{ini}} to {{fim}}, with no classes in that period. Classes resume on {{retorno}}."
-  }
+  },
+  "chooseDay": "Choose the day",
+  "dayClasses_one": "{{day}}: {{count}} class",
+  "dayClasses_other": "{{day}}: {{count}} classes",
+  "todayEnded": "Today's classes are over",
+  "seeDay": "See {{day}} classes",
+  "noClassesOnDay": "No classes at this unit: {{day}}",
+  "noModalityOnDay": "No {{modality}} at this unit: {{day}}",
+  "pickAnotherDay": "Pick another day in the bar above.",
+  "settings": "Settings",
+  "close": "Close",
+  "theme": "Theme",
+  "themeDark": "Dark",
+  "themeLight": "Light",
+  "language": "Language"
 }
