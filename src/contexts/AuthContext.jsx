@@ -5,6 +5,7 @@ import { auth, db } from "../services/firebase"; // ✅ caminho correto
 import { crachaSemAcesso, professorDeLoginAntigo, papelEfetivo, coberturaAtiva, AVISO_SEM_ACESSO, AVISO_PROFESSOR_LOGIN_ANTIGO } from "../permissions";
 import { temporarioVencido } from "../utils/temporario";
 import { definirVisaoAtual } from "../services/visaoAdminAtual";
+import { soltarAparelho } from "../services/avisosPushService";
 
 const AuthContext = createContext(null);
 
@@ -230,6 +231,9 @@ export function AuthProvider({ children }) {
               console.error("Aviso: Falha ao gravar log de logout", logError);
           }
       }
+
+      // 1b. Solta o endereço de aviso deste aparelho (outra pessoa pode entrar nele); não trava a saída se falhar
+      if (user) await soltarAparelho(user.uid).catch(() => {});
 
       // 2. Executa a desconexão real do sistema
       await signOut(auth);

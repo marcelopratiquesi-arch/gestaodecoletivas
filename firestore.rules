@@ -1282,13 +1282,37 @@ service cloud.firestore {
       allow write: if souAdmin();
     }
 
+    // ===================== AVISOS PUSH (celular e computador) =====================
+    // push_aparelhos/{uid}_{id}: o "endereço" de um aparelho para receber aviso. Cada pessoa grava e lê SÓ os seus
+    // (o id começa com o uid dela); ninguém lê os dos outros, nem o admin pelo site (o envio é feito pelo servidor).
+    match /push_aparelhos/{aparelho} {
+      function aparelhoMeu() { return aparelho.matches(request.auth.uid + '_.*'); }
+      function aparelhoOk() {
+        let d = request.resource.data;
+        return d.keys().hasOnly(['uid', 'token', 'plataforma', 'atualizadoEm'])
+          && d.uid == request.auth.uid
+          && d.token is string && d.token.size() > 20 && d.token.size() < 400
+          && d.plataforma is string && d.plataforma.size() < 20
+          && d.atualizadoEm == request.time;
+      }
+      allow read, delete: if logado() && aparelhoMeu() && resource.data.uid == request.auth.uid;
+      allow create: if logado() && aparelhoMeu() && aparelhoOk();
+      allow update: if logado() && aparelhoMeu() && resource.data.uid == request.auth.uid && aparelhoOk();
+    }
+
+    // avisos_enviados: histórico dos avisos do admin. Só o admin lê; quem grava é o servidor (nunca o site).
+    match /avisos_enviados/{aviso} {
+      allow read: if souAdmin();
+      allow write: if false;
+    }
+
     // ===================== DEMAIS COLEÇÕES =====================
     // Qualquer coleção SEM regra própria (acima): quem está logado lê (como antes) e SÓ O ADMIN grava (restaurar backup).
     // (No Firestore, se QUALQUER regra libera, a ação passa; por isso as coleções com regra própria precisam estar na
     // lista de exceções de leitura e de escrita aqui embaixo.)
     match /{colecao}/{resto=**} {
-      allow read: if logado() && !(colecao in ['feriados_propostas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'documentos_privados', 'nascimentos', 'documentos_do_pedido', 'documentos_unicos', 'documentos_ficha', 'documentos_professor', 'contatos_unicos', 'telemetria_leituras', 'tabela_precos', 'workshops_cadastro', 'certificados_professor', 'atualizacoes_professor', 'pedidos_unidade_professor', 'dados_bancarios', 'indicadores_mensais', 'auditoria_financeiro', 'unipower_stock', 'unipower_workshops', 'unipower_transacoes']);
-      allow write: if souAdmin() && !(colecao in ['feriados', 'feriados_propostas', 'usuarios', 'publico', 'validacoes', 'aulas', 'aulas_publicas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'resumos_mensais', 'documentos_privados', 'nascimentos', 'documentos_do_pedido', 'documentos_unicos', 'professores', 'documentos_ficha', 'documentos_professor', 'contatos_unicos', 'telemetria_leituras', 'tabela_precos', 'workshops_cadastro', 'certificados_professor', 'atualizacoes_professor', 'pedidos_unidade_professor', 'dados_bancarios', 'unidades', 'configuracoes', 'vinculos']);
+      allow read: if logado() && !(colecao in ['feriados_propostas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'documentos_privados', 'nascimentos', 'documentos_do_pedido', 'documentos_unicos', 'documentos_ficha', 'documentos_professor', 'contatos_unicos', 'telemetria_leituras', 'tabela_precos', 'workshops_cadastro', 'certificados_professor', 'atualizacoes_professor', 'pedidos_unidade_professor', 'dados_bancarios', 'indicadores_mensais', 'auditoria_financeiro', 'unipower_stock', 'unipower_workshops', 'unipower_transacoes', 'push_aparelhos', 'avisos_enviados']);
+      allow write: if souAdmin() && !(colecao in ['feriados', 'feriados_propostas', 'usuarios', 'publico', 'validacoes', 'aulas', 'aulas_publicas', 'solicitacoes_acesso', 'convites_acesso', 'saidas_acesso', 'pedidos_unidade', 'resumos_mensais', 'documentos_privados', 'nascimentos', 'documentos_do_pedido', 'documentos_unicos', 'professores', 'documentos_ficha', 'documentos_professor', 'contatos_unicos', 'telemetria_leituras', 'tabela_precos', 'workshops_cadastro', 'certificados_professor', 'atualizacoes_professor', 'pedidos_unidade_professor', 'dados_bancarios', 'unidades', 'configuracoes', 'vinculos', 'push_aparelhos', 'avisos_enviados']);
     }
   }
 }

@@ -1,4 +1,5 @@
 import FaixaVisaoAdmin from "../components/FaixaVisaoAdmin";
+import FaixaAvisos from "../components/AvisosPush";
 import { useState } from "react";
 import { Outlet } from "react-router-dom";
 import Sidebar from "../components/Sidebar/Sidebar"; 
@@ -59,6 +60,7 @@ export default function AppLayout() {
         </header>
 
         <FaixaVisaoAdmin />
+        <FaixaAvisos />
 
         <main className="flex-1 overflow-auto p-4 md:p-8 pb-24 md:pb-24 bg-slate-50 dark:bg-[#121212] relative">
           <div className="max-w-7xl mx-auto">

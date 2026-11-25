@@ -2,7 +2,7 @@ import { useState, useMemo, Suspense, lazy } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { 
   Building2, Users, Dumbbell, CalendarDays, 
-  ShieldCheck, Database, LayoutDashboard, Loader2, Headphones, UserCheck, ShoppingBag
+  ShieldCheck, Database, LayoutDashboard, Loader2, Headphones, UserCheck, ShoppingBag, BellRing
 } from "lucide-react";
 import { useCatalogs } from "../../contexts/CatalogContext";
 import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
@@ -17,6 +17,7 @@ const MentoresTab = lazy(() => import('./Mentores/MentoresTab').then(module => (
 const ModalidadesTab = lazy(() => import('./Modalidades/ModalidadesTab').then(module => ({ default: module.ModalidadesTab })));
 const ProfessoresTab = lazy(() => import('./Professores/ProfessoresTab').then(module => ({ default: module.ProfessoresTab })));
 const FeriadosTab = lazy(() => import('./Feriados/FeriadosTab').then(module => ({ default: module.FeriadosTab })));
+const AvisosTab = lazy(() => import('./Avisos/AvisosTab').then(module => ({ default: module.AvisosTab })));
 const BackupTab = lazy(() => import('./Backup/BackupTab'));
 // Workshops: SÓ o cadastro (nome, data, modalidade, participantes). Resumo, Estoque e Eventos têm dinheiro e ficam no Cofre,
 // por isso esta aba NÃO carrega a tela da Loja (src/app/Workshops/index.jsx), só o cadastro.
@@ -62,6 +63,7 @@ export default function ConfiguracoesPage() {
     { id: "feriados", label: t('settingsPage.tabs.feriados', 'Feriados'), icon: CalendarDays, roles: ["admin", "mentor"] },
     { id: "workshops", label: t('settingsPage.tabs.workshops', 'Workshops'), icon: ShoppingBag, roles: ["admin", "mentor", "lider", "unidade"] },
     { id: "pratique-play", label: t('settingsPage.tabs.pratiquePlay', 'Pratique Play'), icon: Headphones, roles: ["admin"] },
+    { id: "avisos", label: t('settingsPage.tabs.avisos', 'Avisos'), icon: BellRing, roles: ["admin"] },
     { id: "backup", label: t('settingsPage.tabs.backup', 'Backup'), icon: Database, roles: ["admin"] },
   ], [t, unidadesSemLider]);
 
@@ -118,6 +120,7 @@ export default function ConfiguracoesPage() {
             {pode("feriados") && <FeriadosTab />}
             {pode("workshops") && <WorkshopsTab />}
             {pode("pratique-play") && <PratiquePlayTab />}
+            {pode("avisos") && <AvisosTab />}
             {pode("backup") && <BackupTab />}
         </div>
     </Suspense>

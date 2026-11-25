@@ -22,6 +22,7 @@ import { vagasDeLiderDaPessoa } from "../utils/lideranca";
 import MinhasUnidades from "./meuCadastro/MinhasUnidades";
 import UnidadesDoProfessor from "./meuCadastro/UnidadesDoProfessor";
 import BancoInter from "./meuCadastro/BancoInter";
+import { CartaoAvisos } from "../components/AvisosPush";
 import { professorTemBancoInter } from "../utils/dadosBancarios";
 import SeletorModalidades from "../components/acesso/SeletorModalidades";
 import { modalidadesDoTexto } from "../components/acesso/acessoDados";
@@ -253,6 +254,9 @@ export default function MeuCadastro() {
           </>
         )}
       </form>
+
+      {/* ===== AVISOS DA GESTÃO (celular/computador) ===== */}
+      <CartaoAvisos classeCartao={cartao} classeSecao={SECAO} />
 
       {/* ===== BANCO INTER (só professor do Brasil) ===== */}
       {souProfessor && guardado && professorTemBancoInter(guardado.pais) && <BancoInter uid={uid} nome={userData?.nome || ""} />}
