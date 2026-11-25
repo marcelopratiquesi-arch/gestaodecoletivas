@@ -15,10 +15,11 @@ import { idDocumentoUnico } from "../utils/documento";
  * @param {object} p
  *  uid, unidades: [{ id, vaga: 1|2 }] (onde copiar nome e telefone),
  *  antes / depois: { nome, telefone, pais, documento: {tipo,numero}|null, nascimento: "AAAA-MM-DD"|"" },
- *  email: e-mail de login (só para a reserva do telefone)
+ *  email: e-mail de login (só para a reserva do telefone),
+ *  extras: outros campos do crachá a gravar junto (ex.: { status, atualizadoEm } na aba Mentores)
  * @returns {Promise<{ ok: true, mudou: string[] } | { ok: false, mensagem: string }>}
  */
-export async function salvarCadastroDoLider({ uid, unidades = [], antes, depois, email = "" }, t) {
+export async function salvarCadastroDoLider({ uid, unidades = [], antes, depois, email = "", extras = {} }, t) {
   const dono = { uid };
   // Telefone novo que já é de outra pessoa não é salvo.
   const bloqueio = await mensagemSeContatoEmUso({
@@ -42,6 +43,7 @@ export async function salvarCadastroDoLider({ uid, unidades = [], antes, depois,
   lote.update(doc(db, "usuarios", uid), {
     nome: depois.nome, telefone: depois.telefone, pais: depois.pais,
     ...(depois.nascimento ? { nascimentoOk: true } : {}),
+    ...extras, // ex.: status e data da edição (aba Mentores)
   });
   unidades.forEach(({ id, vaga }) => {
     const p = vaga === 2 ? "lider2" : "lider";

@@ -8,7 +8,10 @@ import {
 // No 1º acesso pelo Google com esse e-mail, a pessoa entra direto como mentor (pages/SolicitarAcesso).
 import { db } from "../../../services/firebase";
 import { registrarAuditoriaAcesso } from "../../../services/auditoriaAcessos";
-import { DocumentoModal, BuscaDocumento } from "../Documento/DocumentoModal";
+import { BuscaDocumento } from "../Documento/DocumentoModal";
+import { ERRO_DOCUMENTO_EM_USO, lerDocumento } from "../../../services/documentoService";
+import { lerNascimento, nascimentoValido } from "../../../services/meuCadastroService";
+import { apagarDocumentoDoLider, salvarCadastroDoLider } from "../../../services/editarCadastroLiderService";
 import CampoDocumento from "../../../components/acesso/CampoDocumento";
 import { documentoValido, limparDocumento, tipoDocumentoPadrao, tipoDocumentoDoPais, formatarDocumento } from "../../../utils/documento";
 
@@ -34,7 +37,7 @@ import { CabecalhoDaAba, CaixaDeNumeros, BotaoPrincipal, BotaoSecundario } from 
 import { useFiltroCascata } from "../ui/useFiltroCascata";
 import SeloRepetido from "../ui/SeloRepetido";
 import { useSelosRepetidos } from "../ui/useSelosRepetidos";
-import { mensagemSeContatoEmUso, sincronizarEAvisar } from "../../../services/contatoService";
+import { mensagemSeContatoEmUso } from "../../../services/contatoService";
 import { CelulaContato } from "../ui/CelulaContato";
 import { CelulaAcesso } from "../ui/CelulaAcesso";
 import { ColunaOrdenavel, CLASSE_TITULO } from "../ui/ColunaOrdenavel";
@@ -88,7 +91,13 @@ export function MentoresTab() {
   const [status, setStatus] = useState("ativo");
   const [docTipo, setDocTipo] = useState("cpf"); // documento opcional no convite de mentor novo
   const [docNumero, setDocNumero] = useState("");
-  const [docAlvo, setDocAlvo] = useState(null); // { id, nome, email }: documento de um mentor em edição
+  // Editar mentor: o que o admin completa na mesma janela (data de nascimento e documento), lido do banco só ao abrir.
+  const [nascimento, setNascimento] = useState("");
+  const [docGuardado, setDocGuardado] = useState(null); // { tipo, numero } já salvo ou null
+  const [nascGuardado, setNascGuardado] = useState("");
+  const [carregandoExtra, setCarregandoExtra] = useState(false);
+  const [pedindoApagar, setPedindoApagar] = useState(false);
+  const [foco, setFoco] = useState([]); // o que faltava quando abriu pela etiqueta "Cadastro incompleto"
 
   // Edição Inline do Telefone na Tabela
   const [editandoTelefoneId, setEditandoTelefoneId] = useState(null);
@@ -242,7 +251,7 @@ export function MentoresTab() {
     setModalAberto(true);
   }
 
-  function abrirModalEditar(m) {
+  function abrirModalEditar(m, falta = []) {
     setMentorEditando(m); 
     setNome(m.nome || ""); 
     setEmail(m.email || "");
@@ -251,7 +260,33 @@ export function MentoresTab() {
     setStatus(m.status || "ativo");
     setErro(""); 
     setSucesso(""); 
+    setNascimento(""); setNascGuardado(""); setDocGuardado(null); setDocNumero(""); setDocTipo(tipoDocumentoDoPais(m.pais || PAIS_DEFAULT));
+    setPedindoApagar(false); setFoco(falta); setCarregandoExtra(true);
     setModalAberto(true);
+    Promise.all([lerDocumento(m.id), lerNascimento(m.id)])
+      .then(([d, n]) => {
+        setDocGuardado(d); setNascGuardado(n); setNascimento(n);
+        if (d) { setDocTipo(d.tipo); setDocNumero(formatarDocumento(d.tipo, d.numero)); }
+      })
+      .catch((e) => { console.error(e); setErro(t("leadersTab.modal.edit.loadError")); })
+      .finally(() => setCarregandoExtra(false));
+  }
+
+  // Cursor no primeiro campo que falta (etiqueta clicável) assim que os dados chegam.
+  useEffect(() => {
+    if (!modalAberto || carregandoExtra || !mentorEditando || !foco.length) return;
+    const id = ["nome", "telefone", "documento", "nascimento"].map((f) => foco.includes(f) && { nome: "ed-nome", telefone: "ed-tel", documento: "ed-doc", nascimento: "ed-nasc" }[f]).find(Boolean);
+    const el = id && document.getElementById(id);
+    if (el) { el.focus({ preventScroll: true }); el.scrollIntoView({ block: "center" }); }
+  }, [modalAberto, carregandoExtra, mentorEditando, foco]);
+
+  async function apagarDocumentoDoMentor() {
+    setErro(""); setSalvando(true);
+    try {
+      await apagarDocumentoDoLider({ uid: mentorEditando.id, documento: docGuardado });
+      await registrarLogAuditoria('ALTERADA', 'Documento do Mentor apagado.', mentorEditando, 'Documento apagado');
+      setDocGuardado(null); setDocNumero(""); setDocTipo(tipoDocumentoDoPais(pais)); setPedindoApagar(false);
+    } catch (err) { console.error(err); setErro(t("leadersTab.modal.edit.errDelete")); } finally { setSalvando(false); }
   }
 
   async function salvar(e) {
@@ -274,27 +309,24 @@ export function MentoresTab() {
         if ((mentorEditando.pais || PAIS_DEFAULT) !== pais) mudancas.push(`País: ${mentorEditando.pais || PAIS_DEFAULT} ➔ ${pais}`);
         if (mentorEditando.status !== status) mudancas.push(`Status: ${mentorEditando.status} ➔ ${status}`);
 
-        // Parte B: telefone novo que já é de outra pessoa não é salvo.
-        const bloqueio = await mensagemSeContatoEmUso({
-          dono: { uid: mentorEditando.id },
-          antes: { telefone: mentorEditando.telefone, pais: mentorEditando.pais || PAIS_DEFAULT },
-          depois: { telefone: telefone.trim(), pais },
-        }, t);
-        if (bloqueio) { setSalvando(false); return setErro(bloqueio); }
+        if (carregandoExtra) { setSalvando(false); return setErro(t("leadersTab.modal.edit.loadingData")); }
+        if (nascimento && !nascimentoValido(nascimento)) { setSalvando(false); return setErro(t("leadersTab.modal.edit.errBirth")); }
+        if (nascGuardado && !nascimento) { setSalvando(false); return setErro(t("leadersTab.modal.edit.errBirth")); } // data guardada não se apaga, só se corrige
+        const temDoc = limparDocumento(docNumero).length > 0;
+        if (temDoc && !documentoValido(docTipo, docNumero)) { setSalvando(false); return setErro(t("leadersTab.modal.edit.errDoc")); }
+        if (!temDoc && docGuardado) { setSalvando(false); return setErro(t("leadersTab.modal.edit.errDoc")); } // para tirar use "Apagar documento"
+        const documento = temDoc ? { tipo: docTipo, numero: limparDocumento(docNumero) } : null;
+        if (documento && (!docGuardado || docGuardado.tipo !== documento.tipo || docGuardado.numero !== documento.numero)) mudancas.push('Documento atualizado');
+        if (nascimento && nascimento !== nascGuardado) mudancas.push('Data de nascimento atualizada');
 
-        await updateDoc(doc(db, "usuarios", mentorEditando.id), {
-          nome: nome.trim(), 
-          pais, // 🟢 SALVA O PAÍS
-          telefone: telefone.trim(), 
-          status, 
-          atualizadoEm: serverTimestamp()
-        });
-        // Reserva de e-mail/telefone (F3 parte A): depois de salvo; se já é de outra pessoa, só avisa.
-        await sincronizarEAvisar({
-          dono: { uid: mentorEditando.id },
-          antes: { email: mentorEditando.email, telefone: mentorEditando.telefone, pais: mentorEditando.pais || PAIS_DEFAULT },
-          depois: { email: mentorEditando.email, telefone: telefone.trim(), pais },
+        // Telefone novo que já é de outra pessoa não é salvo; documento já de outra pessoa também não (o serviço confere).
+        const resp = await salvarCadastroDoLider({
+          uid: mentorEditando.id, unidades: [], email: mentorEditando.email,
+          antes: { nome: mentorEditando.nome, telefone: mentorEditando.telefone, pais: mentorEditando.pais || PAIS_DEFAULT, documento: docGuardado, nascimento: nascGuardado },
+          depois: { nome: nome.trim(), telefone: telefone.trim(), pais, documento, nascimento },
+          extras: { status, atualizadoEm: serverTimestamp() },
         }, t);
+        if (!resp.ok) { setSalvando(false); return setErro(resp.mensagem); }
 
         if (mudancas.length > 0) {
             await registrarLogAuditoria('ALTERADA', 'Dados cadastrais do Mentor atualizados.', { ...mentorEditando, nome: nome.trim() }, mudancas.join(' | '));
@@ -338,7 +370,7 @@ export function MentoresTab() {
       setTimeout(() => { setModalAberto(false); setSucesso(""); }, 1000);
 
     } catch (e) {
-      setErro("Erro: " + e.message);
+      setErro(e?.message === ERRO_DOCUMENTO_EM_USO ? t("leadersTab.modal.edit.errDocUse") : "Erro: " + e.message);
     } finally {
       setSalvando(false);
     }
@@ -587,7 +619,7 @@ export function MentoresTab() {
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <LinkCentral tipo="mentor" alvo={m} className="font-black text-slate-800 dark:text-white text-base uppercase">{m.nome}</LinkCentral>
                         <SeloRepetido selo={selosRepetidos.get(`cracha:${m.id}`)} detalheDe={(o) => o.email || ""} />
-                        <SeloCadastroIncompleto falta={faltaDoCracha(m)} />
+                        <SeloCadastroIncompleto falta={faltaDoCracha(m)} onClick={(f) => abrirModalEditar(m, f)} />
                       </div>
                       <div className="mt-1.5 space-y-1.5">
                         {principal && <div><Selo tipo="tema" abaId="mentores" icone={Users}>{t('mentorsTab.second.badge', { name: principal.nome || '-' })}</Selo></div>}
@@ -684,7 +716,6 @@ export function MentoresTab() {
                     <td className="px-4 py-4">
                         <div className="flex gap-1.5 justify-end items-center">
                             <BotaoDeLinha abaId="mentores" discreto icone={Edit2} onClick={() => abrirModalEditar(m)} title={t('mentorsTab.table.edit', 'Editar Completo')} />
-                            <BotaoDeLinha abaId="mentores" discreto icone={IdCard} onClick={() => setDocAlvo({ id: m.id, nome: m.nome, email: m.email })} title={t('document.modal.edit')} />
                             <MenuDeAcoes itens={[
                                 { id: 'unidades', rotulo: t('mentorsTab.linked.manage'), icone: Link2, onClick: () => setVinculoAlvo(m), oculto: !!m.mentorPrincipalId },
                                 { id: 'segundo', rotulo: t('mentorsTab.second.add'), icone: Users, onClick: () => setSegundoAlvo(m), oculto: !!m.mentorPrincipalId || !!segundo || !!convite || !ativo },
@@ -712,7 +743,6 @@ export function MentoresTab() {
       {temporarioAlvo && <SegundoMentorModal temporario principal={temporarioAlvo} professores={catalogs?.professores || []} mentores={mentores} unidades={todasUnidades} quem={userData} registrarAuditoria={registrarLogAuditoria} onClose={() => setTemporarioAlvo(null)} />}
       {prazoAlvo && <PrazoModal abaId="mentores" cracha={prazoAlvo} atalhos={ATALHOS_COBERTURA} onFechar={() => setPrazoAlvo(null)} onSalvar={(fim) => mudarPrazoCobertura(prazoAlvo, fim)} />}
       {vinculoAlvo && <UnidadesVinculadasModal mentor={vinculoAlvo} mentores={mentores} unidades={todasUnidades} quem={userData} onClose={() => setVinculoAlvo(null)} />}
-      {docAlvo && <DocumentoModal alvo={docAlvo} onClose={() => setDocAlvo(null)} />}
 
       {modalAberto && (
         <PopupFlutuante
@@ -744,7 +774,7 @@ export function MentoresTab() {
                   <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 block">{t('mentorsTab.modal.name', 'Nome do Mentor')}</label>
                   <div className="relative">
                       <User className="absolute left-4 top-3.5 w-4 h-4 text-slate-400"/>
-                      <input 
+                      <input id="ed-nome"
                           value={nome} 
                           onChange={e=>setNome(e.target.value)} 
                           className="w-full pl-11 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 focus:border-red-500 focus:ring-2 focus:ring-red-100 rounded-xl text-sm font-bold text-slate-800 dark:text-white uppercase outline-none dark:text-white" 
@@ -801,7 +831,7 @@ export function MentoresTab() {
                   </label>
                   <div className="relative">
                       <Phone className="absolute left-4 top-3.5 w-4 h-4 text-slate-400"/>
-                      <input 
+                      <input id="ed-tel"
                           value={telefone} 
                           onChange={e=>setTelefone(formatarTelefone(e.target.value, pais))} 
                           className="w-full pl-11 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 focus:border-red-500 focus:ring-2 focus:ring-red-100 rounded-xl text-sm font-bold text-slate-800 dark:text-white uppercase outline-none dark:text-white" 
@@ -809,6 +839,39 @@ export function MentoresTab() {
                       />
                   </div>
               </div>
+
+              {mentorEditando && (
+                <div>
+                  <label htmlFor="ed-nasc" className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 block">{t('leadersTab.modal.edit.birth')}</label>
+                  <input id="ed-nasc" type="date" value={nascimento} min="1920-01-01" max={new Date().toISOString().slice(0, 10)} onChange={(e) => setNascimento(e.target.value)} disabled={salvando || carregandoExtra}
+                    className="w-full p-3 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-white rounded-xl text-sm font-bold uppercase outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100" />
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 normal-case mt-1">{t('leadersTab.modal.edit.birthHint')}</p>
+                </div>
+              )}
+
+              {mentorEditando && (
+                <div className="border-t border-slate-200 dark:border-slate-700 pt-4 space-y-2">
+                  <p className="text-[11px] font-black uppercase tracking-widest text-red-600">{t('leadersTab.modal.edit.document')}</p>
+                  {carregandoExtra ? <Loader2 className="w-5 h-5 animate-spin text-red-500" /> : (
+                    <>
+                      {!docGuardado && <p className="text-[11px] font-bold text-amber-700 dark:text-amber-300 normal-case">{t('leadersTab.modal.edit.docNone')}</p>}
+                      <CampoDocumento key={pais} claro id="ed-doc" tipoDoPais={tipoDocumentoDoPais(pais)} tipo={docTipo} onTipo={setDocTipo} valor={docNumero} onValor={setDocNumero} desabilitado={salvando} />
+                      {docGuardado && !pedindoApagar && (
+                        <button type="button" onClick={() => setPedindoApagar(true)} disabled={salvando} className="text-[11px] font-black uppercase text-red-600 hover:underline flex items-center gap-1"><Trash2 className="w-3 h-3" /> {t('leadersTab.modal.edit.docDelete')}</button>
+                      )}
+                      {pedindoApagar && (
+                        <div className="p-3 rounded-xl border border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-800 space-y-2">
+                          <p className="text-xs font-bold text-red-700 dark:text-red-300 normal-case">{t('leadersTab.modal.edit.docDeleteAsk', { name: mentorEditando.nome })}</p>
+                          <div className="flex gap-2">
+                            <button type="button" onClick={apagarDocumentoDoMentor} disabled={salvando} className="px-3 py-2 rounded-xl text-[11px] font-black uppercase bg-red-600 hover:bg-red-700 text-white disabled:opacity-50">{t('leadersTab.modal.edit.docDeleteYes')}</button>
+                            <button type="button" onClick={() => setPedindoApagar(false)} disabled={salvando} className="px-3 py-2 rounded-xl text-[11px] font-black uppercase bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-200">{t('leadersTab.modal.edit.docDeleteNo')}</button>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
 
               {!mentorEditando && (
                 <div className="space-y-1">
