@@ -73,5 +73,19 @@
   "reformSoon": {
     "title": "Reforma programada",
     "text": "A unidade vai fechar de {{ini}} a {{fim}}, sem aulas nesse período. As aulas voltam em {{retorno}}."
-  }
+  },
+  "chooseDay": "Escolha o dia",
+  "dayClasses_one": "{{day}}: {{count}} aula",
+  "dayClasses_other": "{{day}}: {{count}} aulas",
+  "todayEnded": "As aulas de hoje já terminaram",
+  "seeDay": "Ver aulas de {{day}}",
+  "noClassesOnDay": "Não há aulas nesta unidade: {{day}}",
+  "noModalityOnDay": "Sem {{modality}} nesta unidade: {{day}}",
+  "pickAnotherDay": "Escolha outro dia na barra acima.",
+  "settings": "Ajustes",
+  "close": "Fechar",
+  "theme": "Tema",
+  "themeDark": "Escuro",
+  "themeLight": "Claro",
+  "language": "Idioma"
 }

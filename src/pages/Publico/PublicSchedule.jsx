@@ -8,10 +8,10 @@ import { reformaPublicaDaUnidade } from '../../utils/reformaPublica';
 import {
   Search, Clock, ChevronRight, Loader2,
   Printer, ArrowLeft, Dumbbell, Sun, Moon, ChevronDown, MapPin, Navigation, LocateFixed, Map, List, Check,
-  X, Share2, AlertTriangle, CalendarDays, CalendarClock, Hammer
+  X, Share2, AlertTriangle, CalendarDays, CalendarClock, Hammer, Settings
 } from 'lucide-react';
 import { useTranslation } from "react-i18next"; // 🟢 MOTOR ACIONADO
-import { LANGUAGES, formatWeekday, getDiaSemana } from '../../utils/formatters';
+import { LANGUAGES, formatWeekday, getDiaSemana, DIAS_SEMANA_GRADE } from '../../utils/formatters';
 
 // 🟢 IMPORTS DO MOTOR DE MAPAS (LEAFLET)
 import { MapContainer, TileLayer, Marker, Popup, Circle } from 'react-leaflet';
@@ -531,6 +531,60 @@ export default function PublicSchedule() {
 
   const getAulasCell = (dia, hora) => aulasExibidas.filter(a => a.hora === hora && a.dias?.includes(dia));
 
+  // 🟢 CELULAR: um dia por vez, com barra de dias, abrindo no dia de hoje.
+  // O sistema só guarda a hora de INÍCIO da aula, então a aula fica apagada 1 hora depois de começar,
+  // e o aviso "aulas de hoje terminaram" aparece 1 hora depois do início da última aula do dia.
+  const [diaCelular, setDiaCelular] = useState(diaDeHoje);
+  const [menuAjustes, setMenuAjustes] = useState(false);
+  const [agoraMin, setAgoraMin] = useState(() => { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); });
+
+  useEffect(() => { setDiaCelular(getDiaSemana(new Date())); }, [unidadeSelecionadaId]);
+  useEffect(() => {
+      const timer = setInterval(() => { const d = new Date(); setAgoraMin(d.getHours() * 60 + d.getMinutes()); }, 60000);
+      return () => clearInterval(timer);
+  }, []);
+  useEffect(() => {
+      if (!menuAjustes) return;
+      const fechar = (e) => { if (e.key === 'Escape') setMenuAjustes(false); };
+      window.addEventListener('keydown', fechar);
+      return () => window.removeEventListener('keydown', fechar);
+  }, [menuAjustes]);
+
+  const minutosDaHora = (hora) => {
+      const [h, m] = String(hora || '').split(':').map(Number);
+      return Number.isFinite(h) ? h * 60 + (Number.isFinite(m) ? m : 0) : 0;
+  };
+
+  // Dias da barra: os dias que têm aula, mais o dia de hoje mesmo sem aula (para o aluno ver "hoje não tem").
+  const diasCelular = useMemo(
+      () => DIAS_SEMANA_GRADE.filter(d => gradeOrganizada.dias.includes(d) || d === diaDeHoje),
+      [gradeOrganizada, diaDeHoje]
+  );
+
+  const linhasCelular = useMemo(() => {
+      const porHora = {};
+      aulasExibidas.filter(a => a.dias?.includes(diaCelular)).forEach(a => {
+          if (!porHora[a.hora]) porHora[a.hora] = [];
+          porHora[a.hora].push(a);
+      });
+      return Object.keys(porHora).sort().map(hora => ({ hora, aulas: porHora[hora] }));
+  }, [aulasExibidas, diaCelular]);
+
+  const celularEhHoje = diaCelular === diaDeHoje;
+  const aulaJaPassou = (hora) => celularEhHoje && agoraMin >= minutosDaHora(hora) + 60;
+  const aulasDeHojeEncerradas = celularEhHoje && linhasCelular.length > 0 && aulaJaPassou(linhasCelular[linhasCelular.length - 1].hora);
+  const totalAulasCelular = linhasCelular.reduce((soma, l) => soma + l.aulas.length, 0);
+
+  // Próximo dia com aula depois de hoje (volta para o começo da semana se precisar).
+  const proximoDiaComAula = useMemo(() => {
+      const i = DIAS_SEMANA_GRADE.indexOf(diaDeHoje);
+      for (let k = 1; k <= 7; k++) {
+          const d = DIAS_SEMANA_GRADE[(i + k) % 7];
+          if (gradeOrganizada.dias.includes(d) && aulasExibidas.some(a => a.dias?.includes(d))) return d;
+      }
+      return null;
+  }, [diaDeHoje, gradeOrganizada, aulasExibidas]);
+
   const appliedDensity = useMemo(() => {
       if (printDensity !== 'auto') return printDensity;
       const linhas = gradeOrganizada.horarios.length;
@@ -653,9 +707,9 @@ export default function PublicSchedule() {
             <main className="relative z-10 w-full max-w-2xl mx-auto px-4 pb-24">
 
                 {/* 🟢 MARCA */}
-                <header className="flex flex-col items-center pt-6 pb-10 md:pt-10 md:pb-14 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                    <img src={LOGOS['pratique']} alt="Pratique" className={`h-20 md:h-28 object-contain ${isDarkMode ? 'brightness-0 invert' : ''}`} />
-                    <h1 className="mt-6 text-5xl md:text-6xl font-black italic tracking-tighter flex justify-center gap-2 leading-none">
+                <header className="flex flex-col items-center pt-1 pb-6 md:pt-10 md:pb-14 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                    <img src={LOGOS['pratique']} alt="Pratique" className={`h-10 md:h-28 object-contain ${isDarkMode ? 'brightness-0 invert' : ''}`} />
+                    <h1 className="mt-3 md:mt-6 text-4xl md:text-6xl font-black italic tracking-tighter flex justify-center gap-2 leading-none">
                         <span className="text-[#ed1c24]">HAPPY</span>
                         <span className="text-[#00adef]">ZONE</span>
                     </h1>
@@ -915,21 +969,29 @@ export default function PublicSchedule() {
 
         {/* 🟢 BARRA SUPERIOR (só na tela) */}
         <div className={`sticky top-0 z-50 print:hidden border-b backdrop-blur-xl ${isDarkMode ? 'bg-[#0b0b0c]/85 border-white/[0.08]' : 'bg-white/85 border-black/[0.06]'}`}>
-            <div className="max-w-[1920px] mx-auto px-3 md:px-6 py-3 md:py-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div className="max-w-[1920px] mx-auto px-3 md:px-6 py-3 md:py-4 flex flex-row items-center justify-between gap-3">
                 <div className="flex items-center gap-2 md:gap-4 flex-1 min-w-0">
                     <button onClick={voltarParaLista} title={t('publicSchedule.back', 'Voltar')} className={`shrink-0 h-11 flex items-center gap-2 pl-2.5 pr-3 md:pr-4 rounded-full border transition-all active:scale-95 ${iconButton}`}>
                         <ArrowLeft className="w-5 h-5"/> <span className="text-xs font-bold uppercase hidden md:inline">{t('publicSchedule.back', 'Voltar')}</span>
                     </button>
-                    <div className="flex flex-col min-w-0">
+                    <div className="flex flex-col min-w-0 flex-1">
                         <h2 className="text-lg md:text-2xl font-black italic tracking-tight uppercase truncate leading-tight">{unidadeSelecionada.nome}</h2>
-                        <a href={getMapsLink(unidadeSelecionada)} target="_blank" rel="noopener noreferrer" title={t('publicSchedule.openInMaps')} className={`flex items-center gap-1.5 text-[11px] md:text-xs font-semibold transition-colors w-fit max-w-full ${isDarkMode ? 'text-sky-400 hover:text-sky-300' : 'text-sky-600 hover:text-sky-700'}`}>
-                            <MapPin className="w-3.5 h-3.5 shrink-0"/>
+                        <a href={getMapsLink(unidadeSelecionada)} target="_blank" rel="noopener noreferrer" title={t('publicSchedule.openInMaps')} className={`flex items-center gap-1.5 text-[11px] md:text-xs font-semibold transition-colors w-fit max-w-full ${isDarkMode ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'}`}>
+                            <MapPin className="w-3.5 h-3.5 shrink-0 text-[#ed1c24]"/>
                             <span className="truncate hover:underline">{displayAddressLocal(unidadeSelecionada)}</span>
                         </a>
                     </div>
+
+                    {/* 🟢 CELULAR: só Compartilhar e Ajustes (tema e idioma) no topo */}
+                    <button onClick={compartilharUnidade} aria-label={t('publicSchedule.share')} className={`md:hidden shrink-0 w-11 h-11 rounded-full border flex items-center justify-center transition-all active:scale-95 ${linkCopiado ? 'bg-emerald-500 border-transparent text-white' : iconButton}`}>
+                        {linkCopiado ? <Check className="w-5 h-5"/> : <Share2 className="w-5 h-5"/>}
+                    </button>
+                    <button onClick={(e) => { e.stopPropagation(); setMenuAjustes(true); }} aria-label={t('publicSchedule.settings')} className={`md:hidden shrink-0 w-11 h-11 rounded-full border flex items-center justify-center transition-all active:scale-95 ${iconButton}`}>
+                        <Settings className="w-5 h-5"/>
+                    </button>
                 </div>
 
-                <div className="flex items-center justify-between md:justify-end gap-2 shrink-0">
+                <div className="hidden md:flex items-center justify-end gap-2 shrink-0">
                     {/* 🟢 HOJE / SEMANA */}
                     <div role="group" aria-label={t('publicSchedule.viewToggle')} className={`grid grid-cols-2 p-1 rounded-full border ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-black/[0.03] border-black/[0.06]'}`}>
                         {[
@@ -952,7 +1014,7 @@ export default function PublicSchedule() {
                         {linkCopiado ? <Check className="w-5 h-5"/> : <Share2 className="w-5 h-5"/>}
                         <span className="text-xs font-bold uppercase hidden lg:inline">{linkCopiado ? t('publicSchedule.linkCopied') : t('publicSchedule.share')}</span>
                     </button>
-                    <div className="hidden sm:block">
+                    <div>
                         <LanguageMenu isDarkMode={isDarkMode} open={isLangMenuOpen} setOpen={setIsLangMenuOpen} onChange={changeLanguage} currentLang={currentLang} language={i18n.language} title={t('sidebar.changeLanguage')} />
                     </div>
                     <button onClick={() => setIsDarkMode(!isDarkMode)} title={t('sidebar.changeTheme')} className={`w-11 h-11 rounded-full border flex items-center justify-center transition-all active:scale-95 ${iconButton}`}>
@@ -994,6 +1056,51 @@ export default function PublicSchedule() {
                 <div className="ph-right"><div className="bg-white p-1 rounded"><img src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent("https://gestaodecoletivas.vercel.app/horarios")}`} alt="QR" className="w-16 h-16"/></div></div>
             </div>
 
+            {/* 🟢 CELULAR: ajustes (tema e idioma), abre por baixo. Fica ANTES do aviso de reforma, que esconde o que vem depois dele. */}
+            {menuAjustes && (
+                <div className="md:hidden print:hidden fixed inset-0 z-[70] flex flex-col justify-end bg-black/50" onClick={(e) => { e.stopPropagation(); setMenuAjustes(false); }}>
+                    <div role="dialog" aria-modal="true" aria-label={t('publicSchedule.settings')} onClick={(e) => e.stopPropagation()} className={`rounded-t-3xl px-4 pt-4 pb-8 flex flex-col gap-5 animate-in slide-in-from-bottom-4 duration-200 ${isDarkMode ? 'bg-[#1c1c1e] text-white' : 'bg-white text-slate-900'}`}>
+                        <div className="flex items-center justify-between">
+                            <p className="text-[13px] font-black uppercase tracking-[0.2em] text-[#ed1c24]">{t('publicSchedule.settings')}</p>
+                            <button onClick={() => setMenuAjustes(false)} aria-label={t('publicSchedule.close')} className={`w-11 h-11 rounded-full border flex items-center justify-center ${iconButton}`}>
+                                <X className="w-5 h-5"/>
+                            </button>
+                        </div>
+                        <div className="flex flex-col gap-2">
+                            <p className={`text-[11px] font-black uppercase tracking-wider ${mutedText}`}>{t('publicSchedule.theme')}</p>
+                            <div className="grid grid-cols-2 gap-2">
+                                <button onClick={() => setIsDarkMode(true)} aria-pressed={isDarkMode} className={`h-12 rounded-2xl border text-[13px] font-black uppercase flex items-center justify-center gap-2 transition-all ${isDarkMode ? chipActive : chipIdle}`}>
+                                    <Moon className="w-4 h-4"/> {t('publicSchedule.themeDark')}
+                                </button>
+                                <button onClick={() => setIsDarkMode(false)} aria-pressed={!isDarkMode} className={`h-12 rounded-2xl border text-[13px] font-black uppercase flex items-center justify-center gap-2 transition-all ${!isDarkMode ? chipActive : chipIdle}`}>
+                                    <Sun className="w-4 h-4"/> {t('publicSchedule.themeLight')}
+                                </button>
+                            </div>
+                        </div>
+                        <div className="flex flex-col gap-2">
+                            <p className={`text-[11px] font-black uppercase tracking-wider ${mutedText}`}>{t('publicSchedule.language')}</p>
+                            {LANGUAGES.map(lang => {
+                                const ativo = i18n.language === lang.code;
+                                return (
+                                    <button
+                                        key={lang.code}
+                                        onClick={() => { i18n.changeLanguage(lang.code); try { localStorage.setItem('idioma_pratique', lang.code); } catch { /* sem storage */ } }}
+                                        aria-pressed={ativo}
+                                        className={`h-12 px-4 rounded-2xl border flex items-center justify-between text-sm font-bold transition-all ${ativo ? (isDarkMode ? 'bg-red-500/15 border-red-500 text-red-400' : 'bg-red-50 border-red-500 text-red-600') : chipIdle}`}
+                                    >
+                                        <span className="flex items-center gap-3">
+                                            <img src={lang.flag} alt="" className="w-5 h-auto rounded-sm shadow-sm"/>
+                                            {lang.name} <span className="opacity-60 font-semibold">{lang.region}</span>
+                                        </span>
+                                        {ativo && <Check className="w-4 h-4"/>}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* 🟢 AVISO DE REFORMA (só na tela; a impressão continua igual). Fechada hoje: some a grade que vem depois do aviso. */}
             {reformaDaUnidade && (
                 <>
@@ -1017,7 +1124,24 @@ export default function PublicSchedule() {
             {/* 🟢 RESUMO E LEGENDA CLICÁVEL (só na tela) */}
             {!loadingGrade && gradeUnidade.length > 0 && (
                 <div className="screen-only print:hidden mb-4 md:mb-6 space-y-3">
-                    <div className={`flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-bold uppercase tracking-wider ${mutedText}`}>
+                    {/* 🟢 CELULAR: barra de dias (abre no dia de hoje) */}
+                    <div role="group" aria-label={t('publicSchedule.chooseDay')} className="md:hidden grid gap-1.5" style={{ gridTemplateColumns: `repeat(${diasCelular.length}, minmax(0, 1fr))` }}>
+                        {diasCelular.map(dia => {
+                            const ativo = dia === diaCelular;
+                            return (
+                                <button
+                                    key={dia}
+                                    onClick={() => setDiaCelular(dia)}
+                                    aria-pressed={ativo}
+                                    className={`h-14 rounded-2xl border flex flex-col items-center justify-center gap-1 transition-all active:scale-95 ${ativo ? chipActive : chipIdle}`}
+                                >
+                                    <span className="text-[13px] font-black uppercase leading-none">{formatWeekday(dia, { short: true })}</span>
+                                    <span className="text-[9px] font-black uppercase tracking-widest leading-none min-h-[9px]">{dia === diaDeHoje ? t('publicSchedule.today') : ''}</span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                    <div className={`hidden md:flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-bold uppercase tracking-wider ${mutedText}`}>
                         <span>{visao === 'hoje' ? t('publicSchedule.todayClasses', { count: totalAulasExibidas }) : t('publicSchedule.weeklyClasses', { count: totalAulasExibidas })}</span>
                         <span className="opacity-40">•</span>
                         <span>{t('publicSchedule.modalitiesCount', { count: modalidadesDaGrade.length })}</span>
@@ -1048,18 +1172,18 @@ export default function PublicSchedule() {
                             </button>
                         )}
                     </div>
-                    {diasExibidos.length > 2 && (
-                        <p className={`md:hidden text-[11px] font-semibold flex items-center gap-1.5 ${mutedText}`}>
-                            <ChevronRight className="w-3.5 h-3.5 animate-pulse"/> {t('publicSchedule.scrollHint')}
-                        </p>
-                    )}
+                    <p className={`md:hidden text-[11px] font-bold uppercase tracking-wider ${mutedText}`}>
+                        {celularEhHoje
+                            ? t('publicSchedule.todayClasses', { count: totalAulasCelular })
+                            : t('publicSchedule.dayClasses', { count: totalAulasCelular, day: formatWeekday(diaCelular) })}
+                    </p>
                 </div>
             )}
 
             {loadingGrade ? <div className="flex justify-center h-[50vh] items-center screen-only"><Loader2 className="w-12 h-12 animate-spin text-[#ed1c24]"/></div> :
             gradeUnidade.length === 0 ? <div className="text-center py-20 opacity-50 screen-only"><p className="font-bold text-xl">{t('publicSchedule.emptyGrid', 'Grade vazia.')}</p></div> :
             horariosExibidos.length === 0 ? (
-                <div className={`screen-only rounded-3xl border p-10 md:p-14 text-center animate-in fade-in ${surface}`}>
+                <div className={`screen-only hidden md:block rounded-3xl border p-10 md:p-14 text-center animate-in fade-in ${surface}`}>
                     <div className={`mx-auto mb-4 w-14 h-14 rounded-2xl flex items-center justify-center ${isDarkMode ? 'bg-white/5' : 'bg-black/[0.04]'}`}>
                         <CalendarClock className="w-7 h-7 opacity-60"/>
                     </div>
@@ -1074,7 +1198,7 @@ export default function PublicSchedule() {
                 </div>
             ) :
             (
-                <div className={`print-grid-wrapper overflow-x-auto overscroll-x-contain rounded-3xl border ${isDarkMode ? 'bg-[#111113] border-white/[0.08]' : 'bg-white border-black/[0.06] shadow-[0_8px_30px_rgba(0,0,0,0.05)]'} print:bg-black print:border-0 print:rounded-none print:shadow-none`}>
+                <div className={`print-grid-wrapper hidden md:block overflow-x-auto overscroll-x-contain rounded-3xl border ${isDarkMode ? 'bg-[#111113] border-white/[0.08]' : 'bg-white border-black/[0.06] shadow-[0_8px_30px_rgba(0,0,0,0.05)]'} print:bg-black print:border-0 print:rounded-none print:shadow-none`}>
                     <div className={`screen-grid print-grid-header ${isDarkMode ? 'bg-[#18181b] border-white/10' : 'bg-gray-50 border-gray-200'} border-b flex`}>
                         <div className={`p-3 md:p-4 flex items-center justify-center border-r print-cell-header sticky left-0 z-20 print:static print:bg-transparent ${isDarkMode ? 'border-white/10 bg-[#18181b]' : 'border-gray-200 bg-gray-50'}`}>
                             <Clock className="w-5 h-5 md:w-6 md:h-6 opacity-40"/>
@@ -1092,7 +1216,7 @@ export default function PublicSchedule() {
                     <div className="screen-grid print-grid-body">
                         {horariosExibidos.map((hora) => (
                             <React.Fragment key={hora}>
-                                <div className={`print-cell border-r border-b font-mono font-bold text-base md:text-xl sticky left-0 z-10 print:static print:bg-transparent ${isDarkMode ? 'border-white/10 text-[#00adef] bg-[#111113]' : 'border-gray-200 text-sky-600 bg-white'} print:text-[#00adef] print:font-black print-time p-2 md:p-4 flex items-center justify-center`}>
+                                <div className={`print-cell border-r border-b font-mono font-bold text-base md:text-xl sticky left-0 z-10 print:static print:bg-transparent ${isDarkMode ? 'border-white/10 text-white bg-[#111113]' : 'border-gray-200 text-slate-800 bg-white'} print:text-[#00adef] print:font-black print-time p-2 md:p-4 flex items-center justify-center`}>
                                     {hora}
                                 </div>
                                 {diasExibidos.map(dia => {
@@ -1128,6 +1252,54 @@ export default function PublicSchedule() {
                             </React.Fragment>
                         ))}
                     </div>
+                </div>
+            )}
+
+            {/* 🟢 CELULAR: lista do dia escolhido (só na tela; a impressão usa a grade acima) */}
+            {!loadingGrade && gradeUnidade.length > 0 && (
+                <div className="md:hidden screen-only print:hidden flex flex-col gap-2.5">
+                    {aulasDeHojeEncerradas && (
+                        <div className={`rounded-2xl border p-4 flex flex-col gap-3 ${surface}`}>
+                            <p className="flex items-center gap-2.5 text-sm font-black uppercase">
+                                <Moon className="w-5 h-5 shrink-0 text-[#ed1c24]"/> {t('publicSchedule.todayEnded')}
+                            </p>
+                            {proximoDiaComAula && (
+                                <button onClick={() => setDiaCelular(proximoDiaComAula)} className="h-12 rounded-full bg-[#ed1c24] text-white text-[13px] font-black uppercase tracking-wide flex items-center justify-center gap-1.5 shadow-lg shadow-red-500/25 active:scale-[0.98] transition-all">
+                                    {t('publicSchedule.seeDay', { day: formatWeekday(proximoDiaComAula) })} <ChevronRight className="w-4 h-4"/>
+                                </button>
+                            )}
+                        </div>
+                    )}
+
+                    {linhasCelular.map(({ hora, aulas }) => (
+                        <div key={hora} className={`flex items-stretch gap-3 transition-opacity ${aulaJaPassou(hora) ? 'opacity-40' : ''}`}>
+                            <div className="w-[58px] shrink-0 pt-3.5 text-[19px] font-black tabular-nums tracking-tight">{hora}</div>
+                            <div className="flex-1 min-w-0 flex flex-col gap-2">
+                                {aulas.map((aula, i) => {
+                                    const cor = aula.modalidadeCor || '#333';
+                                    const corTexto = getContrastColor(cor);
+                                    return (
+                                        <div key={i} className="rounded-2xl px-3.5 py-3 min-h-[58px] flex flex-col justify-center gap-0.5 shadow-sm" style={{ backgroundColor: cor, color: corTexto }}>
+                                            <p className="text-[15px] font-black uppercase leading-tight">{aula.modalidadeNome}</p>
+                                            <p className="text-xs font-bold uppercase opacity-90 truncate">{aula.professorNome}</p>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    ))}
+
+                    {linhasCelular.length === 0 && (
+                        <div className={`rounded-2xl border p-7 text-center ${surface}`}>
+                            <CalendarClock className="w-7 h-7 mx-auto mb-3 opacity-60"/>
+                            <p className="text-sm font-black uppercase">
+                                {modalidadeFiltrada
+                                    ? t('publicSchedule.noModalityOnDay', { day: formatWeekday(diaCelular), modality: modalidadeFiltrada.nome })
+                                    : t('publicSchedule.noClassesOnDay', { day: formatWeekday(diaCelular) })}
+                            </p>
+                            <p className={`mt-1.5 text-xs font-semibold ${mutedText}`}>{t('publicSchedule.pickAnotherDay')}</p>
+                        </div>
+                    )}
                 </div>
             )}
 

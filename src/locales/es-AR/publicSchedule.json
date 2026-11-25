@@ -73,5 +73,19 @@
   "reformSoon": {
     "title": "Remodelación programada",
     "text": "La unidad cerrará del {{ini}} al {{fim}}, sin clases en ese período. Las clases vuelven el {{retorno}}."
-  }
+  },
+  "chooseDay": "Elegí el día",
+  "dayClasses_one": "{{day}}: {{count}} clase",
+  "dayClasses_other": "{{day}}: {{count}} clases",
+  "todayEnded": "Las clases de hoy ya terminaron",
+  "seeDay": "Ver clases del {{day}}",
+  "noClassesOnDay": "No hay clases en esta sede: {{day}}",
+  "noModalityOnDay": "No hay {{modality}} en esta sede: {{day}}",
+  "pickAnotherDay": "Elegí otro día en la barra de arriba.",
+  "settings": "Ajustes",
+  "close": "Cerrar",
+  "theme": "Tema",
+  "themeDark": "Oscuro",
+  "themeLight": "Claro",
+  "language": "Idioma"
 }
