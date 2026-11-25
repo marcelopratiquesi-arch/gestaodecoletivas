@@ -50,7 +50,29 @@
     "cancel": "Cancel",
     "save": "Save",
     "sectionPerson": "Person and unit",
-    "sectionAccess": "Document and access"
+    "sectionAccess": "Document and access",
+    "edit": {
+      "title": "Edit leader",
+      "country": "Country",
+      "birth": "Date of birth",
+      "birthHint": "Personal data: only the administrator and the unit mentor can see it.",
+      "document": "Document",
+      "docNone": "No document on file: the leader will be required to provide it at the next login.",
+      "docDelete": "Delete document",
+      "docDeleteAsk": "Delete {{name}}'s document? The person is locked until they provide it again, with no option to postpone.",
+      "docDeleteYes": "Yes, delete",
+      "docDeleteNo": "Back",
+      "docDeleted": "Document deleted.",
+      "loadingData": "Loading the person's data...",
+      "loadError": "Could not read the person's data. Close and open again.",
+      "missingHint": "Still missing: {{fields}}.",
+      "errBirth": "Invalid date of birth (between 1920 and today).",
+      "errDoc": "Invalid document. Check the numbers.",
+      "errDocUse": "This document is already registered to someone else.",
+      "errDelete": "Could not delete the document. Try again.",
+      "audit": "Leader record updated.",
+      "editSecond": "Edit 2nd leader"
+    }
   },
   "errors": {
     "unit": "Choose the location.",

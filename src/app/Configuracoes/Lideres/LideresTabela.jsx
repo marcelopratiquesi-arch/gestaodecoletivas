@@ -45,7 +45,8 @@ import { useUltimosAcessos } from "../ui/useUltimosAcessos";
 import { paraData } from "../../../utils/ultimoAcesso";
 import SeloRepetido from "../ui/SeloRepetido";
 import { useSelosRepetidos } from "../ui/useSelosRepetidos";
-import { BotaoDocumento, DocumentoModal, BuscaDocumento, AvisoDocumento } from "../Documento/DocumentoModal";
+import { BuscaDocumento, AvisoDocumento } from "../Documento/DocumentoModal";
+import { EditarLiderPopup } from "./EditarLiderPopup";
 import i18n from "../../../i18n";
 import CampoDocumento from "../../../components/acesso/CampoDocumento";
 import { documentoNoLote, gravarComAviso, ERRO_DOCUMENTO_EM_USO, excluirPedidoELiberar, liberarReserva } from "../../../services/documentoService";
@@ -100,7 +101,7 @@ export function LideresTabela() {
   const professores = useMemo(() => catalogs?.professores || [], [catalogs?.professores]);
   const [tornarLider, setTornarLider] = useState(null); // { vaga: 1 | 2, unidade }
   const [donoDoc, setDonoDoc] = useState(null); // quem está com o CPF digitado no cadastro (vindo do aviso)
-  const [docAlvo, setDocAlvo] = useState(null); // { id, nome, email }: documento (CPF/DNI/SSN) em edição
+  const [editando, setEditando] = useState(null); // { unidade, vaga, foco }: janela Editar (nome, país, documento, nascimento, WhatsApp)
 
   const minhasUnidades = useMemo(() => {
     const todas = catalogs?.unidades || [];
@@ -194,10 +195,9 @@ export function LideresTabela() {
     setModal({ modo: "novo", unidade: unidade || null, vaga });
   }
 
-  function abrirEditar(unidade) {
+  function abrirEditar(unidade, vaga = 1, foco = []) {
     setErro("");
-    setForm({ unidadeId: unidade.id, nome: unidade.liderNome || "", email: unidade.liderEmail || "", telefone: unidade.liderTelefone || "", senha: "" });
-    setModal({ modo: "editar", unidade });
+    setEditando({ unidade, vaga, foco });
   }
 
   async function salvar(e) {
@@ -212,36 +212,6 @@ export function LideresTabela() {
     if (nome.length < 3) return setErro(t("leadersTab.errors.name"));
     if (telefone.length < 6) return setErro(t("leadersTab.errors.phone"));
 
-    if (modal.modo === "editar") {
-      setSalvando(true);
-      try {
-        // Parte B: telefone novo que já é de outra pessoa não é salvo.
-        const bloqueio = await mensagemSeContatoEmUso({
-          dono: { uid: unidade.liderUid },
-          antes: { telefone: unidade.liderTelefone, pais: normalizarPais(unidade.pais) },
-          depois: { telefone, pais: normalizarPais(unidade.pais) },
-        }, t);
-        if (bloqueio) { setErro(bloqueio); return; }
-        const batch = writeBatch(db);
-        batch.update(doc(db, "usuarios", unidade.liderUid), { nome, telefone });
-        batch.update(doc(db, "unidades", unidade.id), { liderNome: nome, liderTelefone: telefone });
-        await batch.commit();
-        // Reserva do telefone (F3 parte A): depois de salvo; se já é de outra pessoa, só avisa.
-        const pais = normalizarPais(unidade.pais);
-        await sincronizarEAvisar({
-          dono: { uid: unidade.liderUid },
-          antes: { telefone: unidade.liderTelefone, pais },
-          depois: { email: unidade.liderEmail, telefone, pais },
-        }, t);
-        await registrarAuditoria("ALTERADA", "Contato do líder atualizado.", unidade.nome,
-          `${unidade.liderNome || "-"} ➔ ${nome} | ${unidade.liderTelefone || "-"} ➔ ${telefone}`);
-        setModal(null);
-      } catch (err) {
-        console.error(err);
-        setErro(t("leadersTab.errors.save") + " " + (err.message || ""));
-      } finally { setSalvando(false); }
-      return;
-    }
 
     if (!emailValido(email)) return setErro(t("leadersTab.errors.email"));
     if (!documentoValido(form.tipoDoc, form.documento)) return setErro(t("document.errors.invalid"));
@@ -492,7 +462,7 @@ export function LideresTabela() {
                                 <LinkCentral tipo="lider" alvo={u} className="font-black text-slate-800 dark:text-slate-100 uppercase">{u.liderNome || "-"}</LinkCentral>
                                 <SeloRepetido selo={selosRepetidos.get(`cracha:${u.liderUid}`)} detalheDe={(o) => o.email || ""} />
                                 {u.liderAConferir === true && <Selo tipo="aviso" icone={AlertTriangle}>{t("leadersTab.toCheck")}</Selo>}
-                                <SeloCadastroIncompleto falta={faltaDoLider(u.liderUid)} />
+                                <SeloCadastroIncompleto falta={faltaDoLider(u.liderUid)} onClick={(f) => abrirEditar(u, 1, f)} />
                               </div>
                               <CelulaContato email={u.liderEmail} telefone={u.liderTelefone} pais={pais} />
                             </div>
@@ -502,7 +472,7 @@ export function LideresTabela() {
                                   <LinkCentral tipo="lider2" alvo={u} className="font-black text-slate-800 dark:text-slate-100 uppercase">{u.lider2Nome || "-"}</LinkCentral>
                                   <SeloRepetido selo={selosRepetidos.get(`cracha:${u.lider2Uid}`)} detalheDe={(o) => o.email || ""} />
                                   <Selo tipo="tema" abaId="lideres">{t("leadersTab.second.badge")}</Selo>
-                                  <SeloCadastroIncompleto falta={faltaDoLider(u.lider2Uid)} />
+                                  <SeloCadastroIncompleto falta={faltaDoLider(u.lider2Uid)} onClick={(f) => abrirEditar(u, 2, f)} />
                                 </div>
                                 <CelulaContato email={u.lider2Email} telefone={u.lider2Telefone} pais={pais} />
                               </div>
@@ -550,7 +520,6 @@ export function LideresTabela() {
                                 <BotaoDeLinha abaId="lideres" tipo="ativar" icone={BadgeCheck} onClick={() => confirmar(u)} disabled={ocupado} title={t("leadersTab.confirm")} />
                               )}
                               <BotaoDeLinha abaId="lideres" discreto icone={Edit2} onClick={() => abrirEditar(u)} disabled={ocupado} title={t("leadersTab.edit")} />
-                              <BotaoDeLinha abaId="lideres" discreto icone={IdCard} onClick={() => setDocAlvo({ id: u.liderUid, nome: u.liderNome, email: u.liderEmail })} disabled={ocupado} title={t("document.modal.edit")} />
                               {ocupado ? (
                                 <span className="p-2"><Loader2 className="w-4 h-4 animate-spin text-red-500" /></span>
                               ) : (
@@ -558,7 +527,7 @@ export function LideresTabela() {
                                   { id: "confirmar", rotulo: t("leadersTab.menu.confirmShort"), icone: BadgeCheck, onClick: () => confirmar(u), oculto: u.liderAConferir !== true },
                                   { id: "segundo", rotulo: t("leadersTab.menu.addSecond"), icone: UserPlus, onClick: () => setTornarLider({ vaga: 2, unidade: u }), oculto: !!u.lider2Uid },
                                   { id: "trocar", rotulo: t("leadersTab.replace"), icone: Repeat, onClick: () => abrirNovo(u) },
-                                  { id: "doc2", rotulo: t("leadersTab.menu.docSecond"), icone: IdCard, onClick: () => setDocAlvo({ id: u.lider2Uid, nome: u.lider2Nome, email: u.lider2Email }), oculto: !u.lider2Uid },
+                                  { id: "editar2", rotulo: t("leadersTab.modal.edit.editSecond"), icone: Edit2, onClick: () => abrirEditar(u, 2), oculto: !u.lider2Uid },
                                   { id: "tirar2", rotulo: t("leadersTab.second.remove"), icone: UserX, tipo: "perigo", onClick: () => remover(u, 2), oculto: !u.lider2Uid },
                                   { id: "tirar", rotulo: t("leadersTab.remove"), icone: UserX, tipo: "perigo", onClick: () => remover(u) },
                                 ]} />
@@ -582,7 +551,10 @@ export function LideresTabela() {
         <p className="text-[11px] text-slate-400 font-bold">{t("leadersTab.howTo")}</p>
       </div>
 
-      {docAlvo && <DocumentoModal alvo={docAlvo} abaId="lideres" onClose={() => setDocAlvo(null)} />}
+      {editando && (
+        <EditarLiderPopup key={`${editando.unidade.id}-${editando.vaga}`} unidade={editando.unidade} vaga={editando.vaga} foco={editando.foco}
+          quem={{ id: userId, nome: meuNome }} onFechar={() => setEditando(null)} />
+      )}
 
       {/* MODAL: ESCOLHER LÍDER JÁ CADASTRADO (1º ou 2º líder) */}
       {tornarLider && (
@@ -599,8 +571,8 @@ export function LideresTabela() {
       {modal && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => !salvando && setModal(null)}>
           <form onSubmit={salvar} onClick={(e) => e.stopPropagation()} className={`w-full ${modal.modo === "novo" ? "max-w-4xl" : "max-w-lg"} max-h-[92vh] flex flex-col overflow-hidden bg-white dark:bg-slate-800 rounded-2xl shadow-2xl`}>
-            <CabecalhoDoModal abaId="lideres" icone={modal.modo === "editar" ? Edit2 : UserPlus}
-              titulo={modal.modo === "editar" ? t("leadersTab.modal.editTitle") : t("leadersTab.modal.newTitle")}
+            <CabecalhoDoModal abaId="lideres" icone={UserPlus}
+              titulo={t("leadersTab.modal.newTitle")}
               onFechar={() => setModal(null)} desabilitado={salvando} />
             <div className="p-5 sm:p-7 space-y-5 overflow-y-auto">
 

@@ -37,7 +37,8 @@ import { paraData } from "../../../utils/ultimoAcesso";
 import SeloRepetido from "../ui/SeloRepetido";
 import { faltaDoCracha } from "../../../utils/cadastroCompleto";
 import { useSelosRepetidos } from "../ui/useSelosRepetidos";
-import { DocumentoModal, BuscaDocumento, AvisoDocumento } from "../Documento/DocumentoModal";
+import { BuscaDocumento, AvisoDocumento } from "../Documento/DocumentoModal";
+import { EditarLiderPopup } from "./EditarLiderPopup";
 import i18n from "../../../i18n";
 import CampoDocumento from "../../../components/acesso/CampoDocumento";
 import { documentoNoLote, gravarComAviso, ERRO_DOCUMENTO_EM_USO, excluirPedidoELiberar, liberarReserva } from "../../../services/documentoService";
@@ -104,7 +105,7 @@ function LideresCelular() {
   const professores = useMemo(() => catalogs?.professores || [], [catalogs?.professores]);
   const [tornarLider, setTornarLider] = useState(null); // { vaga: 1 | 2, unidade }
   const [donoDoc, setDonoDoc] = useState(null); // quem está com o CPF digitado no cadastro (vindo do aviso)
-  const [docAlvo, setDocAlvo] = useState(null); // { id, nome, email }: documento (CPF/DNI/SSN) em edição
+  const [editando, setEditando] = useState(null); // { unidade, vaga, foco }: janela Editar (nome, país, documento, nascimento, WhatsApp)
 
   const minhasUnidades = useMemo(() => {
     const todas = catalogs?.unidades || [];
@@ -221,10 +222,9 @@ function LideresCelular() {
     setModal({ modo: "novo", unidade: unidade || null, vaga });
   }
 
-  function abrirEditar(unidade) {
+  function abrirEditar(unidade, vaga = 1, foco = []) {
     setErro("");
-    setForm({ unidadeId: unidade.id, nome: unidade.liderNome || "", email: unidade.liderEmail || "", telefone: unidade.liderTelefone || "", senha: "" });
-    setModal({ modo: "editar", unidade });
+    setEditando({ unidade, vaga, foco });
   }
 
   async function salvar(e) {
@@ -239,36 +239,6 @@ function LideresCelular() {
     if (nome.length < 3) return setErro(t("leadersTab.errors.name"));
     if (telefone.length < 6) return setErro(t("leadersTab.errors.phone"));
 
-    if (modal.modo === "editar") {
-      setSalvando(true);
-      try {
-        // Parte B: telefone novo que já é de outra pessoa não é salvo.
-        const bloqueio = await mensagemSeContatoEmUso({
-          dono: { uid: unidade.liderUid },
-          antes: { telefone: unidade.liderTelefone, pais: normalizarPais(unidade.pais) },
-          depois: { telefone, pais: normalizarPais(unidade.pais) },
-        }, t);
-        if (bloqueio) { setErro(bloqueio); return; }
-        const batch = writeBatch(db);
-        batch.update(doc(db, "usuarios", unidade.liderUid), { nome, telefone });
-        batch.update(doc(db, "unidades", unidade.id), { liderNome: nome, liderTelefone: telefone });
-        await batch.commit();
-        // Reserva do telefone (F3 parte A): depois de salvo; se já é de outra pessoa, só avisa.
-        const pais = normalizarPais(unidade.pais);
-        await sincronizarEAvisar({
-          dono: { uid: unidade.liderUid },
-          antes: { telefone: unidade.liderTelefone, pais },
-          depois: { email: unidade.liderEmail, telefone, pais },
-        }, t);
-        await registrarAuditoria("ALTERADA", "Contato do líder atualizado.", unidade.nome,
-          `${unidade.liderNome || "-"} ➔ ${nome} | ${unidade.liderTelefone || "-"} ➔ ${telefone}`);
-        setModal(null);
-      } catch (err) {
-        console.error(err);
-        setErro(t("leadersTab.errors.save") + " " + (err.message || ""));
-      } finally { setSalvando(false); }
-      return;
-    }
 
     if (!emailValido(email)) return setErro(t("leadersTab.errors.email"));
     if (!documentoValido(form.tipoDoc, form.documento)) return setErro(t("document.errors.invalid"));
@@ -438,10 +408,9 @@ function LideresCelular() {
                 cancelarConvite: (c) => temp.cancelar(c),
                 definirTemporario: () => temp.abrirConvite(selecionada.u),
                 adicionarSegundo: () => setTornarLider({ vaga: 2, unidade: selecionada.u }),
-                documentoSegundo: () => setDocAlvo({ id: selecionada.u.lider2Uid, nome: selecionada.u.lider2Nome, email: selecionada.u.lider2Email }),
+                editarSegundo: () => abrirEditar(selecionada.u, 2),
                 tirarSegundo: () => remover(selecionada.u, 2),
                 editar: () => abrirEditar(selecionada.u),
-                documento: () => setDocAlvo({ id: selecionada.u.liderUid, nome: selecionada.u.liderNome, email: selecionada.u.liderEmail }),
                 trocar: () => abrirNovo(selecionada.u),
                 remover: () => remover(selecionada.u),
               }} />
@@ -453,7 +422,10 @@ function LideresCelular() {
         </div>
       </div>
 
-      {docAlvo && <DocumentoModal alvo={docAlvo} abaId="lideres" onClose={() => setDocAlvo(null)} />}
+      {editando && (
+        <EditarLiderPopup key={`${editando.unidade.id}-${editando.vaga}`} unidade={editando.unidade} vaga={editando.vaga} foco={editando.foco}
+          quem={{ id: userId, nome: meuNome }} onFechar={() => setEditando(null)} />
+      )}
       {temp.convidando && (
         <ConviteModal role={role} escopos={escopos} unidades={todasUnidades} unidadeInicial={temp.convidando.unidade}
           quem={{ id: userId, nome: meuNome, email: userData?.email }} onFechar={temp.fecharConvite} onCriado={temp.aoConvidar} />
@@ -475,8 +447,8 @@ function LideresCelular() {
       {modal && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => !salvando && setModal(null)}>
           <form onSubmit={salvar} onClick={(e) => e.stopPropagation()} className={`w-full ${modal.modo === "novo" ? "max-w-4xl" : "max-w-lg"} max-h-[92vh] flex flex-col overflow-hidden bg-white dark:bg-slate-800 rounded-2xl shadow-2xl`}>
-            <CabecalhoDoModal abaId="lideres" icone={modal.modo === "editar" ? Edit2 : UserPlus}
-              titulo={modal.modo === "editar" ? t("leadersTab.modal.editTitle") : t("leadersTab.modal.newTitle")}
+            <CabecalhoDoModal abaId="lideres" icone={UserPlus}
+              titulo={t("leadersTab.modal.newTitle")}
               onFechar={() => setModal(null)} desabilitado={salvando} />
             <div className="p-5 sm:p-7 space-y-5 overflow-y-auto">
 

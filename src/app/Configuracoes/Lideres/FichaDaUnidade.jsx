@@ -176,10 +176,9 @@ export function FichaDaUnidade({ u, nomeMentor, pais, ocupado, acessoDe, carrega
                 </button>
               )}
               <button type="button" className={BT} onClick={acoes.editar} disabled={ocupado}>{t("leadersTab.edit")}</button>
-              <button type="button" className={BT} onClick={acoes.documento} disabled={ocupado}>{t("leadersTab.listB.document")}</button>
               {u.lider2Uid ? (
                 <>
-                  <button type="button" className={BT} onClick={acoes.documentoSegundo} disabled={ocupado}>{t("leadersTab.menu.docSecond")}</button>
+                  <button type="button" className={BT} onClick={acoes.editarSegundo} disabled={ocupado}>{t("leadersTab.modal.edit.editSecond")}</button>
                   <button type="button" className={BT} onClick={acoes.definirTemporario} disabled={ocupado}>{t("leadersTab.listB.temporary")}</button>
                 </>
               ) : (

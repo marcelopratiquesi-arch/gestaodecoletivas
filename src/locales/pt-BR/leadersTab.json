@@ -50,7 +50,29 @@
     "cancel": "Cancelar",
     "save": "Salvar",
     "sectionPerson": "Pessoa e unidade",
-    "sectionAccess": "Documento e acesso"
+    "sectionAccess": "Documento e acesso",
+    "edit": {
+      "title": "Editar líder",
+      "country": "País",
+      "birth": "Data de nascimento",
+      "birthHint": "Dado pessoal: só o administrador e o mentor da unidade veem.",
+      "document": "Documento",
+      "docNone": "Sem documento cadastrado: o líder será obrigado a informar no próximo acesso.",
+      "docDelete": "Apagar documento",
+      "docDeleteAsk": "Apagar o documento de {{name}}? A pessoa fica travada até informar de novo, sem poder adiar.",
+      "docDeleteYes": "Sim, apagar",
+      "docDeleteNo": "Voltar",
+      "docDeleted": "Documento apagado.",
+      "loadingData": "Carregando dados da pessoa...",
+      "loadError": "Não consegui ler os dados da pessoa. Feche e abra de novo.",
+      "missingHint": "Falta preencher: {{fields}}.",
+      "errBirth": "Data de nascimento inválida (entre 1920 e hoje).",
+      "errDoc": "Documento inválido. Confira os números.",
+      "errDocUse": "Este documento já está cadastrado em outra pessoa.",
+      "errDelete": "Não consegui apagar o documento. Tente de novo.",
+      "audit": "Cadastro do líder atualizado.",
+      "editSecond": "Editar 2º líder"
+    }
   },
   "errors": {
     "unit": "Escolha a unidade.",

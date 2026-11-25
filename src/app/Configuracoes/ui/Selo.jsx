@@ -11,12 +11,12 @@ const POR_TIPO = {
 };
 
 /** @param {{tipo?:"aviso"|"info"|"tema"|"perigo"|"turquesa", abaId?:string, icone?:React.ElementType, children:React.ReactNode, title?:string}} props */
-export function Selo({ tipo = "info", abaId, icone, children, title }) {
+export function Selo({ tipo = "info", abaId, icone, children, title, onClick }) {
   const Icone = icone;
   const cor = tipo === "tema" ? temaDaAba(abaId).suave : POR_TIPO[tipo] || POR_TIPO.info;
-  return (
-    <span title={title} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border text-[9px] font-black uppercase tracking-wide whitespace-nowrap align-middle ${cor}`}>
-      {Icone && <Icone className="w-3 h-3" />} {children}
-    </span>
-  );
+  const classe = `inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border text-[9px] font-black uppercase tracking-wide whitespace-nowrap align-middle ${cor}`;
+  const conteudo = <>{Icone && <Icone className="w-3 h-3" />} {children}</>;
+  // Com `onClick` a etiqueta vira botão (ex.: "Cadastro incompleto" abre o Editar no campo que falta).
+  if (onClick) return <button type="button" title={title} onClick={onClick} className={`${classe} cursor-pointer hover:brightness-95 hover:underline focus:outline-none focus:ring-2 focus:ring-red-300`}>{conteudo}</button>;
+  return <span title={title} className={classe}>{conteudo}</span>;
 }

@@ -50,7 +50,29 @@
     "cancel": "Cancelar",
     "save": "Guardar",
     "sectionPerson": "Persona y unidad",
-    "sectionAccess": "Documento y acceso"
+    "sectionAccess": "Documento y acceso",
+    "edit": {
+      "title": "Editar líder",
+      "country": "País",
+      "birth": "Fecha de nacimiento",
+      "birthHint": "Dato personal: solo lo ve el administrador y el mentor de la sede.",
+      "document": "Documento",
+      "docNone": "Sin documento registrado: el líder deberá informarlo en su próximo acceso.",
+      "docDelete": "Borrar documento",
+      "docDeleteAsk": "¿Borrar el documento de {{name}}? La persona queda bloqueada hasta informarlo de nuevo, sin poder postergar.",
+      "docDeleteYes": "Sí, borrar",
+      "docDeleteNo": "Volver",
+      "docDeleted": "Documento borrado.",
+      "loadingData": "Cargando datos de la persona...",
+      "loadError": "No pude leer los datos de la persona. Cerrá y abrí de nuevo.",
+      "missingHint": "Falta completar: {{fields}}.",
+      "errBirth": "Fecha de nacimiento inválida (entre 1920 y hoy).",
+      "errDoc": "Documento inválido. Revisá los números.",
+      "errDocUse": "Este documento ya está registrado en otra persona.",
+      "errDelete": "No pude borrar el documento. Probá de nuevo.",
+      "audit": "Registro del líder actualizado.",
+      "editSecond": "Editar 2º líder"
+    }
   },
   "errors": {
     "unit": "Elegí la sede.",
