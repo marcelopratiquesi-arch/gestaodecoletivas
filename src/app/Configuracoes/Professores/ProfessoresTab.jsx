@@ -14,6 +14,7 @@ import { contratoVazio, validarContrato, resumoContrato, mesmoContrato } from ".
 import { documentoValido, formatarDocumento, limparDocumento, tipoDocumentoPadrao } from "../../../utils/documento";
 import { apagarDocumentoDaFichaNoLote, documentoDaFichaNoLote, lerDocumentoDaFicha } from "../../../services/documentoFichaService";
 import { ERRO_DOCUMENTO_EM_USO, gravarComAviso } from "../../../services/documentoService";
+import { lerNascimento, nascimentoValido } from "../../../services/meuCadastroService";
 import { chaveTelefone, emailDeMentira, emailFormatoValido, fichasParecidas, limparNome, normalizarEmail } from "../../../utils/repetidos";
 
 // TODOS OS ÍCONES IMPORTADOS CORRETAMENTE
@@ -96,6 +97,12 @@ export function ProfessoresTab() {
   // Documento (CPF/DNI/SSN) no formulário: o número nunca vai para a ficha, só para a gaveta privada.
   const [docForm, setDocForm] = useState({ tipo: "cpf", numero: "" });
   const [docAnterior, setDocAnterior] = useState(null); // documento já gravado (admin/mentor veem e corrigem)
+  // Data de nascimento (só de quem tem login; gaveta nascimentos/{login}): admin e mentor preenchem e corrigem aqui.
+  const [nascimento, setNascimento] = useState("");
+  const [nascGuardado, setNascGuardado] = useState("");
+  const [carregandoNasc, setCarregandoNasc] = useState(false);
+  const [pedindoApagarDoc, setPedindoApagarDoc] = useState(false);
+  const [focoEdicao, setFocoEdicao] = useState([]); // o que faltava quando abriu pela etiqueta "Cadastro incompleto"
   const [contrato, setContrato] = useState(contratoVazio()); // CLT ou Saver (e onde/quando)
   const [contratoInformado, setContratoInformado] = useState(null); // o que o próprio professor informou no crachá dele (1 leitura ao abrir a edição)
   const [avisoTelefoneNovo, setAvisoTelefoneNovo] = useState("");
@@ -284,8 +291,14 @@ export function ProfessoresTab() {
       setModalFormAberto(true);
   }
 
-  function abrirEdicao(p) {
+  function abrirEdicao(p, falta = []) {
       setProfEditando(p);
+      setFocoEdicao(falta); setPedindoApagarDoc(false); setNascimento(""); setNascGuardado("");
+      if (p.uidLogin && veDocumento) {
+          setCarregandoNasc(true);
+          lerNascimento(String(p.uidLogin)).then((n) => { setNascGuardado(n); setNascimento(n); })
+              .catch((err) => console.error("Ler nascimento:", err)).finally(() => setCarregandoNasc(false));
+      }
       setNome(p.nome);
       setEmail(p.email);
       setPais(p.pais || PAIS_DEFAULT); // 🟢 CARREGA O PAÍS
@@ -312,6 +325,30 @@ export function ProfessoresTab() {
       }
       setErro("");
       setModalFormAberto(true);
+  }
+
+  // Cursor no primeiro campo que falta (vindo do clique na etiqueta "Cadastro incompleto").
+  useEffect(() => {
+    if (!modalFormAberto || !profEditando || carregandoNasc || !focoEdicao.length) return;
+    const ids = { nome: "ed-nome", telefone: "ed-tel", documento: "ed-doc", nascimento: "ed-nasc" };
+    const alvo = ["nome", "telefone", "documento", "nascimento"].find((f) => focoEdicao.includes(f));
+    const el = alvo && document.getElementById(ids[alvo]);
+    if (el) { el.focus({ preventScroll: true }); el.scrollIntoView({ block: "center" }); }
+  }, [modalFormAberto, profEditando, carregandoNasc, focoEdicao, docAnterior]);
+
+  // Apaga o documento da ficha de verdade (gaveta + reserva + marca): a ficha volta a "sem documento".
+  async function apagarDocumentoDaFicha() {
+      if (!profEditando || !docAnterior) return;
+      setSalvando(true); setErro("");
+      try {
+          const lote = writeBatch(db);
+          apagarDocumentoDaFichaNoLote(lote, profEditando.id, docAnterior);
+          lote.update(doc(db, "professores", profEditando.id), { documentoOk: false, updatedAt: serverTimestamp() });
+          await lote.commit();
+          await registrarLogAuditoria('ALTERADA', 'Dados cadastrais do professor atualizados.', profEditando.nome, 'Documento de identificação apagado');
+          setDocAnterior(null); setDocForm({ tipo: tipoDocumentoPadrao(i18n.language), numero: "" });
+          setProfEditando((p) => ({ ...p, documentoOk: false })); setPedindoApagarDoc(false);
+      } catch (err) { console.error(err); setErro(t('leadersTab.modal.edit.errDelete')); } finally { setSalvando(false); }
   }
 
   // Avisos na hora (o mesmo é conferido de novo ao salvar): quem mais tem este e-mail, telefone ou nome.
@@ -346,6 +383,12 @@ export function ProfessoresTab() {
     const docMudou = !!docNumero && (!docAnterior || docAnterior.tipo !== docForm.tipo || docAnterior.numero !== docNumero);
     // O líder só informa o documento de ficha que ainda não tem; corrigir é com admin e mentor.
     const gravarDoc = docMudou && (!profEditando?.documentoOk || (veDocumento && !!docAnterior));
+
+    const podeNascimento = !!profEditando?.uidLogin && veDocumento;
+    if (podeNascimento && nascimento && !nascimentoValido(nascimento)) return parar(t('leadersTab.modal.edit.errBirth'));
+    if (podeNascimento && nascGuardado && !nascimento) return parar(t('leadersTab.modal.edit.errBirth')); // data guardada não se apaga, só se corrige
+    const gravarNasc = podeNascimento && !!nascimento && nascimento !== nascGuardado;
+    const marcarNasc = podeNascimento && !!nascimento && !profEditando.nascimentoOk;
 
     const contratoOk = validarContrato(contrato);
     if (!contratoOk.ok) return parar(t(`accessRequest.contract.errors.${contratoOk.erro}`));
@@ -382,8 +425,14 @@ export function ProfessoresTab() {
             nome: nomeLimpo, pais, telefone, status, updatedAt: serverTimestamp(),
             ...(emailMudou ? { email: emailLimpo } : {}),
             ...(gravarDoc ? { documentoOk: true } : {}),
+            ...(gravarNasc || marcarNasc ? { nascimentoOk: true } : {}),
             ...(contratoMudou ? { tipoContrato: contratoOk.valor.tipoContrato, saverLocais: contratoOk.valor.saverLocais } : {}),
           });
+          if (gravarNasc) {
+              lote.set(doc(db, "nascimentos", String(profEditando.uidLogin)), { nascimento, atualizadoEm: serverTimestamp() });
+              mudancas.push('Data de nascimento atualizada');
+          }
+          if (gravarNasc || marcarNasc) lote.update(doc(db, "usuarios", String(profEditando.uidLogin)), { nascimentoOk: true });
           if (gravarDoc) documentoDaFichaNoLote(lote, { professorId: profEditando.id, tipo: docForm.tipo, numero: docNumero, anterior: docAnterior, marcarFicha: false });
           await (gravarDoc ? gravarComAviso(lote) : lote.commit());
           // Reserva de e-mail/telefone (F3 parte A): depois de salvo; se já é de outra pessoa, só avisa.
@@ -610,7 +659,7 @@ export function ProfessoresTab() {
                                     </div>
                                     {(p.documentoOk || qtdWorkshops > 0 || (p.status === "ativo" && faltaDaFicha(p).length > 0)) && (
                                         <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
-                                            {p.status === "ativo" && <SeloCadastroIncompleto falta={faltaDaFicha(p)} />}
+                                            {p.status === "ativo" && <SeloCadastroIncompleto falta={faltaDaFicha(p)} onClick={(f) => abrirEdicao(p, f)} />}
                                             {p.documentoOk && <Selo tipo="tema" abaId="professores" icone={IdCard} title={t('teachersTab.cpf.hasDocument')}>{t('teachersTab.cpf.badge')}</Selo>}
                                             {qtdWorkshops > 0 && (
                                                 <button type="button" onClick={() => setProfWorkshops(p)} title={t('teachersTab.workshopsBadgeTip')}>
@@ -753,7 +802,7 @@ export function ProfessoresTab() {
                     <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 pl-1">{t('teachersTab.formModal.fullName', 'Nome Completo')}</label>
                     <div className="relative">
                         <User className="absolute left-4 top-3.5 w-4 h-4 text-slate-400"/>
-                        <input className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-emerald-500 rounded-xl text-sm font-bold outline-none transition-all dark:text-white" value={nome} onChange={e => setNome(e.target.value)} autoFocus placeholder={t('teachersTab.formModal.namePlaceholder', 'Nome do Professor')} />
+                        <input id="ed-nome" className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-emerald-500 rounded-xl text-sm font-bold outline-none transition-all dark:text-white" value={nome} onChange={e => setNome(e.target.value)} autoFocus placeholder={t('teachersTab.formModal.namePlaceholder', 'Nome do Professor')} />
                     </div>
                 </div>
 
@@ -769,8 +818,36 @@ export function ProfessoresTab() {
                 ) : (
                     <div className="space-y-1 normal-case">
                         <CampoDocumento claro tipo={docForm.tipo} onTipo={(tp) => setDocForm(d => ({ ...d, tipo: tp }))}
-                            valor={docForm.numero} onValor={(v) => setDocForm(d => ({ ...d, numero: v }))} id="docFicha" />
+                            valor={docForm.numero} onValor={(v) => setDocForm(d => ({ ...d, numero: v }))} id="ed-doc" />
                         <p className="text-[11px] text-slate-500 pl-1">{docAnterior ? t('teachersTab.cpf.fixHint') : t('teachersTab.cpf.optionalHint')}</p>
+                        {docAnterior && veDocumento && !pedindoApagarDoc && (
+                            <button type="button" onClick={() => setPedindoApagarDoc(true)} disabled={salvando} className="text-[11px] font-black uppercase text-red-600 hover:underline flex items-center gap-1 pl-1"><Trash2 className="w-3 h-3" /> {t('leadersTab.modal.edit.docDelete')}</button>
+                        )}
+                        {pedindoApagarDoc && (
+                            <div className="p-3 rounded-xl border border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-800 space-y-2">
+                                <p className="text-xs font-bold text-red-700 dark:text-red-300">{t('leadersTab.modal.edit.docDeleteAsk', { name: profEditando.nome })}</p>
+                                <div className="flex gap-2">
+                                    <button type="button" onClick={apagarDocumentoDaFicha} disabled={salvando} className="px-3 py-2 rounded-xl text-[11px] font-black uppercase bg-red-600 hover:bg-red-700 text-white disabled:opacity-50">{t('leadersTab.modal.edit.docDeleteYes')}</button>
+                                    <button type="button" onClick={() => setPedindoApagarDoc(false)} disabled={salvando} className="px-3 py-2 rounded-xl text-[11px] font-black uppercase bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-200">{t('leadersTab.modal.edit.docDeleteNo')}</button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* DATA DE NASCIMENTO: só de quem já tem login (a data fica na gaveta do login). Admin e mentor preenchem e corrigem. */}
+                {profEditando && (
+                    <div className="space-y-1 normal-case">
+                        <label htmlFor="ed-nasc" className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 pl-1">{t('leadersTab.modal.edit.birth')}</label>
+                        {profEditando.uidLogin && veDocumento ? (
+                            <>
+                                <input id="ed-nasc" type="date" value={nascimento} min="1920-01-01" max={new Date().toISOString().slice(0, 10)} onChange={(e) => setNascimento(e.target.value)} disabled={salvando || carregandoNasc}
+                                    className="w-full p-3 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-white rounded-xl text-sm font-bold outline-none focus:border-emerald-500" />
+                                <p className="text-[11px] text-slate-500 pl-1">{t('leadersTab.modal.edit.birthHint')}</p>
+                            </>
+                        ) : (
+                            <p className="text-[11px] text-slate-500 pl-1">{profEditando.uidLogin ? t('teachersTab.birth.onlyStaff') : t('teachersTab.birth.noLogin')}</p>
+                        )}
                     </div>
                 )}
 
@@ -829,7 +906,7 @@ export function ProfessoresTab() {
                             </label>
                             <div className="relative">
                                 <Phone className="absolute left-4 top-3.5 w-4 h-4 text-slate-400"/>
-                                <input 
+                                <input id="ed-tel"
                                     className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-emerald-500 rounded-xl text-sm font-bold outline-none transition-all dark:text-white" 
                                     value={telefone} 
                                     onChange={e => setTelefone(formatarTelefone(e.target.value, pais))} 

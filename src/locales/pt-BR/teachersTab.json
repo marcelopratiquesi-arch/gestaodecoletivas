@@ -137,5 +137,9 @@
   },
   "workshopsBadge_one": "{{count}} workshop",
   "workshopsBadge_other": "{{count}} workshops",
-  "workshopsBadgeTip": "Ver os workshops deste professor"
+  "workshopsBadgeTip": "Ver os workshops deste professor",
+  "birth": {
+    "onlyStaff": "A data de nascimento é preenchida pelo administrador ou pelo mentor da unidade.",
+    "noLogin": "A data de nascimento só pode ser preenchida depois que o professor tiver login no sistema."
+  }
 }

@@ -310,9 +310,12 @@ service cloud.firestore {
         && (request.resource.data.get('documentoOk', false) != true
             || existsAfter(/databases/$(database)/documents/documentos_ficha/$(professorId)));
       allow update: if logado() && !souProfessor()
-        && (souAdmin() || camposAlterados().hasOnly(camposDeFichaDoProfessor()))
+        && (souAdmin() || camposAlterados().hasOnly(camposDeFichaDoProfessor().concat(['nascimentoOk'])))
         && (request.resource.data.get('documentoOk', false) != true
-            || existsAfter(/databases/$(database)/documents/documentos_ficha/$(professorId)));
+            || existsAfter(/databases/$(database)/documents/documentos_ficha/$(professorId)))
+        // "nascimentoOk" (marca que a data já está guardada): o admin, ou o mentor com a data gravada de verdade para o login ligado à ficha.
+        && (souAdmin() || !camposAlterados().hasAny(['nascimentoOk'])
+            || (meuPapel() == 'mentor' && request.resource.data.nascimentoOk == true && existsAfter(/databases/$(database)/documents/nascimentos/$(resource.data.get('uidLogin', '-')))));
       // "Meu cadastro": o professor atualiza na hora só o CONTATO da PRÓPRIA ficha (a ligada ao login dele).
       // Contrato, documento, status e vínculo continuam com quem gerencia.
       allow update: if logado() && souProfessor() && resource.data.get('uidLogin', '') == request.auth.uid
@@ -343,8 +346,11 @@ service cloud.firestore {
             && (liderDoPedidoProfessor(get(/databases/$(database)/documents/solicitacoes_acesso/$(uid)).data)
                 || mentorDoPedido(get(/databases/$(database)/documents/solicitacoes_acesso/$(uid)).data)));
       // O mentor também preenche/corrige a data dos líderes das unidades dele (janela "Editar" da aba Líderes).
-      allow create, update: if nascimentoValido() && ((autenticado() && request.auth.uid == uid) || souAdmin() || mentorDoLider(uid));
-      allow delete: if souAdmin() || (autenticado() && request.auth.uid == uid) || mentorDoLider(uid);
+      // Professor com login: o mentor da unidade dele também (janela "Editar" da aba Professores).
+      allow create, update: if nascimentoValido() && ((autenticado() && request.auth.uid == uid) || souAdmin() || mentorDoLider(uid)
+        || (logado() && meuPapel() == 'mentor' && mentorDaUnidadeId(unidadeDeQuemNasceu())));
+      allow delete: if souAdmin() || (autenticado() && request.auth.uid == uid) || mentorDoLider(uid)
+        || (logado() && meuPapel() == 'mentor' && mentorDaUnidadeId(unidadeDeQuemNasceu()));
     }
 
     // Vínculo professor × unidade (Etapa 2). Cria e apaga: admin, mentor da unidade e líder da unidade. Nunca se edita
@@ -650,7 +656,7 @@ service cloud.firestore {
                     && request.resource.data.get('pais', 'BR') in ['BR', 'AR', 'US']
                     && (!camposAlterados().hasAny(['nascimentoOk']) || (request.resource.data.nascimentoOk == true && existsAfter(/databases/$(database)/documents/nascimentos/$(uid))))
                     && (!camposAlterados().hasAny(['documentoOk']) || request.resource.data.documentoOk == false || existsAfter(caminhoDocumentoUsuario(uid)))
-                    && mentorDoLider(uid))))
+                    && (mentorDoLider(uid) || mentorDaUnidadeId(resource.data.get('unidadeId', ''))))))
         || (logado() && meuPapel() in papeisLider() && papelDoAlvo() == 'professor'
             && camposAlterados().hasOnly(['nome', 'email']))
         // Mentor muda a liderança de UMA unidade DELE no crachá de alguém (aba Líderes; o admin já pode tudo acima).

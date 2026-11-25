@@ -137,5 +137,9 @@
   },
   "workshopsBadge_one": "{{count}} workshop",
   "workshopsBadge_other": "{{count}} workshops",
-  "workshopsBadgeTip": "See this teacher's workshops"
+  "workshopsBadgeTip": "See this teacher's workshops",
+  "birth": {
+    "onlyStaff": "The date of birth is filled in by the administrator or the unit mentor.",
+    "noLogin": "The date of birth can only be filled in once the teacher has a login in the system."
+  }
 }
