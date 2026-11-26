@@ -48,11 +48,19 @@ export function documentoNoLote(batch, { uid, tipo, numero, anterior = null, noP
 }
 
 /** Faz o commit e troca o erro de permissão (documento já reservado por outra pessoa) por um erro claro. */
-export async function gravarComAviso(batch) {
+export async function gravarComAviso(batch, conferir = null) {
   try {
     await batch.commit();
   } catch (e) {
     if (e?.code === "permission-denied") {
+      // Sabendo de quem é o documento: só diz "já é de outra pessoa" quando a reserva é MESMO de outro login.
+      // Reserva da própria pessoa (ou inexistente) = a recusa foi por outro motivo: devolve o erro original.
+      // Sem permissão para conferir (professor): continua como antes.
+      if (conferir?.uid && conferir?.tipo && conferir?.numero) {
+        let reserva;
+        try { reserva = await getDoc(refReserva(conferir.tipo, conferir.numero)); } catch { reserva = null; }
+        if (reserva && (!reserva.exists() || reserva.data().uid === conferir.uid)) throw e;
+      }
       const erro = new Error(ERRO_DOCUMENTO_EM_USO);
       erro.cause = e;
       throw erro;

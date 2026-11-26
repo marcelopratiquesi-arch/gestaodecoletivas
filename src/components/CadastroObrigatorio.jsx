@@ -23,6 +23,7 @@ import { PAISES, DDI_MAP, formatarTelefone, exemploDeTelefone } from "../app/Con
 import { normalizarPais } from "../utils/feriados";
 import { fichasDoLogin } from "../utils/unidadeDoProfessor";
 import { vagasDeLiderDaPessoa } from "../utils/lideranca";
+import { detalheDoErro } from "../utils/detalheDoErro";
 import { adiarAvisoDoCadastro, lerNascimento, marcarNascimentoOk, nascimentoValido, salvarMeuCadastro } from "../services/meuCadastroService";
 import { CAMPO, ROTULO } from "../pages/meuCadastro/estilos";
 
@@ -133,7 +134,7 @@ export default function CadastroObrigatorio() {
       navigate("/app/meu-cadastro");
     } catch (err) {
       console.error(err);
-      setErro(err?.message === ERRO_DOCUMENTO_EM_USO ? t("profileUpdate.gate.documentInUse") : t("profileUpdate.me.errors.save"));
+      setErro(err?.message === ERRO_DOCUMENTO_EM_USO ? t("profileUpdate.gate.documentInUse") : t("profileUpdate.me.errors.save") + detalheDoErro(err));
     } finally { setOcupado(false); }
   }
 

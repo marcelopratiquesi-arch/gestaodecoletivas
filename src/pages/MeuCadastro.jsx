@@ -30,6 +30,7 @@ import { PAISES, DDI_MAP, formatarTelefone, exemploDeTelefone } from "../app/Con
 import { fichasDoLogin, idsDasUnidadesDoProfessor, opcoesDeUnidadeDoProfessor } from "../utils/unidadeDoProfessor";
 import { desistirDaAtualizacao, enviarAtualizacao, lerMinhaAtualizacao } from "../services/atualizacaoProfessorService";
 import { ERRO_DOCUMENTO_EM_USO } from "../services/documentoService";
+import { detalheDoErro } from "../utils/detalheDoErro";
 import { lerMeuDocumento, lerNascimento, nascimentoValido, salvarMeuCadastro } from "../services/meuCadastroService";
 
 export default function MeuCadastro() {
@@ -121,7 +122,7 @@ export default function MeuCadastro() {
       recarregarCracha(); // o aviso de cadastro incompleto lê o crachá: tem de ver o que acabou de ser salvo
     } catch (err) {
       console.error(err);
-      setErroDados(err?.message === ERRO_DOCUMENTO_EM_USO ? t("document.errors.inUse") : t("profileUpdate.me.errors.save"));
+      setErroDados(err?.message === ERRO_DOCUMENTO_EM_USO ? t("document.errors.inUse") : t("profileUpdate.me.errors.save") + detalheDoErro(err));
     } finally { setSalvandoDados(false); }
   }
 
