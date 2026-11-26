@@ -45,6 +45,11 @@ export function nascimentoValido(valor) {
   return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === valor && valor >= "1920-01-01" && d <= new Date();
 }
 
+/** Roda um passo do salvamento; se falhar, marca no erro QUAL passo foi (a tela mostra, para achar a causa de verdade). */
+async function naEtapa(etapa, fn) {
+  try { return await fn(); } catch (e) { if (e && typeof e === "object" && !e.etapa) e.etapa = etapa; throw e; }
+}
+
 /**
  * Salva tudo de uma vez só.
  * @param {object} p
@@ -61,40 +66,44 @@ export async function salvarMeuCadastro({ uid, fichaId, unidadesDoLider = [], an
   const dono = { uid, professorId: fichaId || undefined };
 
   // Parte B: e-mail/telefone novo que já é de outra pessoa não é salvo.
-  const bloqueio = await mensagemSeContatoEmUso({
+  const bloqueio = await naEtapa("contato", () => mensagemSeContatoEmUso({
     dono,
     antes: { email: emailAntes, telefone: antes.telefone, pais: antes.pais },
     depois: { email: emailDepois, telefone: depois.telefone, pais: depois.pais },
-  }, t);
+  }, t));
   if (bloqueio) return { ok: false, erro: "contato", mensagem: bloqueio };
 
-  // 1) Documento primeiro: se já é de outra pessoa o banco recusa e nada mais é salvo.
+  // 1) Documento primeiro: se já é de OUTRA pessoa o banco recusa e nada mais é salvo.
   const docMudou = depois.documento && (!antes.documento || antes.documento.tipo !== depois.documento.tipo || antes.documento.numero !== depois.documento.numero);
   if (docMudou) {
     const lote = writeBatch(db);
     documentoNoLote(lote, { uid, tipo: depois.documento.tipo, numero: depois.documento.numero, anterior: antes.documento, marcarCracha: precisaMarcarDocumento });
-    await gravarComAviso(lote);
+    await naEtapa("documento", () => gravarComAviso(lote, { uid, ...depois.documento }));
   }
 
-  // 2) Crachá + ficha + nascimento, tudo junto ou nada.
+  // 2) O ESSENCIAL (crachá + nascimento), junto ou nada: é o que destrava a pessoa.
   const lote = writeBatch(db);
   // "nascimentoOk": marca no crachá de que a data já está guardada (o aviso de cadastro incompleto lê isso sem ler a gaveta).
   lote.update(doc(db, "usuarios", uid), { nome: depois.nome, telefone: depois.telefone, pais: depois.pais, emailContato: emailDepois, ...(depois.nascimento ? { nascimentoOk: true } : {}) });
-  if (fichaId) lote.update(doc(db, "professores", String(fichaId)), { nome: depois.nome, telefone: depois.telefone, pais: depois.pais, email: emailDepois, updatedAt: serverTimestamp(), ...(depois.nascimento ? { nascimentoOk: true } : {}) });
-  unidadesDoLider.forEach(({ id, vaga }) => {
-    const p = vaga === 2 ? "lider2" : "lider";
-    lote.update(doc(db, "unidades", String(id)), { [`${p}Nome`]: depois.nome, [`${p}Telefone`]: depois.telefone });
-  });
   if (depois.nascimento && depois.nascimento !== antes.nascimento) lote.set(doc(db, "nascimentos", uid), { nascimento: depois.nascimento, atualizadoEm: serverTimestamp() });
-  await lote.commit();
-  if (!depois.nascimento && antes.nascimento) await deleteDoc(doc(db, "nascimentos", uid));
+  await naEtapa("cadastro", () => lote.commit());
+  if (!depois.nascimento && antes.nascimento) await naEtapa("nascimento", () => deleteDoc(doc(db, "nascimentos", uid)));
 
-  // 3) Reserva de e-mail/telefone (se já é de outra pessoa, só avisa) e auditoria (sem dado sensível).
-  await sincronizarEAvisar({
+  // 3) CÓPIAS (ficha da grade e nome/telefone do líder na unidade): se uma falhar, não trava a pessoa; fica no console.
+  const copiasFalharam = [];
+  const copiar = async (onde, fn) => { try { await fn(); } catch (e) { console.error(`Meu cadastro: cópia em ${onde} não gravada`, e?.code, e); copiasFalharam.push(onde); } };
+  if (fichaId) await copiar(`ficha ${fichaId}`, () => updateDoc(doc(db, "professores", String(fichaId)), { nome: depois.nome, telefone: depois.telefone, pais: depois.pais, email: emailDepois, updatedAt: serverTimestamp(), ...(depois.nascimento ? { nascimentoOk: true } : {}) }));
+  for (const { id, vaga } of unidadesDoLider) {
+    const p = vaga === 2 ? "lider2" : "lider";
+    await copiar(`unidade ${id}`, () => updateDoc(doc(db, "unidades", String(id)), { [`${p}Nome`]: depois.nome, [`${p}Telefone`]: depois.telefone }));
+  }
+
+  // 4) Reserva de e-mail/telefone (se já é de outra pessoa, só avisa) e auditoria (sem dado sensível). Nunca trava.
+  await copiar("reserva de contato", () => sincronizarEAvisar({
     dono,
     antes: { email: emailAntes, telefone: antes.telefone, pais: antes.pais },
     depois: { email: emailDepois, telefone: depois.telefone, pais: depois.pais },
-  }, t);
+  }, t));
   try {
     const mudou = [];
     if (antes.nome !== depois.nome) mudou.push(`Nome: ${antes.nome || "-"} ➔ ${depois.nome}`);
@@ -109,5 +118,5 @@ export async function salvarMeuCadastro({ uid, fichaId, unidadesDoLider = [], an
       });
     }
   } catch (e) { console.error("Falha ao gravar auditoria", e); }
-  return { ok: true };
+  return { ok: true, copiasFalharam };
 }

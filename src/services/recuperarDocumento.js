@@ -29,14 +29,14 @@ export async function recuperarDocumentoJaInformado({ uid, email }) {
   if (naGaveta) {
     const batch = writeBatch(db);
     batch.update(doc(db, "usuarios", uid), { documentoOk: true });
-    await gravarComAviso(batch);
+    await gravarComAviso(batch, { uid, ...naGaveta });
     return true;
   }
   const origem = (await lerDocumentoDoPedido(uid)) || (await lerDocumentoDoConvite(email));
   if (origem && documentoValido(origem.tipo, origem.numero)) {
     const batch = writeBatch(db);
     documentoNoLote(batch, { uid, tipo: origem.tipo, numero: origem.numero, marcarCracha: true });
-    await gravarComAviso(batch);
+    await gravarComAviso(batch, { uid, ...origem });
     return true;
   }
   return false;
